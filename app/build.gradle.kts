@@ -29,7 +29,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = ciRun?.toInt() ?: 1
-        versionName = "0.1.0" + (ciRun?.let { "-ci.$it" } ?: "")
+        versionName = "0.2.0" + (ciRun?.let { "-ci.$it" } ?: "")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

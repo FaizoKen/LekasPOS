@@ -59,6 +59,8 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         surface.holder.addCallback(this)
         addAction(R.drawable.ic_flash, R.string.camera_torch) { toggleTorch() }
         beeper = Beeper.create()
+        // After process death Android may restore this screen first: the bill must be loaded.
+        if (sellMode) launchUi { graph.cart.load() }
     }
 
     override fun onResume() {

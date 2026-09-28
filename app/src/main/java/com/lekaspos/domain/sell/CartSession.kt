@@ -21,6 +21,7 @@ import com.lekaspos.data.db.Db
 import com.lekaspos.data.product.ScanHit
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -434,6 +435,8 @@ class CartSession(private val graph: AppGraph) {
                         db.write(reserveIds = batch.sumOf { it.ids }) { tx -> for (op in batch) op.run?.invoke(tx) }
                     }
                     for (op in batch) op.done?.complete(Unit)
+                } catch (e: CancellationException) {
+                    throw e // the app scope ends only in tests
                 } catch (e: Exception) {
                     Log.e("Saving the open bill failed", e)
                     for (op in batch) op.done?.completeExceptionally(e)

@@ -105,7 +105,7 @@ keyKind=test          # or "upload" for the Play upload key
 ```
 
 Because every test build is signed with the same test key and CI stamps an increasing
-`versionCode` (`-Plekas.ciRun=<run number>`, version name `0.1.0-ci.<run>`), testers can install
+`versionCode` (`-Plekas.ciRun=<run number>`, version name `<phase version>-ci.<run>`, e.g. `0.2.0-ci.12`), testers can install
 each new build over the previous one and keep their data. Pull requests from forks don't get the
 secrets and fall back to debug signing.
 

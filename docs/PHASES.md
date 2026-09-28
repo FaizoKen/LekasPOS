@@ -171,6 +171,35 @@ pre-release follow.
       before; camera permission on first use
 - [ ] Tax/receipt compliance as answered by the user (open question 1) — defaults per D-024
 
+### Needs real-hardware testing (Phase 2)
+
+1. **Selling flow** on a phone (portrait) and the tablet (landscape): scan, search, catalogue
+   tabs; change quantity, discount, price; hold and resume; cash, card, split payment; rotate
+   the screen while the "Change" result is showing (it must come back).
+2. **Bluetooth HID scanner** (keyboard mode): pair it in Android settings, then scan on the
+   selling screen without tapping anything; scan while the result dialog is open (starts the
+   next sale); scan into Settings → Scanner → test field.
+3. **SPP (serial) scanner**, if you have one: choose it in Settings → Scanner.
+4. **Camera scanning**: EAN-13 packs, in portrait and landscape, with the torch.
+5. **Bluetooth receipt printer** (58 or 80 mm): pair, choose, print the test page (the digit
+   ruler must fit one line), a sale receipt, a copy, the logo, the e-invoice QR code, and a
+   product with a Chinese name (Auto mode prints it as a picture; with "Chinese characters"
+   switched on, as text).
+6. **Printer offline**: switch the printer off, make two sales (the top bar shows "Printer
+   offline (2)"), switch it on — both receipts print in order and the drawer does not pop open.
+7. **Cash drawer** on the printer: opens on cash sales and cash refunds, and from the menu
+   (pin 2 or pin 5).
+8. **Weighing-scale labels**, if your scale prints EAN-13 labels (prefix 20/21): set the label
+   format in Settings → Store and the PLU on the product.
+9. **Crash safety**: add items, force-stop the app in Android settings, reopen: the bill is
+   still there.
+10. **Refund and void**: partial refund in cash, then void; share a receipt to WhatsApp as a
+    picture and as a PDF.
+11. **Android 12+ permissions**: the "Nearby devices" prompt when choosing a printer; camera
+    permission on first scan.
+12. **Low-end device** (the 2 GB tablet): selling-screen smoothness and Diagnostics → Full test
+    (now also measures receipt building and picture rendering).
+
 ## Phase 3 — inventory, suppliers, stock movements (planned)
 
 - [ ] Stock in (receiving) with purchase records and cost update; stock adjustments with reasons

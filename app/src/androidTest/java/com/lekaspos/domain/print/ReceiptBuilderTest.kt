@@ -7,6 +7,7 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.receipt.PrintLine
 import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.data.db.Db
+import com.lekaspos.data.db.Seed
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.DeviceSettings
 import com.lekaspos.data.settings.StoreSettings
@@ -46,7 +47,7 @@ class ReceiptBuilderTest {
         val sst = db.writeBlocking { tx -> TaxRateDao.insert(tx, "SST", "S", 600, System.currentTimeMillis()) }
         val milk = TestDb.product(db, "Susu Segar 1L", 503L, taxRateId = sst)
         val bread = TestDb.product(db, "Roti", 350L)
-        val draft = TestDb.saleDraft(db, listOf(milk to 2_000L, bread to 1_000L))
+        val draft = TestDb.saleDraft(db, listOf(milk to 2_000L, bread to 1_000L), staffId = Seed.Ids.STAFF_OWNER)
         val sale = db.writeBlocking { tx -> SaleDao.commit(tx, draft, tz) }
 
         val doc = assertNotNull(db.readBlocking { ReceiptBuilder.build(it, sale.id, copy = false, store, tz) })

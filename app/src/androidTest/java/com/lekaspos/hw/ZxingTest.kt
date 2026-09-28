@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.oned.EAN13Writer
+import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.hw.camera.BarcodeDecoder
 import com.lekaspos.hw.printer.Images
 import kotlin.test.assertEquals
@@ -37,7 +38,7 @@ class ZxingTest {
 
     @Test
     fun decodesEan13FromAFrame() {
-        val code = "9556001234567"
+        val code = Gtin.withCheckDigit("955600123456") // a valid EAN-13
         val m = EAN13Writer().encode(code, BarcodeFormat.EAN_13, 380, 120)
         val decoder = BarcodeDecoder()
         assertEquals(code, decoder.decode(frame(m, 640, 480, vertical = false), 640, 480, rotate = false))
