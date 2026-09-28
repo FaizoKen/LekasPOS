@@ -21,6 +21,7 @@ import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.core.time.DateText
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.trackedBy
 import java.util.TimeZone
 
 private fun Activity.dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -112,6 +113,7 @@ class AmountDialog(
         }
         keypad.set(start)
         d.show()
+        d.trackedBy(activity)
         return d
     }
 }
@@ -197,6 +199,7 @@ class DiscountDialog(
         keypad.set(initialDigits)
         render()
         d.show()
+        d.trackedBy(activity)
         return d
     }
 }
@@ -261,7 +264,7 @@ fun showLineDialog(a: Activity, item: CartItem, amount: Long, currency: Currency
 
     dialog = AlertDialog.Builder(a).setTitle(item.name).setView(col).setNegativeButton(R.string.close, null).create()
     dialog.show()
-    return dialog
+    return dialog.trackedBy(a)
 }
 
 fun showHeldBills(
@@ -272,7 +275,7 @@ fun showHeldBills(
     onDelete: (Long) -> Unit,
 ) {
     if (bills.isEmpty()) {
-        AlertDialog.Builder(a).setTitle(R.string.held_title).setMessage(R.string.held_empty).setPositiveButton(R.string.ok, null).show()
+        AlertDialog.Builder(a).setTitle(R.string.held_title).setMessage(R.string.held_empty).setPositiveButton(R.string.ok, null).show().trackedBy(a)
         return
     }
     val tz = TimeZone.getDefault()
@@ -294,9 +297,11 @@ fun showHeldBills(
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+            .trackedBy(a)
         true
     }
     d.show()
+    d.trackedBy(a)
 }
 
 fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit, onSellOther: () -> Unit): AlertDialog =
@@ -307,6 +312,7 @@ fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit, onSe
         .setNeutralButton(R.string.sell_sell_other) { _, _ -> onSellOther() }
         .setNegativeButton(R.string.cancel, null)
         .show()
+        .trackedBy(a)
 
 /** A one-off item that is not in the catalogue: a name and a price. */
 fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> Unit): AlertDialog {
@@ -340,7 +346,7 @@ fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> 
         }
     }
     d.show()
-    return d
+    return d.trackedBy(a)
 }
 
 /** Forwards scanner/keyboard keys of a dialog without text fields to [handler]. */

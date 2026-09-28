@@ -13,7 +13,7 @@ import com.lekaspos.R
 object Dialogs {
 
     fun message(ctx: Context, title: CharSequence?, message: CharSequence): AlertDialog =
-        AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).show()
+        AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).show().trackedBy(ctx)
 
     fun confirm(ctx: Context, title: CharSequence, message: CharSequence?, yes: CharSequence, onYes: () -> Unit): AlertDialog =
         AlertDialog.Builder(ctx)
@@ -22,6 +22,7 @@ object Dialogs {
             .setPositiveButton(yes) { _, _ -> onYes() }
             .setNegativeButton(R.string.cancel, null)
             .show()
+            .trackedBy(ctx)
 
     /** A text prompt. [onOk] gets the trimmed text; returning false keeps the dialog open. */
     fun input(
@@ -56,6 +57,7 @@ object Dialogs {
             }
         }
         d.show()
+        d.trackedBy(ctx)
         field.requestFocus()
         return d
     }
@@ -70,7 +72,7 @@ object Dialogs {
         } else {
             b.setItems(items.toTypedArray()) { _, which -> onPick(which) }
         }
-        return b.setNegativeButton(R.string.cancel, null).show()
+        return b.setNegativeButton(R.string.cancel, null).show().trackedBy(ctx)
     }
 
     /** Wraps [v] with the standard dialog content padding. */

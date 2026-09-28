@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
  * a scope cancelled in onDestroy ([scope]) and one that lives from onStart to onStop
  * ([onStarted]). Activities stay thin: state lives in AppGraph singletons.
  */
-abstract class ScreenActivity : Activity() {
+abstract class ScreenActivity : Activity(), DialogHost {
 
     protected val graph: AppGraph get() = LekasApp.graph(this)
 
@@ -37,6 +37,9 @@ abstract class ScreenActivity : Activity() {
     protected lateinit var content: FrameLayout
     private lateinit var actions: LinearLayout
     private lateinit var titleView: TextView
+    private val dialogs = DialogTracker()
+
+    override fun track(d: android.app.Dialog) = dialogs.track(d)
 
     protected fun setScreen(title: CharSequence, layout: Int? = null): View? {
         setContentView(R.layout.screen)
@@ -79,6 +82,7 @@ abstract class ScreenActivity : Activity() {
     protected open fun onStarted(scope: CoroutineScope) {}
 
     override fun onDestroy() {
+        dialogs.dismissAll()
         scope.cancel()
         super.onDestroy()
     }

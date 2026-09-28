@@ -17,6 +17,7 @@ import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.trackedBy
 
 /**
  * Taking payment (references/money.md §4–§5): cash with change and 5-sen rounding when cash
@@ -84,7 +85,7 @@ class PaymentDialog(
         dialog.setOnKeyListener { _, _, e -> keypad.onKey(e) }
         refresh()
         dialog.show()
-        return dialog
+        return dialog.trackedBy(activity)
     }
 
     private fun enteredAmount(): Long? = if (keypad.digits.isEmpty()) null else MoneyFormat.keypad(keypad.digits, currency)

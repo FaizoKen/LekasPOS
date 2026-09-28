@@ -48,6 +48,8 @@ import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.ui.Insets
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
+import com.lekaspos.ui.common.DialogHost
+import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.products.ProductEditActivity
@@ -72,7 +74,7 @@ import kotlinx.coroutines.launch
  * focusing anything: keyboard-wedge scanners are read here in [dispatchKeyEvent], SPP scanners
  * and the camera feed the same [onScanned]. The bill itself lives in [CartSession].
  */
-class SellActivity : Activity(), LineActions {
+class SellActivity : Activity(), LineActions, DialogHost {
 
     private val graph get() = LekasApp.graph(this)
     private val scope = MainScope()
@@ -121,6 +123,7 @@ class SellActivity : Activity(), LineActions {
     private var paymentDialog: AlertDialog? = null
     private var hasCamera = false
     private var backCallback: Any? = null
+    private val dialogs = DialogTracker()
 
     private val currency: CurrencySpec get() = graph.settings.store.value.currency
 
@@ -241,10 +244,13 @@ class SellActivity : Activity(), LineActions {
         // Keep the outcome: after a rotation the new screen shows the same result again.
         outcomeDialog?.setOnDismissListener(null)
         outcomeDialog?.dismiss()
+        dialogs.dismissAll()
         scope.cancel()
         beeper?.release()
         super.onDestroy()
     }
+
+    override fun track(d: android.app.Dialog) = dialogs.track(d)
 
     // ------------------------------------------------------------------ rendering
 
