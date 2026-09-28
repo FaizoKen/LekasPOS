@@ -80,6 +80,42 @@ object SysRole {
     const val CASHIER = 3
 }
 
+/** Actions written to `audit_log.action`. */
+object AuditAction {
+    const val SALE_VOID = 1
+    const val REFUND = 2
+    const val PRICE_OVERRIDE = 3
+    const val LINE_DISCOUNT = 4
+    const val BILL_DISCOUNT = 5
+    const val DRAWER_OPEN = 6
+    const val REPRINT = 7
+    const val PRODUCT_PRICE_CHANGE = 8
+    const val PRODUCT_DELETE = 9
+    const val BILL_CANCEL = 10
+}
+
+/** Permission bits stored in `role.perms` (roles and PIN login arrive in Phase 4). */
+object Perm {
+    const val VOID = 1L shl 0
+    const val REFUND = 1L shl 1
+    const val PRICE_OVERRIDE = 1L shl 2
+    const val DISCOUNT = 1L shl 3
+    const val OPEN_DRAWER = 1L shl 4
+    const val REPRINT = 1L shl 5
+    const val MANAGE_PRODUCTS = 1L shl 6
+    const val SETTINGS = 1L shl 7
+    const val CANCEL_BILL = 1L shl 8
+    const val ALL = -1L
+}
+
+/** `print_job.kind`. */
+object PrintJobKind {
+    const val RECEIPT = 1
+    const val REPRINT = 2
+    const val TEST = 3
+    const val DRAWER = 4
+}
+
 /** Entity type codes used by the outbox, sync files and the audit log. */
 object Entity {
     const val SETTING = 1

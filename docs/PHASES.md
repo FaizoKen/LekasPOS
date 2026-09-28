@@ -7,8 +7,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | Project skill, architecture, database schema, performance test harness | **done — waiting for real-device feedback** |
-| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | not started |
+| 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
+| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **in progress** (on stated assumptions, D-024) |
 | 3 | Inventory, suppliers, stock movements | not started |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
 | 5 | Reports and CSV import/export | not started |

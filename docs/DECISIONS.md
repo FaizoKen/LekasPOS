@@ -117,6 +117,38 @@ secrets and on the maintainer's laptop) and carry CI-run-based versionCodes, so 
 installs as an update and keeps the testers' data. Kept separate from the future Play upload
 key, which only the app owner holds. Fork PRs get no secrets and stay debug-signed.
 
+### D-024 — Phase 2 starts on stated assumptions (2026-09-29)
+User decision ("start phase 2 with your assumptions"): Malaysian tax/receipt defaults (no tax
+at the till unless rates are configured; prices include tax; 5-sen cash rounding; receipt shows
+store name, address, BRN, SST no. and TIN when set; optional e-invoice request QR, off by default;
+consolidated monthly e-invoice export in Phase 5), application ID `com.lekaspos.app`, customers &
+credit in Phase 4, and generic ESC/POS printing (58/80 mm, Bluetooth SPP) with HID and SPP
+scanners until the user names hardware models.
+
+### D-025 — Camera scanning: ZXing core 3.3.3 + platform Camera1 API
+Why: fits the size budget (~150–250 KB after R8, formats limited to EAN/UPC/Code128/Code39/QR)
+and needs no CameraX (~1 MB). ZXing 3.4+ uses Java 8 library APIs missing below API 24, so the
+3.3 line is pinned; an instrumented test runs decode/encode on the API 21 image. Camera1 is
+deprecated but works on every API level we support. Apache-2.0 → GPL-3.0 compatible.
+
+### D-026 — Printing: receipt model in :core, persistent queue, reconnecting SPP transport
+A receipt is laid out once as elements (`:core` `receipt`), then encoded either as ESC/POS text
+(fast; Latin code pages; GB18030 for Chinese-capable printers) or as a raster image (any script).
+Jobs live in `print_job` (survive disconnects and restarts); a single printer thread reconnects
+with backoff and prints in order. The cash drawer is kicked through the printer (`ESC p`), inside
+the sale receipt job for cash sales; manual opens are permission-checked and audited.
+
+### D-027 — Bluetooth: paired devices only, pairing in Android settings
+Printers and SPP scanners are chosen from the phone's paired devices, which needs only
+`BLUETOOTH_CONNECT` (runtime, API 31+) or the install-time `BLUETOOTH` permission (API ≤ 30) and
+no location permission on any version. Pairing itself happens in Android's Bluetooth settings
+(the app links there), as printer manuals already describe. Rejected for now: in-app discovery,
+which would need `BLUETOOTH_SCAN` on API 31+ and `ACCESS_FINE_LOCATION` on API 23–30 for little gain.
+
+### D-028 — Permissions stubbed until Phase 4, audit entries written from Phase 2
+All sensitive actions go through `PermissionGate` (allows the single owner session for now) and
+write `audit_log` entries, so Phase 4 only adds PIN login, roles and manager override.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

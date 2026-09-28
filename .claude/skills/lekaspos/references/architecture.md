@@ -143,7 +143,7 @@ by tests to simulate several devices, and usable with USB/SD storage).
 | androidx.core 1.17.0 | ContextCompat, FileProvider (transitive anyway) | ~100 KB | 1.18+ needs minSdk 23 |
 | androidx.work 2.10.5 | background sync (spec) | ~250 KB incl. Room runtime | 2.11 needs 23, 2.12 needs 24 |
 | play-services-auth 21.4.0 (Phase 6) | Google Identity Services authorization | ~300 KB | 21.5+ needs minSdk 23 |
-| ZXing core (Phase 2, only if it fits) | camera barcode decode + QR encode | ~250 KB | — |
+| ZXing core 3.3.3 (Phase 2) | camera barcode decode + QR encode | ~150–250 KB | 3.4+ uses Java 8 APIs missing below API 24 |
 | Test: JUnit 4, androidx.test runner 1.7.0 / ext-junit 1.3.0 | tests | none in APK | minSdk 21 |
 
 Not used, on purpose: Compose, AppCompat, Material Components, Fragments, Navigation, Room
