@@ -25,10 +25,12 @@ adb install -r -t "$APKS/app-debug.apk"
 adb install -r -t "$APKS/app-debug-androidTest.apk"
 adb install -r "$APKS/app-release.apk"
 
-app_pid() { # works with toybox pidof (API 23+) and toolbox ps (API 21-22)
+app_pid() { # toybox pidof (API 23+), else toolbox ps (API 21-22). Old adb shells merge stderr
+  # into stdout ("/system/bin/sh: pidof: not found"), so only a number counts as a PID.
   local p
   p=$(adb shell pidof "$1" 2>/dev/null | tr -d '\r' | awk '{print $1}')
-  if [ -z "$p" ]; then p=$(adb shell ps 2>/dev/null | tr -d '\r' | awk -v n="$1" '$NF==n {print $2; exit}'); fi
+  case "$p" in '' | *[!0-9]*) p=$(adb shell ps 2>/dev/null | tr -d '\r' | awk -v n="$1" '$NF==n {print $2; exit}') ;; esac
+  case "$p" in '' | *[!0-9]*) p="" ;; esac
   echo "$p"
 }
 
@@ -37,7 +39,9 @@ echo "## Performance, API $api, scale $SCALE" >> "$summary"
 # 1. Instrumented suite (debug build, no UI).
 adb shell am instrument -w -e class com.lekaspos.perf.PerfSuiteTest -e perfScale "$SCALE" \
   com.lekaspos.app.debug.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' | tee "$OUT/instrumented-api$api.txt"
-adb pull "/data/data/$DEBUG_PKG/files/perf/instrumented-$SCALE.json" "$OUT/instrumented-$SCALE-api$api.json" >/dev/null 2>&1 || true
+# The test writes to external app storage when present (newer images), else internal storage.
+adb pull "/sdcard/Android/data/$DEBUG_PKG/files/perf/instrumented-$SCALE.json" "$OUT/instrumented-$SCALE-api$api.json" >/dev/null 2>&1 ||
+  adb pull "/data/data/$DEBUG_PKG/files/perf/instrumented-$SCALE.json" "$OUT/instrumented-$SCALE-api$api.json" >/dev/null 2>&1 || true
 if grep -q '^OK (' "$OUT/instrumented-api$api.txt"; then
   echo "- Instrumented suite (debug, no UI): **passed** (query plans enforced)" >> "$summary"
 else
