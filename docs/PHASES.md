@@ -109,6 +109,13 @@ Deliverables
   UI-less FULL run passed. Mitigations added (no finalizable objects in the generator loop,
   throttled progress, wake lock); needs a re-run and real Android 5.x hardware to confirm.
 
+### Real-device results (Phase 1)
+
+| Device | Build | Scale | Result | Notes |
+|---|---|---|---|---|
+| Xiaomi 2312DRAABG, Android 15, 7.5 GB RAM, arm64 | 0.1.0-ci.5, test key | FULL (1,000,632 lines) | **PASS**, 19/19 plans | generation 100 s; scan 0.17 ms, worst search 15.3 ms, sale commit 5.3 ms (p95); month report 184 ms; **year report 2.38 s — closest to its 3 s budget** |
+| 2 GB tablet | — | — | pending (device not available yet) | expected to exceed the year-report budget → per-month product summary planned in Phase 5 |
+
 ### Needs real-hardware testing (Phase 1)
 
 1. Install `app-release.apk` on each test device (ideally the slowest one, plus one recent
@@ -158,6 +165,8 @@ Deliverables
 
 ## Phase 5 — reports, CSV import/export (planned)
 
+- [ ] Per-month product summary (`sum_month_product`) so year/multi-month reports stay well
+      under budget on low-end devices (year report measured at 2.38 s on a mid-range phone)
 - [ ] Daily/weekly/monthly sales; by product, category, cashier, payment method
 - [ ] Gross profit, top sellers, slow movers, stock value; export to CSV
 - [ ] Product CSV import (preview, validation, errors per row, bulk insert) and export
