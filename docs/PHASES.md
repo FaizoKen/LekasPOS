@@ -7,7 +7,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | Project skill, architecture, database schema, performance test harness | **in progress** — code done; cold start, release FULL run and API 36 pass pending |
+| 1 | Project skill, architecture, database schema, performance test harness | **done — waiting for real-device feedback** |
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | not started |
 | 3 | Inventory, suppliers, stock movements | not started |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
@@ -55,8 +55,9 @@ Deliverables
 - [x] Minimal launcher screen (placeholder for the selling screen), reports "fully drawn"
 - [x] API 21 (Android 5.0.2, 1 GB) verified locally: 43/43 instrumented tests, release-build
       FULL perf PASS, cold start median 557 ms
-- [ ] **Pending** — instrumented tests + perf on API 36: cannot run on the laptop (not enough
-      disk for the AVD); moves to GitHub Actions (`ci.yml`, `perf.yml`) once the repo is pushed
+- [x] Public repo https://github.com/FaizoKen/LekasPOS (GPL-3.0) with GitHub Actions:
+      CI green — build + 92 JVM tests + lint + APK size, and **43/43 instrumented tests on
+      API 21 and on API 36**; FULL perf on API 36 PASS (CI run 36453791190)
 
 ### Results so far (2026-09-29)
 
@@ -91,8 +92,18 @@ Deliverables
 
   Emulator on a desktop CPU: expect real low-end phones to be several times slower — the
   in-app test on real devices is the verdict.
+- FULL scale on the API 36 emulator in CI (Android 16, SQLite 3.44.3), release build via the
+  in-app runner: **PASS**, 19/19 plans; generation 20 s; worst search p95 4.0 ms, sale commit
+  3.4 ms, monthly report 51 ms, yearly 669 ms; cold start median ~330 ms.
+- FULL scale on the API 21 emulator in CI (Android 5.0.2, 1 GB): instrumented suite (debug,
+  no UI) **PASS**; release build via the in-app runner with UI **PASS** (worst search p95
+  14.8 ms, sale commit 13.5 ms, monthly report 125 ms, yearly 1.6 s); cold start median
+  ~546 ms usable (CI Performance run 36462003804). Second consecutive clean UI run on 5.0.2
+  after the GC-crash mitigations.
+- Latest CI (commit 99c38c1): green on all jobs. Release APK built by CI: 131,550 bytes.
 - Found and fixed by the harness (see DECISIONS D-021): an O(n²) rebuild query on SQLite 3.8
-  (partial index ignored in a correlated subquery) and a dead partial index.
+  (partial index ignored in a correlated subquery) and a dead partial index. Found by the API 36
+  CI run: the plan checker missed aliased tables in modern `EXPLAIN QUERY PLAN` output (fixed).
 - Android 5.0.2 emulator: FULL generation *with the Diagnostics UI visible* crashed 3 of 4
   times inside ART's garbage collector (SIGSEGV in `GCDaemon`), debug and release alike; the
   UI-less FULL run passed. Mitigations added (no finalizable objects in the generator loop,
@@ -101,8 +112,10 @@ Deliverables
 ### Needs real-hardware testing (Phase 1)
 
 1. Install `app-release.apk` on each test device (ideally the slowest one, plus one recent
-   phone/tablet). Launch: the home screen should say "Ready · device XX · products: 0 …"
-   within ~2 s of tapping the icon.
+   phone/tablet). Get it from the latest green CI run on GitHub (Actions → CI → run → artifact
+   **apks**; needs a GitHub login) or from `app\build\outputs\apk\release\`. It is signed with a
+   debug key — for testing only. Launch: the home screen should say
+   "Ready · device XX · products: 0 …" within ~2 s of tapping the icon.
 2. Home → Diagnostics & performance test → **Quick test** → note PASS/FAIL → Share report.
 3. Same → **Full test** (needs ~400 MB free, 5–20 min, keep charging, screen stays on) →
    Share report. Especially valuable on any Android 5.x/6.x device.
