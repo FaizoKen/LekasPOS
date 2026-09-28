@@ -8,7 +8,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | # | Phase | Status |
 |---|---|---|
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
-| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **in progress** (on stated assumptions, D-024) |
+| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **built and verified in CI** — waiting for real-device feedback (tester build `v0.2.0-phase2`) |
 | 3 | Inventory, suppliers, stock movements | not started |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
 | 5 | Reports and CSV import/export | not started |
@@ -132,11 +132,22 @@ Deliverables
 
 ---
 
-## Phase 2 — selling, products, cash, printing, drawer, scanner (in progress)
+## Phase 2 — selling, products, cash, printing, drawer, scanner (waiting for feedback)
 
 Built on the assumptions in D-024 (Malaysian tax/receipt defaults, generic ESC/POS hardware).
-Implementation complete; CI verification on API 21/36, the release APK and the tester
-pre-release follow.
+
+### Results (2026-09-29)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **568 KB** (581,917 bytes; Phase 1: 132 KB; budget 8 MB), version `0.2.0-ci.<run>` |
+| JVM tests | `:core` 129, `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **63/63 on API 21** (Android 5.0, SQLite 3.8.6) and **63/63 on API 36**: cart session incl. restore after restart, hold/resume, checkout (sale + drawer/receipt jobs + bill deleted in one transaction), audited discounts/overrides/cancel, refunds and voids, LWW edits + outbox, print queue, receipts, ZXing decode/encode, every screen opened, keyboard-wedge scan |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 25/25 query plans indexed; scan_to_cart p95 0.8 ms, sale_commit 9.7 ms, receipt_text 4.3 ms, receipt_image 10 ms, report_month 109 ms, report_year 1.1 s |
+| Perf FULL, API 36 emulator | **PASS**, 25/25 plans; receipt_text 0.5 ms, receipt_image 4.2 ms |
+| Cold start to usable selling screen | API 21: 566–677 ms (median ≈ 615 ms); API 36: 594–731 ms — budget 2 s |
+| Schema | unchanged (v1, D-032) |
 
 - [x] Selling screen: one pane on phones in portrait (bill ⇄ catalogue), two panes in landscape
       and on tablets; cart list, totals, category tabs + product tiles, search with debounce,
