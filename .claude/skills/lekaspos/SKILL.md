@@ -28,6 +28,9 @@ When a decision changes: update the reference file here **and** add an entry to
 - Heavy verification runs in GitHub Actions (`ci.yml`: tests on API 21 + API 36 emulators on
   every push; `perf.yml`: QUICK/FULL perf + cold start on demand). The local machine is weak:
   JVM tests and single builds locally, emulators only when unavoidable, never two at once.
+- Tester builds = CI release APKs signed with the shared **test** key (GitHub secrets), version
+  `0.1.0-ci.<run>`; publish them as GitHub pre-releases when the user wants a download link.
+  Never hand testers debug-signed builds; the Play **upload** key is separate (docs/BUILD.md).
 - Work autonomously inside a phase. Ask the user only for decisions that are genuinely
   theirs (business rules, legal/tax facts, accounts, money).
 - Schema changes after Phase 1 shipped to the tester are real migrations (bump DB version),

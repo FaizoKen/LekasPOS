@@ -31,11 +31,34 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      # Shared test key (repository secrets), so every test build installs over the previous one
+      # on testers' phones. Not available to pull requests from forks: those stay debug-signed.
+      - name: Test signing key
+        env:
+          TEST_KEYSTORE_BASE64: ${{ secrets.TEST_KEYSTORE_BASE64 }}
+          TEST_KEYSTORE_PASSWORD: ${{ secrets.TEST_KEYSTORE_PASSWORD }}
+          TEST_KEY_ALIAS: ${{ secrets.TEST_KEY_ALIAS }}
+        run: |
+          if [ -n "$TEST_KEYSTORE_BASE64" ]; then
+            echo "$TEST_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/lekaspos-test.jks"
+            {
+              echo "storeFile=$RUNNER_TEMP/lekaspos-test.jks"
+              echo "storePassword=$TEST_KEYSTORE_PASSWORD"
+              echo "keyAlias=$TEST_KEY_ALIAS"
+              echo "keyPassword=$TEST_KEYSTORE_PASSWORD"
+              echo "keyKind=test"
+            } > keystore.properties
+            echo "Release APK signed with the shared test key" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No test key available: release APK is debug-signed (not for testers' phones)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Build, test, lint
         run: |
           chmod +x gradlew
           ./gradlew :core:test :app:testDebugUnitTest :app:lintRelease \
-            :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+            :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest \
+            -Plekas.ciRun=${{ github.run_number }} --stacktrace
 
       - name: Release APK size (budget 8 MB)
         run: |

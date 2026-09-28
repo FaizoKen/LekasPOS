@@ -302,7 +302,8 @@ class PerfSuite(
                 lowRamDevice = am.isLowRamDevice,
                 memoryClassMb = am.memoryClass,
                 sqliteVersion = sqliteVersion,
-                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) schema v${Schema.VERSION}",
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) schema v${Schema.VERSION}, " +
+                    "${BuildConfig.SIGNING_KEY} key",
                 abi = abi,
             )
         }

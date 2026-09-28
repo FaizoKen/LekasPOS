@@ -6,13 +6,19 @@ plugins {
 }
 
 // Release signing: keystore.properties (git-ignored) at the repo root, see docs/BUILD.md.
-// Without it, release builds are signed with the debug key so they can be installed for
-// testing — never upload such a build to Google Play.
+// keyKind = "test" (shared test key: CI + testers' devices) or "upload" (Google Play upload
+// key). Without the file, release builds are signed with the per-machine debug key — fine
+// on an emulator, never for testers' phones or Google Play.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
 val hasReleaseKey = keystoreProps.getProperty("storeFile") != null
+val signingKind = if (hasReleaseKey) keystoreProps.getProperty("keyKind", "upload") else "debug"
+
+// CI passes its run number so every test build has a higher versionCode (installs as an
+// update) and a name testers can quote in bug reports, e.g. "0.1.0-ci.42".
+val ciRun: String? = providers.gradleProperty("lekas.ciRun").orNull
 
 android {
     namespace = "com.lekaspos"
@@ -22,10 +28,9 @@ android {
         applicationId = "com.lekaspos.app"
         minSdk = 21
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ciRun?.toInt() ?: 1
+        versionName = "0.1.0" + (ciRun?.let { "-ci.$it" } ?: "")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("boolean", "SIGNED_WITH_RELEASE_KEY", hasReleaseKey.toString())
     }
 
     androidResources {
@@ -48,12 +53,14 @@ android {
         getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            buildConfigField("String", "SIGNING_KEY", "\"debug\"")
         }
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
+            buildConfigField("String", "SIGNING_KEY", "\"$signingKind\"")
         }
     }
 

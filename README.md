@@ -46,8 +46,9 @@ docs/     phases, build/release, decisions
 
 ## Signing
 
-See [`docs/BUILD.md#signing`](docs/BUILD.md#signing). Release builds use `keystore.properties`
-(git-ignored); without it they are signed with the debug key for testing only.
+See [`docs/BUILD.md#signing`](docs/BUILD.md#signing). Test builds (CI artifacts and GitHub
+pre-releases) are signed with a shared test key, so each new build installs as an update.
+The Google Play upload key is separate and stays with the app owner.
 
 ## Google Cloud / OAuth setup (needed from Phase 6 — Google Drive sync)
 

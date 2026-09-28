@@ -111,6 +111,12 @@ moved to GitHub-hosted Linux runners (KVM, free for public repositories): `ci.ym
 `perf.yml` on demand. Local emulator images were deleted; `scripts/setup-toolchain.ps1
 -WithEmulator` + `scripts/create-avds.ps1` recreate them if ever needed.
 
+### D-023 — Shared test signing key for CI builds (2026-09-29)
+User request. Tester builds are signed with one dedicated test key (RSA 3072, stored as GitHub
+secrets and on the maintainer's laptop) and carry CI-run-based versionCodes, so each new build
+installs as an update and keeps the testers' data. Kept separate from the future Play upload
+key, which only the app owner holds. Fork PRs get no secrets and stay debug-signed.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

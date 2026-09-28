@@ -85,26 +85,47 @@ app: home screen → Diagnostics & performance test.
 
 ## Signing
 
-Release builds are signed with the key described in `keystore.properties` at the repo root
-(git-ignored):
+Three keys, never mixed up (`BuildConfig.SIGNING_KEY` says which one signed a build; the
+Diagnostics screen shows it):
+
+| Key | Signs | Where it lives |
+|---|---|---|
+| **debug** | debug builds; release builds when no key is configured | per machine (`~/.android/debug.keystore`, created by the build) — differs on every CI runner |
+| **test** | release APKs for testers (CI "apks" artifact, GitHub pre-releases) | GitHub secrets `TEST_KEYSTORE_BASE64`, `TEST_KEYSTORE_PASSWORD`, `TEST_KEY_ALIAS`; on the maintainer's laptop `%USERPROFILE%\.lekaspos\lekaspos-test.jks` |
+| **upload** | Google Play uploads (Phase 7) | only with the app owner; never in CI secrets of a public repo without a protected environment |
+
+Release builds read `keystore.properties` at the repo root (git-ignored):
 
 ```properties
-storeFile=keystore/lekaspos-upload.jks
+storeFile=C:/Users/<you>/.lekaspos/lekaspos-test.jks
 storePassword=...
-keyAlias=upload
+keyAlias=lekaspos-test
 keyPassword=...
+keyKind=test          # or "upload" for the Play upload key
 ```
 
-Create an upload key once (keep it and its passwords safe, outside the repo if possible):
+Because every test build is signed with the same test key and CI stamps an increasing
+`versionCode` (`-Plekas.ciRun=<run number>`, version name `0.1.0-ci.<run>`), testers can install
+each new build over the previous one and keep their data. Pull requests from forks don't get the
+secrets and fall back to debug signing.
+
+Test key certificate: `CN=LekasPOS Test Builds, O=LekasPOS, C=MY`, SHA-256
+`0a67abecd6cb31634eaca5edab9737be7f940ce9a86919b8f47e1ad99ab7d4b9`, valid until 2054.
+Check any APK with `apksigner verify --print-certs <apk>`.
+
+Rotating the test key (only if it leaks): generate a new one, update the three secrets and the
+local copy — testers must then uninstall once.
+
+Create the Play **upload** key once, when publishing (keep it and its passwords safe, outside
+the repo):
 
 ```powershell
-& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore keystore\lekaspos-upload.jks `
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore $env:USERPROFILE\.lekaspos\lekaspos-upload.jks `
   -alias upload -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Without `keystore.properties` the release APK is signed with the debug key so it can be
-installed for testing (`BuildConfig.SIGNED_WITH_RELEASE_KEY = false`). Never upload such a build.
-Google Play uses Play App Signing: you upload with the upload key, Google signs for devices.
+Google Play uses Play App Signing: you upload with the upload key, Google re-signs for devices —
+so the Play version never updates over a test build (uninstall the test build first).
 
 ## Release checklist (details grow with each phase)
 
