@@ -1,0 +1,84 @@
+package com.lekaspos.ui.common
+
+import android.app.AlertDialog
+import android.content.Context
+import android.text.InputType
+import android.view.View
+import android.view.WindowManager
+import android.widget.EditText
+import android.widget.FrameLayout
+import com.lekaspos.R
+
+/** Small platform AlertDialog helpers (no AppCompat, D-002). */
+object Dialogs {
+
+    fun message(ctx: Context, title: CharSequence?, message: CharSequence): AlertDialog =
+        AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).show()
+
+    fun confirm(ctx: Context, title: CharSequence, message: CharSequence?, yes: CharSequence, onYes: () -> Unit): AlertDialog =
+        AlertDialog.Builder(ctx)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(yes) { _, _ -> onYes() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+
+    /** A text prompt. [onOk] gets the trimmed text; returning false keeps the dialog open. */
+    fun input(
+        ctx: Context,
+        title: CharSequence,
+        hint: CharSequence?,
+        initial: String = "",
+        inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+        message: CharSequence? = null,
+        neutral: Pair<CharSequence, () -> Unit>? = null,
+        onOk: (String) -> Boolean,
+    ): AlertDialog {
+        val field = EditText(ctx).apply {
+            this.hint = hint
+            setText(initial)
+            setSelection(initial.length)
+            this.inputType = inputType
+            setSingleLine(inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE == 0)
+        }
+        val d = AlertDialog.Builder(ctx)
+            .setTitle(title)
+            .setMessage(message)
+            .setView(padded(ctx, field))
+            .setPositiveButton(R.string.ok, null)
+            .setNegativeButton(R.string.cancel, null)
+            .apply { if (neutral != null) setNeutralButton(neutral.first) { _, _ -> neutral.second() } }
+            .create()
+        d.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        d.setOnShowListener {
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (onOk(field.text.toString().trim())) d.dismiss()
+            }
+        }
+        d.show()
+        field.requestFocus()
+        return d
+    }
+
+    fun choose(ctx: Context, title: CharSequence, items: List<CharSequence>, checked: Int = -1, onPick: (Int) -> Unit): AlertDialog {
+        val b = AlertDialog.Builder(ctx).setTitle(title)
+        if (checked >= 0) {
+            b.setSingleChoiceItems(items.toTypedArray(), checked) { d, which ->
+                d.dismiss()
+                onPick(which)
+            }
+        } else {
+            b.setItems(items.toTypedArray()) { _, which -> onPick(which) }
+        }
+        return b.setNegativeButton(R.string.cancel, null).show()
+    }
+
+    /** Wraps [v] with the standard dialog content padding. */
+    fun padded(ctx: Context, v: View): View {
+        val pad = (20 * ctx.resources.displayMetrics.density).toInt()
+        return FrameLayout(ctx).apply {
+            setPadding(pad, pad / 2, pad, 0)
+            addView(v)
+        }
+    }
+}

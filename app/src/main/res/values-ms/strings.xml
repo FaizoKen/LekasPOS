@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Umum -->
+    <string name="ok">OK</string>
     <string name="cancel">Batal</string>
+    <string name="save">Simpan</string>
+    <string name="delete">Padam</string>
+    <string name="remove">Buang</string>
+    <string name="close">Tutup</string>
+    <string name="clear">Kosongkan</string>
+    <string name="back">Kembali</string>
+    <string name="saved">Disimpan</string>
+    <string name="error_title">Ada masalah</string>
+    <string name="error_generic">Ada masalah: %1$s</string>
+    <string name="error_not_found">Ia sudah tiada.</string>
+    <string name="not_allowed">Anda tidak dibenarkan berbuat demikian.</string>
+    <string name="reason_hint">Sebab</string>
+    <string name="reason_required">Sila masukkan sebab.</string>
+    <string name="key_delete">Padam digit</string>
 
+    <!-- Nama data asas -->
     <string name="seed_role_owner">Pemilik</string>
     <string name="seed_role_manager">Pengurus</string>
     <string name="seed_role_cashier">Juruwang</string>
@@ -10,12 +27,353 @@
     <string name="seed_pm_ewallet">E-dompet / QR</string>
     <string name="seed_pm_credit">Kredit pelanggan</string>
 
-    <string name="sell_status_opening">Membuka pangkalan data…</string>
-    <string name="sell_status_ready">Sedia · peranti %1$s · produk: %2$d · jualan: %3$d · skema v%4$d</string>
-    <string name="sell_status_error">Pangkalan data tidak dapat dibuka: %1$s</string>
-    <string name="sell_phase_note">Ini binaan Fasa 1. Skrin jualan akan tiba dalam Fasa 2. Gunakan Diagnostik untuk mengukur kelajuan peranti ini.</string>
-    <string name="sell_open_diagnostics">Diagnostik &amp; ujian prestasi</string>
+    <!-- Skrin jualan -->
+    <string name="sell_search_hint">Cari atau imbas</string>
+    <string name="sell_cart_empty">Imbas kod bar, cari, atau pilih dari katalog untuk mula bil.</string>
+    <string name="sell_browse">Katalog</string>
+    <string name="sell_camera">Imbas dengan kamera</string>
+    <string name="sell_menu">Menu</string>
+    <string name="sell_hold">Simpan</string>
+    <string name="sell_discount">Diskaun</string>
+    <string name="sell_pay">Bayar %1$s</string>
+    <string name="sell_pay_empty">Bayar</string>
+    <plurals name="sell_items">
+        <item quantity="other">%d item</item>
+    </plurals>
+    <string name="sell_summary_discount">diskaun %1$s</string>
+    <string name="sell_summary_tax_incl">termasuk cukai %1$s</string>
+    <string name="sell_summary_tax">cukai %1$s</string>
+    <string name="sell_all">Semua</string>
+    <string name="sell_no_products">Belum ada produk di sini. Tambah di Menu → Produk.</string>
+    <string name="sell_no_results">Tiada hasil untuk “%1$s”.</string>
+    <string name="sell_busy">Sila tunggu…</string>
+    <string name="sell_not_found_title">Kod bar tidak dijumpai</string>
+    <string name="sell_not_found_message">Tiada produk dengan kod bar %1$s.</string>
+    <string name="sell_add_product">Tambah produk</string>
+    <string name="sell_sell_other">Jual sebagai item lain</string>
+    <string name="tile_open_price">Masukkan harga</string>
+    <string name="cart_label_price">harga label</string>
+    <string name="cart_price_changed">harga diubah</string>
+    <string name="weigh_title">Berat %1$s</string>
+    <string name="price_for_title">Harga %1$s</string>
+    <string name="other_item_title">Item lain</string>
+    <string name="other_item_name">Nama (pilihan)</string>
+    <string name="other_item_default">Item lain</string>
 
+    <!-- Menu -->
+    <string name="menu_products">Produk</string>
+    <string name="menu_categories">Kategori</string>
+    <string name="menu_tax_rates">Kadar cukai</string>
+    <string name="menu_sales">Jualan &amp; bayaran balik</string>
+    <string name="menu_open_drawer">Buka laci wang</string>
+    <string name="menu_cancel_bill">Batal bil</string>
+    <string name="menu_settings">Tetapan</string>
+    <string name="menu_diagnostics">Diagnostik</string>
+
+    <!-- Baris bil -->
+    <string name="line_each">%1$s seunit</string>
+    <string name="line_minus">−1</string>
+    <string name="line_plus">+1</string>
+    <string name="line_qty">Kuantiti</string>
+    <string name="line_weight">Berat</string>
+    <string name="line_discount">Diskaun</string>
+    <string name="line_price">Tukar harga</string>
+    <string name="line_remove">Buang dari bil</string>
+    <string name="price_title">Harga</string>
+    <string name="discount_title">Diskaun item</string>
+    <string name="bill_discount_title">Diskaun bil</string>
+    <string name="discount_amount">Amaun</string>
+    <string name="discount_percent">Peratus</string>
+    <string name="discount_none">Tiada diskaun</string>
+
+    <!-- Bil disimpan -->
+    <string name="held_title">Bil disimpan</string>
+    <string name="held_empty">Tiada bil disimpan.</string>
+    <string name="held_hold_title">Simpan bil ini</string>
+    <string name="held_label_hint">Nama (pilihan), cth. pelanggan</string>
+    <string name="held_row">%1$s · %3$s · baris: %2$d</string>
+    <string name="held_delete_confirm">Padam bil yang disimpan ini?</string>
+
+    <!-- Batal bil -->
+    <string name="clear_confirm_title">Batalkan bil ini?</string>
+    <plurals name="clear_confirm_message">
+        <item quantity="other">Semua %d baris akan dibuang.</item>
+    </plurals>
+    <string name="clear_yes">Batal bil</string>
+
+    <!-- Laci wang -->
+    <string name="drawer_opened">Membuka laci wang…</string>
+    <string name="drawer_no_printer">Laci wang disambung ke pencetak resit. Tetapkan pencetak dahulu.</string>
+
+    <!-- Pembayaran -->
+    <string name="pay_title">Bayaran</string>
+    <string name="pay_total">Jumlah</string>
+    <string name="pay_remaining">Baki perlu dibayar</string>
+    <string name="pay_cash_due">Tunai (dibundarkan): %1$s</string>
+    <string name="pay_amount_hint">Amaun (asal %1$s)</string>
+    <string name="pay_exact">Tepat</string>
+    <string name="pay_complete">Selesai jualan</string>
+    <string name="pay_tender_row">%1$s: %2$s</string>
+    <string name="pay_error_cash">Tunai mesti sekurang-kurangnya %1$s (dibundarkan), atau kurang daripada amaun perlu dibayar untuk sebahagian bil.</string>
+    <string name="pay_error_exceeds">%1$s boleh membayar paling banyak %2$s.</string>
+    <string name="pay_failed_title">Jualan tidak disimpan</string>
+    <string name="pay_failed">Jualan TIDAK disimpan dan tiada apa-apa dicaj: %1$s</string>
+    <string name="result_change">Baki</string>
+    <string name="result_paid">Dibayar</string>
+    <string name="result_receipt">Resit %1$s</string>
+    <string name="result_printing">Mencetak resit…</string>
+    <string name="result_no_printer">Tiada pencetak (Tetapan → Pencetak).</string>
+    <string name="result_print">Cetak resit</string>
+    <string name="result_print_again">Cetak salinan</string>
+    <string name="result_share">Kongsi</string>
+    <string name="result_new">Jualan baru</string>
+
+    <!-- Status pencetak -->
+    <string name="printer_pill_waiting">%1$d untuk dicetak</string>
+    <string name="printer_pill_printing">Mencetak…</string>
+    <string name="printer_pill_offline">Pencetak luar talian</string>
+    <string name="printer_pill_offline_waiting">Pencetak luar talian (%1$d)</string>
+
+    <!-- Produk -->
+    <string name="products_title">Produk</string>
+    <string name="products_add">Tambah produk</string>
+    <string name="products_search_hint">Cari nama, SKU atau kod bar</string>
+    <string name="products_empty">Belum ada produk. Tekan + untuk menambah, atau imbas kod bar yang tidak dikenali di skrin jualan.</string>
+    <string name="products_none_found">Tiada produk yang sepadan.</string>
+    <string name="product_row_stock">Stok: %1$s</string>
+    <string name="product_hidden">TERSEMBUNYI</string>
+    <string name="product_new">Produk baru</string>
+    <string name="product_edit">Ubah produk</string>
+    <string name="product_name">Nama</string>
+    <string name="product_price">Harga jualan</string>
+    <string name="product_sell_mode">Dijual mengikut</string>
+    <string name="sell_mode_unit">Unit / pek</string>
+    <string name="sell_mode_weight">Berat</string>
+    <string name="sell_mode_open">Harga dimasukkan di kaunter</string>
+    <string name="product_unit">Unit (pcs, kg, pek…)</string>
+    <string name="product_barcodes">Kod bar</string>
+    <string name="product_no_barcodes">Belum ada kod bar.</string>
+    <string name="product_barcode_add">Tambah kod bar</string>
+    <string name="product_barcode_hint">Kod bar</string>
+    <string name="product_scan">Imbas</string>
+    <string name="product_pack_add">Tambah kod bar pek</string>
+    <string name="product_pack_qty">Bilangan unit dalam pek</string>
+    <string name="product_pack_price">Harga pek (kosong = unit × harga)</string>
+    <string name="product_pack_row">%1$s — pek %2$s unit, %3$s</string>
+    <string name="product_pack_auto_price">unit × harga</string>
+    <string name="product_plu">PLU timbangan (kod item pada label penimbang)</string>
+    <string name="product_more">Maklumat lanjut</string>
+    <string name="product_category">Kategori</string>
+    <string name="product_no_category">Tiada kategori</string>
+    <string name="product_tax">Cukai</string>
+    <string name="product_no_tax">Tiada cukai</string>
+    <string name="product_cost">Harga kos</string>
+    <string name="product_sku">SKU / kod item</string>
+    <string name="product_track_stock">Jejak stok</string>
+    <string name="product_low_stock">Amaran stok rendah pada</string>
+    <string name="product_stock_now">Stok sekarang: %1$s</string>
+    <string name="product_active">Papar dalam carian dan katalog</string>
+    <string name="product_saved">Produk disimpan</string>
+    <string name="product_deleted">Produk dipadam</string>
+    <string name="product_delete_confirm">Padam %1$s? Jualan lalu kekal dengan barisnya.</string>
+    <string name="product_duplicate_title">Kod bar sudah digunakan</string>
+    <string name="product_error_barcode_dup">Kod bar %1$s sudah digunakan oleh %2$s. Simpan juga? Imbasan akan memilih produk yang terakhir diubah.</string>
+    <string name="product_error_name">Masukkan nama.</string>
+    <string name="product_error_price">Masukkan amaun yang sah.</string>
+    <string name="product_error_qty">Masukkan kuantiti yang sah.</string>
+    <string name="product_error_barcode">Masukkan kod bar.</string>
+    <string name="product_error_pack_qty">Masukkan 2 unit atau lebih.</string>
+    <string name="product_error_plu">Masukkan digit PLU.</string>
+
+    <!-- Kategori -->
+    <string name="categories_title">Kategori</string>
+    <string name="categories_empty">Belum ada kategori. Kategori menjadi tab dalam katalog skrin jualan.</string>
+    <string name="category_add">Tambah kategori</string>
+    <string name="category_edit">Tukar nama kategori</string>
+    <string name="category_name">Nama</string>
+    <string name="category_delete_confirm">Padam kategori %1$s? Produknya kekal, tanpa kategori.</string>
+
+    <!-- Kadar cukai -->
+    <string name="tax_title">Kadar cukai</string>
+    <string name="tax_empty">Tiada kadar cukai. Biarkan kosong jika anda tidak mengenakan cukai di kaunter.</string>
+    <string name="tax_add">Tambah kadar cukai</string>
+    <string name="tax_edit">Ubah kadar cukai</string>
+    <string name="tax_name">Nama, cth. SST</string>
+    <string name="tax_code">Kod pada resit (pilihan)</string>
+    <string name="tax_rate">Kadar dalam %</string>
+    <string name="tax_error_name">Masukkan nama.</string>
+    <string name="tax_error_rate">Masukkan kadar antara 0 dan 100.</string>
+    <string name="tax_delete_confirm">Padam kadar cukai %1$s? Produk yang menggunakannya tidak lagi dikenakan cukai.</string>
+
+    <!-- Jualan dan bayaran balik -->
+    <string name="sales_title">Jualan &amp; bayaran balik</string>
+    <string name="sales_search_hint">Nombor resit</string>
+    <string name="sales_empty">Belum ada jualan.</string>
+    <string name="sales_none_found">Tiada resit dengan nombor ini.</string>
+    <string name="sale_voided">DIBATALKAN</string>
+    <string name="sale_refund">BAYARAN BALIK</string>
+    <string name="sale_detail_title">Resit</string>
+    <string name="sale_detail_title_no">Resit %1$s</string>
+    <string name="sale_reprint">Cetak salinan</string>
+    <string name="sale_print_queued">Dihantar ke pencetak</string>
+    <string name="sale_refund_action">Bayaran balik / pulangan</string>
+    <string name="sale_void_action">Batalkan</string>
+    <string name="sale_void_title">Batalkan jualan ini?</string>
+    <string name="sale_void_message">Pembatalan mengeluarkan jualan daripada laporan dan mengembalikan item ke stok. Mengapa ia dibatalkan?</string>
+    <string name="sale_voided_done">Jualan dibatalkan</string>
+    <string name="sale_refunds">Bayaran balik untuk jualan ini:</string>
+    <string name="share_title">Kongsi resit</string>
+    <string name="share_image">Sebagai gambar</string>
+    <string name="share_pdf">Sebagai PDF</string>
+    <string name="refund_title">Bayaran balik / pulangan</string>
+    <string name="refund_of">Item daripada resit %1$s</string>
+    <string name="refund_line">%1$s\n%2$s daripada %3$s boleh dipulangkan</string>
+    <string name="refund_all">Semua</string>
+    <string name="refund_qty_title">Kuantiti dipulangkan</string>
+    <string name="refund_nothing_left">Semua item dalam resit ini sudah dibayar balik.</string>
+    <string name="refund_restock">Kembalikan item yang dipulangkan ke stok</string>
+    <string name="refund_reason">Sebab (wajib)</string>
+    <string name="refund_method">Bayar balik dengan</string>
+    <string name="refund_total">Perlu dibayar balik: %1$s</string>
+    <string name="refund_do">Bayar balik</string>
+    <string name="refund_confirm">Bayar balik %1$s melalui %2$s?</string>
+    <string name="refund_done">Bayaran balik %1$s disimpan</string>
+    <string name="refund_has_refunds">Jualan ini ada bayaran balik. Batalkan bayaran balik itu dahulu.</string>
+    <string name="refund_voided">Jualan ini telah dibatalkan.</string>
+    <string name="refund_not_sale">Bayaran balik tidak boleh dibayar balik lagi.</string>
+    <string name="refund_nothing">Pilih item yang dipulangkan dahulu.</string>
+
+    <!-- Tetapan -->
+    <string name="settings_title">Tetapan</string>
+    <string name="settings_store">Kedai &amp; resit</string>
+    <string name="settings_store_sub">Nama, alamat, nombor pendaftaran, teks resit, cukai</string>
+    <string name="settings_printer">Pencetak &amp; laci wang</string>
+    <string name="settings_printer_sub">Pencetak resit Bluetooth pada peranti ini</string>
+    <string name="settings_scanner">Pengimbas kod bar &amp; kamera</string>
+    <string name="settings_scanner_sub">Pengimbas papan kekunci dan bersiri, imbasan kamera</string>
+    <string name="settings_audit">Log aktiviti</string>
+    <string name="settings_audit_sub">Pembatalan, bayaran balik, perubahan harga, diskaun, buka laci</string>
+    <string name="settings_about">Perihal</string>
+    <string name="settings_about_sub">LekasPOS %1$s (binaan %2$s) · GPL-3.0</string>
+    <string name="section_store">Kedai</string>
+    <string name="section_receipt">Resit</string>
+    <string name="section_tax">Cukai dan pembundaran</string>
+    <string name="section_scale">Label penimbang</string>
+    <string name="store_name">Nama kedai</string>
+    <string name="store_address">Alamat</string>
+    <string name="store_phone">Telefon</string>
+    <string name="store_email">E-mel</string>
+    <string name="store_brn">No. pendaftaran perniagaan (SSM)</string>
+    <string name="store_sst">No. pendaftaran SST</string>
+    <string name="store_tin">No. pengenalan cukai (TIN)</string>
+    <string name="receipt_header">Teks kepala resit</string>
+    <string name="receipt_footer">Teks kaki resit</string>
+    <string name="receipt_language">Bahasa resit</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ms">Bahasa Melayu</string>
+    <string name="receipt_copies">Salinan resit</string>
+    <string name="receipt_logo">Cetak logo</string>
+    <string name="receipt_logo_pick">Pilih gambar logo</string>
+    <string name="receipt_logo_remove">Buang logo</string>
+    <string name="receipt_logo_saved">Logo disimpan</string>
+    <string name="einvoice_qr">Cetak kod QR permintaan e-invois</string>
+    <string name="einvoice_url">Pautan QR</string>
+    <string name="einvoice_help">Pelanggan yang memerlukan e-invois mengimbas kod ini. {receipt}, {total} dan {date} dalam pautan diisi untuk setiap jualan.</string>
+    <string name="prices_incl_tax">Harga termasuk cukai</string>
+    <string name="cash_rounding">Bundarkan bayaran tunai kepada 5 sen</string>
+    <string name="scale_templates">Format label</string>
+    <string name="scale_templates_help">Digit = awalan tetap, I = kod item (PLU), W = berat dalam gram, P = harga dalam sen, C = digit semak. Contoh: 20IIIIIWWWWWC, 21IIIIIPPPPPC.</string>
+    <string name="scale_invalid">Format tidak sah: %1$s</string>
+
+    <!-- Tetapan pencetak -->
+    <string name="printer_status">Status: %1$s</string>
+    <string name="status_not_configured">tiada pencetak dipilih</string>
+    <string name="status_no_bt">peranti ini tiada Bluetooth</string>
+    <string name="status_no_permission">kebenaran Bluetooth diperlukan</string>
+    <string name="status_bt_off">Bluetooth dimatikan</string>
+    <string name="status_idle">sedia</string>
+    <string name="status_connecting">menyambung…</string>
+    <string name="status_printing">mencetak…</string>
+    <string name="status_ready">disambung</string>
+    <string name="status_offline">luar talian (%1$s), mencuba semula</string>
+    <string name="status_offline_gave_up">luar talian, tekan Cuba semula</string>
+    <string name="printer_retry">Cuba semula</string>
+    <string name="printer_section_device">Pencetak</string>
+    <string name="printer_none">Tiada pencetak dipilih.</string>
+    <string name="printer_selected">%1$s (%2$s)</string>
+    <string name="printer_choose">Pilih pencetak yang telah dipasangkan</string>
+    <string name="printer_bt_settings">Pasangkan pencetak baru (tetapan Bluetooth)</string>
+    <string name="printer_no_paired">Tiada peranti dipasangkan. Pasangkan pencetak dalam tetapan Bluetooth Android dahulu (PIN biasanya 0000 atau 1234).</string>
+    <string name="printer_permission_needed">Benarkan “Peranti berdekatan” (Bluetooth) untuk menggunakan pencetak.</string>
+    <string name="printer_section_paper">Kertas dan cetakan</string>
+    <string name="printer_paper">Lebar kertas</string>
+    <string name="paper_58">58 mm (32 aksara)</string>
+    <string name="paper_80">80 mm (48 aksara)</string>
+    <string name="paper_80_42">80 mm (42 aksara)</string>
+    <string name="printer_mode">Cetak sebagai</string>
+    <string name="mode_auto">Automatik (teks; gambar jika perlu)</string>
+    <string name="mode_text">Teks (paling pantas)</string>
+    <string name="mode_image">Gambar (sebarang bahasa)</string>
+    <string name="printer_chinese">Pencetak ada aksara Cina (GB18030)</string>
+    <string name="printer_codepage">Nombor halaman kod (ESC t, biasanya 0)</string>
+    <string name="printer_cut">Potong kertas</string>
+    <string name="printer_feed">Baris kosong selepas resit</string>
+    <string name="printer_auto">Cetak resit selepas setiap jualan</string>
+    <string name="printer_native_qr">Pencetak melukis kod QR sendiri</string>
+    <string name="printer_section_drawer">Laci wang</string>
+    <string name="drawer_enabled">Laci wang disambung ke pencetak</string>
+    <string name="drawer_pin">Pin laci</string>
+    <string name="drawer_pin2">Pin 2 (kebanyakan laci)</string>
+    <string name="drawer_pin5">Pin 5</string>
+    <string name="printer_test">Cetak halaman ujian</string>
+    <string name="printer_test_queued">Halaman ujian dihantar</string>
+    <string name="printer_open_drawer">Buka laci</string>
+    <string name="printer_clear_queue">Kosongkan baris gilir cetakan (menunggu: %1$d)</string>
+    <string name="printer_clear_title">Kosongkan baris gilir cetakan?</string>
+    <string name="printer_clear_message">Resit yang belum dicetak tidak akan dicetak. Jualan tetap disimpan; anda boleh cetak salinan dari Jualan.</string>
+    <string name="printer_clear_yes">Kosongkan</string>
+    <string name="printer_queue_cleared">Baris gilir cetakan dikosongkan</string>
+
+    <!-- Tetapan pengimbas -->
+    <string name="scanner_hid_info">Pengimbas mod papan kekunci (USB, atau Bluetooth HID) tidak perlu ditetapkan: pasangkan atau sambungkannya dan imbas di skrin jualan. Tiada apa-apa perlu dipilih dahulu.</string>
+    <string name="scanner_test">Uji pengimbas</string>
+    <string name="scanner_test_hint">Tekan di sini dan imbas</string>
+    <string name="scanner_test_result">Diterima “%1$s” (panjang: %2$d)</string>
+    <string name="scanner_spp">Pengimbas Bluetooth bersiri (SPP)</string>
+    <string name="scanner_spp_none">Tiada</string>
+    <string name="scanner_spp_choose">Pilih pengimbas yang telah dipasangkan</string>
+    <string name="scanner_spp_forget">Berhenti guna pengimbas bersiri</string>
+    <string name="scanner_state">Pengimbas bersiri: %1$s</string>
+    <string name="scanner_status_off">mati</string>
+    <string name="scanner_status_error">tidak disambung, mencuba semula</string>
+    <string name="scanner_camera_section">Kamera</string>
+    <string name="scanner_camera">Imbas kod bar dengan kamera</string>
+
+    <!-- Kamera -->
+    <string name="camera_title">Imbas kod bar</string>
+    <string name="camera_hint">Letakkan kod bar di dalam bingkai</string>
+    <string name="camera_torch">Lampu suluh</string>
+    <string name="camera_permission">Kebenaran kamera diperlukan untuk mengimbas.</string>
+    <string name="camera_unavailable">Kamera tidak dapat dibuka.</string>
+    <string name="camera_added">Ditambah: %1$s</string>
+    <string name="camera_not_found">Bukan produk yang dikenali: %1$s</string>
+    <string name="camera_needs_input">%1$s perlukan berat atau harga: tambah di bil.</string>
+
+    <!-- Log aktiviti -->
+    <string name="audit_empty">Belum ada rekod.</string>
+    <string name="audit_sale_void">Jualan dibatalkan</string>
+    <string name="audit_refund">Bayaran balik</string>
+    <string name="audit_price_override">Harga diubah di kaunter</string>
+    <string name="audit_line_discount">Diskaun item</string>
+    <string name="audit_bill_discount">Diskaun bil</string>
+    <string name="audit_drawer">Laci wang dibuka</string>
+    <string name="audit_reprint">Salinan resit dicetak</string>
+    <string name="audit_product_price">Harga produk diubah</string>
+    <string name="audit_product_delete">Produk dipadam</string>
+    <string name="audit_bill_cancel">Bil dibatalkan</string>
+    <string name="audit_other">Lain-lain</string>
+
+    <!-- Diagnostik -->
     <string name="diag_title">Diagnostik</string>
     <string name="diag_device_info">%1$s %2$s · Android %3$s (API %4$d)\nRAM %5$d MB · had memori aplikasi %6$d MB\nLekasPOS %7$s</string>
     <string name="diag_run_quick">Ujian pantas (5,000 produk)</string>

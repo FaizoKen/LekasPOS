@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The bill line changed last. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#221B7F5B">
+    <item>
+        <color android:color="@color/highlight" />
+    </item>
+</ripple>

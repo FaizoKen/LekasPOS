@@ -84,8 +84,10 @@ network on the main thread already throws on API 21+.
 
 - **Edge-to-edge is enforced** on Android 15+: every Activity applies system-bar and IME
   insets to its root (`View.setOnApplyWindowInsetsListener`) via `ui.Insets.apply(root)`.
-- **Predictive back**: use `OnBackInvokedDispatcher` on API 33+, `onBackPressed()` below,
-  through one helper (`ui.BackHandler`).
+- **Predictive back**: plain screens just finish (the system animates it). A screen that
+  intercepts back registers an `OnBackInvokedCallback` on API 33+ only while it needs it, and
+  handles `KEYCODE_BACK` in `dispatchKeyEvent` below 33 — never `onBackPressed()` (lint
+  `GestureBackNavigation`, not called for gestures).
 - **Large screens** (sw ≥ 600dp) ignore orientation locks on Android 16 — every screen must
   work in both orientations and when resized.
 - **Bluetooth permissions**: API 31+ `BLUETOOTH_CONNECT` (+ `BLUETOOTH_SCAN` with
@@ -107,16 +109,30 @@ network on the main thread already throws on API 21+.
 4. After the first frame + a few seconds: schedule sync/backup work, connect the printer.
 No network, Play Services or Bluetooth calls happen before the selling screen is usable.
 
-## 7. Hardware (details arrive in Phase 2)
+## 7. Hardware (Phase 2)
 
-- Printer: ESC/POS bytes are produced by `:core` (`escpos`), sent over Bluetooth Classic SPP
-  by `hw.printer`. A persistent `print_job` queue survives disconnects and restarts; the
-  printer thread reconnects with backoff. Printing always happens after the sale commit.
-- Cash drawer: ESC/POS pulse (`ESC p`) through the printer. Auto-open on cash payment; manual
-  open requires permission and writes an audit entry.
-- Scanner: HID (keyboard) scanners are read in `SellActivity.dispatchKeyEvent` with an
-  inter-key timing buffer, so no text field needs focus. SPP scanners are read by a
-  background socket reader. Both feed the same `BarcodeInput` pipeline.
+- Receipts: `ReceiptBuilder` builds a `ReceiptDoc` from the *stored* sale (reprints are
+  identical); `:core` `ReceiptLayout` lays it out on a 32/42/48-column grid (CJK = 2 columns);
+  the same lines feed the ESC/POS text encoder, the image renderer (`hw.printer.ReceiptRenderer`,
+  any script) and the share picture/PDF. Auto mode prints text unless a character cannot be
+  printed (e.g. Tamil, or Chinese on a Latin printer), then prints a picture.
+- Printer: `PrinterService` owns one thread, takes `print_job` rows in order, keeps an SPP
+  connection (`hw.bt.SppLink`: secure, then insecure RFCOMM), closes it after 45 s idle,
+  reconnects with backoff (2–60 s, stops after 10 failures until woken) and marks a job done
+  only after its bytes were written. Large (image) jobs are written in paced 1 KB chunks.
+  Printing always happens after the sale commit; the queue survives restarts.
+- Cash drawer: ESC/POS pulse (`ESC p`, pin 2 or 5) as its own DRAWER job, enqueued with cash
+  sales/refunds and by the audited manual "open drawer"; pulses older than 2 min are dropped (D-031).
+- Scanners: keyboard-wedge (HID) scanners are read in `SellActivity.dispatchKeyEvent` through
+  `:core` `ScanBuffer` (burst timing, Enter/Tab or idle), so no field needs focus; slow typing
+  goes to the search field. Dialogs without text fields forward keys to the same buffer. SPP
+  scanners (`hw.scanner.SppScanner`) run while the selling screen is visible. Camera scanning
+  (`ui.scan.CameraScanActivity`, Camera1 + ZXing 3.3.3) either adds every item to the bill or
+  returns one code. All paths end in `CartSession.scan`.
+- Bluetooth permissions: paired devices only (D-027); `BLUETOOTH_CONNECT` is requested when
+  choosing a device on Android 12+.
+- Back handling on the selling screen: `OnBackInvokedCallback` on API 33+ (registered only
+  while back should close the catalogue/search), `KEYCODE_BACK` in `dispatchKeyEvent` below.
 
 ## 8. Sync (details in `sync.md`)
 

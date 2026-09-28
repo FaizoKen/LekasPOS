@@ -157,6 +157,7 @@ class Db private constructor(
             val deviceNo = Meta.getLong(sqlite, Meta.DEVICE_NO)?.toInt()
                 ?: throw IllegalStateException("database has no device identity")
             val storeUuid = Meta.get(sqlite, Meta.STORE_UUID) ?: ""
+            Seed.ensureOwner(sqlite, seedNames, System.currentTimeMillis())
             val hlc = Hlc(System::currentTimeMillis, Meta.getLong(sqlite, Meta.HLC_LAST) ?: 0L)
             val ids = IdAllocator(deviceNo, MetaReservations(sqlite))
             return Db(sqlite, helper, name, deviceNo, storeUuid, ids, hlc)

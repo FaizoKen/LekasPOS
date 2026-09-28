@@ -1,9 +1,19 @@
 package com.lekaspos.app
 
 import android.app.Application
+import android.os.Build
 import com.lekaspos.R
 import com.lekaspos.data.db.Db
+import com.lekaspos.data.db.Schema
 import com.lekaspos.data.db.SeedNames
+import com.lekaspos.domain.PermissionGate
+import com.lekaspos.domain.SettingsRepo
+import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.sale.SaleActions
+import com.lekaspos.domain.sell.CartSession
+import com.lekaspos.domain.sell.CheckoutService
+import com.lekaspos.hw.printer.PrinterService
+import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -16,19 +26,37 @@ import kotlinx.coroutines.async
  * Manual dependency injection (references/architecture.md §2): app-wide singletons, created
  * lazily so Application.onCreate does no I/O.
  */
-class AppGraph(private val app: Application) {
+class AppGraph(private val app: Application, private val dbName: String = Schema.FILE_NAME) {
 
     /** Lives as long as the process; for work that must outlive a screen (e.g. saving a sale). */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val dbOpening: Deferred<Db> = appScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
-        Db.open(app, seedNames = seedNames())
+        Db.open(app, dbName, seedNames())
     }
 
     /** The store database, opened on first use off the main thread. */
     suspend fun db(): Db = dbOpening.await()
 
+    val settings: SettingsRepo by lazy { SettingsRepo(this, defaultLanguage()) }
+    val staff: StaffSession by lazy { StaffSession() }
+    val permissions: PermissionGate by lazy { PermissionGate(staff) }
+    val cart: CartSession by lazy { CartSession(this) }
+    val checkout: CheckoutService by lazy { CheckoutService(this) }
+    val sales: SaleActions by lazy { SaleActions(this) }
+    val printer: PrinterService by lazy { PrinterService(app, this) }
+    val sppScanner: SppScanner by lazy { SppScanner(app, this) }
     val perfRunner: PerfRunner by lazy { PerfRunner(app, appScope) }
+
+    private fun defaultLanguage(): String {
+        val locale = if (Build.VERSION.SDK_INT >= 24) {
+            app.resources.configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            app.resources.configuration.locale
+        }
+        return if (locale?.language == "ms") "ms" else "en"
+    }
 
     private fun seedNames() = SeedNames(
         owner = app.getString(R.string.seed_role_owner),

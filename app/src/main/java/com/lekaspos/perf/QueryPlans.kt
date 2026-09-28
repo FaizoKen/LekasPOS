@@ -1,10 +1,12 @@
 package com.lekaspos.perf
 
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.DerivedRebuild
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.data.sale.SaleQueries
 import com.lekaspos.data.stock.StockDao
 
 /**
@@ -26,10 +28,12 @@ object QueryPlans {
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */
     private val INDEX_ORDERED = setOf(
         "history_first", "history_next", "product_history", "category_page", "search_prefix", "search_barcode_prefix",
+        "product_manage_page", "product_sell_page", "audit_first", "audit_next",
     )
 
     fun hotQueries(): List<Pair<String, String>> =
-        ProductDao.HOT_QUERIES + SaleDao.HOT_QUERIES + StockDao.HOT_QUERIES + ReportDao.HOT_QUERIES
+        ProductDao.HOT_QUERIES + SaleDao.HOT_QUERIES + SaleQueries.HOT_QUERIES + StockDao.HOT_QUERIES +
+            ReportDao.HOT_QUERIES + AuditDao.HOT_QUERIES
 
     fun maintenanceQueries(): List<Pair<String, String>> = DerivedRebuild.MAINTENANCE_QUERIES
 

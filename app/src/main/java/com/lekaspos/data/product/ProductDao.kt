@@ -3,6 +3,7 @@ package com.lekaspos.data.product
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.model.BarcodeKind
+import com.lekaspos.core.model.Entity
 import com.lekaspos.core.text.SearchText
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
@@ -12,6 +13,7 @@ import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
+import com.lekaspos.data.sync.LwwWriter
 
 data class Product(
     val id: Long,
@@ -69,6 +71,7 @@ data class ProductListItem(
     val unit: String,
     val sellMode: Int,
     val stockQty: Long?,
+    val active: Boolean = true,
 )
 
 /** SQL for products, barcodes and product search. See references/database.md §8. */
@@ -187,7 +190,7 @@ object ProductDao {
         args(id), ::sellable,
     )
 
-    private const val LIST_COLUMNS = "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty"
+    private const val LIST_COLUMNS = "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty, p.active"
 
     /** Upper bound of FTS candidates joined and sorted per search: keeps common prefixes cheap. */
     const val FTS_CANDIDATES = 2000
@@ -269,6 +272,7 @@ object ProductDao {
         unit = c.getString(4),
         sellMode = c.getInt(5),
         stockQty = c.longOrNull(6),
+        active = c.bool(7),
     )
 
     fun get(db: SQLiteDatabase, id: Long): Product? = db.queryOne(
@@ -294,6 +298,109 @@ object ProductDao {
 
     fun count(db: SQLiteDatabase): Long = db.long("SELECT COUNT(*) FROM product WHERE deleted = 0")
 
+    // ------------------------------------------------------------------ editing (LWW, synced)
+
+    /** Creates a product and its barcodes as LWW rows (with outbox events when sync is on). */
+    fun create(tx: Db.Tx, p: Product, barcodes: List<Barcode>, now: Long) {
+        LwwWriter.insert(tx, "product", Entity.PRODUCT, p.id, fields(p), now)
+        for (b in barcodes) {
+            require(b.productId == p.id) { "barcode for another product" }
+            addBarcode(tx, b, now)
+        }
+        writeFts(tx, p.id, ftsBody(p.name, p.sku))
+    }
+
+    /** Column values of an editable product, as stored. */
+    fun fields(p: Product): LinkedHashMap<String, Any?> = linkedMapOf(
+        "name" to p.name,
+        "name_key" to SearchText.key(p.name),
+        "sku" to p.sku,
+        "category_id" to p.categoryId,
+        "unit" to p.unit,
+        "sell_mode" to p.sellMode,
+        "price" to p.price,
+        "cost" to p.cost,
+        "tax_rate_id" to p.taxRateId,
+        "track_stock" to p.trackStock,
+        "low_stock" to p.lowStock,
+        "active" to p.active,
+    )
+
+    /** Writes the fields that differ between [before] and [after]; returns the changed columns. */
+    fun update(tx: Db.Tx, before: Product, after: Product, now: Long): Set<String> {
+        require(before.id == after.id)
+        val old = fields(before)
+        val changes = LinkedHashMap<String, Any?>()
+        for ((k, v) in fields(after)) if (old[k] != v) changes[k] = v
+        if (changes.isEmpty()) return emptySet()
+        LwwWriter.update(tx, "product", Entity.PRODUCT, after.id, changes, now)
+        if ("name" in changes || "sku" in changes) reindex(tx, after.id)
+        return changes.keys
+    }
+
+    /** Tombstones the product and its barcodes (history keeps pointing at the row). */
+    fun delete(tx: Db.Tx, id: Long, now: Long) {
+        LwwWriter.delete(tx, "product", Entity.PRODUCT, id, now)
+        for (b in barcodes(tx.db, id)) removeBarcode(tx, b.id, now)
+        reindex(tx, id)
+    }
+
+    fun addBarcode(tx: Db.Tx, b: Barcode, now: Long) {
+        LwwWriter.insert(
+            tx, "product_barcode", Entity.BARCODE, b.id,
+            linkedMapOf("product_id" to b.productId, "code" to b.code, "kind" to b.kind, "pack_qty" to b.packQty, "pack_price" to b.packPrice),
+            now,
+        )
+    }
+
+    fun updateBarcode(tx: Db.Tx, b: Barcode, now: Long) {
+        LwwWriter.update(
+            tx, "product_barcode", Entity.BARCODE, b.id,
+            linkedMapOf("code" to b.code, "kind" to b.kind, "pack_qty" to b.packQty, "pack_price" to b.packPrice), now,
+        )
+    }
+
+    fun removeBarcode(tx: Db.Tx, id: Long, now: Long) {
+        LwwWriter.delete(tx, "product_barcode", Entity.BARCODE, id, now)
+    }
+
+    fun barcodes(db: SQLiteDatabase, productId: Long): List<Barcode> = db.queryList(
+        "SELECT id, product_id, code, kind, pack_qty, pack_price FROM product_barcode " +
+            "WHERE product_id = ? AND deleted = 0 ORDER BY id",
+        args(productId),
+    ) { c -> Barcode(c.getLong(0), c.getLong(1), c.getString(2), c.getInt(3), c.getLong(4), c.longOrNull(5)) }
+
+    /** Other products that already use [code] (duplicate-barcode warning). */
+    fun codeOwners(db: SQLiteDatabase, code: String, exceptProductId: Long): List<Pair<Long, String>> = db.queryList(
+        "SELECT p.id, p.name FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+            "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 AND p.id != ? LIMIT 5",
+        args(code, exceptProductId),
+    ) { it.getLong(0) to it.getString(1) }
+
+    private const val MANAGE_PAGE =
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.deleted = 0 AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
+            "ORDER BY p.name_key, p.id LIMIT ?"
+
+    /** All products (active and inactive) by name, keyset-paginated. First page: after = null. */
+    fun managePage(db: SQLiteDatabase, after: ProductListItem?, limit: Int = 60): List<ProductListItem> {
+        val key = after?.nameKey ?: ""
+        val id = after?.id ?: -1L
+        return db.queryList(MANAGE_PAGE, args(key, key, id, limit), ::listItem)
+    }
+
+    private const val SELL_PAGE =
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.deleted = 0 AND p.active = 1 AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
+            "ORDER BY p.name_key, p.id LIMIT ?"
+
+    /** Sellable products by name for the catalogue's "All" tab, keyset-paginated. */
+    fun sellPage(db: SQLiteDatabase, after: ProductListItem?, limit: Int = 60): List<ProductListItem> {
+        val key = after?.nameKey ?: ""
+        val id = after?.id ?: -1L
+        return db.queryList(SELL_PAGE, args(key, key, id, limit), ::listItem)
+    }
+
     /** Hot queries whose plans the perf suite verifies (name → SQL). */
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "barcode_lookup" to FIND_BY_CODE_2,
@@ -301,5 +408,7 @@ object ProductDao {
         "search_prefix" to SEARCH_PREFIX,
         "search_barcode_prefix" to SEARCH_BARCODE_PREFIX,
         "category_page" to BY_CATEGORY,
+        "product_manage_page" to MANAGE_PAGE,
+        "product_sell_page" to SELL_PAGE,
     )
 }

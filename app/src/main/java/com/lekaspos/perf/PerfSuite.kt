@@ -5,6 +5,8 @@ import android.content.Context
 import android.os.Build
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.barcode.Gtin
+import com.lekaspos.core.escpos.PrinterProfile
+import com.lekaspos.core.escpos.ReceiptEncoder
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.pricing.PriceLine
@@ -30,7 +32,10 @@ import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleLineDraft
 import com.lekaspos.data.sale.SaleRow
+import com.lekaspos.data.settings.StoreSettings
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.domain.print.ReceiptBuilder
+import com.lekaspos.hw.printer.ReceiptRenderer
 import java.util.Random
 import java.util.TimeZone
 
@@ -104,13 +109,18 @@ class PerfSuite(
         })
 
         progress.update("cart_persist")
-        val cartId = db.writeBlocking { tx -> CartDao.openCart(tx, null, System.currentTimeMillis()) }
+        val (maxCart, maxLine) = CartDao.maxIds(r)
+        val cartId = maxCart + 1L
+        db.writeBlocking { tx -> CartDao.insertCart(tx, cartId, null, System.currentTimeMillis(), System.currentTimeMillis()) }
         add(measure("cart_persist", 100.0, warmup = 5, n = 60) { i ->
             val now = System.currentTimeMillis()
             db.writeBlocking(reserveIds = 0) { tx ->
-                CartDao.insertLine(
+                CartDao.putLine(
                     tx, cartId,
-                    CartLine(lineNo = i + 1, productId = null, name = "Perf item $i", qty = 1000L, unitPrice = 150L, addedAt = now),
+                    CartLine(
+                        id = maxLine + 1L + i, lineNo = i + 1, productId = null, name = "Perf item $i", qty = 1000L,
+                        unitPrice = 150L, addedAt = now,
+                    ),
                     now,
                 )
             }
@@ -130,6 +140,19 @@ class PerfSuite(
         } finally {
             db.syncEnabled = wasSync
         }
+
+        progress.update("receipt")
+        val store = StoreSettings(name = "Perf Store", address = "1 Jalan Ujian\n43000 Kajang", sstNo = "W10-0000-00000000")
+        val lastSale = SaleDao.history(r, null, 1).firstOrNull()?.id ?: error("perf database has no sales")
+        add(measure("receipt_text", 50.0, warmup = 3, n = 40) {
+            val doc = ReceiptBuilder.build(r, lastSale, copy = false, store, tz) ?: error("sale $lastSale missing")
+            ReceiptEncoder.text(ReceiptBuilder.layout(doc, 32, store, logo = false, tz), PrinterProfile())
+        })
+        add(measure("receipt_image", 500.0, warmup = 1, n = 10) {
+            val doc = ReceiptBuilder.build(r, lastSale, copy = false, store, tz) ?: error("sale $lastSale missing")
+            val img = ReceiptRenderer(32, 384).mono(ReceiptBuilder.layout(doc, 32, store, logo = false, tz), null, null)
+            ReceiptEncoder.image(img, PrinterProfile())
+        })
 
         progress.update("history")
         add(measure("history_page_first", 50.0, warmup = 5, n = 60) { SaleDao.history(r, null, 50) })

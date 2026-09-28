@@ -16,6 +16,8 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `category_page` | first 60 products of a category | 50k products | ≤ 30 ms |
 | `sale_commit` | complete a 5-line cash sale (stock, summaries, outbox), fsync | 1M lines | ≤ 150 ms |
 | `cart_persist` | persist one cart-line change (writer thread, async) | — | ≤ 100 ms (not user-blocking) |
+| `receipt_text` | build a stored 5-line receipt + ESC/POS text job (printer thread) | 1M lines | ≤ 50 ms |
+| `receipt_image` | same, rendered as a 384-dot picture (Chinese/Tamil receipts) | 1M lines | ≤ 500 ms |
 | `history_page_first` / `_deep` | 50 sales, newest / ~1 year back (keyset) | 1M lines | ≤ 50 ms |
 | `receipt_lookup` | sale by receipt number | 1M lines | ≤ 10 ms |
 | `product_history_page` | 50 most recent lines of one product | 1M lines | ≤ 50 ms |

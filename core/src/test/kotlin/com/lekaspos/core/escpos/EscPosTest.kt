@@ -58,6 +58,14 @@ class EscPosTest {
     }
 
     @Test
+    fun canEncodeTellsWhenAnImageIsNeeded() {
+        assertTrue(EscPosText.canEncode("Café ×2 – RM1.00", TextMode.LATIN))
+        assertEquals(false, EscPosText.canEncode("牛奶", TextMode.LATIN))
+        assertTrue(EscPosText.canEncode("Susu 牛奶", TextMode.GB18030))
+        assertEquals(false, EscPosText.canEncode("பால்", TextMode.GB18030)) // Tamil: image only
+    }
+
+    @Test
     fun chineseModeUsesGb18030() {
         val b = EscPosText.encode("Susu 牛奶", TextMode.GB18030)
         val cjk = "牛奶".toByteArray(java.nio.charset.Charset.forName("GB18030"))

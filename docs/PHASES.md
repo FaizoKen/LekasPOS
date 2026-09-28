@@ -132,23 +132,44 @@ Deliverables
 
 ---
 
-## Phase 2 — selling, products, cash, printing, drawer, scanner (planned)
+## Phase 2 — selling, products, cash, printing, drawer, scanner (in progress)
 
-- [ ] Selling screen (phone + tablet, portrait + landscape): cart list, totals, category grid,
-      search with debounce, quantity edit, remove line, crash-safe current bill (`CartSession`)
-- [ ] Scanner input without focus: HID keyboard buffer in `dispatchKeyEvent`, SPP scanner
-      reader, scale-label templates, pack barcodes; unknown-barcode flow (add product)
-- [ ] Hold/park and resume bills; item and bill discounts; price override (permission stub)
-- [ ] Weighed items: manual weight entry, price/weight-embedded labels
-- [ ] Payments: cash with change and 5-sen rounding, card, e-wallet/QR, split tender (record only)
-- [ ] Complete sale → commit → print; receipt reprint; share receipt as image/PDF
-- [ ] Refunds/returns and voids with reason + permission stub + audit entry
-- [ ] Products: list, add/edit (barcodes, SKU, category, unit, cost, price, tax), categories
-- [ ] ESC/POS in `:core` (58/80 mm, logo raster, text/graphic modes, QR), Bluetooth SPP
-      transport, persistent print queue with reconnect, test-print screen, drawer kick
-      (auto on cash + manual with audit), printer/scanner/drawer setup screens
-- [ ] Android 12+ and legacy Bluetooth permissions; camera scanning decision (size budget)
-- [ ] Tax/receipt compliance as answered by the user (open question 1)
+Built on the assumptions in D-024 (Malaysian tax/receipt defaults, generic ESC/POS hardware).
+Implementation complete; CI verification on API 21/36, the release APK and the tester
+pre-release follow.
+
+- [x] Selling screen: one pane on phones in portrait (bill ⇄ catalogue), two panes in landscape
+      and on tablets; cart list, totals, category tabs + product tiles, search with debounce,
+      quantity edit, remove line; crash-safe bill (`CartSession`: memory first, then one
+      ordered background writer; restored after a kill)
+- [x] Scanners without focus: keyboard-wedge (HID) burst detection in `dispatchKeyEvent`
+      (`:core` `ScanBuffer`), the search field also takes codes + Enter, SPP scanner reader,
+      camera scanning (ZXing 3.3.3 + Camera1, continuous "sell" mode); scale-label templates;
+      pack/carton barcodes; unknown barcode → add product or sell as "other item"
+- [x] Hold/park and resume bills; item and bill discounts (amount or %); price override —
+      all permission-checked (stub, D-028) and audited
+- [x] Weighed items: weight entry on a keypad, weight- and price-embedded scale labels
+- [x] Payments: cash with change and 5-sen rounding, card, e-wallet/QR, split tender, record
+      only; zero-total bills; the bill is frozen while the payment dialog is open
+- [x] Complete sale → one transaction (sale, stock, summaries, outbox, drawer + receipt print
+      jobs, bill deleted) → print; result survives rotation; reprint (audited); share receipt
+      as picture or PDF (FileProvider)
+- [x] Refunds/returns (partial, pro-rata to the sen, cash rounding mirrored, restock option)
+      and voids with reason + permission + audit; refunds must be voided before their sale
+- [x] Products: list (keyset paging, search), add/edit (barcodes, pack barcodes, scale PLU,
+      SKU, category, unit, sold by piece/weight/open price, cost, tax, stock tracking, low-stock
+      level, hide), delete (tombstone); categories; tax rates; LWW edits with outbox events
+- [x] ESC/POS in `:core` (58/80 mm, 32/42/48 columns, text mode with Latin transliteration or
+      GB18030, image mode for any script, logo raster with dithering, QR native or raster,
+      cut, drawer pulse); receipt layout in EN/BM; Bluetooth SPP transport; persistent print
+      queue with reconnect/backoff; printer status on the selling screen; test page; drawer
+      kick (auto on cash, manual with audit)
+- [x] Settings: store & receipt (name, address, BRN, SST no., TIN, header/footer, language,
+      copies, logo, e-invoice QR, prices incl. tax, 5-sen rounding, scale formats), printer &
+      drawer, scanner & camera, activity (audit) log
+- [x] Bluetooth: paired devices only (D-027) — `BLUETOOTH_CONNECT` on 12+, nothing at runtime
+      before; camera permission on first use
+- [ ] Tax/receipt compliance as answered by the user (open question 1) — defaults per D-024
 
 ## Phase 3 — inventory, suppliers, stock movements (planned)
 

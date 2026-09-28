@@ -152,6 +152,21 @@ object EscPosText {
         return out.toByteArray()
     }
 
+    /** True when [encode] would print every character of [s] (nothing becomes '?'). */
+    fun canEncode(s: String, mode: TextMode): Boolean {
+        var i = 0
+        while (i < s.length) {
+            val cp = s.codePointAt(i)
+            i += Character.charCount(cp)
+            if (cp in 0x20..0x7E || cp < 0x20) continue
+            if (mode == TextMode.GB18030 && cp >= 0x2E80 && gb18030 != null) continue
+            if (cp <= 0xFFFF && replacements.containsKey(cp.toChar())) continue
+            val decomposed = Normalizer.normalize(String(Character.toChars(cp)), Normalizer.Form.NFD)
+            if (decomposed.none { it.code in 0x20..0x7E }) return false
+        }
+        return true
+    }
+
     private fun latin(cp: Int, out: ByteArrayOutputStream) {
         if (cp < 0x20) return // control characters never reach the printer
         if (cp <= 0xFFFF) {

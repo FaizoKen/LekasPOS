@@ -89,7 +89,11 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (default roles, payment methods) — same IDs everywhere, `ver_hlc = 0` so any edit wins.
 - The sequence is reserved in blocks (meta key `id_reserved`) in its own committed
   transaction before use, so a crash can only create gaps, never reuse.
-- LOCAL tables (`cart`, `cart_line`, `outbox`, `print_job`) use plain rowids.
+- LOCAL tables (`cart`, `cart_line`, `outbox`, `print_job`) use plain rowids; cart and
+  cart-line IDs are assigned in memory by `CartSession` (seeded from `MAX(id)`, D-029).
+- The default owner (`staff` id 1) is a seed row, created with `INSERT OR IGNORE` on open.
+- Device-only settings (printer, drawer, SPP scanner, camera) are `meta` rows under `dev.*`
+  (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
 ## 6. Table catalog (schema v1)

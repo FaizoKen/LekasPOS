@@ -5,6 +5,7 @@ import com.lekaspos.core.model.CartStatus
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.bool
+import com.lekaspos.data.db.long
 import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
@@ -35,7 +36,7 @@ data class CartLine(
     val addedAt: Long,
 )
 
-data class Cart(
+data class StoredCart(
     val id: Long,
     val status: Int,
     val label: String?,
@@ -44,42 +45,55 @@ data class Cart(
     val billDiscKind: Int,
     val billDiscValue: Long,
     val openedAt: Long,
+    val updatedAt: Long,
     val lines: List<CartLine>,
 )
 
-/** LOCAL tables `cart` / `cart_line`: the open bill and parked (held) bills. */
+data class HeldCartRow(val id: Long, val label: String?, val openedAt: Long, val updatedAt: Long, val lines: Int)
+
+/**
+ * LOCAL tables `cart` / `cart_line`: the open bill and parked (held) bills. IDs are assigned by
+ * the cart session (in memory first, persisted right after), so the UI never waits for a write.
+ */
 object CartDao {
 
     private const val INSERT_CART =
-        "INSERT INTO cart(status, staff_id, opened_at, updated_at) VALUES(?, ?, ?, ?)"
-    private const val INSERT_LINE =
-        "INSERT INTO cart_line(cart_id, line_no, product_id, name, barcode, unit, category_id, sell_mode, qty, " +
-            "pack_qty, base_qty, unit_price, fixed_gross, price_overridden, disc_kind, disc_value, tax_rate_id, " +
-            "tax_bp, unit_cost, track_stock, added_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    private const val UPDATE_QTY = "UPDATE cart_line SET qty = ?, base_qty = ? WHERE id = ?"
+        "INSERT INTO cart(id, status, label, staff_id, bill_disc_kind, bill_disc_value, opened_at, updated_at) " +
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
+    private const val UPSERT_LINE =
+        "INSERT OR REPLACE INTO cart_line(id, cart_id, line_no, product_id, name, barcode, unit, category_id, sell_mode, " +
+            "qty, pack_qty, base_qty, unit_price, fixed_gross, price_overridden, disc_kind, disc_value, tax_rate_id, " +
+            "tax_bp, unit_cost, track_stock, added_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     private const val DELETE_LINE = "DELETE FROM cart_line WHERE id = ?"
     private const val TOUCH = "UPDATE cart SET updated_at = ? WHERE id = ?"
 
-    fun openCart(tx: Db.Tx, staffId: Long?, now: Long): Long = tx.insert(INSERT_CART, CartStatus.OPEN, staffId, now, now)
+    fun insertCart(tx: Db.Tx, id: Long, staffId: Long?, openedAt: Long, now: Long, status: Int = CartStatus.OPEN) {
+        tx.insert(INSERT_CART, id, status, null, staffId, 0, 0L, openedAt, now)
+    }
 
-    fun insertLine(tx: Db.Tx, cartId: Long, l: CartLine, now: Long): Long {
-        val id = tx.insert(
-            INSERT_LINE, cartId, l.lineNo, l.productId, l.name, l.barcode, l.unit, l.categoryId, l.sellMode,
+    /** Inserts or replaces a line (the whole row: qty, price, discount…). */
+    fun putLine(tx: Db.Tx, cartId: Long, l: CartLine, now: Long) {
+        require(l.id > 0L) { "cart lines need an id" }
+        tx.insert(
+            UPSERT_LINE, l.id, cartId, l.lineNo, l.productId, l.name, l.barcode, l.unit, l.categoryId, l.sellMode,
             l.qty, l.packQty, l.baseQty, l.unitPrice, l.fixedGross, l.priceOverridden, l.discKind, l.discValue,
             l.taxRateId, l.taxBp, l.unitCost, l.trackStock, l.addedAt,
         )
-        tx.update(TOUCH, now, cartId)
-        return id
-    }
-
-    fun updateQty(tx: Db.Tx, cartId: Long, lineId: Long, qty: Long, baseQty: Long?, now: Long) {
-        tx.update(UPDATE_QTY, qty, baseQty, lineId)
         tx.update(TOUCH, now, cartId)
     }
 
     fun deleteLine(tx: Db.Tx, cartId: Long, lineId: Long, now: Long) {
         tx.update(DELETE_LINE, lineId)
         tx.update(TOUCH, now, cartId)
+    }
+
+    fun deleteLines(tx: Db.Tx, cartId: Long, now: Long) {
+        tx.update("DELETE FROM cart_line WHERE cart_id = ?", cartId)
+        tx.update(TOUCH, now, cartId)
+    }
+
+    fun setBillDiscount(tx: Db.Tx, cartId: Long, kind: Int, value: Long, now: Long) {
+        tx.update("UPDATE cart SET bill_disc_kind = ?, bill_disc_value = ?, updated_at = ? WHERE id = ?", kind, value, now, cartId)
     }
 
     fun deleteCart(tx: Db.Tx, cartId: Long) {
@@ -90,29 +104,29 @@ object CartDao {
         tx.update("UPDATE cart SET status = ?, label = ?, updated_at = ? WHERE id = ?", status, label, now, cartId)
     }
 
-    /** The open bill (at most one), with lines in order. */
-    fun loadOpen(db: SQLiteDatabase): Cart? {
+    /** The open bill (the most recently touched one if there are several), with lines in order. */
+    fun loadOpen(db: SQLiteDatabase): StoredCart? {
         val id = db.queryOne(
             "SELECT id FROM cart WHERE status = ? ORDER BY updated_at DESC LIMIT 1", args(CartStatus.OPEN),
         ) { it.getLong(0) } ?: return null
         return load(db, id)
     }
 
-    fun load(db: SQLiteDatabase, cartId: Long): Cart? {
+    fun load(db: SQLiteDatabase, cartId: Long): StoredCart? {
         val header = db.queryOne(
-            "SELECT id, status, label, customer_id, staff_id, bill_disc_kind, bill_disc_value, opened_at " +
+            "SELECT id, status, label, customer_id, staff_id, bill_disc_kind, bill_disc_value, opened_at, updated_at " +
                 "FROM cart WHERE id = ?",
             args(cartId),
         ) { c ->
-            Cart(
+            StoredCart(
                 c.getLong(0), c.getInt(1), c.stringOrNull(2), c.longOrNull(3), c.longOrNull(4), c.getInt(5),
-                c.getLong(6), c.getLong(7), emptyList(),
+                c.getLong(6), c.getLong(7), c.getLong(8), emptyList(),
             )
         } ?: return null
         val lines = db.queryList(
             "SELECT id, line_no, product_id, name, barcode, unit, category_id, sell_mode, qty, pack_qty, base_qty, " +
                 "unit_price, fixed_gross, price_overridden, disc_kind, disc_value, tax_rate_id, tax_bp, unit_cost, " +
-                "track_stock, added_at FROM cart_line WHERE cart_id = ? ORDER BY line_no",
+                "track_stock, added_at FROM cart_line WHERE cart_id = ? ORDER BY line_no, id",
             args(cartId),
         ) { c ->
             CartLine(
@@ -126,4 +140,17 @@ object CartDao {
         }
         return header.copy(lines = lines)
     }
+
+    /** Parked bills, most recently parked first. */
+    fun held(db: SQLiteDatabase): List<HeldCartRow> = db.queryList(
+        "SELECT c.id, c.label, c.opened_at, c.updated_at, (SELECT COUNT(*) FROM cart_line l WHERE l.cart_id = c.id) " +
+            "FROM cart c WHERE c.status = ? ORDER BY c.updated_at DESC",
+        args(CartStatus.HELD),
+    ) { c -> HeldCartRow(c.getLong(0), c.stringOrNull(1), c.getLong(2), c.getLong(3), c.getInt(4)) }
+
+    fun heldCount(db: SQLiteDatabase): Int = db.long("SELECT COUNT(*) FROM cart WHERE status = ?", CartStatus.HELD).toInt()
+
+    /** Highest cart and cart-line ids in use, so the session can hand out new ones in memory. */
+    fun maxIds(db: SQLiteDatabase): Pair<Long, Long> =
+        db.long("SELECT MAX(id) FROM cart") to db.long("SELECT MAX(id) FROM cart_line")
 }

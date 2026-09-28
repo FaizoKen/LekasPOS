@@ -149,6 +149,29 @@ which would need `BLUETOOTH_SCAN` on API 31+ and `ACCESS_FINE_LOCATION` on API 2
 All sensitive actions go through `PermissionGate` (allows the single owner session for now) and
 write `audit_log` entries, so Phase 4 only adds PIN login, roles and manager override.
 
+### D-029 — The open bill: memory first, one ordered writer, explicit local IDs
+`CartSession` (app-scoped) changes the bill in memory, publishes it at once and queues the
+database write; one background writer commits queued changes in order, batching bursts into one
+transaction. Cart and cart-line IDs are handed out in memory (seeded from `MAX(id)`), so a scan
+never waits for an insert. Checkout waits for the queue, then commits the sale, its print jobs
+and the deletion of the bill in one transaction. Rejected: writing synchronously before showing
+the line (an fsync per scan), Room/LiveData.
+
+### D-030 — Hardware settings are per device, in `meta`; store settings are synced
+Printer, paper, drawer, SPP scanner and camera settings belong to one till and live in the LOCAL
+`meta` table (`dev.*` keys). Store name, receipt text, tax and rounding live in the LWW `setting`
+table, one register per key, and will sync. Rejected: SharedPreferences (a second storage with
+its own main-thread disk reads).
+
+### D-031 — Cash-drawer pulses are their own print jobs, and expire
+A cash sale enqueues a DRAWER job before its RECEIPT job (same transaction). The printer thread
+skips a drawer pulse that is more than 2 minutes old, so a printer that comes back online later
+never pops the drawer open unexpectedly; receipts still print. Manual opens are audited.
+
+### D-032 — No schema change in Phase 2 (DB stays at version 1)
+Everything Phase 2 needs fits schema v1. The default owner staff row (id 1, a seed row) is created
+with `INSERT OR IGNORE` when the database opens, so Phase 1 installs get it without a migration.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

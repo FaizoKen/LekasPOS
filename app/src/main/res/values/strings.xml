@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">LekasPOS</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="remove">Remove</string>
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="back">Back</string>
+    <string name="saved">Saved</string>
+    <string name="error_title">Something went wrong</string>
+    <string name="error_generic">Something went wrong: %1$s</string>
+    <string name="error_not_found">It no longer exists.</string>
+    <string name="not_allowed">You are not allowed to do this.</string>
+    <string name="reason_hint">Reason</string>
+    <string name="reason_required">Please enter a reason.</string>
+    <string name="key_delete">Delete digit</string>
 
     <!-- Seed data names (created once, on first launch, in the device language) -->
     <string name="seed_role_owner">Owner</string>
@@ -12,12 +29,353 @@
     <string name="seed_pm_ewallet">E-wallet / QR</string>
     <string name="seed_pm_credit">Customer credit</string>
 
-    <!-- Home / selling screen (Phase 1 placeholder) -->
-    <string name="sell_status_opening">Opening database…</string>
-    <string name="sell_status_ready">Ready · device %1$s · products: %2$d · sales: %3$d · schema v%4$d</string>
-    <string name="sell_status_error">Could not open the database: %1$s</string>
-    <string name="sell_phase_note">This is the Phase 1 build. The selling screen arrives in Phase 2. Use Diagnostics to measure how fast this device is.</string>
-    <string name="sell_open_diagnostics">Diagnostics &amp; performance test</string>
+    <!-- Selling screen -->
+    <string name="sell_search_hint">Search or scan</string>
+    <string name="sell_cart_empty">Scan a barcode, search, or pick from the catalogue to start a bill.</string>
+    <string name="sell_browse">Catalogue</string>
+    <string name="sell_camera">Scan with camera</string>
+    <string name="sell_menu">Menu</string>
+    <string name="sell_hold">Hold</string>
+    <string name="sell_discount">Discount</string>
+    <string name="sell_pay">Pay %1$s</string>
+    <string name="sell_pay_empty">Pay</string>
+    <plurals name="sell_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="sell_summary_discount">discount %1$s</string>
+    <string name="sell_summary_tax_incl">incl. tax %1$s</string>
+    <string name="sell_summary_tax">tax %1$s</string>
+    <string name="sell_all">All</string>
+    <string name="sell_no_products">No products here yet. Add them in Menu → Products.</string>
+    <string name="sell_no_results">Nothing found for “%1$s”.</string>
+    <string name="sell_busy">Please wait…</string>
+    <string name="sell_not_found_title">Barcode not found</string>
+    <string name="sell_not_found_message">No product has barcode %1$s.</string>
+    <string name="sell_add_product">Add product</string>
+    <string name="sell_sell_other">Sell as other item</string>
+    <string name="tile_open_price">Enter price</string>
+    <string name="cart_label_price">label price</string>
+    <string name="cart_price_changed">price changed</string>
+    <string name="weigh_title">Weight of %1$s</string>
+    <string name="price_for_title">Price of %1$s</string>
+    <string name="other_item_title">Other item</string>
+    <string name="other_item_name">Name (optional)</string>
+    <string name="other_item_default">Other item</string>
+
+    <!-- Menu -->
+    <string name="menu_products">Products</string>
+    <string name="menu_categories">Categories</string>
+    <string name="menu_tax_rates">Tax rates</string>
+    <string name="menu_sales">Sales &amp; refunds</string>
+    <string name="menu_open_drawer">Open cash drawer</string>
+    <string name="menu_cancel_bill">Cancel bill</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_diagnostics">Diagnostics</string>
+
+    <!-- Bill lines -->
+    <string name="line_each">%1$s each</string>
+    <string name="line_minus">−1</string>
+    <string name="line_plus">+1</string>
+    <string name="line_qty">Quantity</string>
+    <string name="line_weight">Weight</string>
+    <string name="line_discount">Discount</string>
+    <string name="line_price">Change price</string>
+    <string name="line_remove">Remove from bill</string>
+    <string name="price_title">Price</string>
+    <string name="discount_title">Item discount</string>
+    <string name="bill_discount_title">Bill discount</string>
+    <string name="discount_amount">Amount</string>
+    <string name="discount_percent">Percent</string>
+    <string name="discount_none">No discount</string>
+
+    <!-- Held bills -->
+    <string name="held_title">Held bills</string>
+    <string name="held_empty">No held bills.</string>
+    <string name="held_hold_title">Hold this bill</string>
+    <string name="held_label_hint">Name (optional), e.g. the customer</string>
+    <string name="held_row">%1$s · %3$s · lines: %2$d</string>
+    <string name="held_delete_confirm">Delete this held bill?</string>
+
+    <!-- Cancel bill -->
+    <string name="clear_confirm_title">Cancel this bill?</string>
+    <plurals name="clear_confirm_message">
+        <item quantity="one">%d line will be removed.</item>
+        <item quantity="other">All %d lines will be removed.</item>
+    </plurals>
+    <string name="clear_yes">Cancel bill</string>
+
+    <!-- Cash drawer -->
+    <string name="drawer_opened">Opening the cash drawer…</string>
+    <string name="drawer_no_printer">The cash drawer is connected to the receipt printer. Set up a printer first.</string>
+
+    <!-- Payment -->
+    <string name="pay_title">Payment</string>
+    <string name="pay_total">Total</string>
+    <string name="pay_remaining">Still to pay</string>
+    <string name="pay_cash_due">In cash (rounded): %1$s</string>
+    <string name="pay_amount_hint">Amount (default %1$s)</string>
+    <string name="pay_exact">Exact</string>
+    <string name="pay_complete">Complete sale</string>
+    <string name="pay_tender_row">%1$s: %2$s</string>
+    <string name="pay_error_cash">Cash must be at least %1$s (rounded), or less than the amount due for part of the bill.</string>
+    <string name="pay_error_exceeds">%1$s can pay at most %2$s.</string>
+    <string name="pay_failed_title">Sale not saved</string>
+    <string name="pay_failed">The sale was NOT saved and nothing was charged: %1$s</string>
+    <string name="result_change">Change</string>
+    <string name="result_paid">Paid</string>
+    <string name="result_receipt">Receipt %1$s</string>
+    <string name="result_printing">Printing the receipt…</string>
+    <string name="result_no_printer">No printer set up (Settings → Printer).</string>
+    <string name="result_print">Print receipt</string>
+    <string name="result_print_again">Print a copy</string>
+    <string name="result_share">Share</string>
+    <string name="result_new">New sale</string>
+
+    <!-- Printer status on the selling screen -->
+    <string name="printer_pill_waiting">%1$d to print</string>
+    <string name="printer_pill_printing">Printing…</string>
+    <string name="printer_pill_offline">Printer offline</string>
+    <string name="printer_pill_offline_waiting">Printer offline (%1$d)</string>
+
+    <!-- Products -->
+    <string name="products_title">Products</string>
+    <string name="products_add">Add product</string>
+    <string name="products_search_hint">Search name, SKU or barcode</string>
+    <string name="products_empty">No products yet. Tap + to add one, or scan an unknown barcode on the selling screen.</string>
+    <string name="products_none_found">No product matches.</string>
+    <string name="product_row_stock">In stock: %1$s</string>
+    <string name="product_hidden">HIDDEN</string>
+    <string name="product_new">New product</string>
+    <string name="product_edit">Edit product</string>
+    <string name="product_name">Name</string>
+    <string name="product_price">Selling price</string>
+    <string name="product_sell_mode">Sold by</string>
+    <string name="sell_mode_unit">Piece / pack</string>
+    <string name="sell_mode_weight">Weight</string>
+    <string name="sell_mode_open">Price entered at the till</string>
+    <string name="product_unit">Unit (pcs, kg, pack…)</string>
+    <string name="product_barcodes">Barcodes</string>
+    <string name="product_no_barcodes">No barcode yet.</string>
+    <string name="product_barcode_add">Add barcode</string>
+    <string name="product_barcode_hint">Barcode</string>
+    <string name="product_scan">Scan</string>
+    <string name="product_pack_add">Add pack barcode</string>
+    <string name="product_pack_qty">Pieces in the pack</string>
+    <string name="product_pack_price">Pack price (empty = pieces × price)</string>
+    <string name="product_pack_row">%1$s — pack of %2$s, %3$s</string>
+    <string name="product_pack_auto_price">pieces × price</string>
+    <string name="product_plu">Scale PLU (item code on weighing-scale labels)</string>
+    <string name="product_more">More details</string>
+    <string name="product_category">Category</string>
+    <string name="product_no_category">No category</string>
+    <string name="product_tax">Tax</string>
+    <string name="product_no_tax">No tax</string>
+    <string name="product_cost">Cost price</string>
+    <string name="product_sku">SKU / item code</string>
+    <string name="product_track_stock">Track stock</string>
+    <string name="product_low_stock">Low-stock alert at</string>
+    <string name="product_stock_now">In stock now: %1$s</string>
+    <string name="product_active">Show in search and catalogue</string>
+    <string name="product_saved">Product saved</string>
+    <string name="product_deleted">Product deleted</string>
+    <string name="product_delete_confirm">Delete %1$s? Past sales keep their lines.</string>
+    <string name="product_duplicate_title">Barcode already used</string>
+    <string name="product_error_barcode_dup">Barcode %1$s is already used by %2$s. Save anyway? Scans will pick the product changed last.</string>
+    <string name="product_error_name">Enter a name.</string>
+    <string name="product_error_price">Enter a valid amount.</string>
+    <string name="product_error_qty">Enter a valid quantity.</string>
+    <string name="product_error_barcode">Enter the barcode.</string>
+    <string name="product_error_pack_qty">Enter 2 or more pieces.</string>
+    <string name="product_error_plu">Enter the PLU digits.</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categories</string>
+    <string name="categories_empty">No categories yet. Categories become tabs in the selling screen’s catalogue.</string>
+    <string name="category_add">Add category</string>
+    <string name="category_edit">Rename category</string>
+    <string name="category_name">Name</string>
+    <string name="category_delete_confirm">Delete category %1$s? Its products stay, without a category.</string>
+
+    <!-- Tax rates -->
+    <string name="tax_title">Tax rates</string>
+    <string name="tax_empty">No tax rates. Leave this empty if you do not charge tax at the till.</string>
+    <string name="tax_add">Add tax rate</string>
+    <string name="tax_edit">Edit tax rate</string>
+    <string name="tax_name">Name, e.g. SST</string>
+    <string name="tax_code">Code on receipts (optional)</string>
+    <string name="tax_rate">Rate in %</string>
+    <string name="tax_error_name">Enter a name.</string>
+    <string name="tax_error_rate">Enter a rate between 0 and 100.</string>
+    <string name="tax_delete_confirm">Delete tax rate %1$s? Products using it will no longer be taxed.</string>
+
+    <!-- Sales and refunds -->
+    <string name="sales_title">Sales &amp; refunds</string>
+    <string name="sales_search_hint">Receipt number</string>
+    <string name="sales_empty">No sales yet.</string>
+    <string name="sales_none_found">No receipt with this number.</string>
+    <string name="sale_voided">VOIDED</string>
+    <string name="sale_refund">REFUND</string>
+    <string name="sale_detail_title">Receipt</string>
+    <string name="sale_detail_title_no">Receipt %1$s</string>
+    <string name="sale_reprint">Print copy</string>
+    <string name="sale_print_queued">Sent to the printer</string>
+    <string name="sale_refund_action">Refund / return</string>
+    <string name="sale_void_action">Void</string>
+    <string name="sale_void_title">Void this sale?</string>
+    <string name="sale_void_message">Voiding removes the sale from reports and puts the items back into stock. Why is it voided?</string>
+    <string name="sale_voided_done">Sale voided</string>
+    <string name="sale_refunds">Refunds of this sale:</string>
+    <string name="share_title">Share receipt</string>
+    <string name="share_image">As a picture</string>
+    <string name="share_pdf">As a PDF</string>
+    <string name="refund_title">Refund / return</string>
+    <string name="refund_of">Items from receipt %1$s</string>
+    <string name="refund_line">%1$s\n%2$s of %3$s can be returned</string>
+    <string name="refund_all">All</string>
+    <string name="refund_qty_title">Quantity returned</string>
+    <string name="refund_nothing_left">Everything on this receipt has been refunded already.</string>
+    <string name="refund_restock">Put the returned items back into stock</string>
+    <string name="refund_reason">Reason (required)</string>
+    <string name="refund_method">Pay back with</string>
+    <string name="refund_total">To pay back: %1$s</string>
+    <string name="refund_do">Refund</string>
+    <string name="refund_confirm">Pay back %1$s by %2$s?</string>
+    <string name="refund_done">Refund %1$s saved</string>
+    <string name="refund_has_refunds">This sale has refunds. Void the refunds first.</string>
+    <string name="refund_voided">This sale is voided.</string>
+    <string name="refund_not_sale">A refund cannot be refunded again.</string>
+    <string name="refund_nothing">Choose what comes back first.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_store">Store &amp; receipt</string>
+    <string name="settings_store_sub">Name, address, registration numbers, receipt text, tax</string>
+    <string name="settings_printer">Printer &amp; cash drawer</string>
+    <string name="settings_printer_sub">Bluetooth receipt printer on this device</string>
+    <string name="settings_scanner">Barcode scanner &amp; camera</string>
+    <string name="settings_scanner_sub">Keyboard and serial scanners, camera scanning</string>
+    <string name="settings_audit">Activity log</string>
+    <string name="settings_audit_sub">Voids, refunds, price changes, discounts, drawer opens</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_sub">LekasPOS %1$s (%2$s build) · GPL-3.0</string>
+    <string name="section_store">Store</string>
+    <string name="section_receipt">Receipt</string>
+    <string name="section_tax">Tax and rounding</string>
+    <string name="section_scale">Weighing-scale labels</string>
+    <string name="store_name">Store name</string>
+    <string name="store_address">Address</string>
+    <string name="store_phone">Phone</string>
+    <string name="store_email">Email</string>
+    <string name="store_brn">Business registration no. (SSM)</string>
+    <string name="store_sst">SST registration no.</string>
+    <string name="store_tin">Tax identification no. (TIN)</string>
+    <string name="receipt_header">Receipt header text</string>
+    <string name="receipt_footer">Receipt footer text</string>
+    <string name="receipt_language">Receipt language</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ms">Bahasa Melayu</string>
+    <string name="receipt_copies">Receipt copies</string>
+    <string name="receipt_logo">Print the logo</string>
+    <string name="receipt_logo_pick">Choose logo picture</string>
+    <string name="receipt_logo_remove">Remove logo</string>
+    <string name="receipt_logo_saved">Logo saved</string>
+    <string name="einvoice_qr">Print an e-invoice request QR code</string>
+    <string name="einvoice_url">QR link</string>
+    <string name="einvoice_help">Customers who need an e-invoice scan the code. {receipt}, {total} and {date} in the link are filled in for each sale.</string>
+    <string name="prices_incl_tax">Prices include tax</string>
+    <string name="cash_rounding">Round cash payments to 5 sen</string>
+    <string name="scale_templates">Label formats</string>
+    <string name="scale_templates_help">Digits = fixed prefix, I = item code (PLU), W = weight in grams, P = price in sen, C = check digit. Example: 20IIIIIWWWWWC, 21IIIIIPPPPPC.</string>
+    <string name="scale_invalid">Invalid format: %1$s</string>
+
+    <!-- Printer settings -->
+    <string name="printer_status">Status: %1$s</string>
+    <string name="status_not_configured">no printer chosen</string>
+    <string name="status_no_bt">this device has no Bluetooth</string>
+    <string name="status_no_permission">Bluetooth permission needed</string>
+    <string name="status_bt_off">Bluetooth is off</string>
+    <string name="status_idle">ready</string>
+    <string name="status_connecting">connecting…</string>
+    <string name="status_printing">printing…</string>
+    <string name="status_ready">connected</string>
+    <string name="status_offline">offline (%1$s), retrying</string>
+    <string name="status_offline_gave_up">offline, tap Retry</string>
+    <string name="printer_retry">Retry</string>
+    <string name="printer_section_device">Printer</string>
+    <string name="printer_none">No printer chosen.</string>
+    <string name="printer_selected">%1$s (%2$s)</string>
+    <string name="printer_choose">Choose a paired printer</string>
+    <string name="printer_bt_settings">Pair a new printer (Bluetooth settings)</string>
+    <string name="printer_no_paired">No paired devices. Pair the printer in Android’s Bluetooth settings first (the PIN is usually 0000 or 1234).</string>
+    <string name="printer_permission_needed">Allow “Nearby devices” (Bluetooth) to use a printer.</string>
+    <string name="printer_section_paper">Paper and printing</string>
+    <string name="printer_paper">Paper width</string>
+    <string name="paper_58">58 mm (32 characters)</string>
+    <string name="paper_80">80 mm (48 characters)</string>
+    <string name="paper_80_42">80 mm (42 characters)</string>
+    <string name="printer_mode">Print as</string>
+    <string name="mode_auto">Automatic (text; picture when needed)</string>
+    <string name="mode_text">Text (fastest)</string>
+    <string name="mode_image">Picture (any language)</string>
+    <string name="printer_chinese">Printer has Chinese characters (GB18030)</string>
+    <string name="printer_codepage">Code page number (ESC t, usually 0)</string>
+    <string name="printer_cut">Cut the paper</string>
+    <string name="printer_feed">Blank lines after the receipt</string>
+    <string name="printer_auto">Print a receipt after every sale</string>
+    <string name="printer_native_qr">Printer draws QR codes itself</string>
+    <string name="printer_section_drawer">Cash drawer</string>
+    <string name="drawer_enabled">Cash drawer connected to the printer</string>
+    <string name="drawer_pin">Drawer pin</string>
+    <string name="drawer_pin2">Pin 2 (most drawers)</string>
+    <string name="drawer_pin5">Pin 5</string>
+    <string name="printer_test">Print a test page</string>
+    <string name="printer_test_queued">Test page sent</string>
+    <string name="printer_open_drawer">Open the drawer</string>
+    <string name="printer_clear_queue">Clear the print queue (waiting: %1$d)</string>
+    <string name="printer_clear_title">Clear the print queue?</string>
+    <string name="printer_clear_message">Receipts that have not printed yet will not print. The sales stay saved; you can print copies from Sales.</string>
+    <string name="printer_clear_yes">Clear</string>
+    <string name="printer_queue_cleared">Print queue cleared</string>
+
+    <!-- Scanner settings -->
+    <string name="scanner_hid_info">Keyboard-mode scanners (USB, or Bluetooth HID) need no setup: pair or plug them in and scan on the selling screen. Nothing has to be selected first.</string>
+    <string name="scanner_test">Test a scanner</string>
+    <string name="scanner_test_hint">Tap here and scan</string>
+    <string name="scanner_test_result">Received “%1$s” (length: %2$d)</string>
+    <string name="scanner_spp">Serial (SPP) Bluetooth scanner</string>
+    <string name="scanner_spp_none">None</string>
+    <string name="scanner_spp_choose">Choose a paired scanner</string>
+    <string name="scanner_spp_forget">Stop using the serial scanner</string>
+    <string name="scanner_state">Serial scanner: %1$s</string>
+    <string name="scanner_status_off">off</string>
+    <string name="scanner_status_error">not connected, retrying</string>
+    <string name="scanner_camera_section">Camera</string>
+    <string name="scanner_camera">Scan barcodes with the camera</string>
+
+    <!-- Camera -->
+    <string name="camera_title">Scan barcodes</string>
+    <string name="camera_hint">Hold a barcode inside the frame</string>
+    <string name="camera_torch">Torch</string>
+    <string name="camera_permission">Camera permission is needed to scan.</string>
+    <string name="camera_unavailable">The camera could not be opened.</string>
+    <string name="camera_added">Added: %1$s</string>
+    <string name="camera_not_found">Not a known product: %1$s</string>
+    <string name="camera_needs_input">%1$s needs a weight or price: add it on the bill.</string>
+
+    <!-- Activity log -->
+    <string name="audit_empty">Nothing recorded yet.</string>
+    <string name="audit_sale_void">Sale voided</string>
+    <string name="audit_refund">Refund</string>
+    <string name="audit_price_override">Price changed at the till</string>
+    <string name="audit_line_discount">Item discount</string>
+    <string name="audit_bill_discount">Bill discount</string>
+    <string name="audit_drawer">Cash drawer opened</string>
+    <string name="audit_reprint">Receipt copy printed</string>
+    <string name="audit_product_price">Product price changed</string>
+    <string name="audit_product_delete">Product deleted</string>
+    <string name="audit_bill_cancel">Bill cancelled</string>
+    <string name="audit_other">Other</string>
 
     <!-- Diagnostics -->
     <string name="diag_title">Diagnostics</string>

@@ -1,0 +1,408 @@
+package com.lekaspos.ui.products
+
+import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.text.InputType
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.Spinner
+import android.widget.Switch
+import android.widget.TextView
+import com.lekaspos.R
+import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.BarcodeKind
+import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.Perm
+import com.lekaspos.core.model.SellMode
+import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.receipt.ReceiptLayout
+import com.lekaspos.data.audit.AuditDao
+import com.lekaspos.data.catalog.Category
+import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.data.catalog.TaxRate
+import com.lekaspos.data.catalog.TaxRateDao
+import com.lekaspos.data.product.Barcode
+import com.lekaspos.data.product.Product
+import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.stock.StockDao
+import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.Form
+import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.scan.CameraScanActivity
+
+/**
+ * Add or edit a product: name, price, how it is sold, barcodes (including pack/carton
+ * barcodes and the scale PLU), category, tax, cost, SKU, stock tracking. Saved as LWW edits of
+ * the changed fields only; price changes are audited.
+ */
+class ProductEditActivity : ScreenActivity() {
+
+    /** A barcode row being edited; [id] null = not saved yet. */
+    private data class Code(val id: Long?, val code: String, val kind: Int, val packQty: Long, val packPrice: Long?)
+
+    private var productId = 0L
+    private var original: Product? = null
+    private var originalCodes: List<Barcode> = emptyList()
+    private val codes = ArrayList<Code>()
+    private var categories: List<Category> = emptyList()
+    private var taxes: List<TaxRate> = emptyList()
+
+    private lateinit var form: Form
+    private lateinit var name: EditText
+    private lateinit var price: EditText
+    private lateinit var sellMode: Spinner
+    private lateinit var unit: EditText
+    private lateinit var codeList: LinearLayout
+    private lateinit var plu: EditText
+    private lateinit var category: Spinner
+    private lateinit var tax: Spinner
+    private lateinit var cost: EditText
+    private lateinit var sku: EditText
+    private lateinit var trackStock: Switch
+    private lateinit var lowStock: EditText
+    private lateinit var active: Switch
+    private lateinit var stockInfo: TextView
+
+    private val currency get() = graph.settings.store.value.currency
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        productId = intent.getLongExtra(EXTRA_PRODUCT_ID, 0L)
+        setScreen(getString(if (productId == 0L) R.string.product_new else R.string.product_edit))
+        launchUi { load() }
+    }
+
+    private suspend fun load() {
+        val id = productId
+        val data = graph.db().read { r ->
+            Loaded(
+                product = if (id != 0L) ProductDao.get(r, id) else null,
+                codes = if (id != 0L) ProductDao.barcodes(r, id) else emptyList(),
+                categories = CategoryDao.list(r),
+                taxes = TaxRateDao.list(r),
+                stock = if (id != 0L) StockDao.level(r, id) else null,
+            )
+        }
+        original = data.product
+        originalCodes = data.codes
+        categories = data.categories
+        taxes = data.taxes
+        codes.clear()
+        for (b in data.codes) codes.add(Code(b.id, b.code, b.kind, b.packQty, b.packPrice))
+        intent.getStringExtra(EXTRA_BARCODE)?.takeIf { it.isNotBlank() && codes.none { c -> c.code == it } }?.let {
+            codes.add(Code(null, it, BarcodeKind.BARCODE, 1000L, null))
+        }
+        build(data.product, data.stock)
+    }
+
+    private class Loaded(
+        val product: Product?,
+        val codes: List<Barcode>,
+        val categories: List<Category>,
+        val taxes: List<TaxRate>,
+        val stock: Long?,
+    )
+
+    private fun build(p: Product?, stock: Long?) {
+        form = Form(this)
+        name = form.text(getString(R.string.product_name), p?.name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
+        price = form.text(getString(R.string.product_price), p?.let { MoneyFormat.format(it.price, currency, withSymbol = false) }, MONEY_INPUT)
+        sellMode = form.choice(
+            getString(R.string.product_sell_mode),
+            listOf(getString(R.string.sell_mode_unit), getString(R.string.sell_mode_weight), getString(R.string.sell_mode_open)),
+            p?.sellMode ?: SellMode.UNIT,
+        ) { mode ->
+            if (mode == SellMode.WEIGHT && unit.text.toString().trim() == UNIT_PCS) unit.setText(UNIT_KG)
+            if (mode != SellMode.WEIGHT && unit.text.toString().trim() == UNIT_KG) unit.setText(UNIT_PCS)
+        }
+        unit = form.text(getString(R.string.product_unit), p?.unit ?: "pcs", InputType.TYPE_CLASS_TEXT)
+
+        form.section(getString(R.string.product_barcodes))
+        codeList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        form.add(codeList)
+        renderCodes()
+        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val add = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
+            text = getString(R.string.product_barcode_add)
+            setOnClickListener { addBarcode() }
+        }
+        val pack = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
+            text = getString(R.string.product_pack_add)
+            setOnClickListener { addPack() }
+        }
+        buttons.addView(add, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        buttons.addView(pack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8) })
+        form.add(buttons)
+        plu = form.text(getString(R.string.product_plu), codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }?.code, InputType.TYPE_CLASS_NUMBER)
+
+        form.section(getString(R.string.product_more))
+        category = form.choice(
+            getString(R.string.product_category),
+            listOf(getString(R.string.product_no_category)) + categories.map { it.name },
+            categories.indexOfFirst { it.id == p?.categoryId } + 1,
+        )
+        tax = form.choice(
+            getString(R.string.product_tax),
+            listOf(getString(R.string.product_no_tax)) + taxes.map { "${it.name} ${ReceiptLayout.percent(it.rateBp)}" },
+            taxes.indexOfFirst { it.id == p?.taxRateId } + 1,
+        )
+        cost = form.text(getString(R.string.product_cost), p?.let { MoneyFormat.format(it.cost, currency, withSymbol = false) }, MONEY_INPUT)
+        sku = form.text(getString(R.string.product_sku), p?.sku, InputType.TYPE_CLASS_TEXT)
+        trackStock = form.switch(getString(R.string.product_track_stock), p?.trackStock ?: true)
+        lowStock = form.text(
+            getString(R.string.product_low_stock), p?.lowStock?.takeIf { it > 0L }?.let { MoneyFormat.formatQty(it) }, QTY_INPUT,
+        )
+        stockInfo = form.info(if (stock != null) getString(R.string.product_stock_now, MoneyFormat.formatQty(stock)) else "")
+        active = form.switch(getString(R.string.product_active), p?.active ?: true)
+        form.button(getString(R.string.save), primary = true) { save() }
+        if (p != null) form.button(getString(R.string.delete)) { delete() }
+        content.removeAllViews()
+        content.addView(form.view)
+    }
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+    // ------------------------------------------------------------------ barcodes
+
+    private fun renderCodes() {
+        codeList.removeAllViews()
+        for (c in codes.filter { it.kind == BarcodeKind.BARCODE }) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(48)
+            }
+            val label = TextView(this, null, 0, R.style.Text_Lekas_Body).apply {
+                text = if (c.packQty == 1000L) {
+                    c.code
+                } else {
+                    val packPrice = c.packPrice?.let { MoneyFormat.format(it, currency) } ?: getString(R.string.product_pack_auto_price)
+                    getString(R.string.product_pack_row, c.code, MoneyFormat.formatQty(c.packQty), packPrice)
+                }
+            }
+            val remove = ImageButton(this, null, 0, R.style.Widget_Lekas_IconButton).apply {
+                setImageResource(R.drawable.ic_close)
+                contentDescription = getString(R.string.remove)
+                setOnClickListener {
+                    codes.remove(c)
+                    renderCodes()
+                }
+            }
+            row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(remove, LinearLayout.LayoutParams(dp(48), dp(48)))
+            codeList.addView(row)
+        }
+        if (codeList.childCount == 0) {
+            codeList.addView(TextView(this, null, 0, R.style.Text_Lekas_Caption).apply { text = getString(R.string.product_no_barcodes) })
+        }
+    }
+
+    private fun addBarcode() {
+        Dialogs.input(
+            this, getString(R.string.product_barcode_add), getString(R.string.product_barcode_hint),
+            inputType = InputType.TYPE_CLASS_TEXT,
+            neutral = getString(R.string.product_scan) to {
+                @Suppress("DEPRECATION")
+                startActivityForResult(CameraScanActivity.pickIntent(this), REQ_SCAN)
+            },
+        ) { code ->
+            if (code.isEmpty()) return@input false
+            if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
+            renderCodes()
+            true
+        }
+    }
+
+    private fun addPack() {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+        }
+        fun field(hint: Int, type: Int) = EditText(this).apply {
+            this.hint = getString(hint)
+            inputType = type
+            setSingleLine(true)
+            col.addView(this)
+        }
+        val code = field(R.string.product_barcode_hint, InputType.TYPE_CLASS_TEXT)
+        val qty = field(R.string.product_pack_qty, InputType.TYPE_CLASS_NUMBER)
+        val packPrice = field(R.string.product_pack_price, MONEY_INPUT)
+        val d = AlertDialog.Builder(this)
+            .setTitle(R.string.product_pack_add)
+            .setView(col)
+            .setPositiveButton(R.string.ok, null)
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+        d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val c = code.text.toString().trim()
+            val pieces = qty.text.toString().trim().toLongOrNull()
+            val priceText = packPrice.text.toString().trim()
+            val pp = if (priceText.isEmpty()) null else MoneyFormat.parse(priceText, currency)
+            when {
+                c.isEmpty() -> code.error = getString(R.string.product_error_barcode)
+                pieces == null || pieces < 2L || pieces > 100_000L -> qty.error = getString(R.string.product_error_pack_qty)
+                priceText.isNotEmpty() && (pp == null || pp < 0L) -> packPrice.error = getString(R.string.product_error_price)
+                else -> {
+                    codes.removeAll { it.code == c && it.kind == BarcodeKind.BARCODE }
+                    codes.add(Code(null, c, BarcodeKind.BARCODE, pieces * 1000L, pp))
+                    renderCodes()
+                    d.dismiss()
+                }
+            }
+        }
+    }
+
+    @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_SCAN && resultCode == RESULT_OK) {
+            val code = data?.getStringExtra(CameraScanActivity.EXTRA_CODE) ?: return
+            if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
+            if (::codeList.isInitialized) renderCodes()
+        }
+    }
+
+    // ------------------------------------------------------------------ save / delete
+
+    private fun save(confirmedDuplicates: Boolean = false) {
+        if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
+            Dialogs.message(this, null, getString(R.string.not_allowed))
+            return
+        }
+        val n = name.text.toString().trim()
+        val pr = MoneyFormat.parse(price.text.toString(), currency)
+        val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency)
+        val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString())
+        val pluText = plu.text.toString().trim().trimStart('0')
+        when {
+            n.isEmpty() -> return fieldError(name, R.string.product_error_name)
+            pr == null || pr < 0L -> return fieldError(price, R.string.product_error_price)
+            c == null || c < 0L -> return fieldError(cost, R.string.product_error_price)
+            low == null || low < 0L -> return fieldError(lowStock, R.string.product_error_qty)
+            plu.text.isNotBlank() && pluText.isEmpty() -> return fieldError(plu, R.string.product_error_plu)
+        }
+        val mode = sellMode.selectedItemPosition.coerceIn(0, 2)
+        val p = Product(
+            id = productId,
+            name = n,
+            sku = sku.text.toString().trim().ifEmpty { null },
+            categoryId = categories.getOrNull(category.selectedItemPosition - 1)?.id,
+            unit = unit.text.toString().trim().ifEmpty { if (mode == SellMode.WEIGHT) "kg" else "pcs" },
+            sellMode = mode,
+            price = pr ?: 0L,
+            cost = c ?: 0L,
+            taxRateId = taxes.getOrNull(tax.selectedItemPosition - 1)?.id,
+            trackStock = trackStock.isChecked,
+            lowStock = low ?: 0L,
+            active = active.isChecked,
+        )
+        val wanted = ArrayList(codes.filter { it.kind == BarcodeKind.BARCODE })
+        if (pluText.isNotEmpty()) {
+            val old = codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }
+            wanted.add(Code(old?.takeIf { it.code == pluText }?.id, pluText, BarcodeKind.SCALE_PLU, 1000L, null))
+        }
+        launchUi {
+            if (!confirmedDuplicates) {
+                val dup = graph.db().read { r ->
+                    wanted.filter { it.id == null }.firstNotNullOfOrNull { w ->
+                        ProductDao.codeOwners(r, w.code, productId).firstOrNull()?.let { w.code to it.second }
+                    }
+                }
+                if (dup != null) {
+                    Dialogs.confirm(
+                        this@ProductEditActivity, getString(R.string.product_duplicate_title),
+                        getString(R.string.product_error_barcode_dup, dup.first, dup.second), getString(R.string.save),
+                    ) { save(confirmedDuplicates = true) }
+                    return@launchUi
+                }
+            }
+            val id = persist(p, wanted)
+            setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT_ID, id))
+            toast(R.string.product_saved)
+            finish()
+        }
+    }
+
+    private suspend fun persist(p: Product, wanted: List<Code>): Long {
+        val staff = graph.staff.staffId
+        val c = currency
+        return graph.db().write(reserveIds = wanted.size + 16L) { tx ->
+            val now = System.currentTimeMillis()
+            val before = if (p.id != 0L) ProductDao.get(tx.db, p.id) else null
+            if (before == null) {
+                val id = tx.nextId()
+                val barcodes = wanted.map { Barcode(tx.nextId(), id, it.code, it.kind, it.packQty, it.packPrice) }
+                ProductDao.create(tx, p.copy(id = id), barcodes, now)
+                id
+            } else {
+                val changed = ProductDao.update(tx, before, p, now)
+                if ("price" in changed) {
+                    AuditDao.log(
+                        tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price,
+                        "${p.name}: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}",
+                    )
+                }
+                val current = ProductDao.barcodes(tx.db, p.id)
+                val keep = wanted.mapNotNull { it.id }.toSet()
+                for (b in current) if (b.id !in keep) ProductDao.removeBarcode(tx, b.id, now)
+                for (w in wanted) {
+                    val id = w.id
+                    if (id == null) {
+                        ProductDao.addBarcode(tx, Barcode(tx.nextId(), p.id, w.code, w.kind, w.packQty, w.packPrice), now)
+                    } else {
+                        val old = current.firstOrNull { it.id == id }
+                        val next = Barcode(id, p.id, w.code, w.kind, w.packQty, w.packPrice)
+                        if (old != null && old != next) ProductDao.updateBarcode(tx, next, now)
+                    }
+                }
+                p.id
+            }
+        }
+    }
+
+    private fun delete() {
+        val p = original ?: return
+        if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
+            Dialogs.message(this, null, getString(R.string.not_allowed))
+            return
+        }
+        Dialogs.confirm(this, getString(R.string.delete), getString(R.string.product_delete_confirm, p.name), getString(R.string.delete)) {
+            launchUi {
+                val staff = graph.staff.staffId
+                graph.db().write(reserveIds = 8L) { tx ->
+                    val now = System.currentTimeMillis()
+                    ProductDao.delete(tx, p.id, now)
+                    AuditDao.log(tx, AuditAction.PRODUCT_DELETE, staff, now, Entity.PRODUCT, p.id, detail = p.name)
+                }
+                toast(R.string.product_deleted)
+                finish()
+            }
+        }
+    }
+
+    private fun fieldError(field: EditText, message: Int) {
+        field.error = getString(message)
+        field.requestFocus()
+    }
+
+    companion object {
+        const val EXTRA_PRODUCT_ID = "product_id"
+        const val EXTRA_BARCODE = "barcode"
+        private const val REQ_SCAN = 7
+        private const val UNIT_PCS = "pcs" // unit symbols are data (printed on receipts), not UI text
+        private const val UNIT_KG = "kg"
+        private const val MONEY_INPUT = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        private const val QTY_INPUT = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+
+        fun newIntent(ctx: Context, productId: Long = 0L, barcode: String? = null): Intent =
+            Intent(ctx, ProductEditActivity::class.java).putExtra(EXTRA_PRODUCT_ID, productId).putExtra(EXTRA_BARCODE, barcode)
+    }
+}

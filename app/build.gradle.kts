@@ -90,7 +90,8 @@ android {
         checkReleaseBuilds = true
         // Deliberate: targetSdk = Google Play's requirement (36), and library versions are
         // pinned to the last releases that support minSdk 21 (docs/DECISIONS.md D-004, D-005).
-        disable += listOf("OldTargetApi", "GradleDependency")
+        // NewerVersionAvailable: ZXing stays on 3.3.3, the last line without Java 8 APIs (D-025).
+        disable += listOf("OldTargetApi", "GradleDependency", "NewerVersionAvailable")
     }
 
     testOptions {
@@ -107,6 +108,9 @@ kotlin {
 dependencies {
     implementation(project(":core"))
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)

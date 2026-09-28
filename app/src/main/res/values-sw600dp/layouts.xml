@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Landscape and tablets: catalogue and bill side by side. -->
+    <item name="activity_sell" type="layout">@layout/activity_sell_two_pane</item>
+</resources>

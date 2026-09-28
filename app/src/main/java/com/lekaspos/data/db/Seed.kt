@@ -28,6 +28,9 @@ object Seed {
         const val PM_CARD = 2L
         const val PM_EWALLET = 3L
         const val PM_CREDIT = 4L
+
+        /** The store owner's staff record; the only user until PIN login arrives (Phase 4). */
+        const val STAFF_OWNER = 1L
     }
 
     fun insert(db: SQLiteDatabase, names: SeedNames, now: Long) {
@@ -49,5 +52,18 @@ object Seed {
         method(Ids.PM_CARD, names.card, PaymentKind.CARD, false, 2)
         method(Ids.PM_EWALLET, names.ewallet, PaymentKind.EWALLET, false, 3)
         method(Ids.PM_CREDIT, names.credit, PaymentKind.CREDIT, false, 4)
+        ensureOwner(db, names, now)
+    }
+
+    /**
+     * Seed rows added after schema v1 shipped (Phase 2): created on open when missing, so
+     * databases from Phase 1 builds get them without a schema migration.
+     */
+    fun ensureOwner(db: SQLiteDatabase, names: SeedNames, now: Long) {
+        db.execSQL(
+            "INSERT OR IGNORE INTO staff(id, name, role_id, active, deleted, created_at, updated_at, ver_hlc, ver_dev) " +
+                "VALUES(?, ?, ?, 1, 0, ?, ?, 0, 0)",
+            arrayOf<Any?>(Ids.STAFF_OWNER, names.owner, Ids.ROLE_OWNER, now, now),
+        )
     }
 }

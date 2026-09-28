@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Receipts rendered for sharing (cache/shared, cleared before each share). -->
+    <cache-path
+        name="shared"
+        path="shared/" />
+</paths>

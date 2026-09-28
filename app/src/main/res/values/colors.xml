@@ -2,12 +2,19 @@
 <resources>
     <color name="brand">#1B7F5B</color>
     <color name="brand_dark">#145E43</color>
-    <color name="accent">#F2A900</color>
     <color name="bg">#F3F5F4</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="divider">#DDE3E0</color>
+    <color name="field_stroke">#B9C5C0</color>
+    <color name="chip_bg">#E3ECE8</color>
+    <color name="highlight">#FFF3CF</color>
     <color name="text_primary">#1C1F1E</color>
     <color name="text_secondary">#5B6461</color>
+    <color name="text_disabled">#9AA5A1</color>
     <color name="text_on_brand">#FFFFFF</color>
     <color name="ok">#2E7D32</color>
     <color name="danger">#C62828</color>
+    <color name="warning">#B45309</color>
+    <color name="badge">#D84315</color>
     <color name="ic_launcher_bg">#1B7F5B</color>
 </resources>
