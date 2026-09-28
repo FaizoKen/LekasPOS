@@ -35,6 +35,28 @@ object QueryPlans {
 
     private val SCAN = Regex("^SCAN (?:TABLE )?([A-Za-z_][A-Za-z0-9_]*)(.*)$")
 
+    // Modern SQLite prints the alias ("SCAN r"), SQLite 3.8 the table ("SCAN TABLE sale AS r"),
+    // so aliases are mapped back to their tables from the statement's FROM/JOIN clauses.
+    private val FROM_JOIN = Regex(
+        "\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s+(?:AS\\s+)?([A-Za-z_][A-Za-z0-9_]*))?",
+        RegexOption.IGNORE_CASE,
+    )
+    private val NOT_ALIASES = setOf(
+        "WHERE", "ON", "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "JOIN", "NATURAL", "GROUP", "ORDER",
+        "LIMIT", "UNION", "USING", "INDEXED", "NOT", "AND", "OR", "HAVING", "SET", "VALUES", "SELECT",
+    )
+
+    internal fun tableAliases(sql: String): Map<String, String> {
+        val map = HashMap<String, String>()
+        for (m in FROM_JOIN.findAll(sql)) {
+            val table = m.groupValues[1]
+            val alias = m.groupValues[2]
+            map[table] = table
+            if (alias.isNotEmpty() && alias.uppercase() !in NOT_ALIASES) map[alias] = table
+        }
+        return map
+    }
+
     fun check(db: SQLiteDatabase): List<PlanCheck> =
         hotQueries().map { (name, sql) -> check(db, name, sql, maintenance = false) } +
             maintenanceQueries().map { (name, sql) -> check(db, name, sql, maintenance = true) }
@@ -47,12 +69,13 @@ object QueryPlans {
             lines
         }
         val violations = ArrayList<String>()
+        val aliases = tableAliases(sql)
         var insideCorrelated = false // subquery plan lines follow their "CORRELATED ..." marker
         for (line in plan) {
             if (line.contains("CORRELATED")) insideCorrelated = true
             val m = SCAN.find(line.trim())
             if (m != null) {
-                val table = m.groupValues[1]
+                val table = aliases[m.groupValues[1]] ?: m.groupValues[1]
                 val fullScan = table in LARGE_TABLES && !m.groupValues[2].contains("USING")
                 if (fullScan && !maintenance) violations.add("full scan of $table: $line")
                 if (fullScan && insideCorrelated) violations.add("correlated subquery scans $table: $line")
