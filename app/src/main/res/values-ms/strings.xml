@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cancel">Batal</string>
+
+    <string name="seed_role_owner">Pemilik</string>
+    <string name="seed_role_manager">Pengurus</string>
+    <string name="seed_role_cashier">Juruwang</string>
+    <string name="seed_pm_cash">Tunai</string>
+    <string name="seed_pm_card">Kad</string>
+    <string name="seed_pm_ewallet">E-dompet / QR</string>
+    <string name="seed_pm_credit">Kredit pelanggan</string>
+
+    <string name="sell_status_opening">Membuka pangkalan data…</string>
+    <string name="sell_status_ready">Sedia · peranti %1$s · produk: %2$d · jualan: %3$d · skema v%4$d</string>
+    <string name="sell_status_error">Pangkalan data tidak dapat dibuka: %1$s</string>
+    <string name="sell_phase_note">Ini binaan Fasa 1. Skrin jualan akan tiba dalam Fasa 2. Gunakan Diagnostik untuk mengukur kelajuan peranti ini.</string>
+    <string name="sell_open_diagnostics">Diagnostik &amp; ujian prestasi</string>
+
+    <string name="diag_title">Diagnostik</string>
+    <string name="diag_device_info">%1$s %2$s · Android %3$s (API %4$d)\nRAM %5$d MB · had memori aplikasi %6$d MB\nLekasPOS %7$s</string>
+    <string name="diag_run_quick">Ujian pantas (5,000 produk)</string>
+    <string name="diag_run_full">Ujian penuh (50,000 produk, 1 juta baris jualan)</string>
+    <string name="diag_cancel">Henti</string>
+    <string name="diag_delete">Padam data ujian</string>
+    <string name="diag_share">Kongsi laporan</string>
+    <string name="diag_confirm_full_title">Jalankan ujian penuh?</string>
+    <string name="diag_confirm_full_message">Ujian penuh mencipta kira-kira 350 MB data ujian sementara dan boleh mengambil masa 5–20 minit pada peranti yang perlahan. Biarkan aplikasi terbuka dan peranti sedang dicas. Data kedai anda tidak disentuh.</string>
+    <string name="diag_start">Mula</string>
+    <string name="diag_idle">Belum ada ujian dijalankan. Data ujian disimpan dalam pangkalan data berasingan dan tidak bercampur dengan data kedai.</string>
+    <string name="diag_running">Sedang berjalan: %1$s</string>
+    <string name="diag_running_progress">Sedang berjalan: %1$s %2$d / %3$d</string>
+    <string name="diag_passed">LULUS — semua senario dalam bajet</string>
+    <string name="diag_failed">GAGAL — lihat baris bertanda OVER BUDGET atau FAIL</string>
+    <string name="diag_error">Ujian berhenti kerana ralat: %1$s</string>
+    <string name="diag_deleted">Data ujian dipadam</string>
+    <string name="diag_saved_to">Disimpan di %1$s</string>
+</resources>

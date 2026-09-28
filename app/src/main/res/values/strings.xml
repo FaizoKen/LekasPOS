@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">LekasPOS</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Seed data names (created once, on first launch, in the device language) -->
+    <string name="seed_role_owner">Owner</string>
+    <string name="seed_role_manager">Manager</string>
+    <string name="seed_role_cashier">Cashier</string>
+    <string name="seed_pm_cash">Cash</string>
+    <string name="seed_pm_card">Card</string>
+    <string name="seed_pm_ewallet">E-wallet / QR</string>
+    <string name="seed_pm_credit">Customer credit</string>
+
+    <!-- Home / selling screen (Phase 1 placeholder) -->
+    <string name="sell_status_opening">Opening database…</string>
+    <string name="sell_status_ready">Ready · device %1$s · products: %2$d · sales: %3$d · schema v%4$d</string>
+    <string name="sell_status_error">Could not open the database: %1$s</string>
+    <string name="sell_phase_note">This is the Phase 1 build. The selling screen arrives in Phase 2. Use Diagnostics to measure how fast this device is.</string>
+    <string name="sell_open_diagnostics">Diagnostics &amp; performance test</string>
+
+    <!-- Diagnostics -->
+    <string name="diag_title">Diagnostics</string>
+    <string name="diag_device_info">%1$s %2$s · Android %3$s (API %4$d)\nRAM %5$d MB · app memory limit %6$d MB\nLekasPOS %7$s</string>
+    <string name="diag_run_quick">Quick test (5,000 products)</string>
+    <string name="diag_run_full">Full test (50,000 products, 1 million sale lines)</string>
+    <string name="diag_cancel">Stop</string>
+    <string name="diag_delete">Delete test data</string>
+    <string name="diag_share">Share report</string>
+    <string name="diag_confirm_full_title">Run the full test?</string>
+    <string name="diag_confirm_full_message">The full test creates about 350 MB of temporary test data and can take 5–20 minutes on a slow device. Keep the app open and the device charging. Your store data is not touched.</string>
+    <string name="diag_start">Start</string>
+    <string name="diag_idle">No test has run yet. Test data is kept in a separate database and never mixes with store data.</string>
+    <string name="diag_running">Running: %1$s</string>
+    <string name="diag_running_progress">Running: %1$s %2$d / %3$d</string>
+    <string name="diag_passed">PASSED — every scenario is within budget</string>
+    <string name="diag_failed">FAILED — see the lines marked OVER BUDGET or FAIL</string>
+    <string name="diag_error">The test stopped with an error: %1$s</string>
+    <string name="diag_deleted">Test data deleted</string>
+    <string name="diag_saved_to">Saved to %1$s</string>
+</resources>

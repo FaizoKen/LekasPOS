@@ -1,0 +1,118 @@
+# Build, JVM tests, lint and APK-size check on every push/PR, then the instrumented tests on the
+# two emulator profiles that matter most: API 21 (Android 5.0, 1 GB — SQLite 3.8, the oldest
+# planner we support) and API 36 (current target). Heavy work runs here, not on a laptop.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, unit tests, lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build, test, lint
+        run: |
+          chmod +x gradlew
+          ./gradlew :core:test :app:testDebugUnitTest :app:lintRelease \
+            :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+
+      - name: Release APK size (budget 8 MB)
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          size=$(stat -c%s "$apk")
+          echo "Release APK: $size bytes ($((size / 1024)) KB) — budget 8 MB" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$size" -lt 8388608
+
+      - name: Collect APKs
+        run: |
+          mkdir -p apks
+          cp app/build/outputs/apk/release/app-release.apk apks/
+          cp app/build/outputs/apk/debug/app-debug.apk apks/
+          cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apks/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: apks
+          path: apks/
+          retention-days: 14
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-reports
+          path: |
+            core/build/reports/
+            app/build/reports/
+            core/build/test-results/
+            app/build/test-results/
+          retention-days: 14
+
+  instrumented:
+    name: Instrumented tests (API ${{ matrix.api }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 21
+            ram: 1024M
+          - api: 36
+            ram: 2048M
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: apks
+          path: apks
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86_64
+          ram-size: ${{ matrix.ram }}
+          disk-size: 4096M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: bash scripts/ci/instrumented.sh
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: instrumented-api${{ matrix.api }}
+          path: results/
+          retention-days: 14
