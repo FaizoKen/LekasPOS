@@ -45,7 +45,7 @@ Every synced change is one event appended to `outbox` in the same transaction as
 | Event | Payload | Apply rule |
 |---|---|---|
 | `LWW(entity, id, hlc, dev, fields{})` | only the changed fields | per field: apply if `(hlc, dev)` > the field's current version |
-| `SALE` | sale row + lines + payments | `INSERT OR IGNORE` all; if new: stock, summaries, customer credit, derived status |
+| `SALE` | sale row + lines + payments | `INSERT OR IGNORE` all; if new: stock, summaries, derived status (customer credit arrives as its own CREDIT events) |
 | `SALE_VOID` | void row | insert-or-ignore; if new and sale present: reverse stock + summaries, mark voided |
 | `STOCK_MOVE` | movement rows | insert-or-ignore; if new: apply to `stock_level` when after the last count |
 | `STOCK_COUNT` | count rows | insert-or-ignore; if newer than the current count: recompute the product's level |
@@ -59,6 +59,15 @@ Stock work (D-036): a PURCHASE event regenerates its RECEIVE movements with the 
 ids; the moving-average cost change travels separately as an ordinary LWW `product.cost` edit,
 so importers never recompute averages (D-033). A STOCK_COUNT row carries `expected`/`unit_cost`
 for reports only; stock levels use just its qty and HLC.
+
+Staff, shifts and credit (D-037..D-039): a PIN change is one LWW field (`pin_hash` holds the
+whole salted record), so the same PIN works on every till. A shift is an LWW row edited only by
+the till that opened it; its expected cash is recomputed from `shift_id`-tagged events (sales,
+payments, voids, cash movements, credit repayments), never shipped as a total. A credit sale
+writes its CHARGE entries as separate CREDIT events in the sale transaction; refunds to credit
+and voids add reversing CHARGE entries (negative amounts). `customer_balance` = sum of entry
+deltas, rebuilt by `DerivedRebuild.customerBalances`. Wrong-PIN counters and the signed-in
+staff member are LOCAL (`meta`: `pin.*`, `session.staff`), per till.
 
 ### Conflict semantics (these become the merge tests)
 

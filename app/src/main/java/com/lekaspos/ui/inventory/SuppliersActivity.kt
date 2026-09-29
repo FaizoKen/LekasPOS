@@ -53,7 +53,7 @@ class SuppliersActivity : ScreenActivity() {
 
     private fun delete(s: Supplier) {
         if (!graph.permissions.allowed(Perm.MANAGE_STOCK)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.MANAGE_STOCK) { delete(s) }
             return
         }
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.inv_supplier_delete_confirm, s.name), getString(R.string.delete)) {
@@ -68,7 +68,7 @@ class SuppliersActivity : ScreenActivity() {
 /** Add ([existing] = null) or edit a supplier; [onSaved] gets the stored supplier. */
 fun editSupplier(a: ScreenActivity, existing: Supplier?, onSaved: (Supplier) -> Unit) {
     if (!a.graph.permissions.allowed(Perm.MANAGE_STOCK)) {
-        Dialogs.message(a, null, a.getString(R.string.not_allowed))
+        a.requireAccess(Perm.MANAGE_STOCK) { editSupplier(a, existing, onSaved) }
         return
     }
     val pad = (20 * a.resources.displayMetrics.density).toInt()

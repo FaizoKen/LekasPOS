@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 4: staff, PINs, roles, shifts and cash, customers and credit. -->
+<resources>
+    <!-- Language of these resources (used to pick report labels). -->
+    <string name="ui_lang">en</string>
+
+    <!-- Sign-in and PINs -->
+    <string name="lock_title">Sign in</string>
+    <string name="lock_who">Who is using the till?</string>
+    <string name="lock_change_user">Change</string>
+    <string name="lock_forgot">Forgot PIN?</string>
+    <string name="pin_enter">Enter PIN</string>
+    <string name="pin_wrong">Wrong PIN. Tries left: %1$d.</string>
+    <string name="pin_wrong_plain">Wrong PIN.</string>
+    <string name="pin_wrong_wait">Wrong PIN. Wait %1$s before the next try.</string>
+    <string name="pin_wait">Too many wrong PINs. Try again in %1$s.</string>
+    <string name="pin_not_allowed">This person cannot sign in or approve this.</string>
+    <string name="pin_new_title">New PIN for %1$s</string>
+    <string name="pin_new_hint">4 to 6 digits. Avoid 1234 or a birthday.</string>
+    <string name="pin_repeat">Enter the same PIN again.</string>
+    <string name="pin_mismatch">The PINs do not match. Start again.</string>
+    <string name="pin_current">Enter your current PIN.</string>
+    <string name="pin_changed">PIN saved.</string>
+    <string name="recovery_title">Owner recovery code</string>
+    <string name="recovery_message">Write this code down and keep it safe:\n\n%1$s\n\nIf the owner forgets the PIN, this code is the only way back in. It is shown only now.</string>
+    <string name="recovery_done">I wrote it down</string>
+    <string name="recovery_enter">Enter the owner recovery code you wrote down when the first PIN was set.</string>
+    <string name="recovery_hint">XXXX-XXXX-XXXX</string>
+    <string name="recovery_wrong">That recovery code is not right.</string>
+    <string name="approval_title">Manager approval</string>
+    <string name="approval_needed">%1$s needs a manager\'s approval.</string>
+
+    <!-- Staff and roles -->
+    <string name="staff_title">Staff</string>
+    <string name="settings_staff_sub">Staff, PINs, roles and permissions</string>
+    <string name="staff_add">New staff</string>
+    <string name="staff_edit">Edit staff</string>
+    <string name="staff_name">Name</string>
+    <string name="staff_role">Role</string>
+    <string name="staff_active">Active (may sign in)</string>
+    <string name="staff_inactive">inactive</string>
+    <string name="staff_you">you</string>
+    <string name="staff_pin">PIN</string>
+    <string name="staff_pin_set">PIN set</string>
+    <string name="staff_no_pin">no PIN</string>
+    <string name="staff_pin_set_button">Set PIN</string>
+    <string name="staff_pin_change">Change PIN</string>
+    <string name="staff_pin_remove">Remove PIN</string>
+    <string name="staff_pin_remove_confirm">Remove the PIN of %1$s? They can no longer sign in.</string>
+    <string name="staff_pin_after_save">After saving you will set this person\'s PIN.</string>
+    <string name="staff_delete_confirm">Remove %1$s? Their sales and history stay.</string>
+    <string name="staff_login_off">PIN login is off: the app runs as the owner. Set the owner\'s PIN to turn it on.</string>
+    <string name="staff_login_on">PIN login is on. Lock when idle: %1$s.</string>
+    <string name="staff_autolock">Lock when idle</string>
+    <string name="staff_autolock_never">never</string>
+    <string name="staff_autolock_min">after %1$d min</string>
+    <string name="staff_recovery_new">New recovery code</string>
+    <string name="staff_recovery_confirm">A new owner recovery code replaces the old one. Continue?</string>
+    <string name="staff_change_own_pin">Change my PIN</string>
+    <string name="roles_title">Roles</string>
+    <string name="role_add">New role</string>
+    <string name="role_edit">Edit role</string>
+    <string name="role_name">Role name</string>
+    <string name="role_perms">May do</string>
+    <string name="role_owner_all">The owner can always do everything.</string>
+    <string name="role_delete_confirm">Remove the role %1$s?</string>
+    <plurals name="role_perm_count">
+        <item quantity="one">%d permission</item>
+        <item quantity="other">%d permissions</item>
+    </plurals>
+    <string name="perm_discount">Give discounts</string>
+    <string name="perm_price">Change prices on a bill</string>
+    <string name="perm_cancel_bill">Cancel a bill</string>
+    <string name="perm_void">Void sales</string>
+    <string name="perm_refund">Refunds</string>
+    <string name="perm_reprint">Print receipt copies</string>
+    <string name="perm_drawer">Open the cash drawer</string>
+    <string name="perm_cash_move">Cash in, cash out and drops</string>
+    <string name="perm_shift_report">See expected cash and shift reports</string>
+    <string name="perm_customers">Manage customers, take repayments</string>
+    <string name="perm_credit_sale">Sell on credit</string>
+    <string name="perm_credit_limit">Go over credit limits, adjust balances</string>
+    <string name="perm_products">Edit products and categories</string>
+    <string name="perm_stock">Receive, adjust and count stock</string>
+    <string name="perm_audit">See the activity log</string>
+    <string name="perm_settings">Change settings</string>
+    <string name="perm_staff">Manage staff and roles</string>
+    <string name="perm_other">Other</string>
+
+    <!-- Shifts and cash -->
+    <string name="menu_shift">Shift &amp; cash</string>
+    <string name="menu_lock">Lock / switch user</string>
+    <string name="shift_title">Shift &amp; cash</string>
+    <string name="settings_shift_sub">Open and close shifts, cash in and out, shift reports</string>
+    <string name="shift_none">No shift is open on this till.</string>
+    <string name="shift_open">Open shift</string>
+    <string name="shift_float_hint">Cash put in the drawer at the start (change).</string>
+    <string name="shift_current">Open shift</string>
+    <string name="shift_opened_by">Opened by</string>
+    <string name="shift_opened_at">Opened</string>
+    <string name="shift_float">Opening float</string>
+    <string name="shift_cash_in">Cash in</string>
+    <string name="shift_cash_out">Cash out</string>
+    <string name="shift_drop">Cash drop</string>
+    <string name="shift_reason_optional">Reason (optional)</string>
+    <string name="shift_reason_required">Reason (required)</string>
+    <string name="shift_cash_done">Recorded: %1$s</string>
+    <string name="shift_report">Shift report</string>
+    <string name="shift_close">Close shift</string>
+    <string name="shift_count">Count the drawer</string>
+    <string name="shift_count_hint">Count all the cash in the drawer and enter the total.</string>
+    <string name="shift_close_confirm">Close the shift with %1$s counted in the drawer?</string>
+    <string name="shift_closed">Shift closed</string>
+    <string name="shift_closed_blind">The shift is closed. Counted: %1$s.</string>
+    <string name="shift_history">Past shifts</string>
+    <string name="shift_history_empty">No shifts yet.</string>
+    <string name="shift_open_tag">open</string>
+    <string name="shift_till">Till %1$d</string>
+    <string name="shift_moves">Cash movements</string>
+    <string name="shift_print">Print report</string>
+    <string name="shift_needed_title">No shift open</string>
+    <string name="shift_needed">Payments need an open shift on this till. Open one now?</string>
+    <string name="section_cash">Shifts and customers</string>
+    <string name="shift_required">Require an open shift to take payments</string>
+    <string name="shift_required_help">Each till opens a shift with a float and closes it by counting the drawer. Sales, refunds and cash movements are added to the shift.</string>
+
+    <!-- Customers and credit -->
+    <string name="menu_customers">Customers</string>
+    <string name="customers_title">Customers</string>
+    <string name="settings_customers_sub">Customer list, credit balances, repayments</string>
+    <string name="customers_owing">Customers · owing: %1$d (%2$s)</string>
+    <string name="customers_empty">No customers yet. Tap + to add one.</string>
+    <string name="customers_none_found">No customer found.</string>
+    <string name="customer_search_hint">Name or phone</string>
+    <string name="customer_pick">Choose customer</string>
+    <string name="customer_add">New customer</string>
+    <string name="customer_edit">Edit customer</string>
+    <string name="customer_name">Name</string>
+    <string name="customer_tin">Tax ID (TIN)</string>
+    <string name="customer_limit">Credit limit (empty = no limit)</string>
+    <string name="customer_limit_hint">The credit limit is the most this customer may owe. Going over it needs a manager.</string>
+    <string name="customer_limit_error">Enter an amount, or leave it empty for no limit.</string>
+    <string name="customer_owes">Owes %1$s</string>
+    <string name="customer_limit_line">Limit %1$s · %2$s left</string>
+    <string name="customer_delete_confirm">Remove %1$s? Their history stays.</string>
+    <string name="credit_enabled">Customers and credit (pay later)</string>
+    <string name="credit_enabled_help">Attach a customer to a bill, sell on credit up to a limit, and take repayments. Off: no customer field on the selling screen.</string>
+    <string name="credit_empty">No credit entries yet.</string>
+    <string name="credit_charge">Bought on credit</string>
+    <string name="credit_reversal">Credit sale returned</string>
+    <string name="credit_payment">Repayment</string>
+    <string name="credit_adjust">Balance adjusted</string>
+    <string name="credit_balance_after">owes %1$s</string>
+    <string name="credit_receive">Take a repayment</string>
+    <string name="credit_paid_with">Paid with</string>
+    <string name="credit_adjust_title">Adjust balance</string>
+    <string name="credit_adjust_more">Owes more</string>
+    <string name="credit_adjust_less">Owes less</string>
+    <string name="credit_over_limit_title">Over the credit limit</string>
+    <string name="credit_over_limit">%1$s owes %2$s and the limit is %3$s. This sale adds %4$s.</string>
+    <string name="credit_allow">Allow</string>
+    <string name="sell_customer">Customer: %1$s</string>
+    <string name="sell_customer_none">Add customer</string>
+    <string name="sell_customer_change">Change customer</string>
+    <string name="sell_customer_remove">Remove customer</string>
+    <string name="result_customer">%1$s now owes %2$s</string>
+
+    <!-- Refusals -->
+    <string name="error_needs_shift">Open a shift first (menu → Shift &amp; cash).</string>
+    <string name="error_shift_open">A shift is already open on this till.</string>
+    <string name="error_needs_customer">Choose the customer first.</string>
+    <string name="error_over_limit">Over the customer\'s credit limit. A manager must allow it.</string>
+    <string name="error_has_balance">This customer still owes money (or has credit). Settle the balance first.</string>
+    <string name="error_last_owner">Not possible: at least one owner must be able to sign in with a PIN.</string>
+    <string name="error_credit_off">Customers and credit are switched off in Settings → Store.</string>
+    <string name="error_owner_pin_first">Set a PIN for an owner first, so someone can always manage staff.</string>
+    <string name="error_seed_role">The owner, manager and cashier roles cannot be removed.</string>
+    <string name="error_role_in_use">Staff still have this role. Give them another role first.</string>
+
+    <!-- Activity log -->
+    <string name="audit_all">All actions</string>
+    <string name="audit_filter">Filter</string>
+    <string name="audit_approved_by">approved by %1$s</string>
+    <string name="audit_approval">Manager approval</string>
+    <string name="audit_sign_in">Signed in</string>
+    <string name="audit_pin_lockout">Too many wrong PINs</string>
+    <string name="audit_staff">Staff changed</string>
+    <string name="audit_role">Role changed</string>
+    <string name="audit_shift_open">Shift opened</string>
+    <string name="audit_shift_close">Shift closed</string>
+    <string name="audit_over_limit">Credit over limit</string>
+    <string name="audit_pin_reset">Owner PIN reset</string>
+</resources>

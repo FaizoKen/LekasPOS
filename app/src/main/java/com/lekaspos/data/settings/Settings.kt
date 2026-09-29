@@ -37,6 +37,11 @@ object SettingKeys {
     const val CURRENCY_DECIMALS = "currency.decimals"
     const val CASH_STEP = "currency.cash_step"
     const val SCALE_TEMPLATES = "scale.templates"
+    const val SHIFT_REQUIRED = "shift.required"
+    const val CREDIT_ENABLED = "credit.enabled"
+
+    /** Hash of the owner's recovery code (D-037); not part of [StoreSettings]. */
+    const val OWNER_RECOVERY = "owner.recovery"
 }
 
 /** Store-wide settings with their defaults (D-024: Malaysian defaults). */
@@ -60,6 +65,10 @@ data class StoreSettings(
     val pricesIncludeTax: Boolean = true,
     val currency: CurrencySpec = CurrencySpec.MYR,
     val scaleTemplates: List<String> = DEFAULT_SCALE_TEMPLATES,
+    /** Payments need an open shift on this till (D-038). */
+    val shiftRequired: Boolean = false,
+    /** Customers and "pay later" credit (D-039). */
+    val creditEnabled: Boolean = false,
 ) {
     val cashStep: Long get() = currency.cashStep
 
@@ -97,6 +106,8 @@ data class StoreSettings(
         SettingKeys.CURRENCY_DECIMALS to currency.decimals.toString(),
         SettingKeys.CASH_STEP to currency.cashStep.toString(),
         SettingKeys.SCALE_TEMPLATES to scaleTemplates.joinToString(","),
+        SettingKeys.SHIFT_REQUIRED to flag(shiftRequired),
+        SettingKeys.CREDIT_ENABLED to flag(creditEnabled),
     )
 
     companion object {
@@ -131,6 +142,8 @@ data class StoreSettings(
                 ),
                 scaleTemplates = m[SettingKeys.SCALE_TEMPLATES]?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
                     ?: DEFAULT_SCALE_TEMPLATES,
+                shiftRequired = b(SettingKeys.SHIFT_REQUIRED, d.shiftRequired),
+                creditEnabled = b(SettingKeys.CREDIT_ENABLED, d.creditEnabled),
             )
         }
 
@@ -201,6 +214,8 @@ data class DeviceSettings(
     val scannerAddress: String? = null,
     val scannerName: String? = null,
     val cameraScan: Boolean = true,
+    /** Lock the till after this many idle minutes (0 = never) while PIN login is on. */
+    val autoLockMinutes: Int = 0,
 ) {
     val cols: Int get() = when (paper) { 80 -> 48; 81 -> 42; else -> 32 }
     val dots: Int get() = when (paper) { 80 -> 576; 81 -> 512; else -> 384 }
@@ -239,6 +254,7 @@ data class DeviceSettings(
         private const val SCANNER_ADDRESS = "dev.scanner.address"
         private const val SCANNER_NAME = "dev.scanner.name"
         private const val CAMERA = "dev.camera.enabled"
+        private const val AUTO_LOCK = "dev.lock.minutes"
 
         fun load(db: SQLiteDatabase): DeviceSettings {
             val m = HashMap<String, String?>()
@@ -265,6 +281,7 @@ data class DeviceSettings(
                 scannerAddress = m[SCANNER_ADDRESS]?.takeIf { it.isNotEmpty() },
                 scannerName = m[SCANNER_NAME],
                 cameraScan = b(CAMERA, d.cameraScan),
+                autoLockMinutes = i(AUTO_LOCK, d.autoLockMinutes).coerceIn(0, 240),
             )
         }
 
@@ -286,6 +303,7 @@ data class DeviceSettings(
             put(SCANNER_ADDRESS, s.scannerAddress ?: "")
             put(SCANNER_NAME, s.scannerName)
             put(CAMERA, flag(s.cameraScan))
+            put(AUTO_LOCK, s.autoLockMinutes.toString())
         }
     }
 }

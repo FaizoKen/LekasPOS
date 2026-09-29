@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
@@ -23,12 +24,14 @@ class InventoryActivity : ScreenActivity() {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.inv_title), R.layout.list_plain) ?: return
         val entries = listOf(
-            Entry(R.string.inv_receive, R.string.inv_receive_sub) { startActivity(Intent(this, ReceiveActivity::class.java)) },
+            Entry(R.string.inv_receive, R.string.inv_receive_sub) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, ReceiveActivity::class.java)) } },
             Entry(R.string.inv_adjust, R.string.inv_adjust_sub) {
-                @Suppress("DEPRECATION")
-                startActivityForResult(ProductPickActivity.intent(this, getString(R.string.inv_adjust)), REQ_ADJUST)
+                requireAccess(Perm.MANAGE_STOCK) {
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(ProductPickActivity.intent(this, getString(R.string.inv_adjust)), REQ_ADJUST)
+                }
             },
-            Entry(R.string.inv_count, R.string.inv_count_sub) { startActivity(Intent(this, CountSessionsActivity::class.java)) },
+            Entry(R.string.inv_count, R.string.inv_count_sub) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, CountSessionsActivity::class.java)) } },
             Entry(R.string.inv_low_stock, R.string.inv_low_stock_sub) { startActivity(Intent(this, LowStockActivity::class.java)) },
             Entry(R.string.inv_suppliers, R.string.inv_suppliers_sub) { startActivity(Intent(this, SuppliersActivity::class.java)) },
             Entry(R.string.inv_purchases, R.string.inv_purchases_sub) { startActivity(PurchasesActivity.intent(this, null)) },
@@ -71,7 +74,7 @@ class InventoryActivity : ScreenActivity() {
 }
 
 /** Adjust-stock flow usable from any screen. */
-fun ScreenActivity.adjustProduct(productId: Long, done: () -> Unit = {}) {
+fun ScreenActivity.adjustProduct(productId: Long, done: () -> Unit = {}) = requireAccess(Perm.MANAGE_STOCK) {
     launchUi {
         val p = InventoryUi.product(graph, productId) ?: return@launchUi
         InventoryUi.askAdjust(this@adjustProduct, p) { reason, qty, removing, note ->

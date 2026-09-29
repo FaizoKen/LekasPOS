@@ -135,6 +135,26 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
 - Back handling on the selling screen: `OnBackInvokedCallback` on API 33+ (registered only
   while back should close the catalogue/search), `KEYCODE_BACK` in `dispatchKeyEvent` below.
 
+## 7a. Staff, permissions, shifts, customers (Phase 4)
+
+- `StaffSession` (app-scoped): while no active staff member has a PIN the till runs as the seed
+  owner with every permission (the Phase 1–3 behaviour). The first PIN must be an owner's; it
+  signs that owner in and turns PIN login on. The signed-in staff id is kept in `meta`, so a
+  restart returns to the same cashier; Lock / idle timeout (per device, `dev.lock.minutes`)
+  clears it. Wrong PINs count per till (`pin.fails`), 5 free tries, then 30 s doubling to 15 min.
+- `LockActivity` covers the selling screen whenever `state.locked`; secondary screens that find
+  the till locked jump back home (`ScreenActivity.onStart`). Back on the lock screen leaves the app.
+- `PermissionGate`: every sensitive service call takes an optional `Approval` and resolves an
+  `Actor(staffId, approvedBy)`. UI: `withApproval(perm)` = one-shot manager PIN for one action
+  (selling screen, voids, refunds, reprints, drawer, cash moves, credit); `requireAccess(perm)`
+  / `guard(perm)` = a screen keeps the approval until it closes (products, stock, settings,
+  staff, audit log, shift report). Approvals are audited (`approved_by`, or an APPROVAL entry).
+- `ShiftService`: one open shift per till; sales/refunds/voids/credit repayments written while
+  it is open carry its id; expected cash is recomputed from those events (D-038). Blind close
+  for staff without SHIFT_REPORT; the report prints as a PrintJobKind.SHIFT job.
+- `CustomerService` + checkout: credit tenders need the bill's customer, CREDIT_SALE, and over
+  the limit a CREDIT_LIMIT approval, all re-checked inside the sale transaction (D-039).
+
 ## 8. Sync (details in `sync.md`)
 
 `SyncEngine` talks only to the `SyncProvider` interface. Providers: `GoogleDriveProvider`

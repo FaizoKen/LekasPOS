@@ -96,6 +96,10 @@ object CartDao {
         tx.update("UPDATE cart SET bill_disc_kind = ?, bill_disc_value = ?, updated_at = ? WHERE id = ?", kind, value, now, cartId)
     }
 
+    fun setCustomer(tx: Db.Tx, cartId: Long, customerId: Long?, now: Long) {
+        tx.update("UPDATE cart SET customer_id = ?, updated_at = ? WHERE id = ?", customerId, now, cartId)
+    }
+
     fun deleteCart(tx: Db.Tx, cartId: Long) {
         tx.update("DELETE FROM cart WHERE id = ?", cartId) // lines cascade
     }

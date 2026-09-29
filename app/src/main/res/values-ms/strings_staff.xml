@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 4: kakitangan, PIN, peranan, syif dan tunai, pelanggan dan kredit. -->
+<resources>
+    <string name="ui_lang">ms</string>
+
+    <!-- Log masuk dan PIN -->
+    <string name="lock_title">Log masuk</string>
+    <string name="lock_who">Siapa yang menggunakan kaunter?</string>
+    <string name="lock_change_user">Tukar</string>
+    <string name="lock_forgot">Lupa PIN?</string>
+    <string name="pin_enter">Masukkan PIN</string>
+    <string name="pin_wrong">PIN salah. Baki cubaan: %1$d.</string>
+    <string name="pin_wrong_plain">PIN salah.</string>
+    <string name="pin_wrong_wait">PIN salah. Tunggu %1$s sebelum cuba lagi.</string>
+    <string name="pin_wait">Terlalu banyak PIN salah. Cuba lagi dalam %1$s.</string>
+    <string name="pin_not_allowed">Orang ini tidak boleh log masuk atau meluluskan ini.</string>
+    <string name="pin_new_title">PIN baharu untuk %1$s</string>
+    <string name="pin_new_hint">4 hingga 6 digit. Elakkan 1234 atau tarikh lahir.</string>
+    <string name="pin_repeat">Masukkan PIN yang sama sekali lagi.</string>
+    <string name="pin_mismatch">PIN tidak sama. Mula semula.</string>
+    <string name="pin_current">Masukkan PIN semasa anda.</string>
+    <string name="pin_changed">PIN disimpan.</string>
+    <string name="recovery_title">Kod pemulihan pemilik</string>
+    <string name="recovery_message">Catat kod ini dan simpan di tempat selamat:\n\n%1$s\n\nJika pemilik lupa PIN, kod ini satu-satunya cara untuk masuk semula. Ia hanya ditunjukkan sekarang.</string>
+    <string name="recovery_done">Saya sudah catat</string>
+    <string name="recovery_enter">Masukkan kod pemulihan pemilik yang dicatat semasa PIN pertama ditetapkan.</string>
+    <string name="recovery_hint">XXXX-XXXX-XXXX</string>
+    <string name="recovery_wrong">Kod pemulihan itu salah.</string>
+    <string name="approval_title">Kelulusan pengurus</string>
+    <string name="approval_needed">%1$s memerlukan kelulusan pengurus.</string>
+
+    <!-- Kakitangan dan peranan -->
+    <string name="staff_title">Kakitangan</string>
+    <string name="settings_staff_sub">Kakitangan, PIN, peranan dan kebenaran</string>
+    <string name="staff_add">Kakitangan baharu</string>
+    <string name="staff_edit">Sunting kakitangan</string>
+    <string name="staff_name">Nama</string>
+    <string name="staff_role">Peranan</string>
+    <string name="staff_active">Aktif (boleh log masuk)</string>
+    <string name="staff_inactive">tidak aktif</string>
+    <string name="staff_you">anda</string>
+    <string name="staff_pin">PIN</string>
+    <string name="staff_pin_set">PIN ditetapkan</string>
+    <string name="staff_no_pin">tiada PIN</string>
+    <string name="staff_pin_set_button">Tetapkan PIN</string>
+    <string name="staff_pin_change">Tukar PIN</string>
+    <string name="staff_pin_remove">Buang PIN</string>
+    <string name="staff_pin_remove_confirm">Buang PIN %1$s? Dia tidak lagi boleh log masuk.</string>
+    <string name="staff_pin_after_save">Selepas disimpan, anda akan menetapkan PIN orang ini.</string>
+    <string name="staff_delete_confirm">Buang %1$s? Jualan dan sejarahnya kekal.</string>
+    <string name="staff_login_off">Log masuk PIN dimatikan: aplikasi berjalan sebagai pemilik. Tetapkan PIN pemilik untuk menghidupkannya.</string>
+    <string name="staff_login_on">Log masuk PIN dihidupkan. Kunci apabila tidak digunakan: %1$s.</string>
+    <string name="staff_autolock">Kunci apabila tidak digunakan</string>
+    <string name="staff_autolock_never">tidak sekali-kali</string>
+    <string name="staff_autolock_min">selepas %1$d min</string>
+    <string name="staff_recovery_new">Kod pemulihan baharu</string>
+    <string name="staff_recovery_confirm">Kod pemulihan pemilik yang baharu menggantikan yang lama. Teruskan?</string>
+    <string name="staff_change_own_pin">Tukar PIN saya</string>
+    <string name="roles_title">Peranan</string>
+    <string name="role_add">Peranan baharu</string>
+    <string name="role_edit">Sunting peranan</string>
+    <string name="role_name">Nama peranan</string>
+    <string name="role_perms">Boleh</string>
+    <string name="role_owner_all">Pemilik sentiasa boleh melakukan semuanya.</string>
+    <string name="role_delete_confirm">Buang peranan %1$s?</string>
+    <plurals name="role_perm_count">
+        <item quantity="other">%d kebenaran</item>
+    </plurals>
+    <string name="perm_discount">Beri diskaun</string>
+    <string name="perm_price">Ubah harga dalam bil</string>
+    <string name="perm_cancel_bill">Batalkan bil</string>
+    <string name="perm_void">Batalkan jualan</string>
+    <string name="perm_refund">Bayaran balik</string>
+    <string name="perm_reprint">Cetak salinan resit</string>
+    <string name="perm_drawer">Buka laci wang</string>
+    <string name="perm_cash_move">Wang masuk, wang keluar dan simpanan</string>
+    <string name="perm_shift_report">Lihat tunai dijangka dan laporan syif</string>
+    <string name="perm_customers">Urus pelanggan, terima bayaran hutang</string>
+    <string name="perm_credit_sale">Jual secara kredit</string>
+    <string name="perm_credit_limit">Melebihi had kredit, laraskan baki</string>
+    <string name="perm_products">Sunting produk dan kategori</string>
+    <string name="perm_stock">Terima, laras dan kira stok</string>
+    <string name="perm_audit">Lihat log aktiviti</string>
+    <string name="perm_settings">Ubah tetapan</string>
+    <string name="perm_staff">Urus kakitangan dan peranan</string>
+    <string name="perm_other">Lain-lain</string>
+
+    <!-- Syif dan tunai -->
+    <string name="menu_shift">Syif &amp; tunai</string>
+    <string name="menu_lock">Kunci / tukar pengguna</string>
+    <string name="shift_title">Syif &amp; tunai</string>
+    <string name="settings_shift_sub">Buka dan tutup syif, wang masuk dan keluar, laporan syif</string>
+    <string name="shift_none">Tiada syif dibuka di kaunter ini.</string>
+    <string name="shift_open">Buka syif</string>
+    <string name="shift_float_hint">Wang tunai yang dimasukkan ke laci pada permulaan (untuk baki).</string>
+    <string name="shift_current">Syif dibuka</string>
+    <string name="shift_opened_by">Dibuka oleh</string>
+    <string name="shift_opened_at">Dibuka</string>
+    <string name="shift_float">Wang apungan</string>
+    <string name="shift_cash_in">Wang masuk</string>
+    <string name="shift_cash_out">Wang keluar</string>
+    <string name="shift_drop">Simpanan wang</string>
+    <string name="shift_reason_optional">Sebab (pilihan)</string>
+    <string name="shift_reason_required">Sebab (wajib)</string>
+    <string name="shift_cash_done">Direkod: %1$s</string>
+    <string name="shift_report">Laporan syif</string>
+    <string name="shift_close">Tutup syif</string>
+    <string name="shift_count">Kira laci</string>
+    <string name="shift_count_hint">Kira semua wang tunai dalam laci dan masukkan jumlahnya.</string>
+    <string name="shift_close_confirm">Tutup syif dengan %1$s dikira dalam laci?</string>
+    <string name="shift_closed">Syif ditutup</string>
+    <string name="shift_closed_blind">Syif telah ditutup. Dikira: %1$s.</string>
+    <string name="shift_history">Syif lepas</string>
+    <string name="shift_history_empty">Belum ada syif.</string>
+    <string name="shift_open_tag">dibuka</string>
+    <string name="shift_till">Kaunter %1$d</string>
+    <string name="shift_moves">Pergerakan tunai</string>
+    <string name="shift_print">Cetak laporan</string>
+    <string name="shift_needed_title">Tiada syif dibuka</string>
+    <string name="shift_needed">Bayaran memerlukan syif yang dibuka di kaunter ini. Buka sekarang?</string>
+    <string name="section_cash">Syif dan pelanggan</string>
+    <string name="shift_required">Wajibkan syif dibuka untuk menerima bayaran</string>
+    <string name="shift_required_help">Setiap kaunter membuka syif dengan wang apungan dan menutupnya dengan mengira laci. Jualan, bayaran balik dan pergerakan tunai dimasukkan ke dalam syif.</string>
+
+    <!-- Pelanggan dan kredit -->
+    <string name="menu_customers">Pelanggan</string>
+    <string name="customers_title">Pelanggan</string>
+    <string name="settings_customers_sub">Senarai pelanggan, baki kredit, bayaran hutang</string>
+    <string name="customers_owing">Pelanggan · berhutang: %1$d (%2$s)</string>
+    <string name="customers_empty">Belum ada pelanggan. Ketik + untuk menambah.</string>
+    <string name="customers_none_found">Pelanggan tidak dijumpai.</string>
+    <string name="customer_search_hint">Nama atau telefon</string>
+    <string name="customer_pick">Pilih pelanggan</string>
+    <string name="customer_add">Pelanggan baharu</string>
+    <string name="customer_edit">Sunting pelanggan</string>
+    <string name="customer_name">Nama</string>
+    <string name="customer_tin">No. cukai (TIN)</string>
+    <string name="customer_limit">Had kredit (kosong = tiada had)</string>
+    <string name="customer_limit_hint">Had kredit ialah hutang maksimum pelanggan ini. Melebihinya memerlukan pengurus.</string>
+    <string name="customer_limit_error">Masukkan jumlah, atau biarkan kosong untuk tiada had.</string>
+    <string name="customer_owes">Hutang %1$s</string>
+    <string name="customer_limit_line">Had %1$s · baki %2$s</string>
+    <string name="customer_delete_confirm">Buang %1$s? Sejarahnya kekal.</string>
+    <string name="credit_enabled">Pelanggan dan kredit (bayar kemudian)</string>
+    <string name="credit_enabled_help">Kaitkan pelanggan dengan bil, jual secara kredit hingga had, dan terima bayaran hutang. Tutup: tiada ruangan pelanggan di skrin jualan.</string>
+    <string name="credit_empty">Belum ada rekod kredit.</string>
+    <string name="credit_charge">Beli secara kredit</string>
+    <string name="credit_reversal">Jualan kredit dipulangkan</string>
+    <string name="credit_payment">Bayaran hutang</string>
+    <string name="credit_adjust">Baki dilaraskan</string>
+    <string name="credit_balance_after">hutang %1$s</string>
+    <string name="credit_receive">Terima bayaran hutang</string>
+    <string name="credit_paid_with">Dibayar dengan</string>
+    <string name="credit_adjust_title">Laraskan baki</string>
+    <string name="credit_adjust_more">Hutang bertambah</string>
+    <string name="credit_adjust_less">Hutang berkurang</string>
+    <string name="credit_over_limit_title">Melebihi had kredit</string>
+    <string name="credit_over_limit">%1$s berhutang %2$s dan hadnya %3$s. Jualan ini menambah %4$s.</string>
+    <string name="credit_allow">Benarkan</string>
+    <string name="sell_customer">Pelanggan: %1$s</string>
+    <string name="sell_customer_none">Tambah pelanggan</string>
+    <string name="sell_customer_change">Tukar pelanggan</string>
+    <string name="sell_customer_remove">Buang pelanggan</string>
+    <string name="result_customer">%1$s kini berhutang %2$s</string>
+
+    <!-- Penolakan -->
+    <string name="error_needs_shift">Buka syif dahulu (menu → Syif &amp; tunai).</string>
+    <string name="error_shift_open">Syif sudah dibuka di kaunter ini.</string>
+    <string name="error_needs_customer">Pilih pelanggan dahulu.</string>
+    <string name="error_over_limit">Melebihi had kredit pelanggan. Pengurus mesti membenarkannya.</string>
+    <string name="error_has_balance">Pelanggan ini masih ada baki hutang (atau kredit). Selesaikan baki dahulu.</string>
+    <string name="error_last_owner">Tidak boleh: sekurang-kurangnya seorang pemilik mesti boleh log masuk dengan PIN.</string>
+    <string name="error_credit_off">Pelanggan dan kredit dimatikan dalam Tetapan → Kedai.</string>
+    <string name="error_owner_pin_first">Tetapkan PIN pemilik dahulu, supaya sentiasa ada yang boleh mengurus kakitangan.</string>
+    <string name="error_seed_role">Peranan pemilik, pengurus dan juruwang tidak boleh dibuang.</string>
+    <string name="error_role_in_use">Masih ada kakitangan dengan peranan ini. Beri mereka peranan lain dahulu.</string>
+
+    <!-- Log aktiviti -->
+    <string name="audit_all">Semua tindakan</string>
+    <string name="audit_filter">Tapis</string>
+    <string name="audit_approved_by">diluluskan oleh %1$s</string>
+    <string name="audit_approval">Kelulusan pengurus</string>
+    <string name="audit_sign_in">Log masuk</string>
+    <string name="audit_pin_lockout">Terlalu banyak PIN salah</string>
+    <string name="audit_staff">Kakitangan diubah</string>
+    <string name="audit_role">Peranan diubah</string>
+    <string name="audit_shift_open">Syif dibuka</string>
+    <string name="audit_shift_close">Syif ditutup</string>
+    <string name="audit_over_limit">Kredit melebihi had</string>
+    <string name="audit_pin_reset">PIN pemilik ditetapkan semula</string>
+</resources>

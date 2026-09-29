@@ -17,9 +17,11 @@ import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.cart.CartDao
 import com.lekaspos.data.cart.CartLine
 import com.lekaspos.data.cart.StoredCart
+import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.product.ScanHit
 import com.lekaspos.data.product.SellableProduct
+import com.lekaspos.domain.Approval
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -54,6 +56,9 @@ class CartSession(private val graph: AppGraph) {
         val busy: Boolean = false,
         /** The payment dialog is open: the bill is frozen until it is paid or cancelled. */
         val paying: Boolean = false,
+        /** The customer the bill is for (customers & credit, D-039). */
+        val customerId: Long? = null,
+        val customerName: String? = null,
     ) {
         val canEdit: Boolean get() = loaded && !busy && !paying
     }
@@ -87,11 +92,12 @@ class CartSession(private val graph: AppGraph) {
         graph.settings.load()
         val db = graph.db()
         val stored = db.read { r -> Triple(CartDao.loadOpen(r), CartDao.heldCount(r), CartDao.maxIds(r)) }
+        val customer = stored.first?.customerId?.let { id -> db.read { CustomerDao.name(it, id) } }
         nextCartId = stored.third.first + 1L
         nextLineId = stored.third.second + 1L
         startWriter(db)
         val base = State(loaded = true, heldCount = stored.second)
-        _state.value = stored.first?.let { fromStored(it, base) } ?: base
+        _state.value = stored.first?.let { fromStored(it, base, customer) } ?: base
     }
 
     // ------------------------------------------------------------------ adding items
@@ -225,51 +231,54 @@ class CartSession(private val graph: AppGraph) {
         }
     }
 
-    /** Line discount (permission + audit). Returns false when not allowed. */
-    fun setLineDiscount(key: Long, d: Discount): Boolean {
+    /** Line discount (permission or a manager's [approval], audited). Returns false when not allowed. */
+    fun setLineDiscount(key: Long, d: Discount, approval: Approval? = null): Boolean {
         val st = _state.value
         val item = st.cart.item(key) ?: return false
-        if (!st.canEdit || !graph.permissions.allowed(Perm.DISCOUNT)) return false
+        if (!st.canEdit) return false
+        val actor = graph.permissions.actorOrNull(Perm.DISCOUNT, approval) ?: return false
         val detail = "${item.name}: ${describe(d)}"
         putLine(st.cart.setDiscount(key, d), key) { tx, now ->
-            AuditDao.log(tx, AuditAction.LINE_DISCOUNT, graph.staff.staffId, now, Entity.PRODUCT, item.productId, amountOf(d), detail)
+            AuditDao.log(tx, AuditAction.LINE_DISCOUNT, actor.staffId, now, Entity.PRODUCT, item.productId, amountOf(d), detail, actor.approvedBy)
         }
         return true
     }
 
-    /** Price override (permission + audit). Returns false when not allowed. */
-    fun overridePrice(key: Long, unitPrice: Long): Boolean {
+    /** Price override (permission or a manager's [approval], audited). Returns false when not allowed. */
+    fun overridePrice(key: Long, unitPrice: Long, approval: Approval? = null): Boolean {
         val st = _state.value
         val item = st.cart.item(key) ?: return false
-        if (!st.canEdit || unitPrice < 0L || !graph.permissions.allowed(Perm.PRICE_OVERRIDE)) return false
+        if (!st.canEdit || unitPrice < 0L) return false
+        val actor = graph.permissions.actorOrNull(Perm.PRICE_OVERRIDE, approval) ?: return false
         val c = graph.settings.store.value.currency
         val detail = "${item.name}: ${MoneyFormat.format(item.unitPrice, c)} -> ${MoneyFormat.format(unitPrice, c)}"
         putLine(st.cart.overridePrice(key, unitPrice), key) { tx, now ->
-            AuditDao.log(tx, AuditAction.PRICE_OVERRIDE, graph.staff.staffId, now, Entity.PRODUCT, item.productId, unitPrice, detail)
+            AuditDao.log(tx, AuditAction.PRICE_OVERRIDE, actor.staffId, now, Entity.PRODUCT, item.productId, unitPrice, detail, actor.approvedBy)
         }
         return true
     }
 
-    /** Bill discount (permission + audit). Returns false when not allowed. */
-    fun setBillDiscount(d: Discount): Boolean {
+    /** Bill discount (permission or a manager's [approval], audited). Returns false when not allowed. */
+    fun setBillDiscount(d: Discount, approval: Approval? = null): Boolean {
         val st = _state.value
-        if (!st.canEdit || st.cart.isEmpty || !graph.permissions.allowed(Perm.DISCOUNT)) return false
+        if (!st.canEdit || st.cart.isEmpty) return false
+        val actor = graph.permissions.actorOrNull(Perm.DISCOUNT, approval) ?: return false
         val now = System.currentTimeMillis()
         val (kind, value) = discountColumns(d)
         val detail = describe(d)
         commit(st.cart.withBillDiscount(d), st.lastKey, ids = 1L) { tx, cartId ->
             CartDao.setBillDiscount(tx, cartId, kind, value, now)
-            AuditDao.log(tx, AuditAction.BILL_DISCOUNT, graph.staff.staffId, now, amount = amountOf(d), detail = detail)
+            AuditDao.log(tx, AuditAction.BILL_DISCOUNT, actor.staffId, now, amount = amountOf(d), detail = detail, approvedBy = actor.approvedBy)
         }
         return true
     }
 
     /** Cancels the whole bill (audited when it had lines). Returns false when not allowed. */
-    fun clear(): Boolean {
+    fun clear(approval: Approval? = null): Boolean {
         val st = _state.value
         if (!st.canEdit) return false
         if (st.cart.isEmpty && st.cartId == 0L) return true
-        if (!st.cart.isEmpty && !graph.permissions.allowed(Perm.CANCEL_BILL)) return false
+        val actor = if (st.cart.isEmpty) null else graph.permissions.actorOrNull(Perm.CANCEL_BILL, approval) ?: return false
         val cartId = st.cartId
         val now = System.currentTimeMillis()
         val total = st.priced.total
@@ -278,11 +287,25 @@ class CartSession(private val graph: AppGraph) {
             enqueue(if (lines > 0) 1L else 0L) { tx ->
                 CartDao.deleteCart(tx, cartId)
                 if (lines > 0) {
-                    AuditDao.log(tx, AuditAction.BILL_CANCEL, graph.staff.staffId, now, amount = total, detail = "$lines lines")
+                    AuditDao.log(
+                        tx, AuditAction.BILL_CANCEL, actor?.staffId ?: graph.staff.staffId, now, amount = total, detail = "$lines lines",
+                        approvedBy = actor?.approvedBy,
+                    )
                 }
             }
         }
         resetEmpty(st.heldCount)
+        return true
+    }
+
+    /** Sets (or with null, removes) the customer the bill is for. Returns false while the bill is frozen. */
+    fun setCustomer(customerId: Long?, name: String?): Boolean {
+        val st = _state.value
+        if (!st.canEdit) return false
+        if (st.customerId == customerId) return true
+        val now = System.currentTimeMillis()
+        commit(st.cart, st.lastKey) { tx, cartId -> CartDao.setCustomer(tx, cartId, customerId, now) }
+        _state.value = _state.value.copy(customerId = customerId, customerName = if (customerId == null) null else name)
         return true
     }
 
@@ -328,8 +351,9 @@ class CartSession(private val graph: AppGraph) {
         try {
             flush()
             val loaded = graph.db().read { r -> CartDao.load(r, heldId) to CartDao.heldCount(r) }
+            val customer = loaded.first?.customerId?.let { id -> graph.db().read { CustomerDao.name(it, id) } }
             val base = State(loaded = true, heldCount = loaded.second)
-            _state.value = loaded.first?.let { fromStored(it, base) } ?: base
+            _state.value = loaded.first?.let { fromStored(it, base, customer) } ?: base
             return loaded.first != null
         } catch (e: Exception) {
             _state.value = _state.value.copy(busy = false)
@@ -452,7 +476,7 @@ class CartSession(private val graph: AppGraph) {
         nextLineNo++
     }
 
-    private fun fromStored(s: StoredCart, base: State): State {
+    private fun fromStored(s: StoredCart, base: State, customerName: String?): State {
         lineNos.clear()
         nextLineNo = 1
         for (l in s.lines) {
@@ -463,6 +487,7 @@ class CartSession(private val graph: AppGraph) {
         val cart = toCart(s)
         return base.copy(
             cartId = s.id, openedAt = s.openedAt, cart = cart, priced = price(cart), lastKey = cart.items.lastOrNull()?.key ?: 0L,
+            customerId = s.customerId, customerName = customerName,
         )
     }
 

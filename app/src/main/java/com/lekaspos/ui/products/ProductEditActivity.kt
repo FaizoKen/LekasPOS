@@ -291,7 +291,7 @@ class ProductEditActivity : ScreenActivity() {
 
     private fun save(confirmedDuplicates: Boolean = false) {
         if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.MANAGE_PRODUCTS) { save(confirmedDuplicates) }
             return
         }
         val n = name.text.toString().trim()
@@ -352,7 +352,8 @@ class ProductEditActivity : ScreenActivity() {
     }
 
     private suspend fun persist(p: Product, wanted: List<Code>, openingQty: Long): Long {
-        val staff = graph.staff.staffId
+        val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS)
+        val staff = actor.staffId
         val c = currency
         return graph.db().write(reserveIds = wanted.size + 16L) { tx ->
             val now = System.currentTimeMillis()
@@ -368,7 +369,7 @@ class ProductEditActivity : ScreenActivity() {
                 if ("price" in changed) {
                     AuditDao.log(
                         tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price,
-                        "${p.name}: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}",
+                        "${p.name}: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}", actor.approvedBy,
                     )
                 }
                 val current = ProductDao.barcodes(tx.db, p.id)
@@ -392,16 +393,17 @@ class ProductEditActivity : ScreenActivity() {
     private fun delete() {
         val p = original ?: return
         if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.MANAGE_PRODUCTS) { delete() }
             return
         }
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.product_delete_confirm, p.name), getString(R.string.delete)) {
             launchUi {
-                val staff = graph.staff.staffId
+                val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS)
+                val staff = actor.staffId
                 graph.db().write(reserveIds = 8L) { tx ->
                     val now = System.currentTimeMillis()
                     ProductDao.delete(tx, p.id, now)
-                    AuditDao.log(tx, AuditAction.PRODUCT_DELETE, staff, now, Entity.PRODUCT, p.id, detail = p.name)
+                    AuditDao.log(tx, AuditAction.PRODUCT_DELETE, staff, now, Entity.PRODUCT, p.id, detail = p.name, approvedBy = actor.approvedBy)
                 }
                 toast(R.string.product_deleted)
                 finish()

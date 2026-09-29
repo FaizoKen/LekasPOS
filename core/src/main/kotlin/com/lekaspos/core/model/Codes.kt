@@ -92,9 +92,32 @@ object AuditAction {
     const val PRODUCT_PRICE_CHANGE = 8
     const val PRODUCT_DELETE = 9
     const val BILL_CANCEL = 10
+
+    /** A manager approved access to a screen for another staff member (detail: permission). */
+    const val APPROVAL = 11
+    const val SIGN_IN = 12
+
+    /** Too many wrong PINs: this till waits before the next try. */
+    const val PIN_LOCKOUT = 13
+    const val STAFF_CHANGE = 14
+    const val ROLE_CHANGE = 15
+    const val SHIFT_OPEN = 16
+
+    /** amount = counted − expected cash. */
+    const val SHIFT_CLOSE = 17
+    const val CASH_IN = 18
+    const val CASH_OUT = 19
+    const val CASH_DROP = 20
+    const val CREDIT_ADJUST = 21
+
+    /** A credit sale over the customer's limit (approved). */
+    const val CREDIT_OVER_LIMIT = 22
+
+    /** The owner PIN was reset with the recovery code. */
+    const val OWNER_PIN_RESET = 23
 }
 
-/** Permission bits stored in `role.perms` (roles and PIN login arrive in Phase 4). */
+/** Permission bits stored in `role.perms`. The owner role always has every permission. */
 object Perm {
     const val VOID = 1L shl 0
     const val REFUND = 1L shl 1
@@ -108,7 +131,43 @@ object Perm {
 
     /** Receive stock, adjust stock, count stock, edit suppliers. */
     const val MANAGE_STOCK = 1L shl 9
+
+    /** Add and edit staff, set their PINs, edit roles. */
+    const val MANAGE_STAFF = 1L shl 10
+
+    /** Cash in, cash out and cash drops during a shift. */
+    const val CASH_MOVE = 1L shl 11
+
+    /** See expected cash and shift reports (without it, closing a shift is a blind count). */
+    const val SHIFT_REPORT = 1L shl 12
+    const val VIEW_AUDIT = 1L shl 13
+
+    /** Add and edit customers, take credit repayments. */
+    const val CUSTOMERS = 1L shl 14
+
+    /** Sell on credit ("pay later") within the customer's limit. */
+    const val CREDIT_SALE = 1L shl 15
+
+    /** Go over a credit limit, adjust a customer's balance. */
+    const val CREDIT_LIMIT = 1L shl 16
     const val ALL = -1L
+
+    /** Every assignable permission, in the order the role editor lists them. */
+    val LIST: List<Long> = listOf(
+        DISCOUNT, PRICE_OVERRIDE, CANCEL_BILL, VOID, REFUND, REPRINT, OPEN_DRAWER, CASH_MOVE, SHIFT_REPORT,
+        CUSTOMERS, CREDIT_SALE, CREDIT_LIMIT, MANAGE_PRODUCTS, MANAGE_STOCK, VIEW_AUDIT, SETTINGS, MANAGE_STAFF,
+    )
+
+    /** Seed roles' starting permissions (the owner edits them in Settings → Staff → Roles). */
+    const val DEFAULT_MANAGER: Long = DISCOUNT or PRICE_OVERRIDE or CANCEL_BILL or VOID or REFUND or REPRINT or
+        OPEN_DRAWER or CASH_MOVE or SHIFT_REPORT or CUSTOMERS or CREDIT_SALE or CREDIT_LIMIT or MANAGE_PRODUCTS or
+        MANAGE_STOCK or VIEW_AUDIT
+    const val DEFAULT_CASHIER: Long = REPRINT or CUSTOMERS or CREDIT_SALE
+
+    /** What a role may do: the owner role everything, other roles their stored bits. */
+    fun effective(sysRole: Int, perms: Long): Long = if (sysRole == SysRole.OWNER) ALL else perms
+
+    fun has(perms: Long, perm: Long): Boolean = perms and perm == perm
 }
 
 /** `count_session.status`. */
@@ -123,6 +182,9 @@ object PrintJobKind {
     const val REPRINT = 2
     const val TEST = 3
     const val DRAWER = 4
+
+    /** A shift report; `ref_id` = shift id. */
+    const val SHIFT = 5
 }
 
 /** Entity type codes used by the outbox, sync files and the audit log. */

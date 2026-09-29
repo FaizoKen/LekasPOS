@@ -29,6 +29,8 @@ class PaymentDialog(
     private val total: Long,
     private val currency: CurrencySpec,
     private val methods: List<PaymentMethod>,
+    /** Checks a non-cash tender before it is taken (customer credit: customer, permission, limit). */
+    private val authorize: (method: PaymentMethod, amount: Long, done: (Boolean) -> Unit) -> Unit = { _, _, done -> done(true) },
     private val onPaid: (tenders: List<Tender>, rounding: Long) -> Unit,
 ) {
     private val tenders = ArrayList<Tender>()
@@ -109,18 +111,31 @@ class PaymentDialog(
             }
         } else {
             val amount = entered ?: remaining
-            when (val r = Settlement.exact(remaining, amount)) {
-                is Settlement.Result.Settled -> {
-                    tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
-                    finish(0L)
-                }
-                is Settlement.Result.Partial -> {
-                    tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
-                    remaining = r.remaining
-                    refresh()
-                }
-                is Settlement.Result.Rejected -> error(activity.getString(R.string.pay_error_exceeds, m.name, money(remaining)))
+            val r = Settlement.exact(remaining, amount)
+            if (r is Settlement.Result.Rejected) {
+                error(activity.getString(R.string.pay_error_exceeds, m.name, money(remaining)))
+                return
             }
+            val before = remaining
+            authorize(m, amount) { ok ->
+                // Ignore a late answer if the dialog moved on meanwhile.
+                if (ok && remaining == before && dialog.isShowing) take(m, amount, r)
+            }
+        }
+    }
+
+    private fun take(m: PaymentMethod, amount: Long, r: Settlement.Result) {
+        when (r) {
+            is Settlement.Result.Settled -> {
+                tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
+                finish(0L)
+            }
+            is Settlement.Result.Partial -> {
+                tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
+                remaining = r.remaining
+                refresh()
+            }
+            is Settlement.Result.Rejected -> Unit
         }
     }
 

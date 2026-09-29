@@ -2,6 +2,7 @@ package com.lekaspos.data.db
 
 import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.model.SaleStatus
+import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.stock.StockDao
 
 /**
@@ -74,7 +75,10 @@ object DerivedRebuild {
     }
 
     /** Maintenance statements whose plans the perf suite checks (full scans allowed, correlated scans not). */
-    val MAINTENANCE_QUERIES: List<Pair<String, String>> = listOf("rebuild_refunds" to REFUND_TOTALS)
+    val MAINTENANCE_QUERIES: List<Pair<String, String>> = listOf(
+        "rebuild_refunds" to REFUND_TOTALS,
+        "rebuild_balances" to CustomerDao.BALANCES,
+    )
 
     fun stockLevels(tx: Db.Tx) {
         tx.exec("DELETE FROM stock_level")
@@ -91,9 +95,15 @@ object DerivedRebuild {
         for (pid in counted) StockDao.rebuild(tx, pid)
     }
 
+    fun customerBalances(tx: Db.Tx) {
+        tx.exec("DELETE FROM customer_balance")
+        tx.exec(CustomerDao.REBUILD_BALANCES)
+    }
+
     fun all(tx: Db.Tx) {
         refundedAmounts(tx)
         stockLevels(tx)
         summaries(tx)
+        customerBalances(tx)
     }
 }

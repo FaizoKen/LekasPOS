@@ -21,6 +21,11 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `receive_commit` | a 20-line delivery: purchase, movements, 20 average-cost updates, outbox | 1M lines | ≤ 300 ms |
 | `stock_history_page` | 50 newest stock events of a popular product (3 merged index reads) | 1M lines | ≤ 50 ms |
 | `movement_page` / `purchase_page` / `count_page` | first page of the stock-change log, deliveries, a count | FULL | ≤ 50 ms |
+| `shift_report` | a full day's shift report (7 index-range aggregates on `shift_id`) | FULL (a shift a day) | ≤ 300 ms |
+| `shift_page` / `shift_current` | past shifts page; this till's open shift | FULL | ≤ 50 / 10 ms |
+| `customer_page` / `customer_phone` / `statement_page` | customer list (name prefix), phone prefix, a regular's credit statement | FULL (2,000 customers, 31k credit entries) | ≤ 50 ms |
+| `audit_page` | newest 50 activity-log entries | FULL | ≤ 50 ms |
+| `pin_check` | one PBKDF2-SHA256 PIN verification (4,000 iterations) — runs off the main thread | — | ≤ 300 ms |
 | `low_stock_count` | how many products are low (scans the catalogue; inventory screen only) | 50k products | ≤ 300 ms |
 | `history_page_first` / `_deep` | 50 sales, newest / ~1 year back (keyset) | 1M lines | ≤ 50 ms |
 | `receipt_lookup` | sale by receipt number | 1M lines | ≤ 10 ms |

@@ -65,6 +65,18 @@ object AuditDao {
             db.queryList(RECENT_NEXT, args(after.at, after.at, after.id, limit), ::row)
         }
 
+    private const val ACTION_FIRST = "SELECT $COLUMNS FROM audit_log WHERE action = ? ORDER BY at DESC, id DESC LIMIT ?"
+    private const val ACTION_NEXT =
+        "SELECT $COLUMNS FROM audit_log WHERE action = ? AND at <= ? AND (at < ? OR id < ?) ORDER BY at DESC, id DESC LIMIT ?"
+
+    /** Entries of one [action] only, newest first. */
+    fun byAction(db: SQLiteDatabase, action: Int, after: AuditRow?, limit: Int = 50): List<AuditRow> =
+        if (after == null) {
+            db.queryList(ACTION_FIRST, args(action, limit), ::row)
+        } else {
+            db.queryList(ACTION_NEXT, args(action, after.at, after.at, after.id, limit), ::row)
+        }
+
     fun countByAction(db: SQLiteDatabase, action: Int): Long =
         db.long("SELECT COUNT(*) FROM audit_log WHERE action = ?", action)
 
@@ -83,5 +95,7 @@ object AuditDao {
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "audit_first" to RECENT_FIRST,
         "audit_next" to RECENT_NEXT,
+        "audit_action_first" to ACTION_FIRST,
+        "audit_action_next" to ACTION_NEXT,
     )
 }

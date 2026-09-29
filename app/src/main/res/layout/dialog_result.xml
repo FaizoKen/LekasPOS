@@ -37,6 +37,16 @@
         android:gravity="center" />
 
     <TextView
+        android:id="@+id/result_customer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/result_low_stock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

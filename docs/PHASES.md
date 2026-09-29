@@ -9,8 +9,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 |---|---|---|
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
-| 3 | Inventory, suppliers, stock movements | **built and verified in CI** — waiting for real-device feedback (tester build `v0.3.0-phase3`) |
-| 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
+| 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
+| 4 | Users, roles, PIN, shifts, cash management, audit log | **in progress** |
 | 5 | Reports and CSV import/export | not started |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
@@ -218,7 +218,7 @@ The user asked to continue with Phase 3.
 12. **Low-end device** (the 2 GB tablet): selling-screen smoothness and Diagnostics → Full test
     (now also measures receipt building and picture rendering).
 
-## Phase 3 — inventory, suppliers, stock movements (waiting for feedback)
+## Phase 3 — inventory, suppliers, stock movements (done)
 
 - [x] Receive stock: scan (keyboard-wedge or camera) or pick products, carton barcodes add their
       pack size, weighed goods ask for the weight; cost per unit or the invoice's line amount;
@@ -248,6 +248,12 @@ The user asked to continue with Phase 3.
 | Cold start to usable selling screen | API 21: ≤ 481 ms (worst of 10); API 36: 451–523 ms — budget 2 s |
 | Schema | v2 (D-034) — upgrades Phase 1/2 installs in place |
 
+### Real-device feedback (Phase 3, 2026-09-29)
+
+All Phase 3 tests passed on the tester's phone. The printer, drawer, HID/SPP scanners and the
+2 GB tablet are still not available; those checks stay carried forward. The user asked to
+continue with Phase 4.
+
 ### Needs real-device testing (Phase 3)
 
 1. **Upgrade**: install over the Phase 2 build — open bills, products and sales must all still be there.
@@ -262,7 +268,7 @@ The user asked to continue with Phase 3.
 7. **Stock history** of a product after all of the above (levels should add up).
 8. Carried over from Phase 2 when the hardware is available: printer, drawer, HID/SPP scanners.
 
-## Phase 4 — users, roles, PIN, shifts, cash management, audit (planned)
+## Phase 4 — users, roles, PIN, shifts, cash management, audit (in progress)
 
 - [ ] Staff with PIN login (hashed, lockout), roles owner/manager/cashier, configurable permissions
 - [ ] Permission checks + manager override on sensitive actions; audit log viewer

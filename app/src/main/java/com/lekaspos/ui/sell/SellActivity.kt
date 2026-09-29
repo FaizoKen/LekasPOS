@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -26,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.app.LekasApp
 import com.lekaspos.core.cart.CartItem
+import com.lekaspos.core.credit.CreditMath
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
@@ -33,10 +35,14 @@ import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
+import com.lekaspos.domain.Approval
+import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
 import com.lekaspos.hw.printer.PrinterService
@@ -47,6 +53,9 @@ import com.lekaspos.ui.common.DialogHost
 import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScanInput
+import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.customers.CustomersActivity
+import com.lekaspos.ui.customers.pickCustomer
 import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
@@ -56,6 +65,11 @@ import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
+import com.lekaspos.ui.shift.ShiftActivity
+import com.lekaspos.ui.shift.openShift
+import com.lekaspos.ui.staff.LockActivity
+import com.lekaspos.ui.staff.changeOwnPin
+import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,6 +110,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var holdButton: Button
     private lateinit var discountButton: Button
     private lateinit var payButton: Button
+    private lateinit var staffChip: TextView
+    private lateinit var customerChip: TextView
+    private var lockShown = false
+
+    /** Managers' approvals given while the payment dialog is open (credit sales). */
+    private var paymentApprovals = ArrayList<Approval>()
+    private var creditTaken = 0L
     private var twoPane = false
     private var catalogOpen = false
 
@@ -140,6 +161,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         holdButton = findViewById(R.id.btn_hold)
         discountButton = findViewById(R.id.btn_discount)
         payButton = findViewById(R.id.btn_pay)
+        staffChip = findViewById(R.id.staff_chip)
+        customerChip = findViewById(R.id.customer_chip)
         twoPane = findViewById<View>(R.id.cart_side) != null
         hasCamera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
 
@@ -181,6 +204,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         findViewById<View>(R.id.btn_held).setOnClickListener { showHeld() }
         cameraButton.setOnClickListener { startActivity(CameraScanActivity.sellIntent(this)) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
+        staffChip.setOnClickListener { staffMenu(it) }
+        customerChip.setOnClickListener { customerAction() }
         beeper = Beeper.create()
         showPanels()
     }
@@ -189,9 +214,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
         super.onStart()
         val s = MainScope()
         started = s
+        lockShown = false
         s.launch {
             try {
                 graph.cart.load()
+                graph.staff.load()
+                graph.shifts.load()
             } catch (e: Exception) {
                 Log.e("Loading the bill failed", e)
                 Dialogs.message(this@SellActivity, getString(R.string.error_title), getString(R.string.error_generic, e.message ?: e.javaClass.simpleName))
@@ -205,6 +233,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.sppScanner.start()
         }
         s.launch { graph.cart.state.collect { render(it) } }
+        s.launch { graph.staff.state.collect { renderStaff(it) } }
+        s.launch {
+            while (true) {
+                delay(IDLE_CHECK_MS)
+                graph.staff.lockIfIdle()
+            }
+        }
         s.launch {
             graph.settings.store.collect { st ->
                 titleView.text = st.name.ifBlank { getString(R.string.app_name) }
@@ -259,6 +294,52 @@ class SellActivity : Activity(), LineActions, DialogHost {
         summary.text = summaryText(st)
         heldBadge.text = st.heldCount.toString()
         heldBadge.visible(st.heldCount > 0)
+        val credit = graph.settings.store.value.creditEnabled
+        customerChip.visible(credit)
+        if (credit) customerChip.text = st.customerName?.let { getString(R.string.sell_customer, it) } ?: getString(R.string.sell_customer_none)
+    }
+
+    private fun renderStaff(s: StaffSession.State) {
+        staffChip.text = s.current?.name
+        staffChip.visible(s.loginRequired && s.current != null)
+        if (s.locked) showLock()
+    }
+
+    /** Nobody is signed in: the lock screen covers the till (Back there leaves the app). */
+    private fun showLock() {
+        if (lockShown) return
+        lockShown = true
+        paymentDialog?.dismiss()
+        dialogs.dismissAll()
+        startActivity(Intent(this, LockActivity::class.java))
+    }
+
+    private fun staffMenu(anchor: View) {
+        val m = PopupMenu(this, anchor)
+        m.menu.add(0, R.string.menu_lock, 0, R.string.menu_lock)
+        m.menu.add(0, R.string.staff_change_own_pin, 1, R.string.staff_change_own_pin)
+        m.setOnMenuItemClickListener {
+            when (it.itemId) {
+                R.string.menu_lock -> graph.staff.lock()
+                R.string.staff_change_own_pin -> changeOwnPin(this, graph, scope)
+            }
+            true
+        }
+        m.show()
+    }
+
+    /** Choose, change or remove the bill's customer. */
+    private fun customerAction() {
+        val st = graph.cart.state.value
+        if (!st.canEdit) return
+        if (st.customerId == null) {
+            pickCustomer(this, REQ_CUSTOMER)
+            return
+        }
+        val options = listOf(getString(R.string.sell_customer_change), getString(R.string.sell_customer_remove))
+        Dialogs.choose(this, st.customerName ?: "", options) { i ->
+            if (i == 0) pickCustomer(this, REQ_CUSTOMER) else graph.cart.setCustomer(null, null)
+        }
     }
 
     private fun summaryText(st: CartSession.State): String {
@@ -352,8 +433,15 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     // ------------------------------------------------------------------ scanning
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        backKey(event) || (!search.hasFocus() && scanKey(event)) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        graph.staff.touch()
+        return backKey(event) || (!search.hasFocus() && scanKey(event)) || super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        graph.staff.touch()
+        return super.dispatchTouchEvent(ev)
+    }
 
     /** Keyboard-wedge scanner input while no text field has focus (also forwarded by dialogs). */
     fun scanKey(e: KeyEvent): Boolean = scanInput.onKey(e)
@@ -416,6 +504,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
         if (requestCode == REQ_NEW_PRODUCT && resultCode == RESULT_OK) {
             val id = data?.getLongExtra(ProductEditActivity.EXTRA_PRODUCT_ID, 0L) ?: 0L
             if (id != 0L) addProductById(id)
+        }
+        if (requestCode == REQ_CUSTOMER && resultCode == RESULT_OK && data != null) {
+            val id = data.getLongExtra(CustomersActivity.EXTRA_ID, 0L)
+            if (id != 0L) graph.cart.setCustomer(id, data.getStringExtra(CustomersActivity.EXTRA_NAME))
         }
     }
 
@@ -574,17 +666,19 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     override fun discount(item: CartItem) {
-        if (!graph.permissions.allowed(Perm.DISCOUNT)) return notAllowed()
-        DiscountDialog(this, getString(R.string.discount_title), currency, item.discount) { d ->
-            if (!graph.cart.setLineDiscount(item.key, d)) notAllowed()
-        }.show()
+        withApproval(graph, scope, Perm.DISCOUNT) { approval ->
+            DiscountDialog(this, getString(R.string.discount_title), currency, item.discount) { d ->
+                if (!graph.cart.setLineDiscount(item.key, d, approval)) notAllowed()
+            }.show()
+        }
     }
 
     override fun price(item: CartItem) {
-        if (!graph.permissions.allowed(Perm.PRICE_OVERRIDE)) return notAllowed()
-        AmountDialog(this, getString(R.string.price_title), AmountDialog.Kind.MONEY, currency, initial = item.unitPrice, allowZero = true) { p ->
-            if (!graph.cart.overridePrice(item.key, p)) notAllowed()
-        }.show()
+        withApproval(graph, scope, Perm.PRICE_OVERRIDE) { approval ->
+            AmountDialog(this, getString(R.string.price_title), AmountDialog.Kind.MONEY, currency, initial = item.unitPrice, allowZero = true) { p ->
+                if (!graph.cart.overridePrice(item.key, p, approval)) notAllowed()
+            }.show()
+        }
     }
 
     override fun remove(item: CartItem) = graph.cart.remove(item.key)
@@ -592,10 +686,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun billDiscount() {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty) return
-        if (!graph.permissions.allowed(Perm.DISCOUNT)) return notAllowed()
-        DiscountDialog(this, getString(R.string.bill_discount_title), currency, st.cart.billDiscount) { d ->
-            if (!graph.cart.setBillDiscount(d)) notAllowed()
-        }.show()
+        withApproval(graph, scope, Perm.DISCOUNT) { approval ->
+            DiscountDialog(this, getString(R.string.bill_discount_title), currency, st.cart.billDiscount) { d ->
+                if (!graph.cart.setBillDiscount(d, approval)) notAllowed()
+            }.show()
+        }
     }
 
     private fun hold() {
@@ -625,7 +720,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             this, getString(R.string.clear_confirm_title),
             resources.getQuantityString(R.plurals.clear_confirm_message, st.cart.items.size, st.cart.items.size),
             getString(R.string.clear_yes),
-        ) { if (!graph.cart.clear()) notAllowed() }
+        ) { withApproval(graph, scope, Perm.CANCEL_BILL) { approval -> if (!graph.cart.clear(approval)) notAllowed() } }
     }
 
     private fun openDrawer() {
@@ -633,12 +728,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
             Dialogs.message(this, null, getString(R.string.drawer_no_printer))
             return
         }
-        scope.launch {
-            try {
-                graph.sales.openDrawer()
-                Dialogs.message(this@SellActivity, null, getString(R.string.drawer_opened))
-            } catch (e: Exception) {
-                notAllowed()
+        withApproval(graph, scope, Perm.OPEN_DRAWER) { approval ->
+            scope.launch {
+                try {
+                    graph.sales.openDrawer(approval)
+                    Dialogs.message(this@SellActivity, null, getString(R.string.drawer_opened))
+                } catch (e: Exception) {
+                    notAllowed()
+                }
             }
         }
     }
@@ -649,10 +746,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
-        val items = listOf(
-            R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales,
-            R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics,
-        )
+        val items = ArrayList<Int>(14)
+        items += listOf(R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales, R.string.menu_shift)
+        if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
+        items += listOf(R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics)
+        if (graph.staff.state.value.loginRequired) items += R.string.menu_lock
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
@@ -661,6 +759,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 R.string.menu_categories -> startActivity(Intent(this, CategoriesActivity::class.java))
                 R.string.menu_tax_rates -> startActivity(Intent(this, TaxRatesActivity::class.java))
                 R.string.menu_sales -> startActivity(Intent(this, SalesActivity::class.java))
+                R.string.menu_shift -> startActivity(Intent(this, ShiftActivity::class.java))
+                R.string.menu_customers -> startActivity(Intent(this, CustomersActivity::class.java))
+                R.string.menu_lock -> graph.staff.lock()
                 R.string.menu_open_drawer -> openDrawer()
                 R.string.menu_cancel_bill -> cancelBill()
                 R.string.menu_settings -> startActivity(Intent(this, SettingsActivity::class.java))
@@ -676,19 +777,62 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun openPayment() {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty) return
+        val store = graph.settings.store.value
+        if (store.shiftRequired && graph.shifts.current.value == null) {
+            Dialogs.confirm(this, getString(R.string.shift_needed_title), getString(R.string.shift_needed), getString(R.string.shift_open)) {
+                openShift(this, graph, scope) { openPayment() }
+            }
+            return
+        }
         scope.launch {
-            val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT }
+            val credit = store.creditEnabled && graph.cart.state.value.customerId != null
+            val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
             val now = graph.cart.state.value
             if (!now.canEdit || now.cart.isEmpty) return@launch
             graph.cart.setPaying(true)
-            val d = PaymentDialog(this@SellActivity, now.priced.total, currency, methods) { tenders, rounding ->
-                graph.checkout.start(tenders, rounding)
+            paymentApprovals = ArrayList()
+            creditTaken = 0L
+            val d = PaymentDialog(this@SellActivity, now.priced.total, currency, methods, authorize = { m, amount, done -> authorize(m, amount, done) }) { tenders, rounding ->
+                graph.checkout.start(tenders, rounding, paymentApprovals.toList())
             }.show()
             d.setOnDismissListener {
                 graph.cart.setPaying(false)
                 paymentDialog = null
             }
             paymentDialog = d
+        }
+    }
+
+    /**
+     * A credit tender needs the bill's customer, the CREDIT_SALE permission (or a manager) and,
+     * over the customer's limit, a manager's CREDIT_LIMIT approval (D-039).
+     */
+    private fun authorize(m: PaymentMethod, amount: Long, done: (Boolean) -> Unit) {
+        if (m.kind != PaymentKind.CREDIT) return done(true)
+        val customerId = graph.cart.state.value.customerId
+        if (customerId == null) {
+            Dialogs.message(this, null, getString(R.string.error_needs_customer))
+            return done(false)
+        }
+        withApproval(graph, scope, Perm.CREDIT_SALE) { saleApproval ->
+            saleApproval?.let { paymentApprovals.add(it) }
+            scope.launch {
+                val loaded = graph.customers.get(customerId) ?: return@launch done(false)
+                val (c, balance) = loaded
+                if (!CreditMath.overLimit(balance, creditTaken + amount, c.creditLimit)) {
+                    creditTaken += amount
+                    done(true)
+                    return@launch
+                }
+                val msg = getString(R.string.credit_over_limit, c.name, money(balance), money(c.creditLimit), money(amount))
+                Dialogs.confirm(this@SellActivity, getString(R.string.credit_over_limit_title), msg, getString(R.string.credit_allow)) {
+                    withApproval(graph, scope, Perm.CREDIT_LIMIT) { limitApproval ->
+                        limitApproval?.let { paymentApprovals.add(it) }
+                        creditTaken += amount
+                        done(true)
+                    }
+                }
+            }
         }
     }
 
@@ -699,6 +843,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         when (o) {
             null -> Unit
             is CheckoutService.Outcome.Completed -> outcomeDialog = showResult(o.done)
+            is CheckoutService.Outcome.Refused -> {
+                val d = Dialogs.message(this, getString(R.string.pay_failed_title), ScreenActivity.errorText(this, ActionRefused(o.reason)))
+                d.setOnDismissListener { graph.checkout.acknowledge() }
+                outcomeDialog = d
+            }
             is CheckoutService.Outcome.Failed -> {
                 val d = AlertDialog.Builder(this)
                     .setTitle(R.string.pay_failed_title)
@@ -723,6 +872,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
             !device.hasPrinter -> getString(R.string.result_no_printer)
             else -> ""
         }
+        val cust = v.findViewById<TextView>(R.id.result_customer)
+        val owes = done.customerBalance
+        cust.text = if (done.customerName != null && owes != null) getString(R.string.result_customer, done.customerName, money(owes)) else ""
+        cust.visible(done.customerName != null && owes != null)
         val low = v.findViewById<TextView>(R.id.result_low_stock)
         low.text = if (done.lowStock.isEmpty()) "" else getString(R.string.result_low_stock, done.lowStock.joinToString(", ") { "${it.name} (${MoneyFormat.formatQty(it.qty)})" })
         low.visible(done.lowStock.isNotEmpty())
@@ -731,14 +884,19 @@ class SellActivity : Activity(), LineActions, DialogHost {
         print.visible(device.hasPrinter)
         print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
         print.setOnClickListener {
-            scope.launch {
-                try {
-                    graph.sales.print(done.saleId, copy = done.receiptQueued)
-                    print.isEnabled = false
-                } catch (e: Exception) {
-                    notAllowed()
+            val copy = done.receiptQueued
+            val go = { approval: Approval? ->
+                scope.launch {
+                    try {
+                        graph.sales.print(done.saleId, copy = copy, approval = approval)
+                        print.isEnabled = false
+                    } catch (e: Exception) {
+                        notAllowed()
+                    }
                 }
+                Unit
             }
+            if (copy) withApproval(graph, scope, Perm.REPRINT) { go(it) } else go(null)
         }
         v.findViewById<View>(R.id.result_share).setOnClickListener { ReceiptShare.chooseAndShare(this, done.saleId) }
         v.findViewById<View>(R.id.result_new).setOnClickListener { d.dismiss() }
@@ -750,6 +908,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     companion object {
         private const val REQ_NEW_PRODUCT = 1
+        private const val REQ_CUSTOMER = 2
+        private const val IDLE_CHECK_MS = 15_000L
         private const val PAGE = 60
         private const val SEARCH_DEBOUNCE_MS = 150L
         private const val HARDWARE_DELAY_MS = 1500L

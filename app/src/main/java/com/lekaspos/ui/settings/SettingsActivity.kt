@@ -10,7 +10,10 @@ import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.diag.DiagnosticsActivity
+import com.lekaspos.ui.shift.ShiftActivity
+import com.lekaspos.ui.staff.StaffActivity
 
 /** Settings hub. */
 class SettingsActivity : ScreenActivity() {
@@ -24,6 +27,9 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java),
             Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java),
             Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java),
+            Entry(R.string.staff_title, R.string.settings_staff_sub, StaffActivity::class.java),
+            Entry(R.string.shift_title, R.string.settings_shift_sub, ShiftActivity::class.java),
+            Entry(R.string.customers_title, R.string.settings_customers_sub, CustomersActivity::class.java),
             Entry(R.string.menu_tax_rates, null, TaxRatesActivity::class.java),
             Entry(R.string.menu_categories, null, CategoriesActivity::class.java),
             Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),

@@ -102,6 +102,28 @@ class Form(private val ctx: Context) {
         return b
     }
 
+    /** A label on the left and a value on the right (reports). */
+    fun row(label: CharSequence, value: CharSequence, bold: Boolean = false): View {
+        val line = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            minimumHeight = dp(32)
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        val l = TextView(ctx, null, 0, R.style.Text_Lekas_Body).apply { text = label }
+        val v = TextView(ctx, null, 0, R.style.Text_Lekas_Body).apply {
+            text = value
+            gravity = android.view.Gravity.END
+        }
+        if (bold) {
+            l.setTypeface(l.typeface, android.graphics.Typeface.BOLD)
+            v.setTypeface(v.typeface, android.graphics.Typeface.BOLD)
+        }
+        line.addView(l, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        line.addView(v, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
+        column.addView(line, lp())
+        return line
+    }
+
     /** Adds any view (e.g. a list of barcodes) to the column. */
     fun add(v: View): View {
         column.addView(v, lp())

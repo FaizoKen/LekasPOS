@@ -7,6 +7,7 @@ import android.text.InputType
 import android.widget.Button
 import android.widget.TextView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.sale.SaleQueries
@@ -40,9 +41,11 @@ class SaleDetailActivity : ScreenActivity() {
         refund = v.findViewById(R.id.btn_refund)
         void = v.findViewById(R.id.btn_void)
         print.setOnClickListener {
-            launchUi {
-                graph.sales.print(saleId, copy = true)
-                toast(R.string.sale_print_queued)
+            withApproval(Perm.REPRINT) { approval ->
+                launchUi {
+                    graph.sales.print(saleId, copy = true, approval = approval)
+                    toast(R.string.sale_print_queued)
+                }
             }
         }
         share.setOnClickListener { ReceiptShare.chooseAndShare(this, saleId) }
@@ -90,10 +93,12 @@ class SaleDetailActivity : ScreenActivity() {
                 toast(R.string.reason_required)
                 return@input false
             }
-            launchUi {
-                graph.sales.void(saleId, reason)
-                toast(R.string.sale_voided_done)
-                load()
+            withApproval(Perm.VOID) { approval ->
+                launchUi {
+                    graph.sales.void(saleId, reason, approval)
+                    toast(R.string.sale_voided_done)
+                    load()
+                }
             }
             true
         }

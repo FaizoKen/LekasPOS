@@ -46,14 +46,9 @@ class CategoriesActivity : ScreenActivity() {
         }
     }
 
-    private fun allowed(): Boolean {
-        if (graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) return true
-        Dialogs.message(this, null, getString(R.string.not_allowed))
-        return false
-    }
+    private fun edit(c: Category?) = requireAccess(Perm.MANAGE_PRODUCTS) { editNow(c) }
 
-    private fun edit(c: Category?) {
-        if (!allowed()) return
+    private fun editNow(c: Category?) {
         Dialogs.input(
             this, getString(if (c == null) R.string.category_add else R.string.category_edit), getString(R.string.category_name),
             initial = c?.name ?: "", inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS,
@@ -70,8 +65,9 @@ class CategoriesActivity : ScreenActivity() {
         }
     }
 
-    private fun delete(c: Category) {
-        if (!allowed()) return
+    private fun delete(c: Category) = requireAccess(Perm.MANAGE_PRODUCTS) { deleteNow(c) }
+
+    private fun deleteNow(c: Category) {
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.category_delete_confirm, c.name), getString(R.string.delete)) {
             launchUi {
                 graph.db().write(reserveIds = 0L) { tx -> CategoryDao.delete(tx, c.id, System.currentTimeMillis()) }

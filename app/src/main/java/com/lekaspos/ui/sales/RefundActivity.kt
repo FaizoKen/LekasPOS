@@ -13,6 +13,7 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.Settlement
@@ -53,11 +54,13 @@ class RefundActivity : ScreenActivity() {
         setScreen(getString(R.string.refund_title))
         launchUi {
             val data = graph.sales.refundInfo(saleId)
-            methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT }
             if (data == null) {
                 finish()
                 return@launchUi
             }
+            // Back onto the customer's account only for a sale that has a customer.
+            val credit = data.header.customerId != null
+            methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
             info = data
             build(data)
         }
@@ -150,15 +153,17 @@ class RefundActivity : ScreenActivity() {
         ) {
             val chosen = HashMap(picks)
             val back = restock.isChecked
-            submit.isEnabled = false
-            launchUi {
-                try {
-                    // The refund itself runs in the app scope: leaving this screen cannot cut it off.
-                    val sale = graph.appScope.async(Dispatchers.Main) { graph.sales.refund(saleId, chosen, back, why, m) }.await()
-                    toast(getString(R.string.refund_done, sale.receiptNo))
-                    finish()
-                } finally {
-                    submit.isEnabled = true
+            withApproval(Perm.REFUND) { approval ->
+                submit.isEnabled = false
+                launchUi {
+                    try {
+                        // The refund itself runs in the app scope: leaving this screen cannot cut it off.
+                        val sale = graph.appScope.async(Dispatchers.Main) { graph.sales.refund(saleId, chosen, back, why, m, approval) }.await()
+                        toast(getString(R.string.refund_done, sale.receiptNo))
+                        finish()
+                    } finally {
+                        submit.isEnabled = true
+                    }
                 }
             }
         }

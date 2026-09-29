@@ -96,14 +96,14 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v2)
+## 6. Table catalog (schema v3)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
 | `meta` | LOCAL | device identity, sequences, flags (key/value) | PK key |
 | `setting` | LWW (per key) | store-wide settings | PK key |
-| `role` | LWW | roles + permission bitmask | — |
-| `staff` | LWW | users, PIN hash, role | — |
+| `role` | LWW | roles + permission bitmask (`Perm`; owner role = all, seed defaults set by v3) | — |
+| `staff` | LWW | users, role, `pin_hash` = one `PinHash` record "p2:iter:salt:hash" (`pin_salt` unused, D-037) | — |
 | `tax_rate` | LWW | named tax rates | — |
 | `category` | LWW | product categories | `(sort, name_key) WHERE deleted=0` |
 | `product` | LWW | catalog | `name_key`, `(category_id, name_key)`, `sku` (all `deleted = 0`) |
@@ -117,12 +117,12 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `sale` | EVENT | sales and refunds (`kind`), totals, receipt no | `sold_at`, `receipt_no`, `shift_id`, `customer_id`, `ref_sale_id` |
 | `sale_line` | EVENT (child) | lines; also the stock movements of sales | `sale_id`, `(product_id, hlc)` |
 | `payment` | EVENT (child) | tenders of a sale/refund | `sale_id`, `(shift_id, kind)` |
-| `sale_void` | EVENT | void of a whole sale (reason, approver) | `sale_id` |
+| `sale_void` | EVENT | void of a whole sale (reason, approver, shift of the till that voided it) | `sale_id`, `shift_id` (v3, partial) |
 | `stock_movement` | EVENT | non-sale movements: receive, adjust, waste, … (reason = `AdjustReason` code[: note]) | `(product_id, hlc)`, `hlc` |
 | `stock_count` | EVENT | absolute counted quantity + `expected`, `unit_cost` at count time (v2) | `(product_id, hlc)`, `(session_id, hlc)` |
 | `count_session` | LWW | a stock count (stock take): name, status, scope category (v2) | `started_at WHERE deleted = 0` |
 | `purchase`, `purchase_line` | EVENT | receiving from suppliers | `at`, `(supplier_id, at)`, `purchase_id` |
-| `credit_entry` | EVENT | customer credit charges/repayments | `(customer_id, hlc)` |
+| `credit_entry` | EVENT | customer credit: CHARGE (negative = reversal), PAYMENT (method, `shift_id` v3), ADJUST | `(customer_id, hlc)`, `shift_id` (v3, partial) |
 | `audit_log` | EVENT | sensitive actions | `at`, `(action, at)` |
 | `stock_level` | DERIVED | current qty per product + last count version | PK product_id |
 | `customer_balance` | DERIVED | credit balance per customer | PK customer_id |
@@ -196,4 +196,4 @@ are plain columns without FK constraints because sync can deliver them in any or
   the migration transaction with `PRAGMA foreign_keys` handled by `DbOpenHelper`.
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
-- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index).
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions).

@@ -12,15 +12,20 @@ import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.pricing.PriceLine
 import com.lekaspos.core.pricing.PricingEngine
 import com.lekaspos.core.pricing.Settlement
+import com.lekaspos.core.staff.PinHash
 import com.lekaspos.core.text.SearchText
 import com.lekaspos.core.time.Days
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.cart.CartDao
 import com.lekaspos.data.cart.CartLine
+import com.lekaspos.data.catalog.PaymentMethodDao
+import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Schema
 import com.lekaspos.data.db.Seed
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.long
+import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
@@ -36,10 +41,13 @@ import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleLineDraft
 import com.lekaspos.data.sale.SaleRow
 import com.lekaspos.data.settings.StoreSettings
+import com.lekaspos.data.shift.ShiftDao
+import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
 import com.lekaspos.domain.print.ReceiptBuilder
+import com.lekaspos.domain.shift.ShiftService
 import com.lekaspos.hw.printer.ReceiptRenderer
 import java.util.Random
 import java.util.TimeZone
@@ -198,6 +206,32 @@ class PerfSuite(
             add(measure("count_page", 50.0, warmup = 5, n = 60) { i -> CountSessionDao.counts(r, sessions[i % sessions.size].id, null, 50) })
         }
 
+        // Phase 4: shifts, customers and credit, the activity log, PIN checks.
+        progress.update("shifts")
+        val shiftPage = ShiftDao.page(r, null, 50)
+        add(measure("shift_page", 50.0, warmup = 5, n = 60) { ShiftDao.page(r, null, 50) })
+        add(measure("shift_current", 10.0, warmup = 10, n = 100) { ShiftDao.current(r, db.deviceNo) })
+        if (shiftPage.size > 3) {
+            val staffNames = StaffDao.names(r)
+            val methodNames = PaymentMethodDao.names(r)
+            // A full day's shift (hundreds of sales): everything the report and the close need.
+            add(measure("shift_report", 300.0, warmup = 2, n = 20) { i ->
+                val s = shiftPage[1 + i % (shiftPage.size - 1)]
+                ShiftService.build(s, ShiftDao.totals(r, s.id), methodNames, staffNames, "")
+            })
+        }
+        progress.update("customers")
+        add(measure("customer_page", 50.0, warmup = 5, n = 60) { i -> CustomerDao.page(r, if (i % 2 == 0) "" else "ali", null, 50) })
+        add(measure("customer_phone", 50.0, warmup = 5, n = 60) { CustomerDao.byPhone(r, "0110") })
+        val regular = r.longOrNull("SELECT customer_id FROM credit_entry GROUP BY customer_id ORDER BY COUNT(*) DESC LIMIT 1")
+        if (regular != null) {
+            add(measure("statement_page", 50.0, warmup = 5, n = 60) { CustomerDao.statement(r, regular, null, 50) })
+        }
+        add(measure("audit_page", 50.0, warmup = 5, n = 60) { AuditDao.recent(r, null, 50) })
+        progress.update("pin_check")
+        val pinRecord = PinHash.create("2468")
+        add(measure("pin_check", 300.0, warmup = 1, n = 10) { check(PinHash.verify("2468", pinRecord)) })
+
         val today = Days.epochDay(System.currentTimeMillis(), tz)
         for ((id, days, budget, n) in listOf(
             Quad("report_day", 1L, 300.0, 30),
@@ -223,6 +257,9 @@ class PerfSuite(
             "sales" to SaleDao.count(r),
             "sale_lines" to r.long("SELECT COUNT(*) FROM sale_line"),
             "payments" to r.long("SELECT COUNT(*) FROM payment"),
+            "shifts" to r.long("SELECT COUNT(*) FROM shift"),
+            "customers" to r.long("SELECT COUNT(*) FROM customer"),
+            "credit_entries" to r.long("SELECT COUNT(*) FROM credit_entry"),
         )
         return PerfReport(
             device = deviceInfo(context, r.stringOrNull("SELECT sqlite_version()") ?: "?"),

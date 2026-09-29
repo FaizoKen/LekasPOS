@@ -9,6 +9,21 @@
     android:padding="8dp">
 
     <TextView
+        android:id="@+id/customer_chip"
+        style="@style/Text.Lekas.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/chip_bg"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:singleLine="true"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/summary"
         style="@style/Text.Lekas.Caption"
         android:layout_width="match_parent"

@@ -9,10 +9,13 @@ import com.lekaspos.data.db.SeedNames
 import com.lekaspos.domain.PermissionGate
 import com.lekaspos.domain.SettingsRepo
 import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.customer.CustomerService
 import com.lekaspos.domain.inventory.InventoryService
 import com.lekaspos.domain.sale.SaleActions
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
+import com.lekaspos.domain.shift.ShiftService
+import com.lekaspos.domain.staff.StaffService
 import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
@@ -40,8 +43,11 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     suspend fun db(): Db = dbOpening.await()
 
     val settings: SettingsRepo by lazy { SettingsRepo(this, defaultLanguage()) }
-    val staff: StaffSession by lazy { StaffSession() }
+    val staff: StaffSession by lazy { StaffSession(this) }
     val permissions: PermissionGate by lazy { PermissionGate(staff) }
+    val staffAdmin: StaffService by lazy { StaffService(this) }
+    val shifts: ShiftService by lazy { ShiftService(this) }
+    val customers: CustomerService by lazy { CustomerService(this) }
     val cart: CartSession by lazy { CartSession(this) }
     val checkout: CheckoutService by lazy { CheckoutService(this) }
     val sales: SaleActions by lazy { SaleActions(this) }

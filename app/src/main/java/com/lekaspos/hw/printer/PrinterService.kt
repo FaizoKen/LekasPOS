@@ -6,6 +6,8 @@ import com.lekaspos.core.escpos.MonoImage
 import com.lekaspos.core.escpos.ReceiptEncoder
 import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.receipt.PrintLine
+import com.lekaspos.core.shift.ShiftReportLayout
+import com.lekaspos.core.shift.ShiftText
 import com.lekaspos.data.print.PrintJob
 import com.lekaspos.data.print.PrintJobDao
 import com.lekaspos.data.settings.DeviceSettings
@@ -188,6 +190,12 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                     ?: throw IllegalStateException("sale $saleId not found")
                 val logo = if (store.printLogo) logo(cfg.dots) else null
                 encode(ReceiptBuilder.layout(doc, cfg.cols, store, logo != null, tz), cfg, logo, job.copies)
+            }
+            PrintJobKind.SHIFT -> {
+                val shiftId = job.refId ?: throw IllegalStateException("shift report job without a shift")
+                val report = graph.shifts.report(shiftId) ?: throw IllegalStateException("shift $shiftId not found")
+                val layout = ShiftReportLayout(store.currency, ShiftText.forLanguage(store.receiptLanguage), TimeZone.getDefault())
+                encode(layout.lines(report, cfg.cols), cfg, null, job.copies)
             }
             else -> null
         }

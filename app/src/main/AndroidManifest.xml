@@ -160,6 +160,46 @@
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
         <activity
+            android:name=".ui.staff.LockActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.staff.StaffActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.staff.StaffEditActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.staff.RolesActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.staff.RoleEditActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.shift.ShiftActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.shift.ShiftReportActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.shift.ShiftsActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.customers.CustomersActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.customers.CustomerActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
             android:name=".ui.scan.CameraScanActivity"
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />

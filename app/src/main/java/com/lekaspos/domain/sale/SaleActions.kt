@@ -2,6 +2,7 @@ package com.lekaspos.domain.sale
 
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.CreditKind
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
@@ -13,6 +14,7 @@ import com.lekaspos.core.refund.RefundSource
 import com.lekaspos.core.refund.Refunds
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
+import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.print.PrintJobDao
 import com.lekaspos.data.sale.CommittedSale
 import com.lekaspos.data.sale.PaymentDraft
@@ -22,11 +24,18 @@ import com.lekaspos.data.sale.SaleHeader
 import com.lekaspos.data.sale.SaleLineDraft
 import com.lekaspos.data.sale.SaleLineFull
 import com.lekaspos.data.sale.SaleQueries
+import com.lekaspos.domain.Approval
 import java.util.TimeZone
 
 /** Why a sale action was refused. */
 class ActionRefused(val reason: Reason) : Exception(reason.name) {
-    enum class Reason { NOT_ALLOWED, NOT_FOUND, VOIDED, HAS_REFUNDS, NOT_A_SALE, NOTHING_TO_REFUND }
+    enum class Reason {
+        NOT_ALLOWED, NOT_FOUND, VOIDED, HAS_REFUNDS, NOT_A_SALE, NOTHING_TO_REFUND,
+
+        /** Phase 4: shifts, customers and staff. */
+        NEEDS_SHIFT, SHIFT_OPEN, NEEDS_CUSTOMER, OVER_CREDIT_LIMIT, HAS_BALANCE, LAST_OWNER, CREDIT_OFF, OWNER_PIN_FIRST,
+        SEED_ROLE, ROLE_IN_USE, WRONG_PIN,
+    }
 }
 
 /**
@@ -49,17 +58,28 @@ class SaleActions(private val graph: AppGraph) {
      * Returns [picks] (line id → qty in milli-units) of sale [saleId] as a refund document paid
      * out with [method]. Cash refunds mirror the cash rounding.
      */
-    suspend fun refund(saleId: Long, picks: Map<Long, Long>, restock: Boolean, reason: String, method: PaymentMethod): CommittedSale {
-        if (!graph.permissions.allowed(Perm.REFUND)) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
+    suspend fun refund(
+        saleId: Long,
+        picks: Map<Long, Long>,
+        restock: Boolean,
+        reason: String,
+        method: PaymentMethod,
+        approval: Approval? = null,
+    ): CommittedSale {
+        val actor = graph.permissions.actor(Perm.REFUND, approval)
         val store = graph.settings.store.value
         val device = graph.settings.device.value
-        val staffId = graph.staff.staffId
+        val staffId = actor.staffId
+        graph.shifts.load()
+        val shiftId = graph.shifts.currentId
+        if (shiftId == null && store.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
         val tz = TimeZone.getDefault()
         val sale = graph.db().write(reserveIds = picks.size + 16L) { tx ->
             // Re-read inside the transaction: another refund may have been made meanwhile.
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.kind != SaleKind.SALE) throw ActionRefused(ActionRefused.Reason.NOT_A_SALE)
             if (h.voided) throw ActionRefused(ActionRefused.Reason.VOIDED)
+            if (method.kind == PaymentKind.CREDIT && h.customerId == null) throw ActionRefused(ActionRefused.Reason.NEEDS_CUSTOMER)
             val lines = SaleQueries.lines(tx.db, saleId).associateBy { it.id }
             val done = SaleQueries.refundedByLine(tx.db, saleId)
             val parts = ArrayList<Pair<RefundPart, SaleLineFull>>()
@@ -72,11 +92,16 @@ class SaleActions(private val graph: AppGraph) {
             }
             if (parts.isEmpty()) throw ActionRefused(ActionRefused.Reason.NOTHING_TO_REFUND)
             val now = System.currentTimeMillis()
-            val draft = refundDraft(h, parts, restock, reason, method, store.cashStep, staffId, now)
+            val draft = refundDraft(h, parts, restock, reason, method, store.cashStep, staffId, now).copy(shiftId = shiftId)
             val committed = SaleDao.commit(tx, draft, tz)
             AuditDao.log(
-                tx, AuditAction.REFUND, staffId, now, Entity.SALE, committed.id, draft.total, "${h.receiptNo}: $reason",
+                tx, AuditAction.REFUND, staffId, now, Entity.SALE, committed.id, draft.total, "${h.receiptNo}: $reason", actor.approvedBy,
             )
+            val customerId = h.customerId
+            if (method.kind == PaymentKind.CREDIT && customerId != null && draft.total != 0L) {
+                // Refunded to the customer's account: a negative charge lowers what they owe.
+                CustomerDao.insertCredit(tx, customerId, CreditKind.CHARGE, draft.total, committed.id, method.id, staffId, shiftId, reason, now)
+            }
             if (device.hasPrinter) {
                 if (device.drawerEnabled && method.opensDrawer && draft.total != 0L) {
                     PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, committed.id, 1, now)
@@ -89,41 +114,60 @@ class SaleActions(private val graph: AppGraph) {
         return sale
     }
 
-    /** Voids a whole sale or refund (wrong transaction). */
-    suspend fun void(saleId: Long, reason: String) {
-        if (!graph.permissions.allowed(Perm.VOID)) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
-        val staffId = graph.staff.staffId
-        graph.db().write(reserveIds = 8L) { tx ->
+    /**
+     * Voids a whole sale or refund (wrong transaction). Its cash goes back out of this shift's
+     * drawer (which opens) and credit charges on a customer's account are reversed.
+     */
+    suspend fun void(saleId: Long, reason: String, approval: Approval? = null) {
+        val actor = graph.permissions.actor(Perm.VOID, approval)
+        val staffId = actor.staffId
+        val device = graph.settings.device.value
+        graph.shifts.load()
+        val shiftId = graph.shifts.currentId
+        graph.db().write(reserveIds = 16L) { tx ->
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.voided) throw ActionRefused(ActionRefused.Reason.VOIDED)
             // Refunds of this sale must be voided first, or stock and totals would be reversed twice.
             if (h.kind == SaleKind.SALE && h.refunded != 0L) throw ActionRefused(ActionRefused.Reason.HAS_REFUNDS)
             val now = System.currentTimeMillis()
-            SaleDao.void(tx, saleId, reason, staffId, null, null, now)
-            AuditDao.log(tx, AuditAction.SALE_VOID, staffId, now, Entity.SALE, saleId, h.total, "${h.receiptNo}: $reason")
+            SaleDao.void(tx, saleId, reason, staffId, actor.approvedBy, shiftId, now)
+            AuditDao.log(tx, AuditAction.SALE_VOID, staffId, now, Entity.SALE, saleId, h.total, "${h.receiptNo}: $reason", actor.approvedBy)
+            val payments = SaleQueries.payments(tx.db, saleId)
+            val customerId = h.customerId
+            if (customerId != null) {
+                for (p in payments) {
+                    if (p.kind == PaymentKind.CREDIT && p.amount != 0L) {
+                        CustomerDao.insertCredit(tx, customerId, CreditKind.CHARGE, -p.amount, saleId, p.methodId, staffId, shiftId, "void: $reason", now)
+                    }
+                }
+            }
+            if (device.hasPrinter && device.drawerEnabled && payments.any { it.opensDrawer && it.amount != 0L }) {
+                PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, saleId, 1, now)
+            }
         }
+        graph.printer.wake()
     }
 
     /** Prints a sale again: a copy (audited) or, right after the sale, its first receipt. */
-    suspend fun print(saleId: Long, copy: Boolean) {
-        if (copy && !graph.permissions.allowed(Perm.REPRINT)) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
-        val staffId = graph.staff.staffId
+    suspend fun print(saleId: Long, copy: Boolean, approval: Approval? = null) {
+        val actor = if (copy) graph.permissions.actor(Perm.REPRINT, approval) else null
+        val staffId = actor?.staffId ?: graph.staff.staffId
         graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             PrintJobDao.enqueue(tx, if (copy) PrintJobKind.REPRINT else PrintJobKind.RECEIPT, saleId, 1, now)
-            if (copy) AuditDao.log(tx, AuditAction.REPRINT, staffId, now, Entity.SALE, saleId)
+            if (copy) AuditDao.log(tx, AuditAction.REPRINT, staffId, now, Entity.SALE, saleId, approvedBy = actor?.approvedBy)
         }
         graph.printer.wake()
     }
 
     /** Opens the cash drawer without a sale (permission + audit). */
-    suspend fun openDrawer() {
-        if (!graph.permissions.allowed(Perm.OPEN_DRAWER)) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
-        val staffId = graph.staff.staffId
+    suspend fun openDrawer(approval: Approval? = null) {
+        val actor = graph.permissions.actor(Perm.OPEN_DRAWER, approval)
+        val staffId = actor.staffId
         graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)
-            AuditDao.log(tx, AuditAction.DRAWER_OPEN, staffId, now)
+            AuditDao.log(tx, AuditAction.DRAWER_OPEN, staffId, now, approvedBy = actor.approvedBy)
         }
         graph.printer.wake()
     }

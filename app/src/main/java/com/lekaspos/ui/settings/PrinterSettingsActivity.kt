@@ -159,7 +159,7 @@ class PrinterSettingsActivity : ScreenActivity() {
 
     private fun save(finishAfter: Boolean, then: (() -> Unit)? = null) {
         if (!graph.permissions.allowed(Perm.SETTINGS)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.SETTINGS) { save(finishAfter, then) }
             return
         }
         val next = current()
@@ -223,9 +223,11 @@ class PrinterSettingsActivity : ScreenActivity() {
 
     private fun openDrawer() {
         save(finishAfter = false) {
-            launchUi {
-                graph.sales.openDrawer()
-                toast(R.string.drawer_opened)
+            withApproval(Perm.OPEN_DRAWER) { approval ->
+                launchUi {
+                    graph.sales.openDrawer(approval)
+                    toast(R.string.drawer_opened)
+                }
             }
         }
     }

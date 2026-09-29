@@ -30,6 +30,15 @@ object Migrations {
             db.execSQL("CREATE INDEX stock_count_session ON stock_count(session_id, hlc)")
             db.execSQL("CREATE INDEX stock_movement_hlc ON stock_movement(hlc)")
         },
+        // v2 → v3 (Phase 4, D-040): shift of credit repayments, voids per shift, default role permissions.
+        Migration(2, 3) { db ->
+            db.execSQL("ALTER TABLE credit_entry ADD COLUMN shift_id INTEGER")
+            db.execSQL("CREATE INDEX credit_entry_shift ON credit_entry(shift_id) WHERE shift_id IS NOT NULL")
+            db.execSQL("CREATE INDEX sale_void_shift ON sale_void(shift_id) WHERE shift_id IS NOT NULL")
+            // Seed roles nobody edited get their Phase 4 defaults (frozen values of Perm.DEFAULT_MANAGER / _CASHIER).
+            db.execSQL("UPDATE role SET perms = 129919 WHERE id = 2 AND ver_hlc = 0 AND perms = 0")
+            db.execSQL("UPDATE role SET perms = 49184 WHERE id = 3 AND ver_hlc = 0 AND perms = 0")
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

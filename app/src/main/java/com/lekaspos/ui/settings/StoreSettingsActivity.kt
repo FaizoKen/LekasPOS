@@ -45,6 +45,8 @@ class StoreSettingsActivity : ScreenActivity() {
     private lateinit var inclTax: Switch
     private lateinit var rounding: Switch
     private lateinit var templates: EditText
+    private lateinit var shiftRequired: Switch
+    private lateinit var credit: Switch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +94,12 @@ class StoreSettingsActivity : ScreenActivity() {
         inclTax = f.switch(getString(R.string.prices_incl_tax), s.pricesIncludeTax)
         rounding = f.switch(getString(R.string.cash_rounding), s.currency.cashStep > 1L)
 
+        f.section(getString(R.string.section_cash))
+        shiftRequired = f.switch(getString(R.string.shift_required), s.shiftRequired)
+        f.info(getString(R.string.shift_required_help))
+        credit = f.switch(getString(R.string.credit_enabled), s.creditEnabled)
+        f.info(getString(R.string.credit_enabled_help))
+
         f.section(getString(R.string.section_scale))
         templates = f.text(getString(R.string.scale_templates), s.scaleTemplates.joinToString(", "), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS)
         f.info(getString(R.string.scale_templates_help))
@@ -103,7 +111,7 @@ class StoreSettingsActivity : ScreenActivity() {
 
     private fun save(old: StoreSettings) {
         if (!graph.permissions.allowed(Perm.SETTINGS)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.SETTINGS) { save(old) }
             return
         }
         val tpl = templates.text.toString().split(',').map { it.trim().uppercase() }.filter { it.isNotEmpty() }
@@ -134,6 +142,8 @@ class StoreSettingsActivity : ScreenActivity() {
             pricesIncludeTax = inclTax.isChecked,
             currency = old.currency.copy(cashStep = if (rounding.isChecked) CurrencySpec.MYR.cashStep else 0L),
             scaleTemplates = tpl,
+            shiftRequired = shiftRequired.isChecked,
+            creditEnabled = credit.isChecked,
         )
         launchUi {
             graph.settings.saveStore(next)

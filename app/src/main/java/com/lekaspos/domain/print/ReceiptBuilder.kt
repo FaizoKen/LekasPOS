@@ -14,7 +14,8 @@ import com.lekaspos.core.receipt.ReceiptPayment
 import com.lekaspos.core.receipt.ReceiptTax
 import com.lekaspos.core.receipt.ReceiptText
 import com.lekaspos.core.time.Days
-import com.lekaspos.data.catalog.StaffDao
+import com.lekaspos.data.customer.CustomerDao
+import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.data.sale.SaleQueries
 import com.lekaspos.data.settings.StoreSettings
@@ -58,6 +59,7 @@ object ReceiptBuilder {
             refReceiptNo = h.refSaleId?.let { SaleQueries.receiptNo(db, it) },
             soldAt = h.soldAt,
             cashier = h.staffId?.let { StaffDao.name(db, it) },
+            customer = h.customerId?.let { CustomerDao.name(db, it) },
             items = lines.map {
                 ReceiptItem(
                     name = it.name, qty = it.qty, unit = it.unit, weighed = it.qty % 1000L != 0L, unitPrice = it.unitPrice,

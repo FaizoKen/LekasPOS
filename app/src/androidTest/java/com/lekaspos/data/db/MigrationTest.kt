@@ -2,6 +2,7 @@ package com.lekaspos.data.db
 
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lekaspos.core.model.Perm
 import com.lekaspos.testing.TestDb
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,6 +56,43 @@ class MigrationTest {
             } finally {
                 TestDb.delete(migrated)
             }
+        }
+    }
+
+    @Test
+    fun v3GivesUneditedSeedRolesTheirDefaultPermissions() {
+        val name = "migrate-roles.db"
+        val file = TestDb.context.getDatabasePath(name)
+        SQLiteDatabase.deleteDatabase(file)
+        file.parentFile?.mkdirs()
+        val raw = SQLiteDatabase.openOrCreateDatabase(file, null)
+        try {
+            raw.beginTransaction()
+            for (sql in snapshot(2)) raw.execSQL(sql)
+            Meta.createIdentity(raw, System.currentTimeMillis())
+            // Phase 2/3 seed roles had no permissions; a custom role was edited (ver_hlc > 0).
+            for (id in 1..3) {
+                raw.execSQL("INSERT INTO role(id, name, sys_role, perms, created_at, updated_at, ver_hlc, ver_dev) VALUES($id, 'r$id', $id, 0, 0, 0, 0, 0)")
+            }
+            raw.execSQL("INSERT INTO role(id, name, sys_role, perms, created_at, updated_at, ver_hlc, ver_dev) VALUES(99, 'custom', 0, 0, 0, 0, 5, 1)")
+            raw.execSQL("INSERT INTO credit_entry(id, customer_id, kind, amount, at, hlc) VALUES(7, 1, 1, 500, 0, 0)")
+            raw.setTransactionSuccessful()
+            raw.endTransaction()
+            raw.version = 2
+        } finally {
+            raw.close()
+        }
+        val db = Db.open(TestDb.context, name)
+        try {
+            val perms = db.readBlocking { r -> r.queryList("SELECT id, perms FROM role ORDER BY id") { it.getLong(0) to it.getLong(1) } }.toMap()
+            assertEquals(0L, perms[1L]) // the owner role always has everything
+            assertEquals(Perm.DEFAULT_MANAGER, perms[2L])
+            assertEquals(Perm.DEFAULT_CASHIER, perms[3L])
+            assertEquals(0L, perms[99L]) // edited roles are left alone
+            val shift = db.readBlocking { r -> r.queryList("SELECT shift_id FROM credit_entry WHERE id = 7") { it.isNull(0) } }
+            assertEquals(listOf(true), shift) // old credit entries: no shift
+        } finally {
+            TestDb.delete(db)
         }
     }
 }

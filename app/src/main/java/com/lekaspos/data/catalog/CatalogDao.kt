@@ -68,10 +68,12 @@ object PaymentMethodDao {
     fun active(db: SQLiteDatabase): List<PaymentMethod> = db.queryList(
         "SELECT id, name, kind, opens_drawer, sort FROM payment_method WHERE deleted = 0 AND active = 1 ORDER BY sort, id",
     ) { c -> PaymentMethod(c.getLong(0), c.getString(1), c.getInt(2), c.bool(3), c.getInt(4)) }
+
+    /** Every method's name, including removed ones (old reports still show them). */
+    fun names(db: SQLiteDatabase): Map<Long, String> {
+        val out = HashMap<Long, String>()
+        db.queryList("SELECT id, name FROM payment_method", null) { it.getLong(0) to it.getString(1) }.forEach { out[it.first] = it.second }
+        return out
+    }
 }
 
-/** LWW table `staff` (PIN login and roles arrive in Phase 4). */
-object StaffDao {
-    fun name(db: SQLiteDatabase, id: Long): String? =
-        db.queryOne("SELECT name FROM staff WHERE id = ?", args(id)) { it.getString(0) }
-}

@@ -2,6 +2,7 @@ package com.lekaspos.data.db
 
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.model.PaymentKind
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SysRole
 
 /** Localized names for seed rows, taken from resources at first launch. */
@@ -29,19 +30,19 @@ object Seed {
         const val PM_EWALLET = 3L
         const val PM_CREDIT = 4L
 
-        /** The store owner's staff record; the only user until PIN login arrives (Phase 4). */
+        /** The store owner (a seed row): the till runs as the owner until someone sets a PIN (D-037). */
         const val STAFF_OWNER = 1L
     }
 
     fun insert(db: SQLiteDatabase, names: SeedNames, now: Long) {
-        fun role(id: Long, name: String, sysRole: Int) = db.execSQL(
+        fun role(id: Long, name: String, sysRole: Int, perms: Long) = db.execSQL(
             "INSERT INTO role(id, name, sys_role, perms, created_at, updated_at, ver_hlc, ver_dev) " +
-                "VALUES(?, ?, ?, 0, ?, ?, 0, 0)",
-            arrayOf<Any?>(id, name, sysRole, now, now),
+                "VALUES(?, ?, ?, ?, ?, ?, 0, 0)",
+            arrayOf<Any?>(id, name, sysRole, perms, now, now),
         )
-        role(Ids.ROLE_OWNER, names.owner, SysRole.OWNER)
-        role(Ids.ROLE_MANAGER, names.manager, SysRole.MANAGER)
-        role(Ids.ROLE_CASHIER, names.cashier, SysRole.CASHIER)
+        role(Ids.ROLE_OWNER, names.owner, SysRole.OWNER, 0L) // the owner role always has every permission
+        role(Ids.ROLE_MANAGER, names.manager, SysRole.MANAGER, Perm.DEFAULT_MANAGER)
+        role(Ids.ROLE_CASHIER, names.cashier, SysRole.CASHIER, Perm.DEFAULT_CASHIER)
 
         fun method(id: Long, name: String, kind: Int, opensDrawer: Boolean, sort: Int) = db.execSQL(
             "INSERT INTO payment_method(id, name, kind, opens_drawer, sort, active, created_at, " +

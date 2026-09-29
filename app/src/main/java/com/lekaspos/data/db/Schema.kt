@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 2
+    const val VERSION = 3
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -254,6 +254,7 @@ object Schema {
             hlc INTEGER NOT NULL
         )""",
         "CREATE INDEX sale_void_sale ON sale_void(sale_id)",
+        "CREATE INDEX sale_void_shift ON sale_void(shift_id) WHERE shift_id IS NOT NULL",
         """CREATE TABLE stock_movement (
             id INTEGER PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -305,6 +306,7 @@ object Schema {
             total INTEGER NOT NULL
         )""",
         "CREATE INDEX purchase_line_purchase ON purchase_line(purchase_id)",
+        // v3: shift_id = the shift whose drawer took a cash repayment (D-038).
         """CREATE TABLE credit_entry (
             id INTEGER PRIMARY KEY,
             customer_id INTEGER NOT NULL,
@@ -315,9 +317,11 @@ object Schema {
             staff_id INTEGER,
             note TEXT,
             at INTEGER NOT NULL,
-            hlc INTEGER NOT NULL
+            hlc INTEGER NOT NULL,
+            shift_id INTEGER
         )""",
         "CREATE INDEX credit_entry_customer ON credit_entry(customer_id, hlc)",
+        "CREATE INDEX credit_entry_shift ON credit_entry(shift_id) WHERE shift_id IS NOT NULL",
         """CREATE TABLE audit_log (
             id INTEGER PRIMARY KEY,
             action INTEGER NOT NULL,

@@ -148,6 +148,7 @@ which would need `BLUETOOTH_SCAN` on API 31+ and `ACCESS_FINE_LOCATION` on API 2
 ### D-028 — Permissions stubbed until Phase 4, audit entries written from Phase 2
 All sensitive actions go through `PermissionGate` (allows the single owner session for now) and
 write `audit_log` entries, so Phase 4 only adds PIN login, roles and manager override.
+(Done in Phase 4: see D-037.)
 
 ### D-029 — The open bill: memory first, one ordered writer, explicit local IDs
 `CartSession` (app-scoped) changes the bill in memory, publishes it at once and queues the
@@ -199,6 +200,50 @@ ids, so an importer regenerates them idempotently. Adjustments and opening stock
 STOCK_MOVE, counts as STOCK_COUNT, count sessions and suppliers as LWW rows. Stock adjustments
 need MANAGE_STOCK; the movement row (with staff and reason) is their record, so no separate
 audit entry. The delivery being typed is a LOCAL draft (`meta` key `draft.receive`).
+
+### D-037 — Staff PIN login, roles and manager approval (Phase 4, 2026-09-30)
+PIN login is off until the owner sets a PIN: a one-person shop keeps working exactly as before.
+The first PIN must be an owner's, and while anyone can sign in at least one active owner must
+be able to — so the store can never lock itself out of staff management. PINs are 4–6 digits,
+stored as one salted PBKDF2-HMAC-SHA256 record (`p2:iterations:salt:hash`, 4,000 iterations,
+built on `Mac` because `PBKDF2WithHmacSHA256` needs Android 8) in the single LWW field
+`pin_hash`, so a PIN change syncs atomically and works on every till. A short PIN cannot resist
+offline guessing whatever the hash; the hash keeps PINs out of plain sight, and the till
+throttles guessing: 5 wrong PINs, then waits of 30 s doubling to 15 min (per device, in `meta`).
+The owner gets a recovery code (12 characters, shown once, stored hashed in `setting`) — the
+only way back in without a server. Roles are permission bitmasks (17 permissions, owner role
+= all; seed Manager/Cashier defaults). Sensitive actions take a manager's PIN approval: once
+for one action, or held by a screen until it closes; `audit_log.approved_by` records it. The
+signed-in cashier survives a restart; the till locks on demand or after an idle time set per
+device. Rejected: PIN-only login without choosing a name (needs unique PINs and checking every
+staff hash), unhashed PINs, lockout per staff member (5 free guesses per person).
+
+### D-038 — Shifts and cash: expected cash is recomputed from shift-tagged events
+A shift belongs to one till (LWW row edited only by that till). Sales, refunds, voids, cash
+movements and credit repayments made while it is open carry its id; expected cash = float +
+cash taken − cash refunds − cash of documents voided in this shift + cash in − cash out − drops
++ credit repaid in cash (`:core` `ShiftCash`). A void belongs to the shift it happens in, so an
+earlier shift's report never changes. Closing stores counted and expected cash and audits the
+difference; staff without SHIFT_REPORT close "blind". Shifts are optional unless the store
+switches on "require an open shift to take payments". Rejected: running totals on the shift
+row (conflict-prone under sync, can drift), a shift per staff member (the drawer is per till).
+
+### D-039 — Customers and credit ("pay later") as an optional feature
+Off by default (store setting). A customer can be attached to the bill; paying with "Customer
+credit" writes a CHARGE credit entry in the sale transaction and needs CREDIT_SALE; going over
+the customer's limit (0 = no limit) needs a manager's CREDIT_LIMIT approval, re-checked inside
+the transaction. Refunds to credit and voids of credit sales add reversing (negative) CHARGE
+entries; repayments are PAYMENT entries with a method (cash repayments count in the shift's
+drawer); ADJUST corrects a balance (audited). `customer_balance` is DERIVED. Credit entries sync
+as their own CREDIT events (the SALE importer does not derive credit). Receipts show the
+customer's name. Rejected: storing the balance on the customer row (LWW would lose concurrent
+charges from two tills).
+
+### D-040 — Schema v3 (Phase 4)
+`credit_entry.shift_id` (added last with `ALTER TABLE … ADD COLUMN`), partial indexes
+`credit_entry_shift` and `sale_void_shift` (`shift_id IS NOT NULL`, usable with `shift_id = ?` on
+SQLite 3.8), and the seed Manager/Cashier roles get their default permissions when they were
+never edited (`ver_hlc = 0`). Every other Phase 4 table already existed in v1.
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

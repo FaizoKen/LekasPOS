@@ -4,6 +4,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.BarcodeKind
+import com.lekaspos.core.model.CashMoveKind
+import com.lekaspos.core.model.CreditKind
 import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.SaleKind
@@ -64,9 +66,13 @@ class PerfDataGenerator(
         try {
             val now = System.currentTimeMillis()
             val catalog = createCatalog(db, now, progress, cancelled)
-            createSales(db, catalog, now, progress, cancelled)
+            val shifts = createShifts(db, catalog, now)
+            createSales(db, catalog, shifts, now, progress, cancelled)
             createStockWork(db, catalog, now, progress, cancelled)
-            val steps = listOf<(Db.Tx) -> Unit>(DerivedRebuild::refundedAmounts, DerivedRebuild::stockLevels, DerivedRebuild::summaries)
+            createCustomers(db, catalog, shifts, now, progress, cancelled)
+            val steps = listOf<(Db.Tx) -> Unit>(
+                DerivedRebuild::refundedAmounts, DerivedRebuild::stockLevels, DerivedRebuild::summaries, DerivedRebuild::customerBalances,
+            )
             for ((i, step) in steps.withIndex()) {
                 if (cancelled()) throw Cancelled()
                 progress.update("derived", i, steps.size)
@@ -223,7 +229,7 @@ class PerfDataGenerator(
 
     // ------------------------------------------------------------------ sales
 
-    private fun createSales(db: Db, cat: Catalog, now: Long, progress: Progress, cancelled: () -> Boolean) {
+    private fun createSales(db: Db, cat: Catalog, shifts: LongArray, now: Long, progress: Progress, cancelled: () -> Boolean) {
         val total = scale.sales
         val start = now - scale.days * Days.DAY_MS
         val step = scale.days * Days.DAY_MS / total
@@ -241,16 +247,20 @@ class PerfDataGenerator(
                     val soldAt = start + s * step + rnd.nextInt(step.toInt().coerceAtLeast(1))
                     val hlc = Hlc.pack(soldAt, (hlcCounter++) and 0xFFFF)
                     val staff = cat.staff[rnd.nextInt(cat.staff.size)]
-                    val sale = insertSale(tx, cat, soldAt, hlc, staff, prefix, ++saleSeq)
+                    val shift = shifts[dayIndex(soldAt, start)]
+                    val sale = insertSale(tx, cat, soldAt, hlc, staff, prefix, ++saleSeq, shift)
                     val roll = rnd.nextInt(1000)
                     if (roll < 10) {
                         tx.insert(
-                            SaleDao.INSERT_VOID, tx.nextId(), sale.saleId, "Wrong item scanned", staff, cat.staff[0], null,
+                            SaleDao.INSERT_VOID, tx.nextId(), sale.saleId, "Wrong item scanned", staff, cat.staff[0], shift,
                             soldAt + 60_000L, Hlc.pack(soldAt + 60_000L, (hlcCounter++) and 0xFFFF),
                         )
                         tx.update("UPDATE sale SET status = ? WHERE id = ?", SaleStatus.VOIDED, sale.saleId)
                     } else if (roll < 15) {
-                        insertRefund(tx, cat, sale, soldAt + 3_600_000L, (hlcCounter++) and 0xFFFF, staff, prefix, ++refundSeq)
+                        insertRefund(
+                            tx, cat, sale, soldAt + 3_600_000L, (hlcCounter++) and 0xFFFF, staff, prefix, ++refundSeq,
+                            shifts[dayIndex(soldAt + 3_600_000L, start)],
+                        )
                     }
                 }
             }
@@ -261,6 +271,87 @@ class PerfDataGenerator(
             Meta.put(tx.db, Meta.RECEIPT_PREFIX, prefix)
             Meta.put(tx.db, Meta.docSeqKey(SaleKind.SALE), saleSeq.toString())
             Meta.put(tx.db, Meta.docSeqKey(SaleKind.REFUND), refundSeq.toString())
+        }
+    }
+
+    // ------------------------------------------------------------------ shifts, customers, credit (Phase 4)
+
+    private fun dayIndex(at: Long, start: Long): Int = ((at - start) / Days.DAY_MS).toInt().coerceIn(0, scale.days - 1)
+
+    /** One closed shift a day on this till, with a morning float and two cash movements. */
+    private fun createShifts(db: Db, cat: Catalog, now: Long): LongArray {
+        val start = now - scale.days * Days.DAY_MS
+        val ids = LongArray(scale.days)
+        db.writeBlocking(reserveIds = scale.days * 4L) { tx ->
+            for (d in 0 until scale.days) {
+                val opened = start + d * Days.DAY_MS + 7L * 3_600_000L
+                val closed = opened + 14L * 3_600_000L
+                val id = tx.nextId()
+                ids[d] = id
+                tx.insert(
+                    "INSERT INTO shift(id, device_no, opened_by, opened_at, opening_float, closed_by, closed_at, counted_cash, " +
+                        "expected_cash, deleted, created_at, updated_at, ver_hlc, ver_dev) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,?,?)",
+                    id, tx.deviceNo, cat.staff[0], opened, 20_000L, cat.staff[0], closed, 0L, 0L, opened, closed,
+                    Hlc.pack(opened, d and 0xFFFF), tx.deviceNo,
+                )
+                for ((k, kind) in intArrayOf(CashMoveKind.DROP, CashMoveKind.CASH_OUT).withIndex()) {
+                    val at = opened + (4L + k * 5L) * 3_600_000L
+                    tx.insert(
+                        "INSERT INTO cash_movement(id, shift_id, kind, amount, reason, staff_id, at, hlc) VALUES(?,?,?,?,?,?,?,?)",
+                        tx.nextId(), id, kind, if (kind == CashMoveKind.DROP) 50_000L else 1_500L, "perf", cat.staff[0], at,
+                        Hlc.pack(at, 1 + k),
+                    )
+                }
+            }
+        }
+        return ids
+    }
+
+    /**
+     * Customers (products / 25) with credit: charges and repayments spread over the period,
+     * a few regulars owning most entries (like a real shop's notebook).
+     */
+    private fun createCustomers(db: Db, cat: Catalog, shifts: LongArray, now: Long, progress: Progress, cancelled: () -> Boolean) {
+        val start = now - scale.days * Days.DAY_MS
+        val n = (scale.products / 25).coerceAtLeast(20)
+        val ids = LongArray(n)
+        db.writeBlocking(reserveIds = n.toLong()) { tx ->
+            for (i in 0 until n) {
+                val id = tx.nextId()
+                ids[i] = id
+                val name = FIRST[i % FIRST.size] + " " + LAST[(i / FIRST.size) % LAST.size] + " " + (i + 1)
+                tx.insert(
+                    "INSERT INTO customer(id, name, name_key, phone, credit_limit, deleted, created_at, updated_at, ver_hlc, ver_dev) " +
+                        "VALUES(?,?,?,?,?,0,?,?,?,?)",
+                    id, name, SearchText.key(name), "01" + (10_000_000 + i * 37).toString(), if (i % 3 == 0) 0L else 20_000L,
+                    start, start, Hlc.pack(start, i and 0xFFFF), tx.deviceNo,
+                )
+            }
+        }
+        val entries = scale.sales / 8
+        val chunk = 2_000
+        var e = 0
+        var counter = 0
+        while (e < entries) {
+            if (cancelled()) throw Cancelled()
+            val end = minOf(entries, e + chunk)
+            db.writeBlocking(reserveIds = (end - e).toLong()) { tx ->
+                for (k in e until end) {
+                    val at = start + (k.toLong() * scale.days * Days.DAY_MS) / entries
+                    // Squared pick: low indexes (regulars) get most entries.
+                    val c = ids[((rnd.nextDouble() * rnd.nextDouble()) * n).toInt().coerceIn(0, n - 1)]
+                    val payment = k % 3 == 2
+                    tx.insert(
+                        "INSERT INTO credit_entry(id, customer_id, kind, amount, sale_id, method_id, staff_id, note, at, hlc, shift_id) " +
+                            "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                        tx.nextId(), c, if (payment) CreditKind.PAYMENT else CreditKind.CHARGE, 500L + rnd.nextInt(4_000),
+                        null, if (payment) Seed.Ids.PM_CASH else Seed.Ids.PM_CREDIT, cat.staff[0], null, at,
+                        Hlc.pack(at, (counter++) and 0xFFFF), shifts[dayIndex(at, start)],
+                    )
+                }
+            }
+            e = end
+            progress.update("customers", e, entries)
         }
     }
 
@@ -387,7 +478,7 @@ class PerfDataGenerator(
         val cost: Long,
     )
 
-    private fun insertSale(tx: Db.Tx, cat: Catalog, soldAt: Long, hlc: Long, staff: Long, prefix: String, seq: Long): GeneratedSale {
+    private fun insertSale(tx: Db.Tx, cat: Catalog, soldAt: Long, hlc: Long, staff: Long, prefix: String, seq: Long, shift: Long): GeneratedSale {
         val count = 1 + rnd.nextInt(7)
         val idx = IntArray(count) { pick(cat) }
         val qty = LongArray(count) { k ->
@@ -436,7 +527,7 @@ class PerfDataGenerator(
         val saleId = tx.nextId()
         tx.insert(
             SaleDao.INSERT_SALE, saleId, SaleKind.SALE, ReceiptNumbers.format(prefix, SaleKind.SALE, seq), tx.deviceNo,
-            seq, null, null, staff, null, soldAt - 90_000L, soldAt, day, count, priced.subtotal, priced.discount,
+            seq, null, shift, staff, null, soldAt - 90_000L, soldAt, day, count, priced.subtotal, priced.discount,
             priced.tax, rounding, totalDue, totalDue, change, cost, true, SaleStatus.COMPLETED, 0L, null, hlc,
         )
         var firstLineId = 0L
@@ -452,7 +543,7 @@ class PerfDataGenerator(
                 if (cat.tracked[p]) -qty[k] else 0L, hlc,
             )
         }
-        tx.insert(SaleDao.INSERT_PAY, tx.nextId(), saleId, methodId, payKind, applied, tendered, change, null, null, soldAt)
+        tx.insert(SaleDao.INSERT_PAY, tx.nextId(), saleId, methodId, payKind, applied, tendered, change, null, shift, soldAt)
         val first = priced.lines[0]
         return GeneratedSale(
             saleId, firstLineId, idx[0], qty[0], first.gross, first.lineDiscount, first.billDiscount, first.net, first.tax, lineCost[0],
@@ -469,6 +560,7 @@ class PerfDataGenerator(
         staff: Long,
         prefix: String,
         seq: Long,
+        shift: Long,
     ) {
         val p = sale.productIndex
         val hlc = Hlc.pack(at, counter)
@@ -477,7 +569,7 @@ class PerfDataGenerator(
         val day = Days.epochDay(at, tz)
         tx.insert(
             SaleDao.INSERT_SALE, refundId, SaleKind.REFUND, ReceiptNumbers.format(prefix, SaleKind.REFUND, seq),
-            tx.deviceNo, seq, sale.saleId, null, staff, null, at, at, day, 1, -sale.gross,
+            tx.deviceNo, seq, sale.saleId, shift, staff, null, at, at, day, 1, -sale.gross,
             -(sale.lineDiscount + sale.billDiscount), -sale.tax, 0L, -net, -net, 0L, -sale.cost, true,
             SaleStatus.COMPLETED, 0L, "Customer return", hlc,
         )
@@ -487,11 +579,13 @@ class PerfDataGenerator(
             if (cat.taxBp[p] > 0) cat.taxRate[p] else null, cat.taxBp[p], -sale.tax, -sale.cost, false,
             if (cat.tracked[p]) sale.qty else 0L, hlc,
         )
-        tx.insert(SaleDao.INSERT_PAY, tx.nextId(), refundId, Seed.Ids.PM_CARD, PaymentKind.CARD, -net, 0L, 0L, null, null, at)
+        tx.insert(SaleDao.INSERT_PAY, tx.nextId(), refundId, Seed.Ids.PM_CARD, PaymentKind.CARD, -net, 0L, 0L, null, shift, at)
     }
 
     companion object {
         const val DB_NAME = "perf.db"
+        private val FIRST = listOf("Ali", "Siti", "Ah Kow", "Mei Ling", "Ravi", "Priya", "Aminah", "Wong", "Kumar", "Farah")
+        private val LAST = listOf("Bakar", "Tan", "Lim", "Raj", "Ismail", "Lee", "Hassan", "Chong", "Nair", "Yusof")
 
         fun delete(context: Context): Boolean = SQLiteDatabase.deleteDatabase(context.getDatabasePath(DB_NAME))
 

@@ -36,7 +36,21 @@ import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.ScannerSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
 import com.lekaspos.ui.settings.StoreSettingsActivity
+import com.lekaspos.ui.shift.ShiftActivity
+import com.lekaspos.ui.shift.ShiftReportActivity
+import com.lekaspos.ui.shift.ShiftsActivity
+import com.lekaspos.ui.staff.LockActivity
+import com.lekaspos.ui.staff.RoleEditActivity
+import com.lekaspos.ui.staff.RolesActivity
+import com.lekaspos.ui.staff.StaffActivity
+import com.lekaspos.ui.staff.StaffEditActivity
+import com.lekaspos.ui.customers.CustomerActivity
+import com.lekaspos.ui.customers.CustomersActivity
+import com.lekaspos.data.customer.Customer
+import com.lekaspos.data.db.Seed
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -86,6 +100,52 @@ class ScreensSmokeTest {
         open(CountActivity.intent(ctx, session))
         open(CountReportActivity.intent(ctx, session))
         open(PurchaseDetailActivity.intent(ctx, purchase))
+    }
+
+    @Test
+    fun staffShiftAndCustomerScreensOpen() {
+        // PIN login stays off here: the app database is shared with the other screen tests.
+        val graph = LekasApp.graph(ctx)
+        val customer = runBlocking { graph.customers.save(null, Customer(0L, "Smoke test customer", creditLimit = 10_000L)) }
+        val shift = runBlocking {
+            graph.shifts.load()
+            graph.shifts.current.value ?: graph.shifts.open(1_000L)
+        }
+        for (cls in listOf(
+            StaffActivity::class.java, RolesActivity::class.java, ShiftActivity::class.java, ShiftsActivity::class.java,
+            CustomersActivity::class.java,
+        )) {
+            open(cls)
+        }
+        open(StaffEditActivity.intent(ctx, 0L))
+        open(StaffEditActivity.intent(ctx, Seed.Ids.STAFF_OWNER))
+        open(RoleEditActivity.intent(ctx, Seed.Ids.ROLE_MANAGER))
+        open(ShiftReportActivity.intent(ctx, shift.id))
+        open(CustomerActivity.intent(ctx, customer.id))
+        open(CustomersActivity.pickIntent(ctx))
+        runBlocking { graph.shifts.close(1_000L, null) }
+    }
+
+    @Test
+    fun lockScreenAsksForAPinWhileLocked() {
+        val graph = LekasApp.graph(ctx)
+        val owner = Seed.Ids.STAFF_OWNER
+        runBlocking {
+            graph.staff.load()
+            graph.staffAdmin.setPin(owner, "2468")
+            graph.staff.lock()
+        }
+        try {
+            assertTrue(graph.staff.state.value.locked)
+            open(LockActivity::class.java) { a -> assertFalse(a.isFinishing) }
+        } finally {
+            // PIN login off again: the other screen tests share this database.
+            runBlocking {
+                graph.staff.signIn(owner, "2468")
+                graph.staffAdmin.setPin(owner, null)
+            }
+        }
+        assertFalse(graph.staff.state.value.loginRequired)
     }
 
     @Test

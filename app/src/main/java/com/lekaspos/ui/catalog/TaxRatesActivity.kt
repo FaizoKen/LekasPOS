@@ -54,14 +54,9 @@ class TaxRatesActivity : ScreenActivity() {
         }
     }
 
-    private fun allowed(): Boolean {
-        if (graph.permissions.allowed(Perm.SETTINGS)) return true
-        Dialogs.message(this, null, getString(R.string.not_allowed))
-        return false
-    }
+    private fun edit(t: TaxRate?) = requireAccess(Perm.SETTINGS) { editNow(t) }
 
-    private fun edit(t: TaxRate?) {
-        if (!allowed()) return
+    private fun editNow(t: TaxRate?) {
         val pad = (20 * resources.displayMetrics.density).toInt()
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -107,8 +102,9 @@ class TaxRatesActivity : ScreenActivity() {
         }
     }
 
-    private fun delete(t: TaxRate) {
-        if (!allowed()) return
+    private fun delete(t: TaxRate) = requireAccess(Perm.SETTINGS) { deleteNow(t) }
+
+    private fun deleteNow(t: TaxRate) {
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.tax_delete_confirm, t.name), getString(R.string.delete)) {
             launchUi {
                 graph.db().write(reserveIds = 0L) { tx -> TaxRateDao.delete(tx, t.id, System.currentTimeMillis()) }

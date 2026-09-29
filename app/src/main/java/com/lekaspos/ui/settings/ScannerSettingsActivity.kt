@@ -132,7 +132,7 @@ class ScannerSettingsActivity : ScreenActivity() {
 
     private fun save() {
         if (!graph.permissions.allowed(Perm.SETTINGS)) {
-            Dialogs.message(this, null, getString(R.string.not_allowed))
+            requireAccess(Perm.SETTINGS) { save() }
             return
         }
         val next = graph.settings.device.value.copy(scannerAddress = address, scannerName = scannerName, cameraScan = camera.isChecked)
