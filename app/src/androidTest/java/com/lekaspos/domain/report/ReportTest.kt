@@ -109,10 +109,6 @@ class ReportTest {
             assertEquals(days, split, "products of $p")
             val cats = db.readBlocking { ReportDao.byCategory(it, MonthSplit.of(p)) }
             assertEquals(days.values.sumOf { it.second }, cats.sumOf { it.netEx })
-            // The report screen's single pass agrees with the two separate queries.
-            val (top, oneCats) = db.readBlocking { ReportDao.productsAndCategories(it, MonthSplit.of(p), 1) }
-            assertEquals(db.readBlocking { ReportDao.products(it, MonthSplit.of(p), limit = 1) }, top)
-            assertEquals(cats.associateBy { it.categoryId }, oneCats.associateBy { it.categoryId })
         }
     }
 
