@@ -29,11 +29,23 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     class HttpError(val code: Int, message: String) : IOException("Drive HTTP $code: $message")
 
-    override suspend fun list(prefix: String): List<RemoteFile> {
+    /**
+     * Drive's `name contains` matches word prefixes, so the query uses only the first word of
+     * [prefix] ("seg", "dev", "store"); the exact prefix is checked here.
+     */
+    override suspend fun list(prefix: String): List<RemoteFile> =
+        query("name contains '${quote(prefix.substringBefore('-'))}' and trashed = false")
+            .filter { it.name.startsWith(prefix) }
+            .sortedBy { it.name }
+
+    /** The file called exactly [name], if any. */
+    private suspend fun find(name: String): RemoteFile? =
+        query("name = '${quote(name)}' and trashed = false").firstOrNull { it.name == name }
+
+    private suspend fun query(q: String): List<RemoteFile> {
         val out = ArrayList<RemoteFile>()
         var page: String? = null
         do {
-            val q = "name contains '${prefix.replace("'", "\\'")}' and trashed = false"
             val url = "$API/files?spaces=appDataFolder&pageSize=1000&fields=${enc("nextPageToken,files(id,name,size,appProperties)")}" +
                 "&q=${enc(q)}" + (page?.let { "&pageToken=${enc(it)}" } ?: "")
             val json = request("GET", url) { null }.let { String(it, Charsets.UTF_8) }
@@ -43,17 +55,19 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
             for (f in (m["files"] as? List<Any?>).orEmpty()) {
                 val file = f as? Map<String, Any?> ?: continue
                 val name = file["name"] as? String ?: continue
-                if (!name.startsWith(prefix)) continue // "contains" matches word prefixes; keep exact prefixes only
                 val props = (file["appProperties"] as? Map<String, Any?>).orEmpty().mapValues { it.value.toString() }
                 out.add(RemoteFile(name, file["id"] as String, (file["size"] as? String)?.toLongOrNull() ?: 0L, props))
             }
             page = m["nextPageToken"] as? String
         } while (page != null)
-        return out.sortedBy { it.name }
+        return out
     }
 
+    /** Escapes a string literal for a Drive query. */
+    private fun quote(s: String) = s.replace("\\", "\\\\").replace("'", "\\'")
+
     override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean): RemoteFile {
-        val existing = list(name).firstOrNull { it.name == name }
+        val existing = find(name)
         if (existing != null) {
             if (!replace) return existing // uploaded before a crash: never make a second copy
             request("PATCH", "$UPLOAD/files/${existing.id}?uploadType=media") { c ->

@@ -28,8 +28,8 @@ object SyncProviders {
     fun available(ctx: Context): Boolean = DriveAuth.playServicesAvailable(ctx)
 
     /** Asks for access to the store's sync folder. Never on the main thread's time: it is a suspend call on IO. */
-    suspend fun connect(ctx: Context): Connect = when (val r = DriveAuth.authorize(ctx.applicationContext)) {
-        is DriveAuth.Result.Token -> ready(ctx, r.token)
+    suspend fun connect(ctx: Context, account: String? = null): Connect = when (val r = DriveAuth.authorize(ctx.applicationContext, account)) {
+        is DriveAuth.Result.Token -> ready(ctx, r.token, account)
         is DriveAuth.Result.NeedsUser -> Connect.NeedsUser(r.intent)
         is DriveAuth.Result.Unavailable -> Connect.Unavailable(r.message)
     }
@@ -37,35 +37,36 @@ object SyncProviders {
     /** After the consent screen: [data] is its result intent. */
     suspend fun finish(ctx: Context, data: Intent?): Connect {
         val token = DriveAuth.fromIntent(ctx.applicationContext, data) ?: return Connect.Unavailable("access was not granted")
-        return ready(ctx, token)
+        return ready(ctx, token, null)
     }
 
-    private suspend fun ready(ctx: Context, token: String): Connect {
-        val provider = drive(ctx.applicationContext, token)
+    private suspend fun ready(ctx: Context, token: String, known: String?): Connect {
+        var provider = drive(ctx.applicationContext, token, known)
         val account = try {
             provider.accountEmail()
         } catch (e: Exception) {
             Log.w("Cannot read the Google account name", e)
             null
         }
-        return Connect.Ready(provider, account)
+        if (account != null && known == null) provider = drive(ctx.applicationContext, token, account)
+        return Connect.Ready(provider, account ?: known)
     }
 
     /** Google Drive with tokens from Google Identity Services; [first] is a token the UI just got. */
-    private fun drive(ctx: Context, first: String? = null): DriveProvider {
+    private fun drive(ctx: Context, first: String?, account: String?): DriveProvider {
         var cached = first
         return DriveProvider { refresh ->
             val t = cached
             if (t != null && !refresh) {
                 t
             } else {
-                DriveAuth.silentToken(ctx).also { cached = it }
+                DriveAuth.silentToken(ctx, account).also { cached = it }
             }
         }
     }
 
-    fun forId(ctx: Context, id: String?): SyncProvider? = when (id) {
-        GDRIVE -> drive(ctx.applicationContext)
+    fun forId(ctx: Context, id: String?, account: String?): SyncProvider? = when (id) {
+        GDRIVE -> drive(ctx.applicationContext, null, account)
         else -> null
     }
 }

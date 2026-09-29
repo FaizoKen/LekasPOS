@@ -98,19 +98,19 @@ class SyncActivity : ScreenActivity() {
             return
         }
         pendingName = name
-        connect()
+        connect(null)
     }
 
     private fun signIn() {
         pendingName = null
-        connect()
+        connect(graph.sync.status.value.account)
     }
 
     /** Asks Google for access; the consent screen (first time, revoked access) comes back in [onActivityResult]. */
-    private fun connect() {
+    private fun connect(account: String?) {
         launchUi {
             toast(R.string.sync_connecting)
-            onConnect(SyncProviders.connect(this@SyncActivity))
+            onConnect(SyncProviders.connect(this@SyncActivity, account))
         }
     }
 
@@ -127,6 +127,12 @@ class SyncActivity : ScreenActivity() {
 
     private fun connected(provider: SyncProvider, account: String?) {
         val name = pendingName
+        val known = graph.sync.status.value.account
+        if (name == null && account != null && known != null && !account.equals(known, ignoreCase = true)) {
+            // Another account has another (empty) app folder: this till would leave the store.
+            Dialogs.message(this, getString(R.string.sync_title), getString(R.string.sync_other_account, account, known))
+            return
+        }
         val graph = graph
         val app = application
         val screen = WeakReference(this) // the first sync may outlive this screen

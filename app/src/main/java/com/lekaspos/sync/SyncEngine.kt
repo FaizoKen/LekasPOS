@@ -150,7 +150,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     suspend fun provider(): SyncProvider? {
         val db = graph.db()
         if (!db.syncEnabled) return null
-        return SyncProviders.forId(app, db.read { Meta.get(it, PROVIDER) })
+        val (id, account) = db.read { Meta.get(it, PROVIDER) to Meta.get(it, ACCOUNT) }
+        return SyncProviders.forId(app, id, account)
     }
 
     /** One round: seal, upload, import, publish the device card. */

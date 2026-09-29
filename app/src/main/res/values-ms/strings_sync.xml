@@ -66,6 +66,7 @@
     <string name="sync_turn_off_confirm">Kaunter ini berhenti bersegerak. Datanya kekal dalam telefon ini dan kaunter lain menyimpan data masing-masing. Menghidupkan segerak semula menghantar data kaunter ini sekali lagi.</string>
     <string name="sync_error_connect">Tidak dapat menyambung ke Google: %1$s</string>
     <string name="sync_error_clash">Kaunter lain dalam kedai ini mempunyai nombor kaunter yang sama. Buat sandaran, kemudian pulihkannya pada telefon ini sebagai kaunter baharu, dan hidupkan segerak semula.</string>
+    <string name="sync_other_account">Anda log masuk sebagai %1$s, tetapi kaunter ini bersegerak dengan %2$s. Log masuk dengan %2$s, atau matikan dan hidupkan semula segerak untuk memindahkan kedai ke akaun lain.</string>
     <string name="sync_pill_sign_in">Segerak: log masuk</string>
     <string name="sync_pill_stale">Belum segerak</string>
 </resources>

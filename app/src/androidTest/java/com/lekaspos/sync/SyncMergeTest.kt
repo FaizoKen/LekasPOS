@@ -96,8 +96,18 @@ class SyncMergeTest {
         }
         out["stock_level"] = rows("SELECT product_id, qty FROM stock_level WHERE qty != 0 ORDER BY product_id")
         out["customer_balance"] = rows("SELECT customer_id, balance FROM customer_balance WHERE balance != 0 ORDER BY customer_id")
-        for (t in listOf("sum_day", "sum_day_product", "sum_month_product", "sum_day_payment", "sum_day_staff")) {
-            out[t] = rows("SELECT * FROM $t ORDER BY 1, 2").filterNot { row -> row.split("|").drop(2).all { it == "0" || it == "∅" } }
+        // Key columns, then totals; rows whose totals are all zero (left behind by voids) are not data.
+        val sums = linkedMapOf(
+            "sum_day" to ("day" to "sale_count, refund_count, void_count, gross, discount, net_ex, tax, rounding, total, cost, refund_total, items"),
+            "sum_day_product" to ("day, product_id" to "qty, net_ex, tax, cost"),
+            "sum_month_product" to ("month, product_id" to "qty, net_ex, tax, cost"),
+            "sum_day_payment" to ("day, method_id" to "amount, count"),
+            "sum_day_staff" to ("day, staff_id" to "sale_count, total, net_ex"),
+        )
+        for ((t, cols) in sums) {
+            val keys = cols.first.split(", ").size
+            out[t] = rows("SELECT ${cols.first}, ${cols.second} FROM $t ORDER BY ${cols.first}")
+                .filterNot { row -> row.split("|").drop(keys).all { it == "0" || it == "∅" } }
         }
         return out
     }

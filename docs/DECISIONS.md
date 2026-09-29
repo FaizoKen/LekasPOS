@@ -330,6 +330,9 @@ not low, exponential backoff). Dependency: play-services-auth 21.4.0 (pinned in 
 supported way to get a Drive token without the deprecated Google Sign-In API.
 Deferred: snapshot bootstrap for very large stores and deleting segments every till has read
 (`Cursors.deletable`) — segments are gzip-compressed and hold at most 2,000 events each.
+Archiving old sales (planned for Phase 6) is deferred too: the perf suite passes every budget
+at 1M+ sale lines, and purging synced history safely needs local stock and summary
+checkpoints that `DerivedRebuild` respects — more risk than benefit before the first release.
 Rejected: one shared database file on Drive (no concurrent writers), per-row files (thousands
 of API calls), Drive change feeds (need a broader scope), Firebase (backend, cost, privacy).
 

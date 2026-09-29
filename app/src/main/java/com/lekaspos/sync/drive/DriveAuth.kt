@@ -1,5 +1,6 @@
 package com.lekaspos.sync.drive
 
+import android.accounts.Account
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -35,14 +36,18 @@ object DriveAuth {
 
     class SignInNeeded : AuthNeeded("Google sign-in needed")
 
-    private val request: AuthorizationRequest =
-        AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(DriveProvider.SCOPE))).build()
+    /** [account]: the store's Google account once known, so a phone with several accounts asks for the right one. */
+    private fun request(account: String?): AuthorizationRequest {
+        val b = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(DriveProvider.SCOPE)))
+        if (account != null) b.setAccount(Account(account, "com.google"))
+        return b.build()
+    }
 
     fun playServicesAvailable(ctx: Context): Boolean =
         GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ctx) == ConnectionResult.SUCCESS
 
     /** Blocks on Play Services: never call on the main thread. */
-    suspend fun authorize(ctx: Context): Result = withContext(Dispatchers.IO) {
+    suspend fun authorize(ctx: Context, account: String? = null): Result = withContext(Dispatchers.IO) {
         if (!playServicesAvailable(ctx)) return@withContext Result.Unavailable("Google Play services are not available")
         try {
             ProviderInstaller.installIfNeeded(ctx) // up-to-date TLS on old Android
@@ -50,7 +55,7 @@ object DriveAuth {
             Log.w("Security provider update failed", e)
         }
         try {
-            val r = Tasks.await(Identity.getAuthorizationClient(ctx).authorize(request))
+            val r = Tasks.await(Identity.getAuthorizationClient(ctx).authorize(request(account)))
             val pending = r.pendingIntent
             val token = r.accessToken
             when {
@@ -73,7 +78,7 @@ object DriveAuth {
     }
 
     /** A token for a background sync, or [SignInNeeded] when the user must act first. */
-    suspend fun silentToken(ctx: Context): String = when (val r = authorize(ctx)) {
+    suspend fun silentToken(ctx: Context, account: String?): String = when (val r = authorize(ctx, account)) {
         is Result.Token -> r.token
         is Result.NeedsUser -> throw SignInNeeded()
         is Result.Unavailable -> throw IOException(r.message)
