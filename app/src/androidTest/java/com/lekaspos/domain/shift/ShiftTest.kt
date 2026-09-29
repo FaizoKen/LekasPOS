@@ -178,5 +178,6 @@ class ShiftTest {
         // A cashier's close is blind: no SHIFT_REPORT permission.
         assertFalse(graph.permissions.allowed(Perm.SHIFT_REPORT))
         graph.shifts.close(9_000L, null)
+        Unit
     }
 }

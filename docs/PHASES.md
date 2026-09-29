@@ -270,10 +270,27 @@ continue with Phase 4.
 
 ## Phase 4 — users, roles, PIN, shifts, cash management, audit (in progress)
 
-- [ ] Staff with PIN login (hashed, lockout), roles owner/manager/cashier, configurable permissions
-- [ ] Permission checks + manager override on sensitive actions; audit log viewer
-- [ ] Shift open/close, opening float, cash in/out/drop, counted vs expected cash, shift report
-- [ ] Customers and credit ("buy now, pay later") — optional feature switch (proposed here, see open question 3)
+- [x] Staff with PIN login: PIN login stays off until the owner sets a PIN (a one-person shop
+      works as before); pick your name, type a 4–6 digit PIN; salted PBKDF2 hash (D-037); 5 free
+      wrong PINs per till, then a doubling wait; stays signed in across restarts; Lock / switch
+      user; lock after N idle minutes (per device); change own PIN; owner recovery code
+- [x] Roles owner/manager/cashier + your own roles, 17 permissions each (owner = everything);
+      the store can never lock itself out (an owner who can sign in always remains)
+- [x] Manager approval with PIN for sensitive actions: discounts, price changes, cancel bill,
+      voids, refunds, reprints, drawer, cash in/out, credit over the limit (one action), and
+      products, stock, settings, staff, activity log, shift report (the screen keeps it)
+- [x] Activity log shows who did it and who approved it; filter by action; sign-ins, lockouts,
+      staff/role changes, shifts and cash movements are logged
+- [x] Shifts per till: opening float, cash in / cash out / drop (with reason, opens the drawer),
+      close by counting the drawer — expected cash recomputed from the shift's sales, refunds,
+      voids, movements and credit repayments (D-038); blind close for cashiers; shift report on
+      screen and printed; past shifts; optional "require a shift to take payments"
+- [x] Customers and credit (optional switch, D-039): customer on the bill (printed on the
+      receipt), pay with "Customer credit" within a limit, manager approval over it, repayments
+      into the drawer, refunds/voids give the credit back, statement with running balance,
+      balance adjustments, who owes how much
+- [x] Schema v3 migration (D-040); sync events for staff, roles, shifts, cash and credit
+- [ ] CI (API 21/36), perf FULL, release APK size, tester build
 
 ## Phase 5 — reports, CSV import/export (planned)
 
