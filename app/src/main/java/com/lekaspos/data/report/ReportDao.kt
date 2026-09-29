@@ -106,13 +106,13 @@ object ReportDao {
     private const val PRODUCTS_BY_NET =
         "SELECT t.product_id, p.name, t.qty, t.net_ex, t.tax, t.cost FROM " +
             "(SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost " +
-            "FROM ($UNION) GROUP BY product_id ORDER BY 4 DESC, 1 LIMIT ?) t " +
+            "FROM ($UNION) GROUP BY product_id ORDER BY net_ex DESC, product_id LIMIT ?) t " +
             "LEFT JOIN product p ON p.id = t.product_id ORDER BY t.net_ex DESC, t.product_id"
 
     private const val PRODUCTS_BY_QTY =
         "SELECT t.product_id, p.name, t.qty, t.net_ex, t.tax, t.cost FROM " +
             "(SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost " +
-            "FROM ($UNION) GROUP BY product_id ORDER BY 2 DESC, 1 LIMIT ?) t " +
+            "FROM ($UNION) GROUP BY product_id ORDER BY qty DESC, product_id LIMIT ?) t " +
             "LEFT JOIN product p ON p.id = t.product_id ORDER BY t.qty DESC, t.product_id"
 
     private const val BY_CATEGORY =

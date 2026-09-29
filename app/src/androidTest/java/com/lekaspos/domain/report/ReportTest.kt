@@ -109,6 +109,11 @@ class ReportTest {
             assertEquals(days, split, "products of $p")
             val cats = db.readBlocking { ReportDao.byCategory(it, MonthSplit.of(p)) }
             assertEquals(days.values.sumOf { it.second }, cats.sumOf { it.netEx })
+            // The limit keeps the best sellers: by net sales, or by quantity.
+            val bestByNet = days.maxByOrNull { it.value.second }?.key
+            assertEquals(bestByNet, db.readBlocking { ReportDao.products(it, MonthSplit.of(p), limit = 1) }.singleOrNull()?.productId)
+            val bestByQty = days.maxByOrNull { it.value.first }?.key
+            assertEquals(bestByQty, db.readBlocking { ReportDao.products(it, MonthSplit.of(p), byQty = true, limit = 1) }.singleOrNull()?.productId)
         }
     }
 
