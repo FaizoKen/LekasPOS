@@ -9,7 +9,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 |---|---|---|
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
-| 3 | Inventory, suppliers, stock movements | **in progress** |
+| 3 | Inventory, suppliers, stock movements | **built and verified in CI** — waiting for real-device feedback (tester build `v0.3.0-phase3`) |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
 | 5 | Reports and CSV import/export | not started |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
@@ -218,7 +218,7 @@ The user asked to continue with Phase 3.
 12. **Low-end device** (the 2 GB tablet): selling-screen smoothness and Diagnostics → Full test
     (now also measures receipt building and picture rendering).
 
-## Phase 3 — inventory, suppliers, stock movements (in progress)
+## Phase 3 — inventory, suppliers, stock movements (waiting for feedback)
 
 - [x] Receive stock: scan (keyboard-wedge or camera) or pick products, carton barcodes add their
       pack size, weighed goods ask for the weight; cost per unit or the invoice's line amount;
@@ -234,7 +234,33 @@ The user asked to continue with Phase 3.
 - [x] Product stock history: sales, refunds, deliveries, adjustments and counts merged, with the
       level after each; stock-changes log for all products
 - [x] Schema v2 migration (D-034); sync events for all stock work
-- [ ] CI (API 21/36), perf FULL, release APK size, tester build
+- [x] CI (API 21/36), perf FULL, release APK size, tester build
+
+### Results (2026-09-29)
+
+| Check | Result |
+|---|---|
+| JVM tests | `:core` 135, `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **68/68 on API 21** and **68/68 on API 36**, incl. migration v1 → v2, receiving with average cost and one PURCHASE sync event, adjustments, counts applying at once, history paging, low stock, suppliers, all 12 new screens opened |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB, SQLite 3.8.6) | **PASS**, 39/39 query plans indexed; receive_commit (20 lines) p95 19 ms, stock_history_page 2.1 ms, movement/purchase/count pages < 1 ms, low_stock_count 12 ms, sale_commit 9 ms, report_year 0.87 s |
+| Perf FULL, API 36 emulator | **PASS**, 39/39 plans; receive_commit 4.3 ms |
+| Cold start to usable selling screen | API 21: ≤ 481 ms (worst of 10); API 36: 451–523 ms — budget 2 s |
+| Schema | v2 (D-034) — upgrades Phase 1/2 installs in place |
+
+### Needs real-device testing (Phase 3)
+
+1. **Upgrade**: install over the Phase 2 build — open bills, products and sales must all still be there.
+2. **Receive stock**: add a supplier, scan a few products (and one carton barcode), change a
+   quantity, type an invoice line amount, save; check stock and the product's cost.
+3. **Crash safety of a delivery**: enter half a delivery, force-stop the app, reopen Receive stock.
+4. **Adjust stock**: damaged / found / correction, with a note; look at Stock changes.
+5. **Stock count**: start a count for one category, scan or tap products and type counts, sell
+   one counted item, open the count report, finish the count.
+6. **Low stock**: set a low-stock level on a product, sell it below the level — the sale result
+   warns; the Low stock list shows it.
+7. **Stock history** of a product after all of the above (levels should add up).
+8. Carried over from Phase 2 when the hardware is available: printer, drawer, HID/SPP scanners.
 
 ## Phase 4 — users, roles, PIN, shifts, cash management, audit (planned)
 
