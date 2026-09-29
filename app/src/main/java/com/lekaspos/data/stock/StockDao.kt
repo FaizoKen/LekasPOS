@@ -160,6 +160,14 @@ object StockDao {
      * Inserts a movement row without an event of its own: purchases generate their movements
      * (id = purchase line id) and sync them inside the PURCHASE event (references/sync.md §4).
      */
+    /** Like [insertMovementRow] but a movement already stored is left alone (sync import). Returns true if new. */
+    internal fun insertMovementRowIfNew(tx: Db.Tx, values: Array<Any?>): Boolean {
+        require(values.size == MOVE_COLS.size)
+        if (tx.insert(INSERT_MOVEMENT.replaceFirst("INSERT INTO", "INSERT OR IGNORE INTO"), *values) == -1L) return false
+        applyDelta(tx, values[1] as Long, values[3] as Long, values[9] as Long, Ids.deviceOf(values[0] as Long))
+        return true
+    }
+
     internal fun insertMovementRow(tx: Db.Tx, values: Array<Any?>) {
         require(values.size == MOVE_COLS.size)
         tx.insert(INSERT_MOVEMENT, *values)

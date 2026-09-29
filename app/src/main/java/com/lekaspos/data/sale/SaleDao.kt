@@ -143,25 +143,37 @@ object SaleDao {
         shiftId: Long?,
         at: Long,
     ): Boolean {
-        val db = tx.db
-        val h = db.queryOne(
-            "SELECT status, kind, day, staff_id, subtotal, discount, tax, rounding, total, cost, " +
-                "prices_incl_tax, ref_sale_id FROM sale WHERE id = ?",
-            args(saleId),
-        ) { c ->
-            longArrayOf(
-                c.getLong(0), c.getLong(1), c.getLong(2), c.longOrNull(3) ?: -1L, c.getLong(4), c.getLong(5),
-                c.getLong(6), c.getLong(7), c.getLong(8), c.getLong(9), c.getLong(10), c.longOrNull(11) ?: -1L,
-            )
-        } ?: throw IllegalArgumentException("no sale $saleId")
+        val h = header(tx.db, saleId) ?: throw IllegalArgumentException("no sale $saleId")
         if (h[0].toInt() == SaleStatus.VOIDED) return false
-        val kind = h[1].toInt()
-        val inclTax = h[10] != 0L
-
         val voidId = tx.nextId()
         val hlc = tx.hlcNow()
         val voidValues = arrayOf<Any?>(voidId, saleId, reason, staffId, approvedBy, shiftId, at, hlc)
         tx.insert(INSERT_VOID, *voidValues)
+        reverse(tx, saleId, h)
+        if (tx.syncEnabled) {
+            val payload = Outbox.json { w -> Outbox.writeRow(w, VOID_COLS, voidValues) }
+            Outbox.append(tx, Entity.SALE_VOID, EventOp.INSERT, voidId, hlc, payload)
+        }
+        return true
+    }
+
+    /** status, kind, day, staff (−1), subtotal, discount, tax, rounding, total, cost, prices incl. tax, ref sale (−1). */
+    private fun header(db: SQLiteDatabase, saleId: Long): LongArray? = db.queryOne(
+        "SELECT status, kind, day, staff_id, subtotal, discount, tax, rounding, total, cost, " +
+            "prices_incl_tax, ref_sale_id FROM sale WHERE id = ?",
+        args(saleId),
+    ) { c ->
+        longArrayOf(
+            c.getLong(0), c.getLong(1), c.getLong(2), c.longOrNull(3) ?: -1L, c.getLong(4), c.getLong(5),
+            c.getLong(6), c.getLong(7), c.getLong(8), c.getLong(9), c.getLong(10), c.longOrNull(11) ?: -1L,
+        )
+    }
+
+    /** Marks sale [saleId] voided and reverses its stock, summaries and refunded amount. */
+    private fun reverse(tx: Db.Tx, saleId: Long, h: LongArray) {
+        val db = tx.db
+        val kind = h[1].toInt()
+        val inclTax = h[10] != 0L
         tx.update("UPDATE sale SET status = ? WHERE id = ?", SaleStatus.VOIDED, saleId)
 
         class VoidLine(val id: Long, val productId: Long?, val stockQty: Long, val hlc: Long, val sum: Summaries.LineSum)
@@ -189,9 +201,7 @@ object SaleDao {
         val pays = db.queryList("SELECT method_id, kind, amount FROM payment WHERE sale_id = ?", args(saleId)) { c ->
             Summaries.PaySum(c.getLong(0), c.getInt(1), c.getLong(2))
         }
-        if (kind == SaleKind.REFUND && h[11] >= 0L) {
-            tx.update("UPDATE sale SET refunded = refunded + ? WHERE id = ?", h[8], h[11])
-        }
+        if (kind == SaleKind.REFUND && h[11] >= 0L) recomputeRefunded(tx, h[11])
         Summaries.apply(
             tx,
             Summaries.Input(
@@ -200,11 +210,99 @@ object SaleDao {
             sign = -1,
             voided = true,
         )
-        if (tx.syncEnabled) {
-            val payload = Outbox.json { w -> Outbox.writeRow(w, VOID_COLS, voidValues) }
-            Outbox.append(tx, Entity.SALE_VOID, EventOp.INSERT, voidId, hlc, payload)
+    }
+
+    /** `refunded` of sale [saleId] from its completed refunds (any arrival order, D-045). */
+    fun recomputeRefunded(tx: Db.Tx, saleId: Long) {
+        tx.update(
+            "UPDATE sale SET refunded = (SELECT -COALESCE(SUM(total), 0) FROM sale WHERE ref_sale_id = ? " +
+                "AND kind = ${SaleKind.REFUND} AND status = ${SaleStatus.COMPLETED}) WHERE id = ?",
+            saleId, saleId,
+        )
+    }
+
+    // ------------------------------------------------------------------ sync import (D-045)
+
+    private val INSERT_SALE_NEW = INSERT_SALE.replaceFirst("INSERT INTO", "INSERT OR IGNORE INTO")
+    private val INSERT_LINE_NEW = INSERT_LINE.replaceFirst("INSERT INTO", "INSERT OR IGNORE INTO")
+    private val INSERT_PAY_NEW = INSERT_PAY.replaceFirst("INSERT INTO", "INSERT OR IGNORE INTO")
+    private val INSERT_VOID_NEW = INSERT_VOID.replaceFirst("INSERT INTO", "INSERT OR IGNORE INTO")
+
+    private fun values(cols: Array<String>, row: Map<String, Any?>): Array<Any?> = Array(cols.size) { row[cols[it]] }
+
+    /**
+     * A sale or refund made on another till, as its SALE event carried it. Stored once (a second
+     * delivery changes nothing); stock, summaries and refunded amounts follow exactly as if it had
+     * been sold here, and a void that arrived earlier is applied right away. Returns true if new.
+     */
+    fun applyRemote(tx: Db.Tx, sale: Map<String, Any?>, lines: List<Map<String, Any?>>, pays: List<Map<String, Any?>>): Boolean {
+        val s = values(SALE_COLS, sale)
+        s[SALE_COLS.indexOf("status")] = SaleStatus.COMPLETED.toLong()
+        s[SALE_COLS.indexOf("refunded")] = 0L
+        if (tx.insert(INSERT_SALE_NEW, *s) == -1L) return false
+        val id = sale["id"] as Long
+        val kind = (sale["kind"] as Long).toInt()
+        val inclTax = (sale["prices_incl_tax"] as Long?) != 0L
+        val lineSums = ArrayList<Summaries.LineSum>(lines.size)
+        for (l in lines) {
+            tx.insert(INSERT_LINE_NEW, *values(LINE_COLS, l))
+            val pid = l["product_id"] as Long?
+            val stockQty = (l["stock_qty"] as Long?) ?: 0L
+            if (pid != null && stockQty != 0L) StockDao.applyDelta(tx, pid, stockQty, l["hlc"] as Long, Ids.deviceOf(l["id"] as Long))
+            val net = l["net"] as Long
+            val tax = (l["tax"] as Long?) ?: 0L
+            lineSums.add(Summaries.LineSum(pid, l["category_id"] as Long?, l["base_qty"] as Long, if (inclTax) net - tax else net, tax, (l["cost"] as Long?) ?: 0L))
+        }
+        val paySums = ArrayList<Summaries.PaySum>(pays.size)
+        for (p in pays) {
+            tx.insert(INSERT_PAY_NEW, *values(PAY_COLS, p))
+            paySums.add(Summaries.PaySum(p["method_id"] as Long, (p["kind"] as Long).toInt(), p["amount"] as Long))
+        }
+        Summaries.apply(
+            tx,
+            Summaries.Input(
+                sale["day"] as Long, kind, sale["staff_id"] as Long?, sale["subtotal"] as Long, (sale["discount"] as Long?) ?: 0L,
+                (sale["tax"] as Long?) ?: 0L, (sale["rounding"] as Long?) ?: 0L, sale["total"] as Long, (sale["cost"] as Long?) ?: 0L,
+                lineSums, paySums,
+            ),
+            sign = +1,
+        )
+        val ref = sale["ref_sale_id"] as Long?
+        if (kind == SaleKind.REFUND && ref != null) recomputeRefunded(tx, ref)
+        if (kind == SaleKind.SALE) recomputeRefunded(tx, id) // its refunds may have arrived first
+        if (tx.db.long("SELECT COUNT(*) FROM sale_void WHERE sale_id = ?", id) > 0L) {
+            header(tx.db, id)?.let { reverse(tx, id, it) } // the void came before the sale
         }
         return true
+    }
+
+    /** A void made on another till; applied now if its sale is here, else when the sale arrives. */
+    fun applyRemoteVoid(tx: Db.Tx, row: Map<String, Any?>): Boolean {
+        if (tx.insert(INSERT_VOID_NEW, *values(VOID_COLS, row)) == -1L) return false
+        val saleId = row["sale_id"] as Long
+        val h = header(tx.db, saleId) ?: return true
+        if (h[0].toInt() != SaleStatus.VOIDED) reverse(tx, saleId, h)
+        return true
+    }
+
+    /** Rows of one sale as SALE-event maps (sync backfill). */
+    fun exportRows(db: SQLiteDatabase, saleId: Long): Triple<Map<String, Any?>, List<Map<String, Any?>>, List<Map<String, Any?>>>? {
+        val sale = db.queryOne("SELECT ${SALE_COLS.joinToString(", ")} FROM sale WHERE id = ?", args(saleId)) { c -> rowMap(c, SALE_COLS) } ?: return null
+        val lines = db.queryList("SELECT ${LINE_COLS.joinToString(", ")} FROM sale_line WHERE sale_id = ? ORDER BY line_no", args(saleId)) { c -> rowMap(c, LINE_COLS) }
+        val pays = db.queryList("SELECT ${PAY_COLS.joinToString(", ")} FROM payment WHERE sale_id = ? ORDER BY id", args(saleId)) { c -> rowMap(c, PAY_COLS) }
+        return Triple(sale, lines, pays)
+    }
+
+    private fun rowMap(c: android.database.Cursor, cols: Array<String>): Map<String, Any?> {
+        val m = LinkedHashMap<String, Any?>(cols.size)
+        for (i in cols.indices) {
+            m[cols[i]] = when (c.getType(i)) {
+                android.database.Cursor.FIELD_TYPE_NULL -> null
+                android.database.Cursor.FIELD_TYPE_INTEGER -> c.getLong(i)
+                else -> c.getString(i)
+            }
+        }
+        return m
     }
 
     // ------------------------------------------------------------------ queries

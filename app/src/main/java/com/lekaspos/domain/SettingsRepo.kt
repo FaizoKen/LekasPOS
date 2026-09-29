@@ -36,6 +36,13 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         loaded = true
     }
 
+    /** Re-reads store settings after another till changed them (sync import). */
+    suspend fun reload() {
+        val db = graph.db()
+        val store = db.read { r -> SettingsDao.all(r) }
+        _store.value = StoreSettings.from(store, defaultLanguage)
+    }
+
     suspend fun saveStore(s: StoreSettings) {
         val db = graph.db()
         db.write(reserveIds = 0) { tx -> SettingsDao.putChanged(tx, SettingsDao.all(tx.db), s.toMap(), System.currentTimeMillis()) }

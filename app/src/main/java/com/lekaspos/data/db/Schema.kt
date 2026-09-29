@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 4
+    const val VERSION = 5
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -453,6 +453,23 @@ object Schema {
             updated_at INTEGER NOT NULL
         )""",
         "CREATE INDEX print_job_status ON print_job(status, id)",
+        // v5 (D-045): this till's sealed sync segments, and per other till the last segment applied here.
+        """CREATE TABLE sync_segment (
+            seq INTEGER PRIMARY KEY,
+            count INTEGER NOT NULL,
+            first_hlc INTEGER NOT NULL,
+            last_hlc INTEGER NOT NULL,
+            size INTEGER NOT NULL,
+            sha256 TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            uploaded_at INTEGER
+        )""",
+        """CREATE TABLE sync_cursor (
+            dev INTEGER PRIMARY KEY,
+            seq INTEGER NOT NULL,
+            last_hlc INTEGER NOT NULL DEFAULT 0,
+            updated_at INTEGER NOT NULL
+        )""",
         // AUTOINCREMENT: seq must never be reused after rows are deleted (segment sealing).
         """CREATE TABLE outbox (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -477,7 +494,7 @@ object Schema {
         "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",
         "sum_day_payment", "sum_day_staff",
     )
-    val LOCAL_TABLES = listOf("meta", "cart", "cart_line", "print_job", "outbox")
+    val LOCAL_TABLES = listOf("meta", "cart", "cart_line", "print_job", "outbox", "sync_segment", "sync_cursor")
 
     /** Tables whose `id` values come from this device's IdAllocator. */
     val GENERATED_ID_TABLES = LWW_TABLES.filter { it != "setting" } + EVENT_TABLES

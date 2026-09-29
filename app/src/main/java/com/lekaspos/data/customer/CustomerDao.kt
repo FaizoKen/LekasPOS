@@ -163,6 +163,12 @@ object CustomerDao {
         return id
     }
 
+    /** Moves [customerId]'s balance by [delta] (a credit entry arriving from another till). */
+    fun applyBalance(tx: Db.Tx, customerId: Long, delta: Long) {
+        val bal = arrayOf<Any?>(delta, customerId)
+        tx.updateOrInsert(BALANCE_UPDATE, bal, BALANCE_INSERT, bal)
+    }
+
     private const val ENTRY = "SELECT c.id, c.kind, c.amount, c.sale_id, s.receipt_no, c.method_id, c.staff_id, c.note, c.at, c.hlc " +
         "FROM credit_entry c LEFT JOIN sale s ON s.id = c.sale_id "
     private const val STATEMENT_FIRST = ENTRY + "WHERE c.customer_id = ? ORDER BY c.hlc DESC, c.id DESC LIMIT ?"

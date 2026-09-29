@@ -22,6 +22,7 @@ import com.lekaspos.domain.staff.StaffService
 import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
+import com.lekaspos.sync.SyncEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -61,6 +62,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val sppScanner: SppScanner by lazy { SppScanner(app, this) }
     val perfRunner: PerfRunner by lazy { PerfRunner(app, appScope) }
     val backups: BackupService by lazy { BackupService(this, app) }
+    val sync: SyncEngine by lazy { SyncEngine(this, app) }
 
     private fun defaultLanguage(): String {
         val locale = if (Build.VERSION.SDK_INT >= 24) {

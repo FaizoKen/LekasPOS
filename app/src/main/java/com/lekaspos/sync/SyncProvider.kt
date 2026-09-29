@@ -1,0 +1,78 @@
+package com.lekaspos.sync
+
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+
+/** A file in the store's sync folder. [props] are small key/values stored with it (sha256, count). */
+data class RemoteFile(val name: String, val id: String, val size: Long, val props: Map<String, String> = emptyMap())
+
+/**
+ * Where the tills of a store exchange files (references/sync.md §9): a dumb shared folder. The
+ * engine knows nothing about Google Drive; a USB stick or a test directory works the same.
+ * Every call may fail with an IOException (offline, signed out …); the engine retries later.
+ */
+interface SyncProvider {
+    val id: String
+
+    /** Files whose names start with [prefix]. */
+    suspend fun list(prefix: String): List<RemoteFile>
+
+    /**
+     * Stores [file] as [name]. With [replace] an existing file of that name (this till's own
+     * device card) is overwritten; otherwise an existing file is left as it is (same content).
+     */
+    suspend fun put(name: String, file: File, props: Map<String, String> = emptyMap(), replace: Boolean = false): RemoteFile
+
+    suspend fun get(remote: RemoteFile, dest: File)
+
+    suspend fun delete(remote: RemoteFile)
+}
+
+/**
+ * A plain directory as the sync folder: several test databases share one to act as several
+ * tills, and a USB stick or SD card can carry segments between tills without internet.
+ * Props live in a hidden side file per file.
+ */
+class FolderProvider(private val dir: File) : SyncProvider {
+
+    override val id: String = "folder"
+
+    override suspend fun list(prefix: String): List<RemoteFile> {
+        val files = dir.listFiles { f -> f.isFile && f.name.startsWith(prefix) && !f.name.startsWith(".") && !f.name.endsWith(TMP) }.orEmpty()
+        return files.sortedBy { it.name }.map { RemoteFile(it.name, it.name, it.length(), props(it)) }
+    }
+
+    override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean): RemoteFile {
+        dir.mkdirs()
+        val target = File(dir, name)
+        if (target.exists() && !replace) return RemoteFile(name, name, target.length(), props(target))
+        val tmp = File(dir, name + TMP)
+        FileInputStream(file).use { i -> FileOutputStream(tmp).use { o -> i.copyTo(o, 64 * 1024); o.fd.sync() } }
+        if (props.isNotEmpty()) File(dir, ".$name.props").writeText(props.entries.joinToString("\n") { "${it.key}=${it.value}" })
+        if (!tmp.renameTo(target)) {
+            target.delete()
+            if (!tmp.renameTo(target)) throw java.io.IOException("cannot write $name")
+        }
+        return RemoteFile(name, name, target.length(), props)
+    }
+
+    override suspend fun get(remote: RemoteFile, dest: File) {
+        FileInputStream(File(dir, remote.id)).use { i -> FileOutputStream(dest).use { o -> i.copyTo(o, 64 * 1024) } }
+    }
+
+    override suspend fun delete(remote: RemoteFile) {
+        File(dir, remote.id).delete()
+        File(dir, ".${remote.id}.props").delete()
+    }
+
+    private fun props(f: File): Map<String, String> {
+        val p = File(dir, ".${f.name}.props")
+        if (!p.exists()) return emptyMap()
+        return p.readLines().mapNotNull { line -> line.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
+    }
+
+    private companion object {
+        const val TMP = ".part"
+    }
+}

@@ -55,6 +55,18 @@ object Migrations {
             )
             db.execSQL("UPDATE role SET perms = perms | 131072 WHERE id = 2 AND ver_hlc = 0")
         },
+        // v4 → v5 (Phase 6, D-045): LOCAL bookkeeping of sync segments and import cursors.
+        Migration(4, 5) { db ->
+            db.execSQL(
+                "CREATE TABLE sync_segment (seq INTEGER PRIMARY KEY, count INTEGER NOT NULL, first_hlc INTEGER NOT NULL, " +
+                    "last_hlc INTEGER NOT NULL, size INTEGER NOT NULL, sha256 TEXT NOT NULL, created_at INTEGER NOT NULL, " +
+                    "uploaded_at INTEGER)",
+            )
+            db.execSQL(
+                "CREATE TABLE sync_cursor (dev INTEGER PRIMARY KEY, seq INTEGER NOT NULL, last_hlc INTEGER NOT NULL DEFAULT 0, " +
+                    "updated_at INTEGER NOT NULL)",
+            )
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

@@ -137,5 +137,6 @@ class BackupTest {
         assertTrue(autos.all { it.header != null })
         assertTrue(!service.backupIfDue()) // one was just made
         service.dir.listFiles()?.forEach { it.delete() }
+        Unit
     }
 }
