@@ -35,7 +35,8 @@ Dependency direction is strictly downward: `ui → domain → data/hw/sync → :
 | `domain.*` | State holders and services; call DAOs and `:core` rules |
 | `ui.*` | One sub-package per screen (`sell`, `products`, `inventory`, `reports`, `settings`, `diag`) |
 | `hw.*` | `printer` (queue, transports), `scanner` (HID key buffer, SPP), `drawer` |
-| `sync.*` | `SyncEngine`, `SyncProvider`, `drive`, `folder`, `backup`, `archive` |
+| `sync` | `SyncEngine`, `SyncProvider` + `FolderProvider`, `SyncProviders`, `drive` (`DriveProvider`, `DriveAuth`) |
+| `data.sync`, `data.backup` | outbox, segments (`SegmentCodec`, `SyncDao`), `Importer`, `Backfill`; `BackupFiles`, `Restore` |
 | `perf` | `PerfDataGenerator`, `PerfSuite`, `PerfReport` |
 | `util` | `Log`, `Dispatchers`, `StrictModeSetup`, small helpers |
 
@@ -166,11 +167,16 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
 - `ProductCsvService`: preview (read + validate everything, write nothing), then import in
   200-row transactions in the app scope with progress in a StateFlow — D-042.
 
-## 8. Sync (details in `sync.md`)
+## 8. Sync and backup (Phase 6, details in `sync.md`)
 
-`SyncEngine` talks only to the `SyncProvider` interface. Providers: `GoogleDriveProvider`
-(REST over `HttpURLConnection`, `drive.appdata` scope) and `FolderProvider` (a directory; used
-by tests to simulate several devices, and usable with USB/SD storage).
+`SyncEngine` talks only to the `SyncProvider` interface. Providers: `DriveProvider` (REST over
+`HttpURLConnection`, `drive.appdata` scope, GIS tokens via `DriveAuth`) and `FolderProvider` (a
+directory; used by tests to simulate several devices). Only `com.lekaspos.sync` knows about
+Drive: other code sees `SyncProviders.connect/finish/forId` and the generic `AuthNeeded`.
+`SyncWorker` and `BackupWorker` (WorkManager, initialised on demand, scheduled after the
+selling screen is usable); `AppGraph.syncSoon()` after each sale. Screens: Settings → Sync,
+Settings → Backup & restore. `BackupService` makes and prunes backups; `Restore` stages a
+restore that `Db.open` applies before opening the database (D-044).
 
 ## 9. Errors, logging, crash safety
 

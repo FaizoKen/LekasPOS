@@ -15,12 +15,15 @@ import com.lekaspos.data.sync.Outbox
 import com.lekaspos.data.sync.SegmentCodec
 import com.lekaspos.data.sync.SegmentRow
 import com.lekaspos.data.sync.SyncDao
+import com.lekaspos.data.sync.SyncEvent
 import com.lekaspos.util.Log
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Log shipping between the tills of one store (references/sync.md, D-045). Each till seals its
@@ -207,23 +210,26 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     private fun localSegment(seq: Long) = File(outDir, "seg-$seq${SyncNames.SEGMENT_EXT}")
 
-    /** Outbox → numbered segment files, [MAX_EVENTS] events each, one transaction per segment. */
+    /**
+     * Outbox → numbered segment files, [MAX_EVENTS] events each. The file is written and synced
+     * outside the write transaction (sales keep committing); a short transaction then records it
+     * and drops those outbox rows. Outbox seqs only grow, so the rows read are exactly those up
+     * to the last one; a file left by a crash before the transaction is simply written again.
+     */
     private suspend fun seal(db: Db, store: String): Int {
         var n = 0
         while (true) {
-            val made = db.write(reserveIds = 0L) { tx ->
-                val rows = SyncDao.outboxBatch(tx.db, MAX_EVENTS)
-                if (rows.isEmpty()) return@write false
-                val seq = SyncDao.nextSegmentSeq(tx.db)
-                val first = rows.minOf { it.hlc }
-                val last = rows.maxOf { it.hlc }
-                val file = localSegment(seq)
-                val (size, sha) = SegmentCodec.write(file, SegmentCodec.Header(1, store, tx.deviceNo, seq, rows.size, first, last), rows)
+            val (rows, seq) = db.read { SyncDao.outboxBatch(it, MAX_EVENTS) to SyncDao.nextSegmentSeq(it) }
+            if (rows.isEmpty()) return n
+            val first = rows.minOf { it.hlc }
+            val last = rows.maxOf { it.hlc }
+            val (size, sha) = withContext(Dispatchers.IO) {
+                SegmentCodec.write(localSegment(seq), SegmentCodec.Header(1, store, db.deviceNo, seq, rows.size, first, last), rows)
+            }
+            db.write(reserveIds = 0L) { tx ->
                 SyncDao.insertSegment(tx, SegmentRow(seq, rows.size, first, last, size, sha, System.currentTimeMillis(), null))
                 SyncDao.deleteOutboxUpTo(tx, rows.last().seq)
-                true
             }
-            if (!made) return n
             n++
         }
     }
@@ -259,21 +265,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                     if (expected != null && SegmentCodec.sha256(tmp) != expected) {
                         throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq does not match its checksum")
                     }
-                    events += db.write(reserveIds = 0L) { tx ->
-                        val importer = Importer(tx.db)
-                        var max = 0L
-                        var count = 0
-                        SegmentCodec.read(tmp, { h ->
-                            if (h.store != store || h.dev != dev || h.seq != seq) throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq has a wrong header")
-                        }) { e ->
-                            if (importer.apply(tx, e)) changed.add(e.entity)
-                            if (e.hlc > max) max = e.hlc
-                            count++
-                        }
-                        if (!db.hlc.observe(max)) Log.w("Till $dev has a clock far in the future")
-                        SyncDao.setCursor(tx, dev, seq, max, System.currentTimeMillis())
-                        count
-                    }
+                    events += applySegment(db, tmp, store, dev, seq, changed)
                     applied++
                 } finally {
                     tmp.delete()
@@ -282,6 +274,46 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
         return Triple(applied, events, byDev.keys.size)
     }
+
+    /**
+     * Applies one downloaded segment in short transactions (at most [IMPORT_CHUNK] events or about
+     * [IMPORT_TX_MS] ms each), so a sale never waits for a whole segment; the cursor moves only
+     * after the last one. A crash in between re-applies the segment next time, which changes
+     * nothing (imports are idempotent).
+     */
+    private suspend fun applySegment(db: Db, file: File, store: String, dev: Int, seq: Long, changed: MutableSet<Int>): Int =
+        withContext(Dispatchers.IO) {
+            val batch = ArrayList<SyncEvent>(IMPORT_CHUNK)
+            var max = 0L
+            var count = 0
+            fun flush() {
+                var i = 0
+                while (i < batch.size) {
+                    db.writeBlocking(reserveIds = 0L) { tx ->
+                        val importer = Importer(tx.db)
+                        val start = System.nanoTime()
+                        while (i < batch.size) {
+                            val e = batch[i++]
+                            if (importer.apply(tx, e)) changed.add(e.entity)
+                            if (System.nanoTime() - start >= IMPORT_TX_MS * 1_000_000L) break
+                        }
+                    }
+                }
+                batch.clear()
+                if (!db.hlc.observe(max)) Log.w("Till $dev has a clock far in the future")
+            }
+            SegmentCodec.read(file, { h ->
+                if (h.store != store || h.dev != dev || h.seq != seq) throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq has a wrong header")
+            }) { e ->
+                batch.add(e)
+                if (e.hlc > max) max = e.hlc
+                count++
+                if (batch.size >= IMPORT_CHUNK) flush()
+            }
+            flush()
+            db.writeBlocking(reserveIds = 0L) { tx -> SyncDao.setCursor(tx, dev, seq, max, System.currentTimeMillis()) }
+            count
+        }
 
     private suspend fun putCard(db: Db, provider: SyncProvider, store: String) {
         val (uuid, name, prefix) = db.read { r -> Triple(Meta.get(r, Meta.DEVICE_UUID).orEmpty(), Meta.get(r, DEVICE_NAME).orEmpty(), Meta.get(r, Meta.RECEIPT_PREFIX)) }
@@ -341,6 +373,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     companion object {
         const val MAX_EVENTS = 2_000
+        const val IMPORT_CHUNK = 200
+        const val IMPORT_TX_MS = 100L
         const val KEEP_LOCAL_MS = 14L * 24L * 60L * 60L * 1000L
         const val DEVICE_NAME = "sync.device_name"
         const val PROVIDER = "sync.provider"

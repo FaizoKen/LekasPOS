@@ -89,14 +89,14 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (default roles, payment methods) — same IDs everywhere, `ver_hlc = 0` so any edit wins.
 - The sequence is reserved in blocks (meta key `id_reserved`) in its own committed
   transaction before use, so a crash can only create gaps, never reuse.
-- LOCAL tables (`cart`, `cart_line`, `outbox`, `print_job`) use plain rowids; cart and
+- LOCAL tables (`cart`, `cart_line`, `outbox`, `print_job`, `sync_segment`, `sync_cursor`) use plain rowids; cart and
   cart-line IDs are assigned in memory by `CartSession` (seeded from `MAX(id)`, D-029).
 - The default owner (`staff` id 1) is a seed row, created with `INSERT OR IGNORE` on open.
 - Device-only settings (printer, drawer, SPP scanner, camera) are `meta` rows under `dev.*`
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v4)
+## 6. Table catalog (schema v5)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -134,6 +134,8 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `cart`, `cart_line` | LOCAL | open bill + held (parked) bills | `(cart_id, line_no)` |
 | `print_job` | LOCAL | persistent print queue | `status` |
 | `outbox` | LOCAL | sync events not yet sealed into a segment | PK seq |
+| `sync_segment` | LOCAL | this device's sealed segments (count, HLC range, size, sha256, uploaded_at) (v5, D-045) | PK seq |
+| `sync_cursor` | LOCAL | per other device: last applied segment seq + HLC (v5) | PK dev |
 
 Children (`sale_line`, `payment`, `purchase_line`, `cart_line`) reference their parent with
 `REFERENCES … ON DELETE CASCADE`. All other references (product, staff, customer, shift, …)
@@ -197,4 +199,4 @@ are plain columns without FK constraints because sync can deliver them in any or
   the migration transaction with `PRAGMA foreign_keys` handled by `DbOpenHelper`.
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
-- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role).
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`).

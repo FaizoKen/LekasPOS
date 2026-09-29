@@ -63,8 +63,11 @@ store's Google Drive). That scope is *non-sensitive*, so no paid security assess
    (optional), links to the privacy policy and home page; add the scope
    `.../auth/drive.appdata`. Publish the app (move from *Testing* to *In production*) before the
    Play release — with only non-sensitive scopes, verification is quick or not required.
+   While the app is in *Testing*, only the Google accounts listed as **test users** can sign in.
 4. **Credentials → Create credentials → OAuth client ID → Android**, once per signing
    certificate, with package `com.lekaspos.app` and the certificate's SHA-1:
+   - the shared **test** key of the tester builds (GitHub pre-releases):
+     `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`;
    - debug key: `keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android`
      (debug builds use package `com.lekaspos.app.debug` → make a separate client for it);
    - your upload key (`keystore/lekaspos-upload.jks`);

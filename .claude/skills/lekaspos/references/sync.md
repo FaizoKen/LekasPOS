@@ -83,107 +83,111 @@ staff member are LOCAL (`meta`: `pin.*`, `session.staff`), per till.
 - Receipt numbers never collide: per-device prefix + per-device sequence.
 - A device offline for weeks uploads its whole backlog; nothing is lost or double-counted.
 
-## 5. Files
+## 5. Files (as built in Phase 6 — D-045)
 
-Remote layout (Google Drive `appDataFolder`, flat names; `appProperties` carry the same
-fields for queries):
+Remote layout: a flat folder (Google Drive `appDataFolder`); names from `core/sync/SyncNames`,
+small key/values (`sha256`, `count`) stored with each file (Drive `appProperties`, sidecar
+`.name.props` in `FolderProvider`).
 
 | File | Written by | Mutable? |
 |---|---|---|
-| `store-{store}.json` — store manifest | creating device | never rewritten |
-| `dev-{store}-{dev}.json` — device card (name, app version, last seen, import vector) | that device | rewritten only by its owner |
-| `seg-{store}-{dev}-{seq:08}.ndjson.gz` — events | that device | immutable |
-| `snap-{store}-{dev}-{seq:06}.db.gz` + `.json` manifest (vector clock) | any device | immutable |
-| `arch-{store}-{dev}-{yyyymm}.ndjson.gz` — archived sales | that device | immutable |
-| `blob-{store}-{sha256}` — logo and other binaries | any device | immutable |
+| `store-{store}.json` — store manifest | first device | never rewritten |
+| `dev-{store}-{dev}.json` — device card (name, app version, last seen, last seq, receipt prefix, cursors) | that device | rewritten only by its owner |
+| `seg-{store}-{dev}-{seq}.ndjson.gz` — events | that device | immutable |
+| (not built yet) snapshots, archives, blobs (logo) | — | — |
 
 Segment = gzip NDJSON: header line `{v, store, dev, seq, count, firstHlc, lastHlc}` then one
-event per line. Integrity: `count` and SHA-256 (stored in `appProperties`) are verified before
-applying; a bad file is re-downloaded, never half-applied. Streaming read/write only.
+event per line `{"e": entity, "o": op, "r": rowId, "h": hlc, "p": payload}`. Integrity: SHA-256
+compared before applying, header checked, count checked; a bad file stops sync with CORRUPT.
+Streaming read/write only (`SegmentCodec`).
 
-## 6. Upload (per device)
+## 6. One sync round (`SyncEngine.sync`, under a mutex)
 
-1. Seal: one write transaction moves outbox rows `> lastSealed` into a new local segment file
-   (fsynced first), records it in `sync_segment`, deletes those outbox rows.
-2. Upload every unsent segment (multipart ≤ 5 MB, resumable above; session URI persisted
-   so a broken upload resumes at the last acknowledged byte). Before re-uploading after a
-   crash, look the name up first to avoid duplicates (importers also de-duplicate).
-3. Mark uploaded; keep local copies 14 days, then delete.
+0. First round after enabling (or after an interrupted one): **backfill** — every existing row
+   is published as an event (`Backfill`, chunks of 300). `meta sync.backfilled = store` marks it
+   done; imports are idempotent, so repeating it is harmless.
+1. Seal: one write transaction per segment moves ≤ 2,000 outbox rows into
+   `files/sync/out/seg-<seq>.ndjson.gz`, records it in `sync_segment`, deletes those rows.
+2. Upload every unsent segment in order (`put` with `replace = false`: an already uploaded name
+   is left alone after a crash); mark uploaded; local copies deleted after 14 days.
+3. Import: list `seg-{store}-*`; for every other device `d` apply `cursor[d]+1, +2, …` in
+   order (`Cursors.next`), each downloaded to `cacheDir/sync-in`, verified, and applied in one
+   transaction together with `cursor[d] = seq`. A gap stops that device until it appears.
+   `hlc.observe(max)` afterwards.
+4. Publish the device card; reload settings / staff when those entities changed.
+5. `meta sync.last_ok / sync.last_error` (`"sign-in"` when the provider needs the user).
 
-## 7. Import (per provider)
+Importer rules (`data/sync/Importer`): EVENT rows `INSERT OR IGNORE` by id, derived data only
+when new (a void before its sale is applied when the sale arrives; a purchase regenerates its
+RECEIVE movements with line ids); stock counts rebuild the product's level; LWW rows merge per
+field by `(hlc, dev)` — a change before the creation inserts a placeholder with base (0,0) that
+the creation fills; products are re-indexed for search.
 
-1. List what's new (Drive Changes API page token; full listing as fallback).
-2. For every other device `d`: apply segments `cursor[d]+1, +2, …` in order, each in one
-   transaction together with `cursor[d] = seq` (crash-safe, exactly-once effect).
-   A gap (missing seq) stops that device's stream until it appears.
-3. If a needed segment was garbage-collected, bootstrap from the newest snapshot instead.
-4. Advance the HLC past the highest imported HLC.
+## 7. Joining, restore and identity
 
-## 8. Snapshots, bootstrap, garbage collection
+- Enabling sync: pick the store manifest (own store if present, else create when none, else
+  adopt the first), refuse on a device-number clash (another card with our number, different
+  uuid), take a free receipt prefix if ours is used by another card, then backfill + sync.
+- Disabling: outbox cleared, backfill flag cleared (re-enabling publishes everything again).
+- Restore (D-044): a database that published segments (or had sync on) always gets a **new
+  identity** on restore; sync is turned off; the old device's cursor is set to its last sealed
+  segment (that data is in the backup), so only what the original did afterwards is imported.
 
-- Snapshot = a compact SQLite file with all LWW, EVENT and DERIVED tables (no LOCAL tables),
-  built by streaming rows from one read transaction (WAL: selling continues) into a new DB
-  file, then gzip. Its manifest has the vector clock `{dev → last seq included}`.
-- Taken when idle/charging, at most daily, only if enough changed.
-- **New device:** download newest snapshot → it becomes the local DB (LOCAL tables reset,
-  new identity) → import segments after the vector → ready.
-- **Merge a standalone device into a store:** upload its own snapshot; others merge it row by
-  row with the same LWW/insert-or-ignore rules (a snapshot is just a big batch of events).
-- **GC:** a device deletes its own segment `(d, s)` once a snapshot covers it and every
-  device seen in the last 90 days has imported it (from the device cards).
+## 8. Not built yet (deferred, D-045)
 
-## 9. Provider interface
+Snapshot bootstrap for very large stores; remote GC of segments every device has read
+(`Cursors.deletable` exists); archive of old sales; Drive Changes API (full listing is used).
+
+## 9. Provider interface (as built)
 
 ```kotlin
 interface SyncProvider {
-    val id: String                                   // "gdrive", "folder", later "server"
-    suspend fun state(): ProviderState               // ready / needs sign-in / offline / error
-    suspend fun putDeviceCard(store: String, card: DeviceCard)
-    suspend fun listDeviceCards(store: String): List<DeviceCard>
-    suspend fun listSegments(store: String, since: ListCursor?): SegmentListing
-    suspend fun uploadSegment(store: String, meta: SegmentMeta, file: File, progress: ResumeState)
-    suspend fun downloadSegment(ref: RemoteSegment, dest: File, progress: ResumeState)
-    suspend fun deleteOwnSegments(store: String, refs: List<RemoteSegment>)
-    suspend fun uploadSnapshot(store: String, meta: SnapshotMeta, file: File, progress: ResumeState)
-    suspend fun latestSnapshot(store: String): RemoteSnapshot?
-    suspend fun downloadSnapshot(ref: RemoteSnapshot, dest: File, progress: ResumeState)
-    suspend fun uploadArchive(store: String, meta: ArchiveMeta, file: File, progress: ResumeState)
+    val id: String                                    // "gdrive", "folder"
+    suspend fun list(prefix: String): List<RemoteFile>
+    suspend fun put(name: String, file: File, props: Map<String, String> = emptyMap(), replace: Boolean = false): RemoteFile
+    suspend fun get(remote: RemoteFile, dest: File)
+    suspend fun delete(remote: RemoteFile)
 }
+open class AuthNeeded(message: String) : IOException(message)   // provider needs the user
 ```
-Several providers may be enabled at once (e.g. Drive + own server later): the engine keeps
-cursors and upload flags per provider; merges are idempotent, so duplicates are harmless.
+`SyncProviders` (the only place that knows it is Drive): `connect()` / `finish(intent)` for the
+sync screen, `forId(meta sync.provider)` for background work.
 
 ## 10. Google Drive specifics
 
-- Auth: Google Identity Services `Identity.getAuthorizationClient(ctx).authorize()` with
-  scope `https://www.googleapis.com/auth/drive.appdata` only (non-sensitive → no paid
-  security assessment). Background jobs call `authorize()` silently; if it needs UI, status
-  becomes "Sign-in needed" and the user taps to fix. No ID token needed; the account email
-  is shown from `about.get?fields=user`.
-- All devices of a store sign in with the **same Google account** (appDataFolder is private
-  per account + app).
-- REST over `HttpURLConnection`, gzip, 30 s connect / 60 s read timeouts, `ProviderInstaller`
-  on API 21 for modern TLS. Retries: WorkManager exponential backoff (30 s → 5 h).
-- Scheduling: periodic every 30 min (network connected, battery not low) + an expedited-ish
-  one-off 2 min after the last sale (debounced) + manual "Sync now".
-- Status shown in the app bar: last successful sync time, pending events, last error.
+- Auth: GIS `Identity.getAuthorizationClient(ctx).authorize()` with scope
+  `https://www.googleapis.com/auth/drive.appdata` only. Background: silent; a needed
+  resolution throws `SignInNeeded` (an `AuthNeeded`) → status "sign-in needed", selling-screen
+  pill, "Sign in again" on the sync screen. Account e-mail from `about?fields=user(emailAddress)`.
+- All devices of a store use the **same Google account**. Each signing certificate (test key,
+  upload key, Play signing key, debug) needs an Android OAuth client in Google Cloud (README).
+- REST over `HttpURLConnection`: list with `name contains` + exact prefix filter, multipart
+  upload ≤ 5 MB else resumable (resumes from the `Range` Drive reports), `alt=media` download,
+  PATCH via `X-HTTP-Method-Override`, one retry with a fresh token after 401. 30 s connect /
+  60 s read timeouts; `ProviderInstaller` for modern TLS on API 21.
+- Scheduling (`app/Work.kt`): periodic 30 min (network + battery not low, exponential backoff
+  from 30 s) + one-off "sync-soon" 2 min after a sale (KEEP, at most one enqueue per minute,
+  `AppGraph.syncSoon`) + "Sync now". `SyncWorker` ends quietly when sign-in is needed.
+- Status: `SyncEngine.status` (enabled, running, phase prepare/sync, records prepared, pending
+  events, last OK, last error, needs sign-in, account, till name, other tills). The selling
+  screen shows a pill only for "sign in" or "not synced for 24 h with pending changes".
 
-## 11. Backup and archive (work without Google Play Services)
+## 11. Backup (works without Google Play Services — D-044)
 
-- **Automatic local backup** daily (and before migrations/restores): consistent copy made
-  like a snapshot (all tables incl. LOCAL + identity), gzip, `files/backups/`, keep 7.
-- **Manual export/import**: the same `.lekasbak` file via the Storage Access Framework
-  (USB, SD card, Downloads, any cloud app). Import asks: replace this device (take over its
-  identity) or restore as a new device.
-- **Archive**: sales older than N months → monthly archive files to Drive (and/or export),
-  then purged locally; `sum_*` tables keep reports working; a stock checkpoint preserves
-  stock levels.
+- `.lekasbak` = ZIP of `backup.json` (format, time, reason, store/device ids, schema, app
+  version, store name, sale/product counts) + `lekaspos.db` (+ `-wal`). Made on the writer
+  thread after `wal_checkpoint(FULL)` (writes wait for the copy).
+- Automatic: daily (`BackupWorker`, keep 7) and before every schema upgrade (keep 3);
+  "replaced-*" copies before a restore (keep 3). Manual: back up now, save via SAF, share.
+- Restore: staged into `files/restore/`, app restarts, applied in `Db.open` before opening.
+- Archive of old sales: not built yet.
 
-## 12. Merge test plan (Phase 6)
+## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)
 
-Pure merge rules in `:core` (JVM tests) + multi-device scenarios in instrumented tests using
-N separate databases and a `FolderProvider`: concurrent same-field edits, different-field
-edits, delete vs edit, offline device with a week of sales, out-of-order and duplicate
-segment delivery, stock count vs offline sales, clock skew, snapshot bootstrap + catch-up,
-interrupted upload/download resume. Every scenario asserts all devices converge to
-identical table contents.
+N separate databases sharing a `FolderProvider` folder. Scenarios: second till joins with
+existing data (backfill), per-field edits and delete vs edit, a week offline (1,200 sales,
+several segments), out-of-order (edit before creation, void before sale) and repeated
+delivery, count vs offline sales, credit + settings, restored till rejoining without ID or
+receipt collisions, interrupted backfill. Every scenario asserts identical LWW/EVENT tables
+and derived tables equal to `DerivedRebuild.all`. Test data must be written through the app's
+synced paths (e.g. `ProductDao.create`, not the raw bulk `insert`).

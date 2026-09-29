@@ -12,6 +12,9 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.escpos.PrinterProfile
+import com.lekaspos.core.id.Ids
+import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.escpos.ReceiptEncoder
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.pricing.Discount
@@ -55,6 +58,8 @@ import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
+import com.lekaspos.data.sync.Importer
+import com.lekaspos.data.sync.SyncEvent
 import com.lekaspos.domain.print.ReceiptBuilder
 import com.lekaspos.domain.report.ReportService
 import com.lekaspos.domain.shift.ShiftService
@@ -314,6 +319,36 @@ class PerfSuite(
             }
         })
 
+        progress.update("sync import")
+        // Another till's events, applied by the importer as a sync does (D-045): 200 sales (an
+        // hour of a busy till) and 200 price edits, each set in one transaction. A real import
+        // splits a segment into ~100 ms transactions, so these are worst cases for a waiting sale.
+        val remote = if (db.deviceNo >= Ids.MAX_DEVICE_NO) 1 else db.deviceNo + 1
+        val runBase = (System.currentTimeMillis() / 1000L) % 1_000_000_000L * 1024L // fresh ids on a reused perf database
+        val recent = r.queryList("SELECT id FROM sale WHERE kind = 0 ORDER BY id DESC LIMIT 200") { it.getLong(0) }
+        val saleSets = (0 until 3).map { i ->
+            recent.mapIndexedNotNull { k, id -> SaleDao.exportRows(r, id)?.let { remoteSale(it, remote, runBase + (i * 1_000L + k) * 64L) } }
+        }
+        add(measure("sync_import_200_sales", 3000.0, warmup = 0, n = 3) { i ->
+            db.writeBlocking(reserveIds = 0L) { tx ->
+                val importer = Importer(tx.db)
+                for (e in saleSets[i]) check(importer.apply(tx, e))
+            }
+        })
+        val editSets = (0 until 3).map { i ->
+            (0 until 200).map { k ->
+                val pid = samples.popular[rnd.nextInt(samples.popular.size)]
+                val hlc = db.hlc.now()
+                SyncEvent(Entity.PRODUCT, EventOp.LWW, pid, hlc, mapOf("id" to pid, "hlc" to hlc, "dev" to remote.toLong(), "f" to mapOf("price" to 100L + i * 200L + k)))
+            }
+        }
+        add(measure("sync_import_200_edits", 1500.0, warmup = 0, n = 3) { i ->
+            db.writeBlocking(reserveIds = 0L) { tx ->
+                val importer = Importer(tx.db)
+                for (e in editSets[i]) importer.apply(tx, e)
+            }
+        })
+
         progress.update("query plans")
         val plans = QueryPlans.check(r)
 
@@ -349,6 +384,20 @@ class PerfSuite(
             samples[i] = System.nanoTime() - t
         }
         return PerfResult.from(id, budgetMs, samples)
+    }
+
+    /** An exported sale as if till [dev] had made it: its own ids (from [seq], up to 63 child rows) and receipt number. */
+    private fun remoteSale(rows: Triple<Map<String, Any?>, List<Map<String, Any?>>, List<Map<String, Any?>>>, dev: Int, seq: Long): SyncEvent {
+        val saleId = Ids.make(dev, seq)
+        var child = 0L
+        fun childId() = Ids.make(dev, seq + (++child))
+        val sale = LinkedHashMap(rows.first)
+        sale["id"] = saleId
+        sale["device_no"] = dev.toLong()
+        sale["receipt_no"] = "PF-$seq"
+        val lines = rows.second.map { l -> LinkedHashMap(l).also { it["id"] = childId(); it["sale_id"] = saleId } }
+        val pays = rows.third.map { p -> LinkedHashMap(p).also { it["id"] = childId(); it["sale_id"] = saleId } }
+        return SyncEvent(Entity.SALE, EventOp.INSERT, saleId, sale["hlc"] as Long, mapOf("sale" to sale, "lines" to lines, "pays" to pays))
     }
 
     /** A realistic 5-line cash sale priced by the real engine. */
