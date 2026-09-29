@@ -200,6 +200,18 @@
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
         <activity
+            android:name=".ui.reports.ReportsActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.reports.SlowMoversActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.products.ProductImportActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
             android:name=".ui.scan.CameraScanActivity"
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />

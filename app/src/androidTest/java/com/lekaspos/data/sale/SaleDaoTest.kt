@@ -1,6 +1,8 @@
 package com.lekaspos.data.sale
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lekaspos.core.report.MonthSplit
+import com.lekaspos.core.report.Period
 import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.SaleKind
@@ -68,7 +70,7 @@ class SaleDaoTest {
         assertEquals(draft.subtotal - draft.discount - draft.tax, totals.netEx)
         assertEquals(draft.lines.sumOf { it.cost }, totals.cost)
         assertEquals(draft.rounding, totals.rounding)
-        val byProduct = db.readBlocking { ReportDao.topProducts(it, day, day + 1, 10) }
+        val byProduct = db.readBlocking { ReportDao.products(it, MonthSplit.of(Period(day, day + 1)), limit = 10) }
         assertEquals(2_000L, byProduct.first { it.productId == a }.qty)
         val byPayment = db.readBlocking { ReportDao.byPayment(it, day, day + 1) }
         assertEquals(draft.total, byPayment.single().amount)

@@ -39,6 +39,22 @@ object Migrations {
             db.execSQL("UPDATE role SET perms = 129919 WHERE id = 2 AND ver_hlc = 0 AND perms = 0")
             db.execSQL("UPDATE role SET perms = 49184 WHERE id = 3 AND ver_hlc = 0 AND perms = 0")
         },
+        // v3 → v4 (Phase 5, D-043): per-month product totals, filled from the per-day ones;
+        // unedited manager role gets the new REPORTS permission (1 shl 17).
+        Migration(3, 4) { db ->
+            db.execSQL(
+                "CREATE TABLE sum_month_product (month INTEGER NOT NULL, product_id INTEGER NOT NULL, " +
+                    "category_id INTEGER, qty INTEGER NOT NULL DEFAULT 0, net_ex INTEGER NOT NULL DEFAULT 0, " +
+                    "tax INTEGER NOT NULL DEFAULT 0, cost INTEGER NOT NULL DEFAULT 0, " +
+                    "PRIMARY KEY (month, product_id)) WITHOUT ROWID",
+            )
+            db.execSQL(
+                "INSERT INTO sum_month_product(month, product_id, category_id, qty, net_ex, tax, cost) " +
+                    "SELECT CAST(strftime('%Y%m', day * 86400, 'unixepoch') AS INTEGER), product_id, MIN(category_id), " +
+                    "SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) FROM sum_day_product GROUP BY 1, product_id",
+            )
+            db.execSQL("UPDATE role SET perms = perms | 131072 WHERE id = 2 AND ver_hlc = 0")
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

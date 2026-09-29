@@ -115,6 +115,9 @@ object AuditAction {
 
     /** The owner PIN was reset with the recovery code. */
     const val OWNER_PIN_RESET = 23
+
+    /** Products imported from a CSV file (detail: how many created and updated). */
+    const val PRODUCT_IMPORT = 24
 }
 
 /** Permission bits stored in `role.perms`. The owner role always has every permission. */
@@ -142,6 +145,9 @@ object Perm {
     const val SHIFT_REPORT = 1L shl 12
     const val VIEW_AUDIT = 1L shl 13
 
+    /** Sales reports, profit and stock value, report exports. */
+    const val REPORTS = 1L shl 17
+
     /** Add and edit customers, take credit repayments. */
     const val CUSTOMERS = 1L shl 14
 
@@ -155,13 +161,13 @@ object Perm {
     /** Every assignable permission, in the order the role editor lists them. */
     val LIST: List<Long> = listOf(
         DISCOUNT, PRICE_OVERRIDE, CANCEL_BILL, VOID, REFUND, REPRINT, OPEN_DRAWER, CASH_MOVE, SHIFT_REPORT,
-        CUSTOMERS, CREDIT_SALE, CREDIT_LIMIT, MANAGE_PRODUCTS, MANAGE_STOCK, VIEW_AUDIT, SETTINGS, MANAGE_STAFF,
+        CUSTOMERS, CREDIT_SALE, CREDIT_LIMIT, MANAGE_PRODUCTS, MANAGE_STOCK, REPORTS, VIEW_AUDIT, SETTINGS, MANAGE_STAFF,
     )
 
     /** Seed roles' starting permissions (the owner edits them in Settings → Staff → Roles). */
     const val DEFAULT_MANAGER: Long = DISCOUNT or PRICE_OVERRIDE or CANCEL_BILL or VOID or REFUND or REPRINT or
         OPEN_DRAWER or CASH_MOVE or SHIFT_REPORT or CUSTOMERS or CREDIT_SALE or CREDIT_LIMIT or MANAGE_PRODUCTS or
-        MANAGE_STOCK or VIEW_AUDIT
+        MANAGE_STOCK or VIEW_AUDIT or REPORTS
     const val DEFAULT_CASHIER: Long = REPRINT or CUSTOMERS or CREDIT_SALE
 
     /** What a role may do: the owner role everything, other roles their stored bits. */

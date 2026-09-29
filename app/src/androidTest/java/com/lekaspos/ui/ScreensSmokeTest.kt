@@ -36,6 +36,9 @@ import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.ScannerSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
 import com.lekaspos.ui.settings.StoreSettingsActivity
+import com.lekaspos.ui.products.ProductImportActivity
+import com.lekaspos.ui.reports.ReportsActivity
+import com.lekaspos.ui.reports.SlowMoversActivity
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.shift.ShiftReportActivity
 import com.lekaspos.ui.shift.ShiftsActivity
@@ -124,6 +127,17 @@ class ScreensSmokeTest {
         open(CustomerActivity.intent(ctx, customer.id))
         open(CustomersActivity.pickIntent(ctx))
         runBlocking { graph.shifts.close(1_000L, null) }
+    }
+
+    @Test
+    fun reportAndImportScreensOpen() {
+        val today = com.lekaspos.core.time.Days.epochDay(System.currentTimeMillis(), java.util.TimeZone.getDefault())
+        open(ReportsActivity::class.java)
+        open(SlowMoversActivity.intent(ctx, com.lekaspos.core.report.Period(today - 29, today + 1)))
+        val file = java.io.File(ctx.cacheDir, "smoke-import.csv")
+        file.writeText("name,price,barcodes\nSmoke test import,1.00,2999000000017\n")
+        open(ProductImportActivity.intent(ctx, android.net.Uri.fromFile(file)))
+        file.delete()
     }
 
     @Test

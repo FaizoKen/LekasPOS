@@ -45,6 +45,7 @@ class DerivedConsistencyTest {
         mapOf(
             "sum_day" to rows("SELECT day, sale_count + refund_count + void_count, sale_count, refund_count, void_count, gross, discount, net_ex, tax, rounding, total, cost, refund_total, items FROM sum_day ORDER BY day"),
             "sum_day_product" to rows("SELECT day, product_id, qty, net_ex, tax, cost FROM sum_day_product ORDER BY day, product_id"),
+            "sum_month_product" to rows("SELECT month, product_id, qty, net_ex, tax, cost FROM sum_month_product ORDER BY month, product_id"),
             "sum_day_payment" to rows("SELECT day, method_id, amount, count FROM sum_day_payment ORDER BY day, method_id"),
             "sum_day_staff" to rows("SELECT day, staff_id, sale_count, total, net_ex FROM sum_day_staff ORDER BY day, staff_id"),
             "stock_level" to r.queryList("SELECT product_id, qty FROM stock_level WHERE qty != 0 ORDER BY product_id") { "${it.getLong(0)}|${it.getLong(1)}" },
@@ -56,12 +57,13 @@ class DerivedConsistencyTest {
     fun incrementalMaintenanceEqualsFullRebuild() {
         val rnd = Random(99)
         val products = (1..12).map { i -> TestDb.product(db, "Product $i", 100L + 37L * i, trackStock = i % 4 != 0) }
-        val start = System.currentTimeMillis() - 5 * 86_400_000L
+        // 150 sales over 45 days: the per-month table crosses at least one month boundary.
+        val start = System.currentTimeMillis() - 45 * 86_400_000L
         val saleIds = ArrayList<Long>()
         repeat(150) { n ->
             val items = List(1 + rnd.nextInt(4)) { products[rnd.nextInt(products.size)] to 1_000L * (1 + rnd.nextInt(3)) }
             val draft = TestDb.saleDraft(
-                db, items, soldAt = start + n * 2_700_000L,
+                db, items, soldAt = start + n * 25_920_000L,
                 payKind = if (rnd.nextBoolean()) PaymentKind.CASH else PaymentKind.CARD,
                 staffId = if (rnd.nextBoolean()) 1L else null,
                 billDiscount = if (rnd.nextInt(5) == 0) Discount.Amount(50) else Discount.None,
@@ -69,7 +71,7 @@ class DerivedConsistencyTest {
             saleIds.add(db.writeBlocking { tx -> SaleDao.commit(tx, draft, tz) }.id)
             when (rnd.nextInt(12)) {
                 0 -> db.writeBlocking { tx -> SaleDao.void(tx, saleIds[rnd.nextInt(saleIds.size)], "test", null, null, null, 0L) }
-                1 -> refund(saleIds[rnd.nextInt(saleIds.size)], start + n * 2_700_000L + 60_000L)
+                1 -> refund(saleIds[rnd.nextInt(saleIds.size)], start + n * 25_920_000L + 60_000L)
                 else -> Unit
             }
         }

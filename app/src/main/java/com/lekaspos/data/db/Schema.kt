@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 3
+    const val VERSION = 4
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -374,6 +374,17 @@ object Schema {
             PRIMARY KEY (day, product_id)
         ) WITHOUT ROWID""",
         "CREATE INDEX sum_day_product_p ON sum_day_product(product_id, day)",
+        // v4: per-month product totals (month = yyyymm), so long-range reports read 12 rows a year per product (D-043).
+        """CREATE TABLE sum_month_product (
+            month INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            category_id INTEGER,
+            qty INTEGER NOT NULL DEFAULT 0,
+            net_ex INTEGER NOT NULL DEFAULT 0,
+            tax INTEGER NOT NULL DEFAULT 0,
+            cost INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (month, product_id)
+        ) WITHOUT ROWID""",
         """CREATE TABLE sum_day_payment (
             day INTEGER NOT NULL,
             method_id INTEGER NOT NULL,
@@ -463,7 +474,7 @@ object Schema {
         "stock_count", "purchase", "purchase_line", "credit_entry", "audit_log",
     )
     val DERIVED_TABLES = listOf(
-        "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product",
+        "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",
         "sum_day_payment", "sum_day_staff",
     )
     val LOCAL_TABLES = listOf("meta", "cart", "cart_line", "print_job", "outbox")

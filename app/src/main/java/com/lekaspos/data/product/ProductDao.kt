@@ -370,6 +370,67 @@ object ProductDao {
         args(productId),
     ) { c -> Barcode(c.getLong(0), c.getLong(1), c.getString(2), c.getInt(3), c.getLong(4), c.longOrNull(5)) }
 
+    // ------------------------------------------------------------------ CSV export / import (D-042)
+
+    /** A product as exported to CSV; [tax] = the tax rate's name, [stock] = current level (milli). */
+    data class ExportRow(
+        val id: Long,
+        val name: String,
+        val sku: String?,
+        val category: String?,
+        val unit: String,
+        val price: Long,
+        val cost: Long,
+        val tax: String?,
+        val sellMode: Int,
+        val trackStock: Boolean,
+        val stock: Long?,
+        val lowStock: Long,
+        val active: Boolean,
+        val barcodes: List<String>,
+    )
+
+    private const val EXPORT_PAGE =
+        "SELECT p.id, p.name, p.sku, c.name, p.unit, p.price, p.cost, t.name, p.sell_mode, p.track_stock, l.qty, " +
+            "p.low_stock, p.active FROM product p LEFT JOIN category c ON c.id = p.category_id " +
+            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id LEFT JOIN stock_level l ON l.product_id = p.id " +
+            "WHERE p.deleted = 0 AND p.id > ? ORDER BY p.id LIMIT ?"
+
+    // Plain unit barcodes only: pack barcodes and scale PLUs have extra settings a CSV cell cannot hold.
+    private const val EXPORT_BARCODES =
+        "SELECT product_id, code FROM product_barcode WHERE deleted = 0 AND product_id >= ? AND product_id <= ? " +
+            "AND kind = ${BarcodeKind.BARCODE} AND pack_qty = 1000 ORDER BY product_id, id"
+
+    /** Products in id order after [afterId], with their barcodes (two index reads, no per-row query). */
+    fun exportPage(db: SQLiteDatabase, afterId: Long, limit: Int = 500): List<ExportRow> {
+        val rows = db.queryList(EXPORT_PAGE, args(afterId, limit)) { c ->
+            ExportRow(
+                id = c.getLong(0), name = c.getString(1), sku = c.stringOrNull(2), category = c.stringOrNull(3),
+                unit = c.getString(4), price = c.getLong(5), cost = c.getLong(6), tax = c.stringOrNull(7),
+                sellMode = c.getInt(8), trackStock = c.bool(9), stock = c.longOrNull(10), lowStock = c.getLong(11),
+                active = c.bool(12), barcodes = emptyList(),
+            )
+        }
+        if (rows.isEmpty()) return rows
+        val codes = HashMap<Long, MutableList<String>>()
+        db.queryList(EXPORT_BARCODES, args(rows.first().id, rows.last().id)) { it.getLong(0) to it.getString(1) }
+            .forEach { (pid, code) -> codes.getOrPut(pid) { ArrayList(2) }.add(code) }
+        return rows.map { r -> codes[r.id]?.let { r.copy(barcodes = it) } ?: r }
+    }
+
+    /** The product (not deleted) that uses [code] as a barcode, if any. */
+    fun ownerOf(db: SQLiteDatabase, code: String): Long? = db.longOrNull(
+        "SELECT b.product_id FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+            "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 LIMIT 1",
+        code,
+    )
+
+    /** The product (not deleted) with SKU [sku], if exactly one has it. */
+    fun bySku(db: SQLiteDatabase, sku: String): Long? {
+        val ids = db.queryList("SELECT id FROM product WHERE sku = ? AND deleted = 0 LIMIT 2", args(sku)) { it.getLong(0) }
+        return ids.singleOrNull()
+    }
+
     /** Other products that already use [code] (duplicate-barcode warning). */
     fun codeOwners(db: SQLiteDatabase, code: String, exceptProductId: Long): List<Pair<Long, String>> = db.queryList(
         "SELECT p.id, p.name FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
@@ -410,5 +471,7 @@ object ProductDao {
         "category_page" to BY_CATEGORY,
         "product_manage_page" to MANAGE_PAGE,
         "product_sell_page" to SELL_PAGE,
+        "product_export" to EXPORT_PAGE,
+        "product_export_barcodes" to EXPORT_BARCODES,
     )
 }

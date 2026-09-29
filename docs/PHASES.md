@@ -10,8 +10,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
-| 4 | Users, roles, PIN, shifts, cash management, audit log | **built and verified in CI** — waiting for real-device feedback (tester build `v0.4.0-phase4`) |
-| 5 | Reports and CSV import/export | not started |
+| 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
+| 5 | Reports and CSV import/export | **in progress** |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
 
@@ -268,7 +268,7 @@ continue with Phase 4.
 7. **Stock history** of a product after all of the above (levels should add up).
 8. Carried over from Phase 2 when the hardware is available: printer, drawer, HID/SPP scanners.
 
-## Phase 4 — users, roles, PIN, shifts, cash management, audit (waiting for feedback)
+## Phase 4 — users, roles, PIN, shifts, cash management, audit (done)
 
 - [x] Staff with PIN login: PIN login stays off until the owner sets a PIN (a one-person shop
       works as before); pick your name, type a 4–6 digit PIN; salted PBKDF2 hash (D-037); 5 free
@@ -305,6 +305,11 @@ continue with Phase 4.
 | Cold start to usable selling screen | API 21: 557–605 ms; API 36: 405–467 ms — budget 2 s |
 | Schema | v3 (D-040) — upgrades Phase 1–3 installs in place |
 
+### Real-device feedback (Phase 4, 2026-09-30)
+
+The tester ran the Phase 4 checks on the phone and reported no problems; the user asked to
+continue with Phase 5. Printer, drawer, HID/SPP scanners and the 2 GB tablet stay carried forward.
+
 ### Needs real-device testing (Phase 4)
 
 1. **Upgrade**: install over the Phase 3 build — everything still there, the app opens
@@ -333,13 +338,21 @@ continue with Phase 4.
     (opens for floats, cash in/out, cash repayments), HID/SPP scanners (a scan on the lock screen
     must not count as a wrong PIN).
 
-## Phase 5 — reports, CSV import/export (planned)
+## Phase 5 — reports, CSV import/export (in progress)
 
-- [ ] Per-month product summary (`sum_month_product`) so year/multi-month reports stay well
-      under budget on low-end devices (year report measured at 2.38 s on a mid-range phone)
-- [ ] Daily/weekly/monthly sales; by product, category, cashier, payment method
-- [ ] Gross profit, top sellers, slow movers, stock value; export to CSV
-- [ ] Product CSV import (preview, validation, errors per row, bulk insert) and export
+- [x] Per-month product summary (`sum_month_product`, schema v4, D-043): reports read whole
+      months from it and only the loose days at both ends from the per-day table
+- [x] Reports screen (needs the new REPORTS permission): today, yesterday, this/last week,
+      this/last month, this/last year or any dates; sales, refunds, voids, discounts, net sales,
+      tax, cost, gross profit and margin, average sale, change against the period before; sales
+      by day, week or month; payment methods, cashiers, categories, best sellers
+- [x] Stock value at cost (by category) and "not sold in this period" (slow movers)
+- [x] CSV exports (D-041), shared or saved as a file: report summary, sales per day, products
+      sold, receipts (also the source for the monthly consolidated e-invoice)
+- [x] Products CSV (D-042): export, example file, import with a preview (new / updated /
+      problems per line), English or Malay headers, categories created, tax by name or %,
+      opening stock for new products, optional stock count for existing ones
+- [ ] CI (API 21/36), perf FULL, release APK size, tester build
 
 ## Phase 6 — Google Drive sync, backup/restore, merge tests (planned)
 

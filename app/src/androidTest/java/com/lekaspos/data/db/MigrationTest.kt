@@ -3,6 +3,7 @@ package com.lekaspos.data.db
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.time.Days
 import com.lekaspos.testing.TestDb
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,6 +77,13 @@ class MigrationTest {
             }
             raw.execSQL("INSERT INTO role(id, name, sys_role, perms, created_at, updated_at, ver_hlc, ver_dev) VALUES(99, 'custom', 0, 0, 0, 0, 5, 1)")
             raw.execSQL("INSERT INTO credit_entry(id, customer_id, kind, amount, at, hlc) VALUES(7, 1, 1, 500, 0, 0)")
+            // Per-day product totals from before v4: the migration fills the per-month table from them.
+            for ((ymd, pid, qty) in listOf(Triple(20251231, 5L, 1_000L), Triple(20260101, 5L, 2_000L), Triple(20260131, 5L, 3_000L), Triple(20260101, 6L, 500L))) {
+                raw.execSQL(
+                    "INSERT INTO sum_day_product(day, product_id, category_id, qty, net_ex, tax, cost) VALUES(?, ?, 9, ?, ?, 0, 1)",
+                    arrayOf<Any>(Days.fromYmd(ymd), pid, qty, qty / 10),
+                )
+            }
             raw.setTransactionSuccessful()
             raw.endTransaction()
             raw.version = 2
@@ -91,6 +99,12 @@ class MigrationTest {
             assertEquals(0L, perms[99L]) // edited roles are left alone
             val shift = db.readBlocking { r -> r.queryList("SELECT shift_id FROM credit_entry WHERE id = 7") { it.isNull(0) } }
             assertEquals(listOf(true), shift) // old credit entries: no shift
+            val months = db.readBlocking { r ->
+                r.queryList("SELECT month, product_id, category_id, qty, net_ex, cost FROM sum_month_product ORDER BY month, product_id") {
+                    (0 until 6).joinToString("|") { i -> it.getString(i) }
+                }
+            }
+            assertEquals(listOf("202512|5|9|1000|100|1", "202601|5|9|5000|500|2", "202601|6|9|500|50|1"), months)
         } finally {
             TestDb.delete(db)
         }

@@ -23,6 +23,18 @@ object DateText {
     /** "dd/MM/yyyy" of a local epoch day. */
     fun date(epochDay: Long): String = StringBuilder(10).also { appendDate(it, epochDay) }.toString()
 
+    /** "yyyy-MM-dd" of a local epoch day (files: sorts and parses the same everywhere). */
+    fun isoDate(epochDay: Long): String {
+        val ymd = Days.toYmd(epochDay)
+        val sb = StringBuilder(10)
+        sb.append(ymd / 10_000)
+        sb.append('-')
+        pad2(sb, ymd / 100 % 100)
+        sb.append('-')
+        pad2(sb, ymd % 100)
+        return sb.toString()
+    }
+
     /** "HH:mm" in [tz]. */
     fun time(epochMs: Long, tz: TimeZone): String {
         val local = epochMs + tz.getOffset(epochMs)

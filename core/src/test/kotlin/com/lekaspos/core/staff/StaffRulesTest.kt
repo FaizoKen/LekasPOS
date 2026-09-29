@@ -106,6 +106,6 @@ class StaffRulesTest {
             all = all or p
         }
         assertEquals(all, all or Perm.DEFAULT_MANAGER or Perm.DEFAULT_CASHIER)
-        assertEquals((1L shl 17) - 1L, all)
+        assertEquals((1L shl 18) - 1L, all)
     }
 }

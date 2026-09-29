@@ -3,6 +3,7 @@ package com.lekaspos.data.db
 import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.data.customer.CustomerDao
+import com.lekaspos.data.sale.Summaries
 import com.lekaspos.data.stock.StockDao
 
 /**
@@ -48,6 +49,8 @@ object DerivedRebuild {
                 "FROM sale_line l JOIN sale s ON s.id = l.sale_id WHERE s.status = $OK " +
                 "GROUP BY s.day, COALESCE(l.product_id, 0)",
         )
+        tx.exec("DELETE FROM sum_month_product")
+        tx.exec(Summaries.MONTHS_FROM_DAYS)
         tx.exec("DELETE FROM sum_day_payment")
         tx.exec(
             "INSERT INTO sum_day_payment(day, method_id, kind, amount, count) " +

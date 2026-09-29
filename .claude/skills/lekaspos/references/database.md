@@ -96,7 +96,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v3)
+## 6. Table catalog (schema v4)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -128,6 +128,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `customer_balance` | DERIVED | credit balance per customer | PK customer_id |
 | `sum_day` | DERIVED | per-day totals | PK day |
 | `sum_day_product` | DERIVED | per-day per-product qty/net/cost/tax | PK (day, product_id), `(product_id, day)` |
+| `sum_month_product` | DERIVED | per-month (yyyymm) per-product qty/net/cost/tax (v4, D-043) | PK (month, product_id) |
 | `sum_day_payment` | DERIVED | per-day per-payment-method | PK (day, method_id) |
 | `sum_day_staff` | DERIVED | per-day per-cashier | PK (day, staff_id) |
 | `cart`, `cart_line` | LOCAL | open bill + held (parked) bills | `(cart_id, line_no)` |
@@ -196,4 +197,4 @@ are plain columns without FK constraints because sync can deliver them in any or
   the migration transaction with `PRAGMA foreign_keys` handled by `DbOpenHelper`.
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
-- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions).
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role).

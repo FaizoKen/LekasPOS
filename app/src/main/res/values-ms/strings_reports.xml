@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 5: laporan, import dan eksport CSV. -->
+<resources>
+    <string name="menu_reports">Laporan</string>
+    <string name="perm_reports">Lihat laporan jualan, untung dan nilai stok</string>
+    <string name="reports_title">Laporan</string>
+
+    <!-- Tempoh -->
+    <string name="report_today">Hari ini</string>
+    <string name="report_yesterday">Semalam</string>
+    <string name="report_this_week">Minggu ini</string>
+    <string name="report_last_week">Minggu lepas</string>
+    <string name="report_this_month">Bulan ini</string>
+    <string name="report_last_month">Bulan lepas</string>
+    <string name="report_this_year">Tahun ini</string>
+    <string name="report_last_year">Tahun lepas</string>
+    <string name="report_custom">Pilih tarikh</string>
+    <string name="report_from">Hari pertama</string>
+    <string name="report_to">Hari terakhir</string>
+    <string name="report_range">%1$s – %2$s</string>
+
+    <!-- Laporan -->
+    <string name="report_summary">Ringkasan</string>
+    <string name="report_sales_count">Jualan (%1$d)</string>
+    <string name="report_refunds_count">Bayaran balik (%1$d)</string>
+    <string name="report_voids">Jualan dibatalkan</string>
+    <string name="report_discounts">Diskaun</string>
+    <string name="report_net_ex_tax">Jualan bersih (tanpa cukai)</string>
+    <string name="report_tax">Cukai</string>
+    <string name="report_rounding">Pelarasan</string>
+    <string name="report_total">Jumlah diterima</string>
+    <string name="report_cost">Kos barang</string>
+    <string name="report_profit">Untung kasar</string>
+    <string name="report_margin">Margin kasar</string>
+    <string name="report_average">Purata jualan</string>
+    <string name="report_vs_previous">Perubahan berbanding tempoh sebelum (%1$s)</string>
+    <string name="report_by_day">Mengikut hari</string>
+    <string name="report_by_week">Mengikut minggu</string>
+    <string name="report_by_month">Mengikut bulan</string>
+    <string name="report_bucket_value">%1$s (%2$d)</string>
+    <string name="report_payments">Cara bayaran</string>
+    <string name="report_cashiers">Juruwang</string>
+    <string name="report_categories">Kategori</string>
+    <string name="report_no_category">Tiada kategori</string>
+    <string name="report_net_profit">%1$s · untung %2$s</string>
+    <string name="report_top_products">Paling laris</string>
+    <string name="report_other_items">Item lain</string>
+    <string name="report_count_label">%1$s (%2$d)</string>
+    <string name="report_qty_label">%1$s × %2$s</string>
+    <string name="report_stock">Stok di tangan</string>
+    <string name="report_stock_value">Nilai stok pada kos · item: %1$d</string>
+    <string name="report_slow_movers">Tidak terjual dalam tempoh ini</string>
+    <string name="report_slow_header">Tidak terjual %1$s. Item ada stok: %2$d · nilai pada kos %3$s</string>
+    <string name="report_slow_empty">Semua produk yang ada stok terjual dalam tempoh ini.</string>
+    <string name="report_in_stock">Stok: %1$s</string>
+    <string name="report_note">Jualan yang dibatalkan tidak dikira. Jualan bersih ialah selepas diskaun dan tanpa cukai; untung kasar = jualan bersih − kos (kos purata semasa item dijual).</string>
+
+    <!-- Eksport -->
+    <string name="export_title">Eksport</string>
+    <string name="export_share">Kongsi</string>
+    <string name="export_save">Simpan sebagai fail</string>
+    <string name="export_saved">Disimpan (baris: %1$d).</string>
+    <string name="export_lost">Eksport terganggu. Sila cuba lagi.</string>
+    <string name="export_summary">Ringkasan (CSV)</string>
+    <string name="export_daily">Jualan harian (CSV)</string>
+    <string name="export_products">Produk terjual (CSV)</string>
+    <string name="export_receipts">Resit – untuk e-invois bulanan (CSV)</string>
+
+    <!-- CSV produk -->
+    <string name="csv_import">Import produk (CSV)</string>
+    <string name="csv_export">Eksport produk (CSV)</string>
+    <string name="csv_template">Contoh fail CSV</string>
+    <string name="import_title">Import produk</string>
+    <string name="import_reading">Membaca fail…</string>
+    <string name="import_file">Fail</string>
+    <string name="import_malformed">Fail tidak dapat dibaca: %1$s</string>
+    <string name="import_missing">Lajur wajib tiada: %1$s. Baris pertama fail mesti menamakan lajur (sekurang-kurangnya name dan price).</string>
+    <string name="import_rows">Baris produk</string>
+    <string name="import_new">Produk baharu</string>
+    <string name="import_updates">Produk dikemas kini</string>
+    <string name="import_bad">Baris bermasalah (dilangkau)</string>
+    <string name="import_unknown_columns">Lajur diabaikan: %1$s</string>
+    <string name="import_new_categories">Kategori baharu akan dicipta: %1$s</string>
+    <string name="import_problems">Masalah</string>
+    <string name="import_line">Baris %1$d</string>
+    <string name="import_more_problems">Ada lagi masalah yang tidak ditunjukkan. Betulkan ini dan cuba lagi.</string>
+    <string name="import_sample">Produk pertama</string>
+    <string name="import_tag_new">baharu</string>
+    <string name="import_tag_update">kemas kini</string>
+    <string name="import_set_stock">Tetapkan juga stok produk sedia ada mengikut kuantiti dalam fail</string>
+    <string name="import_stock_help">Produk baharu menerima lajur stok sebagai stok permulaan. Stok produk sedia ada hanya berubah jika pilihan ini dihidupkan (direkod sebagai kiraan stok).</string>
+    <string name="import_go">Import sekarang · %1$d</string>
+    <string name="import_running">Mengimport… baris selesai: %1$d</string>
+    <string name="import_done">Import selesai</string>
+    <string name="import_created">Dicipta</string>
+    <string name="import_updated">Dikemas kini</string>
+    <string name="import_skipped">Dilangkau (bermasalah)</string>
+    <string name="import_categories_created">Kategori baharu</string>
+    <string name="import_stock_set">Stok ditetapkan</string>
+    <string name="problem_name_missing">nama tiada</string>
+    <string name="problem_name_long">nama terlalu panjang (maksimum 120 aksara)</string>
+    <string name="problem_price_missing">harga tiada</string>
+    <string name="problem_amount">bukan jumlah wang (tulis seperti 12.50)</string>
+    <string name="problem_quantity">bukan kuantiti (tulis seperti 3 atau 1.25)</string>
+    <string name="problem_sold_by">tulis piece, weight atau open price</string>
+    <string name="problem_yes_no">tulis yes atau no</string>
+    <string name="problem_barcode">kod bar ada ruang kosong atau terlalu panjang</string>
+    <string name="problem_tax">tiada kadar cukai dengan nama atau peratus ini</string>
+    <string name="problem_barcode_twice">kod bar ini juga ada pada baris sebelumnya</string>
+    <string name="problem_barcode_taken">kod bar milik produk lain daripada SKU</string>
+    <string name="problem_barcodes_split">kod bar milik produk yang berlainan</string>
+</resources>

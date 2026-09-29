@@ -39,6 +39,7 @@ fun permLabel(perm: Long): Int = when (perm) {
     Perm.MANAGE_PRODUCTS -> R.string.perm_products
     Perm.MANAGE_STOCK -> R.string.perm_stock
     Perm.VIEW_AUDIT -> R.string.perm_audit
+    Perm.REPORTS -> R.string.perm_reports
     Perm.SETTINGS -> R.string.perm_settings
     Perm.MANAGE_STAFF -> R.string.perm_staff
     else -> R.string.perm_other

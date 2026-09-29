@@ -60,6 +60,7 @@ import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
+import com.lekaspos.ui.reports.ReportsActivity
 import com.lekaspos.ui.sales.ReceiptShare
 import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
@@ -747,7 +748,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
         val items = ArrayList<Int>(14)
-        items += listOf(R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales, R.string.menu_shift)
+        items += listOf(R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales, R.string.menu_reports, R.string.menu_shift)
         if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
         items += listOf(R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics)
         if (graph.staff.state.value.loginRequired) items += R.string.menu_lock
@@ -759,6 +760,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 R.string.menu_categories -> startActivity(Intent(this, CategoriesActivity::class.java))
                 R.string.menu_tax_rates -> startActivity(Intent(this, TaxRatesActivity::class.java))
                 R.string.menu_sales -> startActivity(Intent(this, SalesActivity::class.java))
+                R.string.menu_reports -> startActivity(Intent(this, ReportsActivity::class.java))
                 R.string.menu_shift -> startActivity(Intent(this, ShiftActivity::class.java))
                 R.string.menu_customers -> startActivity(Intent(this, CustomersActivity::class.java))
                 R.string.menu_lock -> graph.staff.lock()

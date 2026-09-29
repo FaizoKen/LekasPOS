@@ -245,6 +245,43 @@ charges from two tills).
 SQLite 3.8), and the seed Manager/Cashier roles get their default permissions when they were
 never edited (`ver_hlc = 0`). Every other Phase 4 table already existed in v1.
 
+### D-041 — CSV files: UTF-8 with BOM, ISO dates, English headers, shared or saved (Phase 5)
+Exports are RFC 4180 CSV (CRLF, quotes doubled), UTF-8 with a byte-order mark so Excel shows
+Malay and Chinese text, dates as yyyy-mm-dd and amounts as plain decimals ("12.50"), with fixed
+English column names so an accountant's spreadsheet or another tool can rely on them. Files are
+streamed page by page (constant memory) and either shared from the app cache through
+FileProvider (WhatsApp, e-mail) or saved where the user picks (Storage Access Framework:
+Downloads, Drive, USB) — no storage permission. Imports come from the system file picker; the
+reader accepts comma, semicolon or tab, any line ending and quoted line breaks, and falls back
+to Windows-1252 when a file is not valid UTF-8 (Excel's "CSV" on Windows). The receipt list
+export (receipt no, date, time, cashier, customer and TIN, net, tax, total, payments) is the
+source for LHDN's monthly consolidated e-invoice until the compliance question is answered.
+Rejected: XLSX (a large library), a storage permission, localized headers (break re-imports).
+
+### D-042 — Product CSV import: preview, then import in chunks; empty cells change nothing
+The same columns export and import, so a catalogue can be edited in a spreadsheet and brought
+back; headers match loosely in English or Malay and only name and price are required. The file
+is read twice: a preview validates every row (money, quantities, sold by, yes/no, barcodes, tax
+by name or percentage, duplicate barcodes in the file, barcodes owned by another product) and
+shows the counts and the first 200 problems by line; then the import runs in the app scope in
+transactions of 200 rows, skipping rows with problems. A row updates the product owning one of
+its barcodes, else the one with its SKU, else creates a product. Empty cells leave a product's
+value unchanged ("none" removes a tax); new categories are created by name. The stock column is
+the opening stock of new products; existing products' stock changes only when the user asks,
+as a stock count. Updates are LWW edits (sync like hand edits); one audit entry records the
+import. Rejected: matching by name (too many false matches), all-or-nothing imports (one bad
+line would block thousands), deleting products missing from the file.
+
+### D-043 — Per-month product totals; ranges read whole months + loose days
+`sum_month_product` (DERIVED, key month = yyyymm and product) is maintained with the per-day
+table in the sale transaction and rebuilt from it (SQLite's strftime on epoch days gives the
+same months as `:core`). A report range is split into loose days at both ends (per-day table)
+and whole months in between (per-month table), so a year of best sellers reads about 12 rows
+per product instead of 365. Reports need the new REPORTS permission (profit and cost). Slow
+movers = products with stock that did not sell in the period (one `NOT IN` over the sold ids);
+stock value = on-hand quantity × current average cost. Schema v4 migrates the per-month table
+from existing per-day rows.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

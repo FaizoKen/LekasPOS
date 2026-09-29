@@ -23,11 +23,13 @@ import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Base of the secondary screens: a top bar with back arrow, title and actions, a content area,
@@ -149,6 +151,48 @@ abstract class ScreenActivity : Activity(), DialogHost {
         }
     }
 
+    private var pendingExport: (suspend (Appendable) -> Long)? = null
+
+    /**
+     * Exports a CSV that [write] produces (returning its row count): shared (WhatsApp, e-mail …)
+     * or saved where the user picks (D-041).
+     */
+    fun exportCsv(fileName: String, write: suspend (Appendable) -> Long) {
+        Dialogs.choose(this, getString(R.string.export_title), listOf(getString(R.string.export_share), getString(R.string.export_save))) { i ->
+            if (i == 0) {
+                launchUi {
+                    val file = withContext(Dispatchers.IO) {
+                        CsvFiles.shareFile(this@ScreenActivity, fileName).also { f -> CsvFiles.writer(f).use { write(it) } }
+                    }
+                    CsvFiles.share(this@ScreenActivity, file)
+                }
+            } else {
+                pendingExport = write
+                @Suppress("DEPRECATION")
+                startActivityForResult(CsvFiles.createDocumentIntent(fileName), REQ_EXPORT)
+            }
+        }
+    }
+
+    @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_EXPORT) return
+        val write = pendingExport
+        pendingExport = null
+        val uri = data?.data
+        if (resultCode != RESULT_OK || uri == null) return
+        if (write == null) {
+            toast(R.string.export_lost)
+            return
+        }
+        launchUi {
+            val n = withContext(Dispatchers.IO) { CsvFiles.writer(this@ScreenActivity, uri).use { write(it) } }
+            toast(getString(R.string.export_saved, n))
+        }
+    }
+
     /** A one-time approval for one action (not kept by the screen). */
     fun withApproval(perm: Long, block: (Approval?) -> Unit) = withApproval(graph, scope, perm, block)
 
@@ -192,6 +236,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
     companion object {
         private const val STATE_ELEVATIONS = "lekas.elevations"
         private const val IDLE_CHECK_MS = 15_000L
+        private const val REQ_EXPORT = 0x4C45
 
         fun errorText(a: Activity, e: Exception): String = when (e) {
             is ActionRefused -> a.getString(

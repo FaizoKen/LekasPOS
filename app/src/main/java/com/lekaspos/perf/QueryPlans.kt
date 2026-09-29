@@ -39,7 +39,7 @@ object QueryPlans {
         "purchases_supplier_first", "purchases_supplier_next", "session_counts_first", "session_counts_next",
         "count_sessions", "history_sales", "history_moves", "history_counts", "supplier_list",
         "shift_first", "shift_next", "customer_first", "customer_next", "statement_first", "statement_next",
-        "audit_action_first", "audit_action_next",
+        "audit_action_first", "audit_action_next", "receipts_first", "receipts_next", "product_export",
     )
 
     fun hotQueries(): List<Pair<String, String>> =

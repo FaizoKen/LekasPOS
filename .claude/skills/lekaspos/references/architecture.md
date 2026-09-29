@@ -155,6 +155,17 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
 - `CustomerService` + checkout: credit tenders need the bill's customer, CREDIT_SALE, and over
   the limit a CREDIT_LIMIT approval, all re-checked inside the sale transaction (D-039).
 
+## 7b. Reports and CSV (Phase 5)
+
+- `ReportService` builds the report screen from summaries only (`sum_day*`, and whole months from
+  `sum_month_product`, D-043); `:core` `Period`/`Preset`/`MonthSplit`/`Buckets` do the calendar
+  maths (weeks start Monday). REPORTS permission.
+- CSV: `:core` `CsvWriter`/`CsvReader` (streaming), `ProductCsv` (columns, header aliases, row
+  validation). `ScreenActivity.exportCsv(name) { out -> … }` streams any export to a shared
+  cache file (FileProvider) or a user-picked document (SAF) — D-041.
+- `ProductCsvService`: preview (read + validate everything, write nothing), then import in
+  200-row transactions in the app scope with progress in a StateFlow — D-042.
+
 ## 8. Sync (details in `sync.md`)
 
 `SyncEngine` talks only to the `SyncProvider` interface. Providers: `GoogleDriveProvider`

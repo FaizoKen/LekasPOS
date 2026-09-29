@@ -5,6 +5,12 @@ import android.content.Context
 import android.os.Build
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.barcode.Gtin
+import com.lekaspos.core.csv.CsvWriter
+import com.lekaspos.core.csv.ProductCsv
+import com.lekaspos.core.money.CurrencySpec
+import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.report.MonthSplit
+import com.lekaspos.core.report.Period
 import com.lekaspos.core.escpos.PrinterProfile
 import com.lekaspos.core.escpos.ReceiptEncoder
 import com.lekaspos.core.model.PaymentKind
@@ -29,11 +35,14 @@ import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
+import com.lekaspos.data.product.Barcode
+import com.lekaspos.data.product.Product
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.data.purchase.PurchaseDao
 import com.lekaspos.data.purchase.PurchaseIn
 import com.lekaspos.data.purchase.PurchaseLineIn
+import com.lekaspos.data.report.ReceiptRow
 import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
@@ -47,6 +56,7 @@ import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
 import com.lekaspos.domain.print.ReceiptBuilder
+import com.lekaspos.domain.report.ReportService
 import com.lekaspos.domain.shift.ShiftService
 import com.lekaspos.hw.printer.ReceiptRenderer
 import java.util.Random
@@ -239,15 +249,70 @@ class PerfSuite(
             Quad("report_year", 365L, 3000.0, 3),
         )) {
             progress.update(id)
+            // The whole report screen: totals, the period before, buckets, payments, cashiers,
+            // categories and the best sellers (products from whole months + loose days, D-043).
             add(measure(id, budget, warmup = 1, n = n) { i ->
                 val to = today - i % 7 + 1
-                val from = to - days
-                ReportDao.totals(r, from, to)
-                ReportDao.byPayment(r, from, to)
-                ReportDao.topProducts(r, from, to, 10)
-                ReportDao.byStaff(r, from, to)
+                ReportService.build(r, Period(to - days, to), 20)
             })
         }
+        // Calendar year: twelve whole months, no loose days.
+        val yearStart = Days.fromYmd(Days.toYmd(today) / 10_000 * 10_000 - 10_000 + 101)
+        val lastYear = Period(yearStart, Days.fromYmd(Days.toYmd(today) / 10_000 * 10_000 + 101))
+        add(measure("report_calendar_year", 3000.0, warmup = 1, n = 3) { ReportService.build(r, lastYear, 20) })
+
+        progress.update("stock reports")
+        val month = MonthSplit.of(Period(today - 29, today + 1))
+        add(measure("slow_movers", 1000.0, warmup = 1, n = 5) {
+            ReportDao.slowMovers(r, month, 100)
+            ReportDao.slowTotal(r, month)
+        })
+        add(measure("stock_value", 500.0, warmup = 1, n = 5) { ReportDao.stockValue(r) })
+
+        progress.update("exports")
+        val sink = CountingSink()
+        val currency = CurrencySpec.MYR
+        // A month of receipts (~20,000) as CSV, page by page as the export does.
+        add(measure("export_receipts_month", 10_000.0, warmup = 0, n = 1) {
+            val w = CsvWriter(sink)
+            val fromMs = Days.startOfDay(today - 29, tz)
+            val toMs = Days.startOfDay(today + 1, tz)
+            var after: ReceiptRow? = null
+            while (true) {
+                val page = ReportDao.receipts(r, fromMs, toMs, after, 500)
+                for (s in page) w.row(s.receiptNo, s.staff, s.customer, s.payments, MoneyFormat.plain(s.total, currency.decimals))
+                if (page.size < 500) break
+                after = page.last()
+            }
+        })
+        // Every product (50,000 at FULL) as CSV.
+        add(measure("export_products", 20_000.0, warmup = 0, n = 1) {
+            val w = CsvWriter(sink)
+            var after = 0L
+            while (true) {
+                val page = ProductDao.exportPage(r, after, 500)
+                for (p in page) {
+                    w.row(ProductCsv.format(ProductCsv.Row(p.name, p.price, p.barcodes, p.sku, p.category, p.unit, p.cost, p.tax), currency))
+                }
+                if (page.size < 500) break
+                after = page.last().id
+            }
+        })
+        // One import transaction: 200 CSV rows parsed, checked and created as new products.
+        val header = ProductCsv.header(ProductCsv.COLUMNS.map { it.header })
+        add(measure("import_chunk_200", 3000.0, warmup = 0, n = 3) { i ->
+            db.writeBlocking(reserveIds = 200 * 4L) { tx ->
+                val now = System.currentTimeMillis()
+                for (k in 0 until 200) {
+                    val code = "2999${i}9${k.toString().padStart(6, '0')}"
+                    val fields = listOf("Perf import $i-$k", code, "PERF-$i-$k", "", "pcs", "3.20", "2.10", "", "piece", "yes", "", "", "yes")
+                    val row = (ProductCsv.parse(fields, header, currency) as ProductCsv.Parsed.Ok).row
+                    check(ProductDao.ownerOf(tx.db, code) == null && ProductDao.bySku(tx.db, row.sku ?: "") == null)
+                    val id = tx.nextId()
+                    ProductDao.create(tx, Product(id = id, name = row.name, sku = row.sku, price = row.price, cost = row.cost ?: 0L), listOf(Barcode(tx.nextId(), id, code)), now)
+                }
+            }
+        })
 
         progress.update("query plans")
         val plans = QueryPlans.check(r)
@@ -390,4 +455,12 @@ class PerfSuite(
             )
         }
     }
+}
+
+/** Counts what an export writes without keeping it (perf runs measure the work, not storage). */
+private class CountingSink : Appendable {
+    var chars = 0L
+    override fun append(csq: CharSequence?): Appendable = apply { chars += csq?.length ?: 4 }
+    override fun append(csq: CharSequence?, start: Int, end: Int): Appendable = apply { chars += end - start }
+    override fun append(c: Char): Appendable = apply { chars++ }
 }

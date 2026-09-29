@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 5: reports, CSV import and export. -->
+<resources>
+    <string name="menu_reports">Reports</string>
+    <string name="perm_reports">See sales reports, profit and stock value</string>
+    <string name="reports_title">Reports</string>
+
+    <!-- Periods -->
+    <string name="report_today">Today</string>
+    <string name="report_yesterday">Yesterday</string>
+    <string name="report_this_week">This week</string>
+    <string name="report_last_week">Last week</string>
+    <string name="report_this_month">This month</string>
+    <string name="report_last_month">Last month</string>
+    <string name="report_this_year">This year</string>
+    <string name="report_last_year">Last year</string>
+    <string name="report_custom">Choose dates</string>
+    <string name="report_from">First day</string>
+    <string name="report_to">Last day</string>
+    <string name="report_range">%1$s – %2$s</string>
+
+    <!-- Report -->
+    <string name="report_summary">Summary</string>
+    <string name="report_sales_count">Sales (%1$d)</string>
+    <string name="report_refunds_count">Refunds (%1$d)</string>
+    <string name="report_voids">Voided sales</string>
+    <string name="report_discounts">Discounts</string>
+    <string name="report_net_ex_tax">Net sales (without tax)</string>
+    <string name="report_tax">Tax</string>
+    <string name="report_rounding">Rounding</string>
+    <string name="report_total">Total received</string>
+    <string name="report_cost">Cost of goods</string>
+    <string name="report_profit">Gross profit</string>
+    <string name="report_margin">Gross margin</string>
+    <string name="report_average">Average sale</string>
+    <string name="report_vs_previous">Change vs the period before (%1$s)</string>
+    <string name="report_by_day">By day</string>
+    <string name="report_by_week">By week</string>
+    <string name="report_by_month">By month</string>
+    <string name="report_bucket_value">%1$s (%2$d)</string>
+    <string name="report_payments">Payment methods</string>
+    <string name="report_cashiers">Cashiers</string>
+    <string name="report_categories">Categories</string>
+    <string name="report_no_category">No category</string>
+    <string name="report_net_profit">%1$s · profit %2$s</string>
+    <string name="report_top_products">Best sellers</string>
+    <string name="report_other_items">Other items</string>
+    <string name="report_count_label">%1$s (%2$d)</string>
+    <string name="report_qty_label">%1$s × %2$s</string>
+    <string name="report_stock">Stock on hand</string>
+    <string name="report_stock_value">Stock value at cost · items: %1$d</string>
+    <string name="report_slow_movers">Not sold in this period</string>
+    <string name="report_slow_header">Not sold %1$s. Items with stock: %2$d · value at cost %3$s</string>
+    <string name="report_slow_empty">Every product with stock sold in this period.</string>
+    <string name="report_in_stock">In stock: %1$s</string>
+    <string name="report_note">Voided sales are left out. Net sales are after discounts and without tax; gross profit = net sales − cost (the average cost when the item was sold).</string>
+
+    <!-- Export -->
+    <string name="export_title">Export</string>
+    <string name="export_share">Share</string>
+    <string name="export_save">Save as a file</string>
+    <string name="export_saved">Saved (rows: %1$d).</string>
+    <string name="export_lost">The export was interrupted. Please try again.</string>
+    <string name="export_summary">Summary (CSV)</string>
+    <string name="export_daily">Sales per day (CSV)</string>
+    <string name="export_products">Products sold (CSV)</string>
+    <string name="export_receipts">Receipts – for the monthly e-invoice (CSV)</string>
+
+    <!-- Products CSV -->
+    <string name="csv_import">Import products (CSV)</string>
+    <string name="csv_export">Export products (CSV)</string>
+    <string name="csv_template">Example CSV file</string>
+    <string name="import_title">Import products</string>
+    <string name="import_reading">Reading the file…</string>
+    <string name="import_file">File</string>
+    <string name="import_malformed">The file cannot be read: %1$s</string>
+    <string name="import_missing">Required columns are missing: %1$s. The first line of the file must name the columns (at least name and price).</string>
+    <string name="import_rows">Lines with products</string>
+    <string name="import_new">New products</string>
+    <string name="import_updates">Products to update</string>
+    <string name="import_bad">Lines with problems (skipped)</string>
+    <string name="import_unknown_columns">Ignored columns: %1$s</string>
+    <string name="import_new_categories">New categories will be created: %1$s</string>
+    <string name="import_problems">Problems</string>
+    <string name="import_line">Line %1$d</string>
+    <string name="import_more_problems">More problems are not shown. Fix these and try again.</string>
+    <string name="import_sample">First products</string>
+    <string name="import_tag_new">new</string>
+    <string name="import_tag_update">update</string>
+    <string name="import_set_stock">Also set the stock of existing products to the file\'s quantity</string>
+    <string name="import_stock_help">New products get the stock column as their opening stock. Existing products only change stock if you switch this on (recorded as a stock count).</string>
+    <string name="import_go">Import now · %1$d</string>
+    <string name="import_running">Importing… lines done: %1$d</string>
+    <string name="import_done">Import finished</string>
+    <string name="import_created">Created</string>
+    <string name="import_updated">Updated</string>
+    <string name="import_skipped">Skipped (problems)</string>
+    <string name="import_categories_created">New categories</string>
+    <string name="import_stock_set">Stock set</string>
+    <string name="problem_name_missing">the name is missing</string>
+    <string name="problem_name_long">the name is too long (120 characters at most)</string>
+    <string name="problem_price_missing">the price is missing</string>
+    <string name="problem_amount">not an amount (write like 12.50)</string>
+    <string name="problem_quantity">not a quantity (write like 3 or 1.25)</string>
+    <string name="problem_sold_by">write piece, weight or open price</string>
+    <string name="problem_yes_no">write yes or no</string>
+    <string name="problem_barcode">a barcode has spaces or is too long</string>
+    <string name="problem_tax">no tax rate with this name or percentage</string>
+    <string name="problem_barcode_twice">this barcode is also on an earlier line</string>
+    <string name="problem_barcode_taken">the barcode belongs to another product than the SKU</string>
+    <string name="problem_barcodes_split">the barcodes belong to different products</string>
+</resources>

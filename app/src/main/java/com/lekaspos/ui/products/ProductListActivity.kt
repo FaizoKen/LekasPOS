@@ -1,17 +1,23 @@
 package com.lekaspos.ui.products
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
+import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
@@ -47,6 +53,8 @@ class ProductListActivity : ScreenActivity() {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.products_title), R.layout.list_with_search) ?: return
         addAction(R.drawable.ic_add, R.string.products_add) { startActivity(ProductEditActivity.newIntent(this)) }
+        lateinit var more: ImageButton
+        more = addAction(R.drawable.ic_more, R.string.sell_menu) { csvMenu(more) }
         search = v.findViewById(R.id.list_search)
         search.setHint(R.string.products_search_hint)
         empty = v.findViewById(R.id.list_empty)
@@ -86,7 +94,40 @@ class ProductListActivity : ScreenActivity() {
         }
     }
 
+    /** Products to and from CSV (D-042): import (with preview), export, an example file. */
+    private fun csvMenu(anchor: View) {
+        val m = PopupMenu(this, anchor)
+        val items = listOf(R.string.csv_import, R.string.csv_export, R.string.csv_template)
+        for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
+        m.setOnMenuItemClickListener {
+            when (it.itemId) {
+                R.string.csv_import -> requireAccess(Perm.MANAGE_PRODUCTS) {
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(CsvFiles.openDocumentIntent(), REQ_IMPORT)
+                }
+                R.string.csv_export -> requireAccess(Perm.MANAGE_PRODUCTS) {
+                    exportCsv("lekaspos-products.csv") { out -> graph.productCsv.export(out).toLong() }
+                }
+                R.string.csv_template -> exportCsv("lekaspos-products-template.csv") { out ->
+                    graph.productCsv.template(out)
+                    2L
+                }
+            }
+            true
+        }
+        m.show()
+    }
+
+    @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data
+        if (requestCode == REQ_IMPORT && resultCode == RESULT_OK && uri != null) startActivity(ProductImportActivity.intent(this, uri))
+    }
+
     companion object {
+        private const val REQ_IMPORT = 7
         private const val PAGE = 60
     }
 }

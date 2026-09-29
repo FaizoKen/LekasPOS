@@ -32,9 +32,12 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `product_history_page` | 50 most recent lines of one product | 1M lines | ≤ 50 ms |
 | `stock_level` | one product's stock | 1M lines | ≤ 5 ms |
 | `low_stock_page` | first 50 low-stock products | 50k products | ≤ 300 ms |
-| `report_day` | day totals + by payment + top 10 products | 1M lines | ≤ 300 ms |
-| `report_month` | same for a month | 1M lines | ≤ 1000 ms |
-| `report_year` | same for a year (informational) | 1M lines | ≤ 3000 ms |
+| `report_day` | the whole report screen (`ReportService.build`): totals + period before, buckets, payments, cashiers, categories, top 20 | 1M lines | ≤ 300 ms |
+| `report_month` | same for 30 days | 1M lines | ≤ 1000 ms |
+| `report_year` / `report_calendar_year` | same for 365 days / a calendar year (whole months from `sum_month_product`, D-043) | 1M lines | ≤ 3000 ms |
+| `slow_movers` / `stock_value` | products with stock not sold in 30 days; stock at cost by category | 50k products | ≤ 1000 / 500 ms |
+| `export_receipts_month` / `export_products` | a month of receipts (~20k) / every product as CSV, streamed | FULL | ≤ 10 s / 20 s (n = 1) |
+| `import_chunk_200` | one import transaction: 200 CSV rows parsed, checked, created | FULL | ≤ 3000 ms |
 | `db_open` | open existing DB + pragmas + version check | 1M lines | ≤ 300 ms |
 | `heap` | Java heap after GC, steady selling | — | ≤ 48 MB, no growth over 1,000 sales |
 
@@ -86,9 +89,9 @@ Emulator notes (API 21 image, observed 2026-09-28):
   source is not pinned down (a WAL checkpoint right after creation did not change it).
   Treat it as harmless noise unless it starts appearing for existing databases.
 
-Known scaling note: `report_year` (≈550k `sum_day_product` rows at FULL) takes ~1.3 s on
-the emulator — fine for the budget there, but low-end phones may take several seconds. Phase 5
-adds a per-month product summary for ranges longer than ~2 months.
+Scaling note: before Phase 5 `report_year` read ≈550k `sum_day_product` rows (2.38 s on a
+mid-range phone). Since D-043 whole months come from `sum_month_product` (≈12 rows per product
+and year) and only the loose days at both ends from the per-day table.
 
 ## 3. Cold start
 

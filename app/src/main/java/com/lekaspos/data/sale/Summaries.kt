@@ -1,6 +1,7 @@
 package com.lekaspos.data.sale
 
 import com.lekaspos.core.model.SaleKind
+import com.lekaspos.core.report.Months
 import com.lekaspos.data.db.Db
 
 /**
@@ -41,6 +42,21 @@ object Summaries {
             "WHERE day = ? AND product_id = ?"
     private const val PRODUCT_INSERT =
         "INSERT INTO sum_day_product(qty, net_ex, tax, cost, day, product_id, category_id) VALUES(?,?,?,?,?,?,?)"
+
+    private const val MONTH_UPDATE =
+        "UPDATE sum_month_product SET qty = qty + ?, net_ex = net_ex + ?, tax = tax + ?, cost = cost + ? " +
+            "WHERE month = ? AND product_id = ?"
+    private const val MONTH_INSERT =
+        "INSERT INTO sum_month_product(qty, net_ex, tax, cost, month, product_id, category_id) VALUES(?,?,?,?,?,?,?)"
+
+    /**
+     * Rebuilds the per-month table from the per-day one (D-043). An epoch day times 86,400 read as
+     * UTC seconds is that local date, so strftime gives the same yyyymm as :core `Months.key`.
+     */
+    const val MONTHS_FROM_DAYS =
+        "INSERT INTO sum_month_product(month, product_id, category_id, qty, net_ex, tax, cost) " +
+            "SELECT CAST(strftime('%Y%m', day * 86400, 'unixepoch') AS INTEGER), product_id, MIN(category_id), " +
+            "SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) FROM sum_day_product GROUP BY 1, product_id"
 
     private const val PAYMENT_UPDATE =
         "UPDATE sum_day_payment SET amount = amount + ?, count = count + ? WHERE day = ? AND method_id = ?"
@@ -86,10 +102,15 @@ object Summaries {
             acc[3] += l.cost
             if (!categories.containsKey(pid)) categories[pid] = l.categoryId
         }
+        val month = Months.key(s.day)
         for ((pid, a) in byProduct) {
             tx.updateOrInsert(
                 PRODUCT_UPDATE, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, s.day, pid),
                 PRODUCT_INSERT, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, s.day, pid, categories[pid]),
+            )
+            tx.updateOrInsert(
+                MONTH_UPDATE, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, month, pid),
+                MONTH_INSERT, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, month, pid, categories[pid]),
             )
         }
 
