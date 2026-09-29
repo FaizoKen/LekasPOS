@@ -116,6 +116,7 @@ class ReportService(private val graph: AppGraph) {
         fun build(r: SQLiteDatabase, p: Period, topN: Int): Report {
             val split = MonthSplit.of(p)
             val g = Granularity.forPeriod(p)
+            val (top, categories) = ReportDao.productsAndCategories(r, split, topN)
             return Report(
                 period = p,
                 totals = ReportDao.totals(r, p.from, p.to),
@@ -124,8 +125,8 @@ class ReportService(private val graph: AppGraph) {
                 buckets = Buckets.of(ReportDao.days(r, p.from, p.to), p, g),
                 payments = ReportDao.byPayment(r, p.from, p.to),
                 staff = ReportDao.byStaff(r, p.from, p.to),
-                categories = ReportDao.byCategory(r, split),
-                topProducts = ReportDao.products(r, split, limit = topN),
+                categories = categories,
+                topProducts = top,
             )
         }
 

@@ -9,6 +9,7 @@ import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
+import java.util.PriorityQueue
 
 data class Totals(
     val saleCount: Long,
@@ -121,6 +122,11 @@ object ReportDao {
             "FROM ($UNION) GROUP BY category_id) t " +
             "LEFT JOIN category c ON c.id = t.category_id ORDER BY t.net_ex DESC"
 
+    /** One pass for the report screen: per product and category, in product order. */
+    private const val BY_PRODUCT_CATEGORY =
+        "SELECT product_id, category_id, SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) FROM ($UNION) " +
+            "GROUP BY product_id, category_id ORDER BY product_id, category_id"
+
     /** Products sold in the range (ids only), for "not sold" lists. */
     private const val SOLD_IDS =
         "SELECT product_id FROM sum_day_product WHERE day >= ? AND day < ? " +
@@ -188,6 +194,67 @@ object ReportDao {
             CategoryTotal(c.longOrNull(0), c.stringOrNull(1), c.getLong(2), c.getLong(3), c.getLong(4))
         }
 
+    /**
+     * Category totals and the [topN] best sellers by net sales from ONE pass over the product
+     * rows of the range (the report screen needs both; two GROUP BYs cost twice as much).
+     * Same answers as [products] and [byCategory].
+     */
+    fun productsAndCategories(db: SQLiteDatabase, s: MonthSplit, topN: Int): Pair<List<ProductTotal>, List<CategoryTotal>> {
+        val cats = LinkedHashMap<Long?, LongArray>()
+        val best = PriorityQueue(topN + 1, compareBy<ProductTotal>({ it.netEx }, { -it.productId }))
+        var pid = Long.MIN_VALUE
+        val acc = LongArray(4)
+        fun flush() {
+            if (pid == Long.MIN_VALUE) return
+            best.add(ProductTotal(pid, null, acc[0], acc[1], acc[2], acc[3]))
+            if (best.size > topN) best.poll()
+        }
+        db.rawQuery(BY_PRODUCT_CATEGORY, args(*split(s))).use { c ->
+            while (c.moveToNext()) {
+                val p = c.getLong(0)
+                val cat = c.longOrNull(1)
+                val qty = c.getLong(2)
+                val net = c.getLong(3)
+                val tax = c.getLong(4)
+                val cost = c.getLong(5)
+                if (p != pid) {
+                    flush()
+                    pid = p
+                    acc.fill(0L)
+                }
+                acc[0] += qty
+                acc[1] += net
+                acc[2] += tax
+                acc[3] += cost
+                val k = cats.getOrPut(cat) { LongArray(3) }
+                k[0] += qty
+                k[1] += net
+                k[2] += cost
+            }
+        }
+        flush()
+        val top = best.sortedWith(compareBy<ProductTotal>({ -it.netEx }, { it.productId }))
+        val productNames = names(db, "product", top.map { it.productId }.filter { it != 0L })
+        val categoryNames = names(db, "category", cats.keys.filterNotNull())
+        val products = top.map { it.copy(name = productNames[it.productId]) }
+        val categories = cats.map { (id, v) -> CategoryTotal(id, id?.let { categoryNames[it] }, v[0], v[1], v[2]) }
+            .sortedByDescending { it.netEx }
+        return products to categories
+    }
+
+    /** Names of a few rows by primary key (at most [MAX_IN] per query). */
+    private fun names(db: SQLiteDatabase, table: String, ids: List<Long>): Map<Long, String> {
+        val out = HashMap<Long, String>()
+        for (chunk in ids.distinct().chunked(MAX_IN)) {
+            val marks = chunk.joinToString(",") { "?" }
+            db.queryList("SELECT id, name FROM $table WHERE id IN ($marks)", args(*chunk.toTypedArray())) { it.getLong(0) to it.getString(1) }
+                .forEach { out[it.first] = it.second }
+        }
+        return out
+    }
+
+    private const val MAX_IN = 200
+
     /** Products with stock that did not sell in the range, most stock value first. */
     fun slowMovers(db: SQLiteDatabase, s: MonthSplit, limit: Int = 100): List<SlowMover> =
         db.queryList(SLOW_MOVERS, args(*split(s), limit)) { c -> SlowMover(c.getLong(0), c.getString(1), c.getLong(2), c.getLong(3)) }
@@ -226,6 +293,7 @@ object ReportDao {
         "report_products" to PRODUCTS_BY_NET,
         "report_products_qty" to PRODUCTS_BY_QTY,
         "report_categories" to BY_CATEGORY,
+        "report_product_category" to BY_PRODUCT_CATEGORY,
         "report_slow_movers" to SLOW_MOVERS,
         "report_stock_value" to STOCK_VALUE,
         "receipts_first" to RECEIPTS_FIRST,
