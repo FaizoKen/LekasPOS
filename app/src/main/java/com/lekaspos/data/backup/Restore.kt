@@ -5,6 +5,8 @@ import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.id.Ids
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.db.long
+import com.lekaspos.data.db.queryOne
 import com.lekaspos.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -73,12 +75,17 @@ object Restore {
         return mode
     }
 
-    /** After a restored database opened: stale print jobs go; a new till gets a new identity. */
+    /**
+     * After a restored database opened: stale print jobs go; a new till gets a new identity. So
+     * does a restored till that has published to a sync folder: the original went on selling
+     * after the backup, so its IDs and receipt numbers from then on are already taken there.
+     */
     fun afterOpen(db: SQLiteDatabase, mode: Mode) {
         db.beginTransaction()
         try {
             db.execSQL("DELETE FROM print_job")
-            if (mode == Mode.NEW_DEVICE) newIdentity(db)
+            val published = db.long("SELECT COUNT(*) FROM sync_segment") > 0L
+            if (mode == Mode.NEW_DEVICE || published || Meta.get(db, Meta.SYNC_ENABLED) == "1") newIdentity(db)
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
@@ -88,7 +95,9 @@ object Restore {
     /**
      * This database becomes a different till of the same store: new device number (so its new
      * IDs and receipt numbers never collide with the original's), fresh sequences, no pending
-     * sync events (they belong to the original till).
+     * sync events (they belong to the original till). Sync is off until turned on again (which
+     * publishes the data under the new number); the original's segments already contained in
+     * this database are marked as read, so only what it did after the backup is imported.
      */
     fun newIdentity(db: SQLiteDatabase, random: SecureRandom = SecureRandom()) {
         val old = Meta.getLong(db, Meta.DEVICE_NO)?.toInt()
@@ -102,6 +111,16 @@ object Restore {
         Meta.put(db, Meta.RECEIPT_PREFIX, null)
         db.execSQL("DELETE FROM meta WHERE key >= 'doc_seq_' AND key < 'doc_seq`'")
         db.execSQL("DELETE FROM outbox")
+        val last = db.queryOne("SELECT seq, last_hlc FROM sync_segment ORDER BY seq DESC LIMIT 1") { it.getLong(0) to it.getLong(1) }
+        if (old != null && last != null) {
+            db.execSQL(
+                "INSERT OR REPLACE INTO sync_cursor(dev, seq, last_hlc, updated_at) VALUES(?, ?, ?, ?)",
+                arrayOf<Any>(old, last.first, last.second, System.currentTimeMillis()),
+            )
+        }
+        db.execSQL("DELETE FROM sync_segment")
+        Meta.put(db, Meta.SYNC_ENABLED, "0")
+        for (k in listOf(Meta.SYNC_BACKFILLED, Meta.SYNC_LAST_OK, Meta.SYNC_LAST_ERROR)) Meta.put(db, k, null)
     }
 
     fun backupDir(ctx: Context): File = File(ctx.filesDir, "backups")

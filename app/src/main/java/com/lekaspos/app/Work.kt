@@ -1,9 +1,13 @@
 package com.lekaspos.app
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -18,6 +22,8 @@ import java.util.concurrent.TimeUnit
 object Work {
 
     private const val BACKUP = "backup-daily"
+    private const val SYNC = "sync-periodic"
+    private const val SYNC_SOON = "sync-soon"
 
     fun schedule(context: Context) {
         val wm = WorkManager.getInstance(context)
@@ -25,7 +31,24 @@ object Work {
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).setRequiresStorageNotLow(true).build())
             .build()
         wm.enqueueUniquePeriodicWork(BACKUP, ExistingPeriodicWorkPolicy.KEEP, backup)
+        val sync = PeriodicWorkRequestBuilder<SyncWorker>(30, TimeUnit.MINUTES)
+            .setConstraints(online())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        wm.enqueueUniquePeriodicWork(SYNC, ExistingPeriodicWorkPolicy.KEEP, sync)
     }
+
+    /** A sync a couple of minutes after a sale (KEEP: a busy till is not postponed forever). Off the main thread. */
+    fun syncSoon(context: Context) {
+        val req = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setInitialDelay(2, TimeUnit.MINUTES)
+            .setConstraints(online())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(SYNC_SOON, ExistingWorkPolicy.KEEP, req)
+    }
+
+    private fun online() = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build()
 }
 
 /** The automatic daily backup on this phone (D-044). */
@@ -36,5 +59,23 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     } catch (e: Exception) {
         Log.e("Automatic backup failed", e)
         if (runAttemptCount < 3) Result.retry() else Result.failure()
+    }
+}
+
+/** Background sync (references/sync.md §10): retried with backoff; a needed sign-in stops it until the user acts. */
+class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        val graph = LekasApp.graph(applicationContext)
+        val provider = graph.sync.provider() ?: return Result.success()
+        return try {
+            graph.sync.sync(provider)
+            Result.success()
+        } catch (e: com.lekaspos.sync.AuthNeeded) {
+            Result.failure() // the sync screen shows "sign-in needed"; the periodic job tries again later
+        } catch (e: com.lekaspos.sync.SyncEngine.Problem) {
+            Result.failure()
+        } catch (e: Exception) {
+            if (runAttemptCount < 5) Result.retry() else Result.failure()
+        }
     }
 }

@@ -7,6 +7,9 @@ import java.io.FileOutputStream
 /** A file in the store's sync folder. [props] are small key/values stored with it (sha256, count). */
 data class RemoteFile(val name: String, val id: String, val size: Long, val props: Map<String, String> = emptyMap())
 
+/** The provider needs the user to sign in again (access revoked, password changed …). */
+open class AuthNeeded(message: String) : java.io.IOException(message)
+
 /**
  * Where the tills of a store exchange files (references/sync.md §9): a dumb shared folder. The
  * engine knows nothing about Google Drive; a USB stick or a test directory works the same.

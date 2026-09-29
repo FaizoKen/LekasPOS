@@ -15,6 +15,9 @@ object Meta {
     const val HLC_LAST = "hlc_last"
     const val SYNC_ENABLED = "sync_enabled"
     const val RECEIPT_PREFIX = "receipt_prefix"
+    const val SYNC_BACKFILLED = "sync.backfilled"
+    const val SYNC_LAST_OK = "sync.last_ok"
+    const val SYNC_LAST_ERROR = "sync.last_error"
 
     fun docSeqKey(kind: Int) = "doc_seq_$kind"
 

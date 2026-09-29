@@ -47,6 +47,7 @@ import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
 import com.lekaspos.hw.printer.PrinterService
+import com.lekaspos.sync.SyncEngine
 import com.lekaspos.ui.Insets
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
@@ -67,6 +68,7 @@ import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
+import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.shift.openShift
 import com.lekaspos.ui.staff.LockActivity
@@ -96,6 +98,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private lateinit var titleView: TextView
     private lateinit var printerState: TextView
+    private lateinit var syncState: TextView
     private lateinit var heldBadge: TextView
     private lateinit var cameraButton: View
     private lateinit var search: EditText
@@ -147,6 +150,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
         titleView = findViewById(R.id.title)
         printerState = findViewById(R.id.printer_state)
+        syncState = findViewById(R.id.sync_state)
         heldBadge = findViewById(R.id.held_badge)
         cameraButton = findViewById(R.id.btn_camera)
         search = findViewById(R.id.search)
@@ -206,6 +210,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         findViewById<View>(R.id.btn_held).setOnClickListener { showHeld() }
         cameraButton.setOnClickListener { startActivity(CameraScanActivity.sellIntent(this)) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
+        syncState.setOnClickListener { startActivity(Intent(this, SyncActivity::class.java)) }
         staffChip.setOnClickListener { staffMenu(it) }
         customerChip.setOnClickListener { customerAction() }
         beeper = Beeper.create()
@@ -235,6 +240,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.sppScanner.start()
             val app = applicationContext
             graph.appScope.launch(Dispatchers.IO) { Work.schedule(app) } // background jobs, after the till is usable (WorkManager starts here, off the main thread)
+            graph.sync.refreshStatus()
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
@@ -255,6 +261,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.settings.device.collect { cameraButton.visible(it.cameraScan && hasCamera) } }
         s.launch { combine(graph.printer.status, graph.printer.pending) { st, n -> st to n }.collect { renderPrinter(it.first, it.second) } }
+        s.launch { graph.sync.status.collect { renderSync(it) } }
         s.launch { graph.sppScanner.codes.collect { onScanned(it) } }
         s.launch { graph.checkout.outcome.collect { showOutcome(it) } }
         loadCategories()
@@ -368,6 +375,19 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         printerState.text = text
         printerState.visible(text != null)
+    }
+
+    /** Quiet while sync works; a pill only when it needs the user or has not worked for a day. */
+    private fun renderSync(s: SyncEngine.Status) {
+        val stale = s.pending > 0L && System.currentTimeMillis() - (s.lastSuccessAt ?: 0L) > SYNC_STALE_MS
+        val text = when {
+            !s.enabled -> null
+            s.needsSignIn -> getString(R.string.sync_pill_sign_in)
+            stale && !s.running -> getString(R.string.sync_pill_stale)
+            else -> null
+        }
+        syncState.text = text
+        syncState.visible(text != null)
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
@@ -918,5 +938,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         private const val PAGE = 60
         private const val SEARCH_DEBOUNCE_MS = 150L
         private const val HARDWARE_DELAY_MS = 1500L
+        private const val SYNC_STALE_MS = 24L * 60L * 60L * 1000L
     }
 }

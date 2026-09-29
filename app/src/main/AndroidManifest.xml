@@ -13,6 +13,11 @@
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- Sync between tills through the store's Google Drive app folder (D-045); selling never
+         needs the network. Network state lets WorkManager wait for a connection. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Optional camera barcode scanning (D-025). -->
     <uses-permission android:name="android.permission.CAMERA" />
 
@@ -213,6 +218,10 @@
             android:exported="false" />
         <activity
             android:name=".ui.settings.BackupActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.settings.SyncActivity"
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
         <activity

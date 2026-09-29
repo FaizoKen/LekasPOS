@@ -79,10 +79,14 @@ store share the hidden app folder by signing in with the store's account. REST v
 Why: fastest restore for a new device (download, unzip, open); built from a WAL read
 transaction so selling continues. `VACUUM INTO` (3.27) and `ATTACH` (disables WAL on Android)
 are not usable.
+(Amended in Phase 6: backups are file copies under the writer, see D-044; new tills join by
+publishing their rows, not from a snapshot, see D-045.)
 
 ### D-016 — Outbox is written only while sync is enabled
 Why: otherwise it grows forever on single-device shops. Enabling sync starts with a full
 snapshot upload, which carries every row's version information.
+(Phase 6: "full snapshot upload" became the backfill of D-045 — every row published as an event
+with its version information.)
 
 ### D-017 — Receipt numbers per device and per document kind
 Why: unique without coordination; format `{prefix}{kind}{seq:06}` with a per-device prefix.
@@ -281,6 +285,53 @@ per product instead of 365. Reports need the new REPORTS permission (profit and 
 movers = products with stock that did not sell in the period (one `NOT IN` over the sold ids);
 stock value = on-hand quantity × current average cost. Schema v4 migrates the per-month table
 from existing per-day rows.
+
+### D-044 — Backups are consistent file copies; restores are staged and applied at start (Phase 6, 2026-09-30)
+A backup (`.lekasbak` = ZIP of `backup.json` + the database file) is made on the writer thread:
+`wal_checkpoint(FULL)`, then the main file (and any WAL left) is copied while writes wait
+(reads and the UI keep going; a sale waits for the copy, not the other way round). Automatic: daily via
+WorkManager (last 7 kept) and before every schema upgrade (last 3). Manual: back up now, save
+or share a file (SAF / share sheet — USB, SD card, Drive, WhatsApp) with no Play Services.
+A restore is unpacked and checked into `files/restore/`; the app restarts and `Db.open` swaps
+the files before opening (the replaced database is kept as a backup first). Two modes: take
+over the backed-up till's identity, or become a new till (new device number, receipt prefix,
+ID range; pending outbox dropped). A till that ever published to a sync folder always gets a
+new identity on restore: the original went on selling after the backup, so its later IDs and
+receipt numbers are already taken in the store. Its sync is off until turned on again, and the
+original's segments already contained in the backup are marked as read.
+Rejected: streaming rows into a new file (D-015, slower and more code for the same result),
+`VACUUM INTO` (SQLite 3.27), `ATTACH` (disables WAL on Android), a read transaction without
+writes waiting (the framework gives no read-only transaction before API 35), swapping the
+file while the app runs (open cursors, cached statements).
+
+### D-045 — Sync = per-till immutable segment files; joining = publishing existing rows (Phase 6)
+Each till seals its outbox into numbered gzip NDJSON segments (≤ 2,000 events; header with
+store, device, seq, count, HLC range; SHA-256 and count stored as file properties) and uploads
+them under `seg-<store>-<dev>-<seq>`. Other tills download new segments per device in order
+(a gap stops that device until it arrives), verify the checksum, and apply each segment in one
+transaction together with its cursor, so an interrupted sync resumes and nothing applies twice.
+The importer is idempotent and order-independent: EVENT rows `INSERT OR IGNORE` (derived data
+only when new; a void arriving before its sale is applied when the sale comes), LWW rows merge
+per field (an edit arriving before the creation makes a placeholder whose fields the creation
+fills where they are older), stock counts rebuild the product's level from events. Each till
+publishes a device card (name, app version, receipt prefix, cursors, last seen); the store
+manifest is created by the first till and adopted by the others. A till joining (or re-joining)
+publishes every row it already has as events ("backfill") instead of downloading a snapshot and
+merging it: one code path (the importer) for all data, tested by the merge suite. An
+interrupted backfill is repeated by the next sync (imports are idempotent). Receipt-prefix
+clashes are resolved on joining; a device-number clash stops sync with a message.
+Google Drive provider (D-014): REST v3 over `HttpURLConnection`, `appDataFolder` only, multipart
+upload ≤ 5 MB else resumable (resumes from Drive's committed range), a 401 fetches a fresh
+token once. Tokens come silently from GIS `AuthorizationClient`; when Google needs the user,
+background sync stops with "sign-in needed" (pill on the selling screen) until the user signs in
+on the sync screen. WorkManager: every 30 minutes and ~2 minutes after a sale (network + battery
+not low, exponential backoff). Dependency: play-services-auth 21.4.0 (pinned in D-005) adds
+~185 KB to the release APK (894,975 → 1,084,540 bytes with the sync screen); it is the only
+supported way to get a Drive token without the deprecated Google Sign-In API.
+Deferred: snapshot bootstrap for very large stores and deleting segments every till has read
+(`Cursors.deletable`) — segments are gzip-compressed and hold at most 2,000 events each.
+Rejected: one shared database file on Drive (no concurrent writers), per-row files (thousands
+of API calls), Drive change feeds (need a broader scope), Firebase (backend, cost, privacy).
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

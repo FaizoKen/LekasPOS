@@ -91,7 +91,10 @@ object ProductDao {
     private const val DELETE_FTS = "DELETE FROM product_fts WHERE docid = ?"
     private const val INSERT_FTS = "INSERT INTO product_fts(docid, body) VALUES(?, ?)"
 
-    /** Inserts a new product with its barcodes as one LWW creation at [hlc]. */
+    /**
+     * Bulk insert of a product with its barcodes at [hlc], **without** an outbox event: for
+     * generated perf data and DAO tests only. The app creates products with [create].
+     */
     fun insert(tx: Db.Tx, p: Product, barcodes: List<Barcode>, now: Long, hlc: Long) {
         tx.insert(
             INSERT_PRODUCT, p.id, p.name, SearchText.key(p.name), p.sku, p.categoryId, p.unit, p.sellMode,

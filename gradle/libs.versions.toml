@@ -8,6 +8,7 @@ androidxCore = "1.17.0"        # 1.18+ needs minSdk 23
 recyclerview = "1.4.0"         # last line with minSdk 21
 zxing = "3.3.3"                # 3.4+ calls Java 8 library APIs missing below API 24 (D-025)
 work = "2.10.5"                 # 2.11 needs minSdk 23, 2.12 needs 24 (D-005)
+playServicesAuth = "21.4.0"     # 21.5+ needs minSdk 23 (D-005)
 junit = "4.13.2"
 androidxTestRunner = "1.7.0"   # 1.7.x is the newest line with minSdk 21
 androidxTestCore = "1.7.0"
@@ -20,6 +21,7 @@ androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }

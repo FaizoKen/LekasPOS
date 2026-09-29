@@ -6,6 +6,8 @@ import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.CreditKind
 import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.sync.SyncNames
+import com.lekaspos.data.backup.BackupFiles
+import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.customer.Customer
 import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.DerivedRebuild
@@ -18,6 +20,8 @@ import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.TimeZone
 import java.util.UUID
@@ -253,6 +257,61 @@ class SyncMergeTest {
         syncAll(a, b)
         assertConverged(a, b)
         runBlocking { assertEquals(18_000L, a.db().read { StockDao.level(it, p) }) } // 20 counted − 2 sold after
+    }
+
+    @Test
+    fun aTillRestoredFromAnOldBackupRejoinsWithoutCollisions() {
+        val a = till()
+        enable(a, "Counter A")
+        val p = product(a, "Milo", 1_890L)
+        repeat(3) { sell(a, p) }
+        syncAll(a)
+        val bytes = runBlocking {
+            val out = ByteArrayOutputStream()
+            BackupFiles.write(a.db(), out, File(TestDb.context.cacheDir, "sync-backup-test"), "test", "manual")
+            out.toByteArray()
+        }
+        // The original goes on selling after the backup, and uploads it.
+        repeat(2) { sell(a, p) }
+        syncAll(a)
+        // The backup is restored "as this till" on another phone: it must not reuse A's number.
+        Restore.cancelStaged(TestDb.context)
+        val b = till()
+        Restore.stage(TestDb.context, ByteArrayInputStream(bytes), Restore.Mode.REPLACE)
+        runBlocking {
+            val db = b.db() // opening applies the staged restore
+            val aDev = a.db().deviceNo
+            assertNotEquals(aDev, db.deviceNo)
+            assertTrue(!db.syncEnabled)
+            assertEquals(0L, db.read { it.long("SELECT COUNT(*) FROM sync_segment") })
+            assertTrue(db.read { it.long("SELECT seq FROM sync_cursor WHERE dev = ?", aDev.toLong()) } >= 1L)
+        }
+        enable(b, "Counter B")
+        syncAll(a, b)
+        repeat(2) { sell(b, p) }
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            assertEquals(7L, b.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            assertEquals(7L, b.db().read { it.long("SELECT COUNT(DISTINCT receipt_no) FROM sale") })
+        }
+    }
+
+    @Test
+    fun anInterruptedFirstSyncIsCompletedByTheNextOne() {
+        val a = till()
+        val p = product(a, "Kaya", 650L)
+        sell(a, p)
+        enable(a)
+        runBlocking {
+            // As if the app died during the first sync: the backfill is repeated from the start.
+            a.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, SyncEngine.BACKFILLED, null) }
+            a.sync.sync(provider)
+        }
+        val b = till()
+        enable(b)
+        syncAll(a, b)
+        assertConverged(a, b)
     }
 
     @Test

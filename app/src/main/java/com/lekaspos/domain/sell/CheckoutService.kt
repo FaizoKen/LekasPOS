@@ -152,6 +152,7 @@ class CheckoutService(private val graph: AppGraph) {
             Done(sale.id, sale.receiptNo, draft.total, draft.change, queued, low, customer, owes)
         }
         graph.printer.wake()
+        graph.syncSoon()
         return done
     }
 

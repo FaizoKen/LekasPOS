@@ -2,6 +2,7 @@ package com.lekaspos.app
 
 import android.app.Application
 import android.os.Build
+import android.os.SystemClock
 import com.lekaspos.R
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Schema
@@ -28,7 +29,9 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 /**
  * Manual dependency injection (references/architecture.md §2): app-wide singletons, created
@@ -64,6 +67,20 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val backups: BackupService by lazy { BackupService(this, app) }
     val sync: SyncEngine by lazy { SyncEngine(this, app) }
 
+    private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
+
+    /**
+     * After a sale: a background sync a couple of minutes later (references/sync.md §10). At most
+     * once a minute, off the main thread, and only for the app's own database (not test graphs).
+     */
+    fun syncSoon() {
+        if (dbName != Schema.FILE_NAME) return
+        val now = SystemClock.elapsedRealtime()
+        val last = lastSyncSoon.get()
+        if (now - last < SYNC_SOON_GAP_MS || !lastSyncSoon.compareAndSet(last, now)) return
+        appScope.launch(Dispatchers.IO) { if (db().syncEnabled) Work.syncSoon(app) }
+    }
+
     private fun defaultLanguage(): String {
         val locale = if (Build.VERSION.SDK_INT >= 24) {
             app.resources.configuration.locales[0]
@@ -83,4 +100,8 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
         ewallet = app.getString(R.string.seed_pm_ewallet),
         credit = app.getString(R.string.seed_pm_credit),
     )
+
+    private companion object {
+        const val SYNC_SOON_GAP_MS = 60_000L
+    }
 }

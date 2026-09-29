@@ -52,10 +52,11 @@ object TestDb {
     ): Long = db.writeBlocking { tx ->
         val id = tx.nextId()
         val barcodes = codes.map { Barcode(tx.nextId(), id, it) }
-        ProductDao.insert(
+        // The app's path: synced (outbox event) when the database has sync on.
+        ProductDao.create(
             tx,
             Product(id = id, name = name, sku = sku, categoryId = categoryId, price = price, cost = cost, trackStock = trackStock, active = active, taxRateId = taxRateId),
-            barcodes, System.currentTimeMillis(), tx.hlcNow(),
+            barcodes, System.currentTimeMillis(),
         )
         id
     }

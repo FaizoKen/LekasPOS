@@ -112,6 +112,7 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.zxing.core)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.play.services.auth)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)

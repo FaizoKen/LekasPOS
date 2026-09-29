@@ -39,6 +39,21 @@
         android:visibility="gone" />
 
     <TextView
+        android:id="@+id/sync_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/pill_bg"
+        android:gravity="center"
+        android:minHeight="32dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:singleLine="true"
+        android:textColor="@color/text_on_brand"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/printer_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

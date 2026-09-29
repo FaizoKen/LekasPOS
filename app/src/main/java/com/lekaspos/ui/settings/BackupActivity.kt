@@ -183,6 +183,7 @@ class BackupActivity : ScreenActivity() {
                 val lines = ArrayList<String>()
                 lines.add(getString(R.string.backup_restore_what, DateText.dateTime(h.createdAt, tz), h.storeName ?: "-", h.sales, h.products))
                 if (h.storeUuid != store) lines.add(getString(R.string.backup_other_store))
+                if (graph.db().syncEnabled) lines.add(getString(R.string.backup_restore_sync))
                 lines.add(getString(R.string.backup_restore_how))
                 val d = AlertDialog.Builder(this@BackupActivity)
                     .setTitle(R.string.backup_restore_title)

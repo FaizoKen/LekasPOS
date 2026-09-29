@@ -40,6 +40,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** Other tills seen in the store. */
         val devices: Int = 0,
         val phase: String? = null,
+        /** Records published so far while preparing (first sync). */
+        val done: Long = 0L,
+        /** Google (or another provider) needs the user to sign in again before syncing continues. */
+        val needsSignIn: Boolean = false,
+        val account: String? = null,
+        val deviceName: String? = null,
     )
 
     data class Report(val sealed: Int, val uploaded: Int, val applied: Int, val events: Int, val devices: Int)
@@ -70,17 +76,25 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     suspend fun refreshStatus() {
         val db = graph.db()
-        val (pending, last, error) = db.read { r ->
-            Triple(SyncDao.unsentEvents(r), Meta.getLong(r, LAST_OK), Meta.get(r, LAST_ERROR))
+        val s = db.read { r ->
+            _status.value.copy(
+                enabled = db.syncEnabled, pending = SyncDao.unsentEvents(r), lastSuccessAt = Meta.getLong(r, LAST_OK),
+                lastError = Meta.get(r, LAST_ERROR), account = Meta.get(r, ACCOUNT), deviceName = Meta.get(r, DEVICE_NAME),
+            )
         }
-        _status.value = _status.value.copy(enabled = db.syncEnabled, pending = pending, lastSuccessAt = last, lastError = error)
+        _status.value = s.copy(needsSignIn = s.enabled && s.lastError == ERROR_SIGN_IN)
     }
 
     /**
      * Makes this till part of the store kept in [provider] (creating it when there is none),
      * publishes the data it already has, then syncs. Safe to call again.
      */
-    suspend fun enable(provider: SyncProvider, deviceName: String, progress: (String, Long) -> Unit = { _, _ -> }): Report = mutex.withLock {
+    suspend fun enable(
+        provider: SyncProvider,
+        deviceName: String,
+        account: String? = null,
+        progress: (String, Long) -> Unit = { _, _ -> },
+    ): Report = mutex.withLock {
         val db = graph.db()
         val (localStore, uuid) = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() to Meta.get(it, Meta.DEVICE_UUID).orEmpty() }
         val stores = provider.list(SyncNames.STORE_PREFIX).mapNotNull { SyncNames.parseStore(it.name) }.sorted()
@@ -108,14 +122,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             if (ReceiptNumbers.prefix(tx) in taken) Meta.put(tx.db, Meta.RECEIPT_PREFIX, freePrefix(taken))
             Meta.put(tx.db, Meta.SYNC_ENABLED, "1")
             Meta.put(tx.db, DEVICE_NAME, deviceName)
+            Meta.put(tx.db, PROVIDER, provider.id)
+            Meta.put(tx.db, ACCOUNT, account)
         }
         db.syncEnabled = true // before the backfill: nothing written meanwhile can be missed
-        if (db.read { Meta.get(it, BACKFILLED) } != store) {
-            _status.value = _status.value.copy(running = true, phase = "backfill")
-            Backfill.run(db, progress)
-            db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, BACKFILLED, store) }
-        }
-        syncLocked(provider)
+        syncLocked(provider, progress)
     }
 
     /** Stops syncing (the data stays). Enabling again publishes everything again. */
@@ -125,20 +136,45 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         db.write(reserveIds = 0L) { tx ->
             Meta.put(tx.db, Meta.SYNC_ENABLED, "0")
             Meta.put(tx.db, BACKFILLED, null)
+            Meta.put(tx.db, PROVIDER, null)
+            Meta.put(tx.db, LAST_ERROR, null)
             tx.update("DELETE FROM outbox")
         }
         refreshStatus()
     }
 
+    /** The provider this till was set up with, or null when sync is off. */
+    suspend fun provider(): SyncProvider? {
+        val db = graph.db()
+        if (!db.syncEnabled) return null
+        return SyncProviders.forId(app, db.read { Meta.get(it, PROVIDER) })
+    }
+
     /** One round: seal, upload, import, publish the device card. */
     suspend fun sync(provider: SyncProvider): Report = mutex.withLock { syncLocked(provider) }
 
-    private suspend fun syncLocked(provider: SyncProvider): Report {
+    private suspend fun syncLocked(provider: SyncProvider, progress: (String, Long) -> Unit = { _, _ -> }): Report {
         val db = graph.db()
         if (!db.syncEnabled) throw Problem(Problem.Reason.NOT_ENABLED, "sync is off")
-        _status.value = _status.value.copy(running = true, phase = "sync")
+        _status.value = _status.value.copy(running = true, phase = PHASE_SYNC)
         try {
             val store = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }
+            if (db.read { Meta.get(it, BACKFILLED) } != store) {
+                // Publishes what this till already had; an interrupted run is simply repeated (imports are idempotent).
+                _status.value = _status.value.copy(phase = PHASE_PREPARE, done = 0L)
+                var before = 0L
+                var table = ""
+                Backfill.run(db) { t, n ->
+                    if (t != table) {
+                        before = _status.value.done
+                        table = t
+                    }
+                    _status.value = _status.value.copy(done = before + n)
+                    progress(t, n)
+                }
+                db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, BACKFILLED, store) }
+                _status.value = _status.value.copy(phase = PHASE_SYNC)
+            }
             val sealed = seal(db, store)
             val uploaded = upload(db, provider, store)
             val changed = HashSet<Int>()
@@ -152,14 +188,17 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 Meta.put(tx.db, LAST_OK, now.toString())
                 Meta.put(tx.db, LAST_ERROR, null)
             }
-            _status.value = _status.value.copy(running = false, phase = null, devices = devices, lastSuccessAt = now, lastError = null)
+            _status.value = _status.value.copy(running = false, phase = null, devices = devices, lastSuccessAt = now, lastError = null, needsSignIn = false)
             refreshStatus()
             return Report(sealed, uploaded, applied, events, devices)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            _status.value = _status.value.copy(running = false, phase = null)
+            throw e
         } catch (e: Exception) {
             Log.w("Sync failed", e)
-            val msg = e.message ?: e.javaClass.simpleName
+            val msg = if (e is AuthNeeded) ERROR_SIGN_IN else e.message ?: e.javaClass.simpleName
             runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, LAST_ERROR, msg) } }
-            _status.value = _status.value.copy(running = false, phase = null, lastError = msg)
+            _status.value = _status.value.copy(running = false, phase = null, lastError = msg, needsSignIn = msg == ERROR_SIGN_IN)
             throw e
         }
     }
@@ -304,9 +343,16 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         const val MAX_EVENTS = 2_000
         const val KEEP_LOCAL_MS = 14L * 24L * 60L * 60L * 1000L
         const val DEVICE_NAME = "sync.device_name"
-        const val BACKFILLED = "sync.backfilled"
-        const val LAST_OK = "sync.last_ok"
-        const val LAST_ERROR = "sync.last_error"
+        const val PROVIDER = "sync.provider"
+        const val BACKFILLED = Meta.SYNC_BACKFILLED
+        const val LAST_OK = Meta.SYNC_LAST_OK
+        const val LAST_ERROR = Meta.SYNC_LAST_ERROR
+        const val ACCOUNT = "sync.account"
+
+        /** Stored as the last error when the provider needs the user to sign in. */
+        const val ERROR_SIGN_IN = "sign-in"
+        const val PHASE_PREPARE = "prepare"
+        const val PHASE_SYNC = "sync"
 
         @Suppress("UNCHECKED_CAST")
         fun parseCard(json: String): DeviceCard? {
