@@ -33,6 +33,7 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.menu_tax_rates, null, TaxRatesActivity::class.java),
             Entry(R.string.menu_categories, null, CategoriesActivity::class.java),
             Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),
+            Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
             Entry(R.string.settings_about, null, null),
         )

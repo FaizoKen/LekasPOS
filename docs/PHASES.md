@@ -11,8 +11,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
-| 5 | Reports and CSV import/export | **built and verified in CI** — waiting for real-device feedback (tester build `v0.5.0-phase5`) |
-| 6 | Google Drive sync, local backup/restore, merge tests | not started |
+| 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
+| 6 | Google Drive sync, local backup/restore, merge tests | **in progress** |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
 
 ## Open questions for the user
@@ -338,7 +338,7 @@ continue with Phase 5. Printer, drawer, HID/SPP scanners and the 2 GB tablet sta
     (opens for floats, cash in/out, cash repayments), HID/SPP scanners (a scan on the lock screen
     must not count as a wrong PIN).
 
-## Phase 5 — reports, CSV import/export (waiting for feedback)
+## Phase 5 — reports, CSV import/export (done)
 
 - [x] Per-month product summary (`sum_month_product`, schema v4, D-043): reports read whole
       months from it and only the loose days at both ends from the per-day table
@@ -374,6 +374,11 @@ a rolling 365 days still reads the loose days at both ends from the per-day tabl
 The FULL test data sells most of its 50,000 products every month, which is the worst case for
 the month table; a real shop with a few thousand products gains more.
 
+### Real-device feedback (Phase 5, 2026-09-30)
+
+The user replied "good, now continue" to the Phase 5 build — taken as approval; no problems
+were reported. The checklist below stays for reference; hardware items remain carried forward.
+
 ### Needs real-device testing (Phase 5)
 
 1. **Upgrade**: install over the Phase 4 build — everything still there; Reports shows past sales.
@@ -392,7 +397,7 @@ the month table; a real shop with a few thousand products gains more.
    it imports; it keeps going and shows the result.
 8. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 6 — Google Drive sync, backup/restore, merge tests (planned)
+## Phase 6 — Google Drive sync, backup/restore, merge tests (in progress)
 
 - [ ] `SyncProvider`, `FolderProvider`, `GoogleDriveProvider` (appDataFolder, resumable transfers)
 - [ ] Outbox sealing, segment upload/import, snapshots, bootstrap, GC; WorkManager scheduling

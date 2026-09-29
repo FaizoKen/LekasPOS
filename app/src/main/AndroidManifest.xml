@@ -212,6 +212,10 @@
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
         <activity
+            android:name=".ui.settings.BackupActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
             android:name=".ui.scan.CameraScanActivity"
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
@@ -227,6 +231,17 @@
 
         <!-- Shared receipts (picture/PDF) leave the app only as content:// URIs with a
              one-off read grant. -->
+        <!-- WorkManager starts on demand (LekasApp is its Configuration.Provider), not at app start. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

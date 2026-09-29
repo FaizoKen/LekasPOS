@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteStatement
 import android.os.Looper
 import com.lekaspos.core.id.IdAllocator
 import com.lekaspos.core.time.Hlc
+import com.lekaspos.data.backup.BackupFiles
+import com.lekaspos.data.backup.Restore
 import java.io.Closeable
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -69,6 +71,23 @@ class Db private constructor(
         if (Thread.currentThread() === writerThread.get()) return transaction(reserveIds, block)
         return try {
             writerExecutor.submit<T> { transaction(reserveIds, block) }.get()
+        } catch (e: java.util.concurrent.ExecutionException) {
+            throw e.cause ?: e
+        }
+    }
+
+    /**
+     * Runs [block] on the writer thread OUTSIDE any transaction, so nothing else can write while
+     * it runs (backups: checkpoint and copy the file, D-044). Keep it short: sales wait meanwhile.
+     */
+    fun <T> onWriterThread(block: (SQLiteDatabase) -> T): T {
+        assertNotMainThread()
+        if (Thread.currentThread() === writerThread.get()) {
+            check(!sqlite.inTransaction()) { "not inside a transaction" }
+            return block(sqlite)
+        }
+        return try {
+            writerExecutor.submit<T> { block(sqlite) }.get()
         } catch (e: java.util.concurrent.ExecutionException) {
             throw e.cause ?: e
         }
@@ -151,8 +170,12 @@ class Db private constructor(
         /** Opens (creating/migrating if needed) the database [name]. Blocking; never on main. */
         fun open(context: Context, name: String = Schema.FILE_NAME, seedNames: SeedNames = SeedNames()): Db {
             assertNotMainThread()
+            // A restore staged before the restart goes in first; otherwise an upgrade is backed up (D-044).
+            val restored = Restore.applyIfStaged(context, name)
+            if (restored == null) backupBeforeUpgrade(context, name)
             val helper = DbOpenHelper(context.applicationContext, name, seedNames)
             val sqlite = helper.writableDatabase
+            if (restored != null) Restore.afterOpen(sqlite, restored)
             sqlite.setMaxSqlCacheSize(SQLiteDatabase.MAX_SQL_CACHE_SIZE)
             val deviceNo = Meta.getLong(sqlite, Meta.DEVICE_NO)?.toInt()
                 ?: throw IllegalStateException("database has no device identity")
@@ -161,6 +184,23 @@ class Db private constructor(
             val hlc = Hlc(System::currentTimeMillis, Meta.getLong(sqlite, Meta.HLC_LAST) ?: 0L)
             val ids = IdAllocator(deviceNo, MetaReservations(sqlite))
             return Db(sqlite, helper, name, deviceNo, storeUuid, ids, hlc)
+        }
+
+        /** Keeps a backup of a database about to be migrated to a newer schema (kept: the last 3). */
+        private fun backupBeforeUpgrade(context: Context, name: String) {
+            val file = context.getDatabasePath(name)
+            if (!file.exists()) return
+            try {
+                val version = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { it.version }
+                if (version <= 0 || version >= Schema.VERSION) return
+                val dir = Restore.backupDir(context).apply { mkdirs() }
+                java.io.FileOutputStream(File(dir, "upgrade-v$version-${System.currentTimeMillis()}${BackupFiles.EXT}")).use {
+                    BackupFiles.writeClosed(file, it, com.lekaspos.BuildConfig.VERSION_NAME, "upgrade")
+                }
+                dir.listFiles { f -> f.name.startsWith("upgrade-") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
+            } catch (e: Exception) {
+                com.lekaspos.util.Log.e("Backup before upgrade failed", e) // never block opening the store
+            }
         }
 
         fun assertNotMainThread() {

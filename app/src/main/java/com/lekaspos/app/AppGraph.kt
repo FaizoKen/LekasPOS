@@ -9,6 +9,7 @@ import com.lekaspos.data.db.SeedNames
 import com.lekaspos.domain.PermissionGate
 import com.lekaspos.domain.SettingsRepo
 import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.customer.CustomerService
 import com.lekaspos.domain.inventory.InventoryService
 import com.lekaspos.domain.products.ProductCsvService
@@ -59,6 +60,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val printer: PrinterService by lazy { PrinterService(app, this) }
     val sppScanner: SppScanner by lazy { SppScanner(app, this) }
     val perfRunner: PerfRunner by lazy { PerfRunner(app, appScope) }
+    val backups: BackupService by lazy { BackupService(this, app) }
 
     private fun defaultLanguage(): String {
         val locale = if (Build.VERSION.SDK_INT >= 24) {

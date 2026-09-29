@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.app.LekasApp
+import com.lekaspos.app.Work
 import com.lekaspos.core.cart.CartItem
 import com.lekaspos.core.credit.CreditMath
 import com.lekaspos.core.model.PaymentKind
@@ -232,6 +233,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
             delay(HARDWARE_DELAY_MS) // keep Bluetooth work out of the cold-start path
             graph.printer.start()
             graph.sppScanner.start()
+            val app = applicationContext
+            graph.appScope.launch(Dispatchers.IO) { Work.schedule(app) } // background jobs, after the till is usable (WorkManager starts here, off the main thread)
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }

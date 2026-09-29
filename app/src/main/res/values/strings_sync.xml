@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 6: backups, restore and sync. -->
+<resources>
+    <string name="backup_title">Backup &amp; restore</string>
+    <string name="settings_backup_sub">Backups on this phone, backup files, restore</string>
+    <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before every app upgrade or restore. To keep a copy somewhere else, save or share a backup file (USB, SD card, Google Drive, WhatsApp). Tap a backup to restore it; hold to delete it.</string>
+    <string name="backup_empty">No backups on this phone yet.</string>
+    <string name="backup_counts">sales: %1$d · products: %2$d</string>
+    <string name="backup_reason_auto">Automatic</string>
+    <string name="backup_reason_manual">Made by hand</string>
+    <string name="backup_reason_upgrade">Before an app upgrade</string>
+    <string name="backup_reason_replaced">Before a restore</string>
+    <string name="backup_reason_other">Backup</string>
+    <string name="backup_now">Back up now</string>
+    <string name="backup_working">Making the backup…</string>
+    <string name="backup_done">Backup made.</string>
+    <string name="backup_save_file">Save a backup file…</string>
+    <string name="backup_share">Share a backup file</string>
+    <string name="backup_restore_file">Restore from a file…</string>
+    <string name="backup_saved">Backup file saved.</string>
+    <string name="backup_not_a_backup">This is not a LekasPOS backup file.</string>
+    <string name="backup_restore_title">Restore a backup</string>
+    <string name="backup_restore_what">Backup of %1$s · %2$s · sales: %3$d · products: %4$d.</string>
+    <string name="backup_other_store">This backup belongs to a different store than the data on this phone.</string>
+    <string name="backup_restore_how">Everything on this phone will be replaced by the backup (a copy of the current data is kept first). Continue as the same till if the old phone is no longer used; choose a new till if both phones will be used.</string>
+    <string name="backup_mode_same">Restore this till</string>
+    <string name="backup_mode_replace">Replace the old phone</string>
+    <string name="backup_mode_new">Add as a new till</string>
+    <string name="backup_checking">Checking the backup…</string>
+    <string name="backup_restart">The backup is ready. The app restarts to finish the restore.</string>
+    <string name="backup_restart_now">Restart now</string>
+    <string name="backup_delete_confirm">Delete this backup from the phone?</string>
+</resources>

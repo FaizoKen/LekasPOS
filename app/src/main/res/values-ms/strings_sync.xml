@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 6: sandaran, pemulihan dan penyegerakan. -->
+<resources>
+    <string name="backup_title">Sandaran &amp; pemulihan</string>
+    <string name="settings_backup_sub">Sandaran dalam telefon ini, fail sandaran, pulihkan</string>
+    <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Untuk menyimpan salinan di tempat lain, simpan atau kongsi fail sandaran (USB, kad SD, Google Drive, WhatsApp). Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
+    <string name="backup_empty">Belum ada sandaran dalam telefon ini.</string>
+    <string name="backup_counts">jualan: %1$d · produk: %2$d</string>
+    <string name="backup_reason_auto">Automatik</string>
+    <string name="backup_reason_manual">Dibuat sendiri</string>
+    <string name="backup_reason_upgrade">Sebelum naik taraf aplikasi</string>
+    <string name="backup_reason_replaced">Sebelum pemulihan</string>
+    <string name="backup_reason_other">Sandaran</string>
+    <string name="backup_now">Buat sandaran sekarang</string>
+    <string name="backup_working">Membuat sandaran…</string>
+    <string name="backup_done">Sandaran dibuat.</string>
+    <string name="backup_save_file">Simpan fail sandaran…</string>
+    <string name="backup_share">Kongsi fail sandaran</string>
+    <string name="backup_restore_file">Pulihkan daripada fail…</string>
+    <string name="backup_saved">Fail sandaran disimpan.</string>
+    <string name="backup_not_a_backup">Ini bukan fail sandaran LekasPOS.</string>
+    <string name="backup_restore_title">Pulihkan sandaran</string>
+    <string name="backup_restore_what">Sandaran pada %1$s · %2$s · jualan: %3$d · produk: %4$d.</string>
+    <string name="backup_other_store">Sandaran ini milik kedai yang berlainan daripada data dalam telefon ini.</string>
+    <string name="backup_restore_how">Semua data dalam telefon ini akan diganti dengan sandaran (salinan data semasa disimpan dahulu). Teruskan sebagai kaunter yang sama jika telefon lama tidak digunakan lagi; pilih kaunter baharu jika kedua-dua telefon akan digunakan.</string>
+    <string name="backup_mode_same">Pulihkan kaunter ini</string>
+    <string name="backup_mode_replace">Ganti telefon lama</string>
+    <string name="backup_mode_new">Tambah sebagai kaunter baharu</string>
+    <string name="backup_checking">Menyemak sandaran…</string>
+    <string name="backup_restart">Sandaran sudah sedia. Aplikasi dimulakan semula untuk selesaikan pemulihan.</string>
+    <string name="backup_restart_now">Mula semula sekarang</string>
+    <string name="backup_delete_confirm">Padam sandaran ini daripada telefon?</string>
+</resources>
