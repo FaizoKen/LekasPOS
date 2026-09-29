@@ -10,7 +10,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
-| 4 | Users, roles, PIN, shifts, cash management, audit log | **in progress** |
+| 4 | Users, roles, PIN, shifts, cash management, audit log | **built and verified in CI** — waiting for real-device feedback (tester build `v0.4.0-phase4`) |
 | 5 | Reports and CSV import/export | not started |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
@@ -268,7 +268,7 @@ continue with Phase 4.
 7. **Stock history** of a product after all of the above (levels should add up).
 8. Carried over from Phase 2 when the hardware is available: printer, drawer, HID/SPP scanners.
 
-## Phase 4 — users, roles, PIN, shifts, cash management, audit (in progress)
+## Phase 4 — users, roles, PIN, shifts, cash management, audit (waiting for feedback)
 
 - [x] Staff with PIN login: PIN login stays off until the owner sets a PIN (a one-person shop
       works as before); pick your name, type a 4–6 digit PIN; salted PBKDF2 hash (D-037); 5 free
@@ -290,7 +290,48 @@ continue with Phase 4.
       into the drawer, refunds/voids give the credit back, statement with running balance,
       balance adjustments, who owes how much
 - [x] Schema v3 migration (D-040); sync events for staff, roles, shifts, cash and credit
-- [ ] CI (API 21/36), perf FULL, release APK size, tester build
+- [x] CI (API 21/36), perf FULL, release APK size, tester build
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **726 KB** (743,960 bytes; Phase 3: 628 KB; budget 8 MB), version `0.4.0-ci.<run>` |
+| JVM tests | `:core` 145 (PIN hashing checked against the JDK's PBKDF2, lockout, recovery codes, permissions, shift cash, report layout 32/42/48 columns EN/BM, credit rules), `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **86/86 on API 21** (Android 5.0, SQLite 3.8.6) and **86/86 on API 36**: migration v2 → v3 incl. role defaults, PIN login and restart, lockout, manager approvals and screen approvals, last-owner protection, recovery code, roles, shift expected cash with refunds/voids/movements, void in a later shift, required shift, credit sales, limit approval, refunds/voids reversing credit, statement paging, balance rebuild, 10 new screens incl. the lock screen |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 56/56 query plans indexed; shift_report (a full day) p95 6.9 ms, customer/statement pages < 1 ms, pin_check 31 ms, sale_commit 10 ms, report_year 1.16 s |
+| Perf FULL, API 36 emulator | **PASS**, 56/56 plans; shift_report 1.5 ms, pin_check 12 ms |
+| Cold start to usable selling screen | API 21: 557–605 ms; API 36: 405–467 ms — budget 2 s |
+| Schema | v3 (D-040) — upgrades Phase 1–3 installs in place |
+
+### Needs real-device testing (Phase 4)
+
+1. **Upgrade**: install over the Phase 3 build — everything still there, the app opens
+   straight to selling (no PIN yet).
+2. **Turn on PIN login**: Settings → Staff → tap the owner → Set PIN (twice) → write down the
+   recovery code. Add a cashier and a manager, each with a PIN. Menu → Lock / switch user.
+3. **Sign in**: choose a name, type the PIN; try 5 wrong PINs — the till makes you wait;
+   force-stop and reopen — the same person is still signed in.
+4. **Manager approval**: signed in as the cashier, give a discount, change a price, cancel a
+   bill, void a sale, reprint — each asks for the manager's PIN; Settings → Activity log shows
+   who did it and who approved it (try the filter).
+5. **Roles**: Staff → ⋮ → Roles → Cashier → switch on "Give discounts" → the cashier no longer
+   needs approval for discounts.
+6. **Idle lock**: Staff → ⋮ → Lock when idle → 1 min; leave the phone for a minute.
+7. **Forgotten owner PIN**: lock → owner → Forgot PIN? → the recovery code → new PIN.
+8. **Shift**: Menu → Shift & cash → Open shift with a float → cash sale, card sale, cash refund,
+   Cash in / Cash out / Cash drop → Close shift: count the drawer; check the report's expected
+   cash and difference; as the cashier the close is blind. With a printer: print the report.
+9. **Require a shift**: Settings → Store → "Require an open shift…" → pay without a shift → asked
+   to open one.
+10. **Customers & credit**: Settings → Store → "Customers and credit" on → Add customer on the
+    bill (new one with a small limit) → pay with Customer credit → result shows what they owe;
+    try going over the limit (manager approval); Menu → Customers → the customer → Take a
+    repayment in cash → statement; refund part of a credit sale to credit.
+11. Carried over when the hardware is available: printer (now also the shift report), drawer
+    (opens for floats, cash in/out, cash repayments), HID/SPP scanners (a scan on the lock screen
+    must not count as a wrong PIN).
 
 ## Phase 5 — reports, CSV import/export (planned)
 
