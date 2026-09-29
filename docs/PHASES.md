@@ -11,7 +11,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
-| 5 | Reports and CSV import/export | **in progress** |
+| 5 | Reports and CSV import/export | **built and verified in CI** — waiting for real-device feedback (tester build `v0.5.0-phase5`) |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
 
@@ -338,7 +338,7 @@ continue with Phase 5. Printer, drawer, HID/SPP scanners and the 2 GB tablet sta
     (opens for floats, cash in/out, cash repayments), HID/SPP scanners (a scan on the lock screen
     must not count as a wrong PIN).
 
-## Phase 5 — reports, CSV import/export (in progress)
+## Phase 5 — reports, CSV import/export (waiting for feedback)
 
 - [x] Per-month product summary (`sum_month_product`, schema v4, D-043): reports read whole
       months from it and only the loose days at both ends from the per-day table
@@ -352,7 +352,45 @@ continue with Phase 5. Printer, drawer, HID/SPP scanners and the 2 GB tablet sta
 - [x] Products CSV (D-042): export, example file, import with a preview (new / updated /
       problems per line), English or Malay headers, categories created, tax by name or %,
       opening stock for new products, optional stock count for existing ones
-- [ ] CI (API 21/36), perf FULL, release APK size, tester build
+- [x] Fixed on the way: the best-sellers list sorted by the tax column instead of net sales
+      before its limit (since Phase 1) — with no tax configured the "top" list was arbitrary
+- [x] CI (API 21/36), perf FULL, release APK size, tester build
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **777 KB** (795,780 bytes; Phase 4: 726 KB; budget 8 MB), version `0.5.0-ci.<run>` |
+| JVM tests | `:core` 163 (CSV reading/writing incl. quotes, line breaks, BOM, delimiter detection; product CSV headers and rows; periods, month split, buckets, margins), `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **95/95 on API 21** and **95/95 on API 36**: migration v3 → v4 fills the month table from day rows, month table = its days after sales/voids/refunds and after a rebuild (SQLite and :core agree on every month), split ranges = day-only answers, best sellers by net and by qty, report permission, slow movers, stock value, receipt export paging, product CSV round trip, preview problems per line, import rules, report/import screens |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 65/65 query plans indexed; report screen: day 24 ms, 30 days 0.27 s, rolling year 1.25 s, calendar year 0.30 s; slow movers 0.25 s, stock value 0.10 s; CSV: a month of receipts (~20k) 0.29 s, 50,600 products 0.81 s; import 200 rows 0.28 s |
+| Perf FULL, API 36 emulator | **PASS**, 65/65 plans; rolling year 0.67 s, calendar year 0.12 s |
+| Cold start to usable selling screen | API 21: 597–762 ms; API 36: 546–683 ms — budget 2 s |
+| Schema | v4 (D-043) — upgrades Phase 1–4 installs in place |
+
+Note on long reports: a calendar year (whole months) now takes 0.30 s on the API 21 emulator;
+a rolling 365 days still reads the loose days at both ends from the per-day table (1.25 s there).
+The FULL test data sells most of its 50,000 products every month, which is the worst case for
+the month table; a real shop with a few thousand products gains more.
+
+### Needs real-device testing (Phase 5)
+
+1. **Upgrade**: install over the Phase 4 build — everything still there; Reports shows past sales.
+2. **Reports** (menu → Reports; a cashier needs a manager's PIN): Today, This week, This month,
+   Choose dates — compare Today with your shift report; look at best sellers, categories,
+   payment methods, cashiers, and the change against the period before.
+3. **Stock**: the stock value at the bottom; "Not sold in this period" (tap a product to open it).
+4. **Exports** (⋮ on Reports): each of the four, once shared to WhatsApp or e-mail and once
+   saved as a file; open them in Google Sheets or Excel — names with Malay or Chinese letters,
+   dates and amounts must look right.
+5. **Products CSV** (Products → ⋮): Export, open in a spreadsheet, change a price, add a new
+   product and a line with a wrong price ("abc"), save as CSV, Import — the preview must show one
+   update, one new product and one problem with its line number; import and check the products.
+6. **Example CSV file**: fill it in Google Sheets (download as CSV) and import it.
+7. Optional: a big file (a few thousand products) — rotate the phone or leave the screen while
+   it imports; it keeps going and shows the result.
+8. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
 ## Phase 6 — Google Drive sync, backup/restore, merge tests (planned)
 
