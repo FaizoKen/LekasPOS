@@ -9,8 +9,24 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lekaspos.R
+import com.lekaspos.app.LekasApp
+import com.lekaspos.core.inventory.ReceiveDraft
+import com.lekaspos.testing.TestDb
+import kotlinx.coroutines.runBlocking
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
+import com.lekaspos.ui.inventory.CountActivity
+import com.lekaspos.ui.inventory.CountReportActivity
+import com.lekaspos.ui.inventory.CountSessionsActivity
+import com.lekaspos.ui.inventory.InventoryActivity
+import com.lekaspos.ui.inventory.LowStockActivity
+import com.lekaspos.ui.inventory.MovementsActivity
+import com.lekaspos.ui.inventory.ProductPickActivity
+import com.lekaspos.ui.inventory.PurchaseDetailActivity
+import com.lekaspos.ui.inventory.PurchasesActivity
+import com.lekaspos.ui.inventory.ReceiveActivity
+import com.lekaspos.ui.inventory.StockHistoryActivity
+import com.lekaspos.ui.inventory.SuppliersActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
 import com.lekaspos.ui.sales.SalesActivity
@@ -33,8 +49,11 @@ class ScreensSmokeTest {
 
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private fun open(cls: Class<out Activity>, extras: Intent.() -> Unit = {}, check: (Activity) -> Unit = {}) {
-        ActivityScenario.launch<Activity>(Intent(ctx, cls).apply(extras)).use { scenario ->
+    private fun open(cls: Class<out Activity>, extras: Intent.() -> Unit = {}, check: (Activity) -> Unit = {}) =
+        open(Intent(ctx, cls).apply(extras), check)
+
+    private fun open(intent: Intent, check: (Activity) -> Unit = {}) {
+        ActivityScenario.launch<Activity>(intent).use { scenario ->
             scenario.onActivity { check(it) }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         }
@@ -46,10 +65,27 @@ class ScreensSmokeTest {
             ProductListActivity::class.java, CategoriesActivity::class.java, TaxRatesActivity::class.java,
             SalesActivity::class.java, SettingsActivity::class.java, StoreSettingsActivity::class.java,
             PrinterSettingsActivity::class.java, ScannerSettingsActivity::class.java, AuditLogActivity::class.java,
+            InventoryActivity::class.java, ReceiveActivity::class.java, SuppliersActivity::class.java, PurchasesActivity::class.java,
+            CountSessionsActivity::class.java, LowStockActivity::class.java, MovementsActivity::class.java, ProductPickActivity::class.java,
         )) {
             open(cls)
         }
         open(ProductEditActivity::class.java, { putExtra(ProductEditActivity.EXTRA_BARCODE, "9556001234567") })
+    }
+
+    @Test
+    fun stockScreensOpenWithTheirData() {
+        val graph = LekasApp.graph(ctx)
+        val db = runBlocking { graph.db() }
+        val product = TestDb.product(db, "Smoke test item", 100L)
+        val session = runBlocking { graph.inventory.startCount("Smoke test", null) }
+        runBlocking { graph.inventory.count(session, product, 3_000L) }
+        val draft = ReceiveDraft().add(1L, product, "Smoke test item", "pcs", 2_000L, 50L).first
+        val purchase = runBlocking { graph.inventory.receive(draft) }
+        open(StockHistoryActivity.intent(ctx, product))
+        open(CountActivity.intent(ctx, session))
+        open(CountReportActivity.intent(ctx, session))
+        open(PurchaseDetailActivity.intent(ctx, purchase))
     }
 
     @Test

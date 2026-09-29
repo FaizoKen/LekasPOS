@@ -114,3 +114,13 @@ Bill level:
 | cash rounding MYR | 1006, 1007, 1008, 1009 | 1005, 1005, 1010, 1010 |
 | split tender | total 1003, card 500, cash rest | cash due 505 (503 → 505), rounding +2 |
 | refund mirror | refund −1003 in cash | −1005, rounding −2 |
+
+## 10. Cost and stock value (Phase 3, D-033)
+
+- Product cost (minor units per base unit) is the **moving weighted average**: receiving
+  `q` units for line amount `T` with `h` on hand at cost `c` gives
+  `roundHalfUp(h × c + T × 1000, h + q)`; with `h ≤ 0` the new cost is `roundHalfUp(T × 1000, q)`.
+- A delivery line keeps the invoice amount `T` exactly when the user types it; the unit cost is
+  derived from it. Line value = `roundHalfUp(qty × unitCost, 1000)`.
+- Count variance value = `roundHalfUp((counted − expected) × unitCost, 1000)` with the cost stored
+  on the count (negative = loss).

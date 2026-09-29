@@ -19,6 +19,7 @@ import com.lekaspos.R
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.MoneyFormat
@@ -35,6 +36,8 @@ import com.lekaspos.data.stock.StockDao
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.inventory.StockHistoryActivity
+import com.lekaspos.ui.inventory.adjustProduct
 import com.lekaspos.ui.scan.CameraScanActivity
 
 /**
@@ -69,6 +72,7 @@ class ProductEditActivity : ScreenActivity() {
     private lateinit var lowStock: EditText
     private lateinit var active: Switch
     private lateinit var stockInfo: TextView
+    private var opening: EditText? = null
 
     private val currency get() = graph.settings.store.value.currency
 
@@ -160,6 +164,12 @@ class ProductEditActivity : ScreenActivity() {
             getString(R.string.product_low_stock), p?.lowStock?.takeIf { it > 0L }?.let { MoneyFormat.formatQty(it) }, QTY_INPUT,
         )
         stockInfo = form.info(if (stock != null) getString(R.string.product_stock_now, MoneyFormat.formatQty(stock)) else "")
+        if (p == null) {
+            opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
+        } else {
+            form.button(getString(R.string.hist_title)) { startActivity(StockHistoryActivity.intent(this, p.id)) }
+            form.button(getString(R.string.inv_adjust)) { adjustProduct(p.id) { reloadStock(p.id) } }
+        }
         active = form.switch(getString(R.string.product_active), p?.active ?: true)
         form.button(getString(R.string.save), primary = true) { save() }
         if (p != null) form.button(getString(R.string.delete)) { delete() }
@@ -168,6 +178,13 @@ class ProductEditActivity : ScreenActivity() {
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+    private fun reloadStock(id: Long) {
+        launchUi {
+            val stock = graph.db().read { StockDao.level(it, id) }
+            stockInfo.text = getString(R.string.product_stock_now, MoneyFormat.formatQty(stock))
+        }
+    }
 
     // ------------------------------------------------------------------ barcodes
 
@@ -282,12 +299,15 @@ class ProductEditActivity : ScreenActivity() {
         val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency)
         val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString())
         val pluText = plu.text.toString().trim().trimStart('0')
+        val openingText = opening?.text?.toString()?.trim().orEmpty()
+        val openingQty = if (openingText.isEmpty()) 0L else MoneyFormat.parseQty(openingText)
         when {
             n.isEmpty() -> return fieldError(name, R.string.product_error_name)
             pr == null || pr < 0L -> return fieldError(price, R.string.product_error_price)
             c == null || c < 0L -> return fieldError(cost, R.string.product_error_price)
             low == null || low < 0L -> return fieldError(lowStock, R.string.product_error_qty)
             plu.text.isNotBlank() && pluText.isEmpty() -> return fieldError(plu, R.string.product_error_plu)
+            openingQty == null || openingQty < 0L -> return opening?.let { fieldError(it, R.string.product_error_qty) } ?: Unit
         }
         val mode = sellMode.selectedItemPosition.coerceIn(0, 2)
         val p = Product(
@@ -324,14 +344,14 @@ class ProductEditActivity : ScreenActivity() {
                     return@launchUi
                 }
             }
-            val id = persist(p, wanted)
+            val id = persist(p, wanted, openingQty ?: 0L)
             setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT_ID, id))
             toast(R.string.product_saved)
             finish()
         }
     }
 
-    private suspend fun persist(p: Product, wanted: List<Code>): Long {
+    private suspend fun persist(p: Product, wanted: List<Code>, openingQty: Long): Long {
         val staff = graph.staff.staffId
         val c = currency
         return graph.db().write(reserveIds = wanted.size + 16L) { tx ->
@@ -341,6 +361,7 @@ class ProductEditActivity : ScreenActivity() {
                 val id = tx.nextId()
                 val barcodes = wanted.map { Barcode(tx.nextId(), id, it.code, it.kind, it.packQty, it.packPrice) }
                 ProductDao.create(tx, p.copy(id = id), barcodes, now)
+                if (openingQty > 0L) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
                 id
             } else {
                 val changed = ProductDao.update(tx, before, p, now)

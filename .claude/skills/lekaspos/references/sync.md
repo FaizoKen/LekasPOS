@@ -53,7 +53,12 @@ Every synced change is one event appended to `outbox` in the same transaction as
 | `CASH_MOVE`, `CREDIT`, `AUDIT` | row | insert-or-ignore (+ derived balance for credit) |
 
 LWW entities: `setting` (per key), `role`, `staff`, `tax_rate`, `category`, `product`,
-`product_barcode`, `supplier`, `customer`, `payment_method`, `shift`.
+`product_barcode`, `supplier`, `customer`, `payment_method`, `shift`, `count_session`.
+
+Stock work (D-036): a PURCHASE event regenerates its RECEIVE movements with the purchase-line
+ids; the moving-average cost change travels separately as an ordinary LWW `product.cost` edit,
+so importers never recompute averages (D-033). A STOCK_COUNT row carries `expected`/`unit_cost`
+for reports only; stock levels use just its qty and HLC.
 
 ### Conflict semantics (these become the merge tests)
 

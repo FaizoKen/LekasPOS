@@ -4,10 +4,14 @@ import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.DerivedRebuild
 import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.purchase.PurchaseDao
 import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleQueries
+import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.data.stock.StockHistoryDao
+import com.lekaspos.data.supplier.SupplierDao
 
 /**
  * Verifies with EXPLAIN QUERY PLAN (references/database.md §8):
@@ -29,11 +33,15 @@ object QueryPlans {
     private val INDEX_ORDERED = setOf(
         "history_first", "history_next", "product_history", "category_page", "search_prefix", "search_barcode_prefix",
         "product_manage_page", "product_sell_page", "audit_first", "audit_next",
+        "low_stock_next", "movements_first", "movements_next", "purchases_first", "purchases_next",
+        "purchases_supplier_first", "purchases_supplier_next", "session_counts_first", "session_counts_next",
+        "count_sessions", "history_sales", "history_moves", "history_counts", "supplier_list",
     )
 
     fun hotQueries(): List<Pair<String, String>> =
         ProductDao.HOT_QUERIES + SaleDao.HOT_QUERIES + SaleQueries.HOT_QUERIES + StockDao.HOT_QUERIES +
-            ReportDao.HOT_QUERIES + AuditDao.HOT_QUERIES
+            ReportDao.HOT_QUERIES + AuditDao.HOT_QUERIES + PurchaseDao.HOT_QUERIES + SupplierDao.HOT_QUERIES +
+            CountSessionDao.HOT_QUERIES + StockHistoryDao.HOT_QUERIES
 
     fun maintenanceQueries(): List<Pair<String, String>> = DerivedRebuild.MAINTENANCE_QUERIES
 

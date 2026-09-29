@@ -26,6 +26,9 @@ import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.SellableProduct
+import com.lekaspos.data.purchase.PurchaseDao
+import com.lekaspos.data.purchase.PurchaseIn
+import com.lekaspos.data.purchase.PurchaseLineIn
 import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
@@ -33,7 +36,9 @@ import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleLineDraft
 import com.lekaspos.data.sale.SaleRow
 import com.lekaspos.data.settings.StoreSettings
+import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.data.stock.StockHistoryDao
 import com.lekaspos.domain.print.ReceiptBuilder
 import com.lekaspos.hw.printer.ReceiptRenderer
 import java.util.Random
@@ -137,6 +142,13 @@ class PerfSuite(
                 val draft = saleDraft(saleProducts, i)
                 db.writeBlocking(reserveIds = 20) { tx -> SaleDao.commit(tx, draft, tz) }
             })
+            // A 20-line delivery: purchase, lines, movements, 20 moving-average cost updates, outbox.
+            add(measure("receive_commit", 300.0, warmup = 2, n = 30) { i ->
+                val lines = List(20) { k ->
+                    PurchaseLineIn(saleProducts[(i * 20 + k) % saleProducts.size].id, 12_000L, 100L, 1_200L)
+                }
+                db.writeBlocking(reserveIds = 60) { tx -> PurchaseDao.commit(tx, PurchaseIn(null, "PERF", null, lines), null, System.currentTimeMillis()) }
+            })
         } finally {
             db.syncEnabled = wasSync
         }
@@ -175,6 +187,16 @@ class PerfSuite(
             StockDao.level(r, samples.popular[i % samples.popular.size])
         })
         add(measure("low_stock_page", 300.0, warmup = 2, n = 20) { StockDao.lowStock(r, 50) })
+        add(measure("low_stock_count", 300.0, warmup = 1, n = 5) { StockDao.lowStockCount(r) })
+        add(measure("stock_history_page", 50.0, warmup = 5, n = 60) { i ->
+            StockHistoryDao.page(r, samples.popular[i % samples.popular.size], null, 50)
+        })
+        add(measure("movement_page", 50.0, warmup = 5, n = 60) { StockDao.movementPage(r, null, 50) })
+        add(measure("purchase_page", 50.0, warmup = 5, n = 60) { PurchaseDao.page(r, null, null, 50) })
+        val sessions = CountSessionDao.list(r, 20)
+        if (sessions.isNotEmpty()) {
+            add(measure("count_page", 50.0, warmup = 5, n = 60) { i -> CountSessionDao.counts(r, sessions[i % sessions.size].id, null, 50) })
+        }
 
         val today = Days.epochDay(System.currentTimeMillis(), tz)
         for ((id, days, budget, n) in listOf(

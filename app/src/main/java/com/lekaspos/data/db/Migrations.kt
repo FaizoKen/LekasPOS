@@ -14,7 +14,23 @@ object Migrations {
      * Ordered steps. Never edit a step that shipped; add a new one. Column changes use the
      * table-rebuild pattern (no RENAME/DROP COLUMN on API 21) — see references/database.md §9.
      */
-    val ALL: List<Migration> = emptyList()
+    val ALL: List<Migration> = listOf(
+        // v1 → v2 (Phase 3, D-034): count sessions, expected qty and cost on counts, movement log index.
+        Migration(1, 2) { db ->
+            db.execSQL("ALTER TABLE stock_count ADD COLUMN expected INTEGER")
+            db.execSQL("ALTER TABLE stock_count ADD COLUMN unit_cost INTEGER")
+            db.execSQL(
+                "CREATE TABLE count_session (id INTEGER PRIMARY KEY, name TEXT NOT NULL, " +
+                    "status INTEGER NOT NULL DEFAULT 0, category_id INTEGER, started_at INTEGER NOT NULL, " +
+                    "finished_at INTEGER, staff_id INTEGER, note TEXT, deleted INTEGER NOT NULL DEFAULT 0, " +
+                    "created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, ver_hlc INTEGER NOT NULL, " +
+                    "ver_dev INTEGER NOT NULL, fver TEXT)",
+            )
+            db.execSQL("CREATE INDEX count_session_started ON count_session(started_at) WHERE deleted = 0")
+            db.execSQL("CREATE INDEX stock_count_session ON stock_count(session_id, hlc)")
+            db.execSQL("CREATE INDEX stock_movement_hlc ON stock_movement(hlc)")
+        },
+    )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {
         var v = from

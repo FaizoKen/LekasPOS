@@ -10,6 +10,8 @@ import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleLineDraft
+import com.lekaspos.data.stock.LowStockItem
+import com.lekaspos.data.stock.StockDao
 import com.lekaspos.util.Log
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +38,15 @@ data class Tender(
  */
 class CheckoutService(private val graph: AppGraph) {
 
-    data class Done(val saleId: Long, val receiptNo: String, val total: Long, val change: Long, val receiptQueued: Boolean)
+    /** [lowStock]: products of this sale that are now at or below their alert level. */
+    data class Done(
+        val saleId: Long,
+        val receiptNo: String,
+        val total: Long,
+        val change: Long,
+        val receiptQueued: Boolean,
+        val lowStock: List<LowStockItem> = emptyList(),
+    )
 
     /** Result of the last checkout until the selling screen acknowledges it (survives rotation). */
     sealed class Outcome {
@@ -86,7 +96,8 @@ class CheckoutService(private val graph: AppGraph) {
                     queued = true
                 }
             }
-            Done(sale.id, sale.receiptNo, draft.total, draft.change, queued)
+            val low = StockDao.lowAmong(tx.db, draft.lines.mapNotNull { if (it.trackStock) it.productId else null })
+            Done(sale.id, sale.receiptNo, draft.total, draft.change, queued, low)
         }
         graph.printer.wake()
         return done

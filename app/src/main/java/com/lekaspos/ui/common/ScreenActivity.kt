@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
  */
 abstract class ScreenActivity : Activity(), DialogHost {
 
-    protected val graph: AppGraph get() = LekasApp.graph(this)
+    val graph: AppGraph get() = LekasApp.graph(this)
 
     /** Loads and saves started by this screen; cancelled when it is destroyed. */
     protected val scope: CoroutineScope = MainScope()
@@ -87,12 +87,12 @@ abstract class ScreenActivity : Activity(), DialogHost {
         super.onDestroy()
     }
 
-    protected fun toast(text: CharSequence) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+    fun toast(text: CharSequence) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
-    protected fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
+    fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
 
     /** Runs [block] in [scope]; failures are logged and shown instead of crashing the screen. */
-    protected fun launchUi(block: suspend CoroutineScope.() -> Unit): Job = scope.launch {
+    fun launchUi(block: suspend CoroutineScope.() -> Unit): Job = scope.launch {
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {

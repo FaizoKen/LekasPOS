@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 1
+    const val VERSION = 2
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -143,6 +143,18 @@ object Schema {
             note TEXT,$LWW
         )""",
         "CREATE INDEX shift_opened ON shift(opened_at)",
+        // v2: a stock count (stock take). Counts apply as they are entered; the session groups them.
+        """CREATE TABLE count_session (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            status INTEGER NOT NULL DEFAULT 0,
+            category_id INTEGER,
+            started_at INTEGER NOT NULL,
+            finished_at INTEGER,
+            staff_id INTEGER,
+            note TEXT,$LWW
+        )""",
+        "CREATE INDEX count_session_started ON count_session(started_at) WHERE deleted = 0",
 
         // ---------- EVENT: append-only facts ----------
         """CREATE TABLE cash_movement (
@@ -255,6 +267,8 @@ object Schema {
             hlc INTEGER NOT NULL
         )""",
         "CREATE INDEX stock_movement_product ON stock_movement(product_id, hlc)",
+        "CREATE INDEX stock_movement_hlc ON stock_movement(hlc)",
+        // v2: expected + unit_cost are what the app had just before the count (variance reports).
         """CREATE TABLE stock_count (
             id INTEGER PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -263,9 +277,13 @@ object Schema {
             staff_id INTEGER,
             note TEXT,
             at INTEGER NOT NULL,
-            hlc INTEGER NOT NULL
+            hlc INTEGER NOT NULL,
+            expected INTEGER,
+            unit_cost INTEGER
         )""",
         "CREATE INDEX stock_count_product ON stock_count(product_id, hlc)",
+        // Not partial: session lists count rows in a correlated subquery (3.8 ignores partial indexes there, D-021).
+        "CREATE INDEX stock_count_session ON stock_count(session_id, hlc)",
         """CREATE TABLE purchase (
             id INTEGER PRIMARY KEY,
             supplier_id INTEGER,
@@ -434,7 +452,7 @@ object Schema {
     /** Tables by sync class (every table must appear exactly once; checked by SchemaTest). */
     val LWW_TABLES = listOf(
         "setting", "role", "staff", "tax_rate", "category", "product", "product_barcode",
-        "supplier", "customer", "payment_method", "shift",
+        "supplier", "customer", "payment_method", "shift", "count_session",
     )
     val EVENT_TABLES = listOf(
         "cash_movement", "sale", "sale_line", "payment", "sale_void", "stock_movement",

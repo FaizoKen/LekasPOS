@@ -18,6 +18,10 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `cart_persist` | persist one cart-line change (writer thread, async) | — | ≤ 100 ms (not user-blocking) |
 | `receipt_text` | build a stored 5-line receipt + ESC/POS text job (printer thread) | 1M lines | ≤ 50 ms |
 | `receipt_image` | same, rendered as a 384-dot picture (Chinese/Tamil receipts) | 1M lines | ≤ 500 ms |
+| `receive_commit` | a 20-line delivery: purchase, movements, 20 average-cost updates, outbox | 1M lines | ≤ 300 ms |
+| `stock_history_page` | 50 newest stock events of a popular product (3 merged index reads) | 1M lines | ≤ 50 ms |
+| `movement_page` / `purchase_page` / `count_page` | first page of the stock-change log, deliveries, a count | FULL | ≤ 50 ms |
+| `low_stock_count` | how many products are low (scans the catalogue; inventory screen only) | 50k products | ≤ 300 ms |
 | `history_page_first` / `_deep` | 50 sales, newest / ~1 year back (keyset) | 1M lines | ≤ 50 ms |
 | `receipt_lookup` | sale by receipt number | 1M lines | ≤ 10 ms |
 | `product_history_page` | 50 most recent lines of one product | 1M lines | ≤ 50 ms |

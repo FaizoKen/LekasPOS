@@ -105,7 +105,16 @@ object Perm {
     const val MANAGE_PRODUCTS = 1L shl 6
     const val SETTINGS = 1L shl 7
     const val CANCEL_BILL = 1L shl 8
+
+    /** Receive stock, adjust stock, count stock, edit suppliers. */
+    const val MANAGE_STOCK = 1L shl 9
     const val ALL = -1L
+}
+
+/** `count_session.status`. */
+object CountSessionStatus {
+    const val OPEN = 0
+    const val FINISHED = 1
 }
 
 /** `print_job.kind`. */
@@ -129,6 +138,7 @@ object Entity {
     const val CUSTOMER = 9
     const val PAYMENT_METHOD = 10
     const val SHIFT = 11
+    const val COUNT_SESSION = 12
     const val SALE = 20
     const val SALE_VOID = 21
     const val STOCK_MOVE = 22

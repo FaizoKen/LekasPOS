@@ -7,12 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -35,7 +31,6 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
-import com.lekaspos.core.scan.ScanBuffer
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.PaymentMethodDao
@@ -51,7 +46,9 @@ import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.DialogHost
 import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.diag.DiagnosticsActivity
+import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
 import com.lekaspos.ui.sales.ReceiptShare
@@ -110,13 +107,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var catalogEnd = false
     private var searchJob: Job? = null
 
-    private val scanBuffer = ScanBuffer()
-    private val handler = Handler(Looper.getMainLooper())
-    private val idleCheck = object : Runnable {
-        override fun run() {
-            if (scanBuffer.isIdle(SystemClock.uptimeMillis())) deliver(scanBuffer.onIdle()) else if (!scanBuffer.isEmpty) handler.postDelayed(this, 50L)
-        }
-    }
+    private val scanInput = ScanInput(onScan = { onScanned(it) }, onTyped = { text, submit -> typed(text, submit) })
 
     private var beeper: Beeper? = null
     private var outcomeDialog: AlertDialog? = null
@@ -234,8 +225,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         started?.cancel()
         started = null
         graph.sppScanner.stop()
-        handler.removeCallbacks(idleCheck)
-        scanBuffer.clear()
+        scanInput.clear()
         super.onStop()
     }
 
@@ -366,47 +356,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
         backKey(event) || (!search.hasFocus() && scanKey(event)) || super.dispatchKeyEvent(event)
 
     /** Keyboard-wedge scanner input while no text field has focus (also forwarded by dialogs). */
-    fun scanKey(e: KeyEvent): Boolean {
-        if (e.action == KeyEvent.ACTION_MULTIPLE && e.keyCode == KeyEvent.KEYCODE_UNKNOWN) {
-            val chars = e.characters ?: return false
-            for (c in chars) {
-                if (c == '\n' || c == '\r') deliver(scanBuffer.onTerminator()) else if (c >= ' ') feed(c, e.eventTime)
-            }
-            return true
-        }
-        if (e.action != KeyEvent.ACTION_DOWN) return false
-        when (e.keyCode) {
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB -> {
-                if (scanBuffer.isEmpty) return false
-                handler.removeCallbacks(idleCheck)
-                deliver(scanBuffer.onTerminator())
-                return true
-            }
-        }
-        val ch = e.getUnicodeChar(e.metaState)
-        if (ch <= 0x1F || ch and KeyCharacterMap.COMBINING_ACCENT != 0) return false
-        feed(ch.toChar(), e.eventTime)
-        return true
-    }
+    fun scanKey(e: KeyEvent): Boolean = scanInput.onKey(e)
 
-    private fun feed(c: Char, at: Long) {
-        scanBuffer.onChar(c, at)
-        handler.removeCallbacks(idleCheck)
-        handler.postDelayed(idleCheck, ScanBuffer.IDLE_MS)
-    }
-
-    private fun deliver(r: ScanBuffer.Result?) {
-        when (r) {
-            null -> Unit
-            is ScanBuffer.Result.Scan -> onScanned(r.code)
-            is ScanBuffer.Result.Typed -> {
-                // A person typing on a keyboard: continue in the search field.
-                search.setText(r.text)
-                search.setSelection(r.text.length)
-                search.requestFocus()
-                if (r.submit) submitSearch()
-            }
-        }
+    /** A person typing on a keyboard: continue in the search field. */
+    private fun typed(text: String, submit: Boolean) {
+        search.setText(text)
+        search.setSelection(text.length)
+        search.requestFocus()
+        if (submit) submitSearch()
     }
 
     /** Every scan ends here: HID buffer, search field, SPP scanner. */
@@ -693,13 +650,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
         val items = listOf(
-            R.string.menu_products, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales,
+            R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales,
             R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics,
         )
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
+                R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))
                 R.string.menu_categories -> startActivity(Intent(this, CategoriesActivity::class.java))
                 R.string.menu_tax_rates -> startActivity(Intent(this, TaxRatesActivity::class.java))
                 R.string.menu_sales -> startActivity(Intent(this, SalesActivity::class.java))
@@ -765,6 +723,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
             !device.hasPrinter -> getString(R.string.result_no_printer)
             else -> ""
         }
+        val low = v.findViewById<TextView>(R.id.result_low_stock)
+        low.text = if (done.lowStock.isEmpty()) "" else getString(R.string.result_low_stock, done.lowStock.joinToString(", ") { "${it.name} (${MoneyFormat.formatQty(it.qty)})" })
+        low.visible(done.lowStock.isNotEmpty())
         val d = AlertDialog.Builder(this).setView(v).create()
         val print = v.findViewById<Button>(R.id.result_print)
         print.visible(device.hasPrinter)

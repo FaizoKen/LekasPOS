@@ -9,6 +9,7 @@ import com.lekaspos.data.db.SeedNames
 import com.lekaspos.domain.PermissionGate
 import com.lekaspos.domain.SettingsRepo
 import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.inventory.InventoryService
 import com.lekaspos.domain.sale.SaleActions
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
@@ -44,6 +45,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val cart: CartSession by lazy { CartSession(this) }
     val checkout: CheckoutService by lazy { CheckoutService(this) }
     val sales: SaleActions by lazy { SaleActions(this) }
+    val inventory: InventoryService by lazy { InventoryService(this) }
     val printer: PrinterService by lazy { PrinterService(app, this) }
     val sppScanner: SppScanner by lazy { SppScanner(app, this) }
     val perfRunner: PerfRunner by lazy { PerfRunner(app, appScope) }

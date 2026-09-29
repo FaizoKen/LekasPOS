@@ -65,6 +65,7 @@ class PerfDataGenerator(
             val now = System.currentTimeMillis()
             val catalog = createCatalog(db, now, progress, cancelled)
             createSales(db, catalog, now, progress, cancelled)
+            createStockWork(db, catalog, now, progress, cancelled)
             val steps = listOf<(Db.Tx) -> Unit>(DerivedRebuild::refundedAmounts, DerivedRebuild::stockLevels, DerivedRebuild::summaries)
             for ((i, step) in steps.withIndex()) {
                 if (cancelled()) throw Cancelled()
@@ -260,6 +261,108 @@ class PerfDataGenerator(
             Meta.put(tx.db, Meta.RECEIPT_PREFIX, prefix)
             Meta.put(tx.db, Meta.docSeqKey(SaleKind.SALE), saleSeq.toString())
             Meta.put(tx.db, Meta.docSeqKey(SaleKind.REFUND), refundSeq.toString())
+        }
+    }
+
+    // ------------------------------------------------------------------ stock work (Phase 3)
+
+    /**
+     * Suppliers, one delivery a day (15 lines, movements sharing the line ids like PurchaseDao),
+     * manual adjustments and a stock count a month — inserted in bulk; levels are rebuilt after.
+     */
+    private fun createStockWork(db: Db, cat: Catalog, now: Long, progress: Progress, cancelled: () -> Boolean) {
+        val start = now - scale.days * Days.DAY_MS
+        var counter = 0
+        val suppliers = LongArray(40)
+        db.writeBlocking(reserveIds = 100L) { tx ->
+            for (i in suppliers.indices) {
+                val id = tx.nextId()
+                suppliers[i] = id
+                val name = "Pembekal ${i + 1} Sdn Bhd"
+                tx.insert(
+                    "INSERT INTO supplier(id, name, name_key, deleted, created_at, updated_at, ver_hlc, ver_dev) VALUES(?,?,?,0,?,?,?,?)",
+                    id, name, SearchText.key(name), start, start, Hlc.pack(start, i), tx.deviceNo,
+                )
+            }
+        }
+        val days = scale.days
+        var d = 0
+        while (d < days) {
+            if (cancelled()) throw Cancelled()
+            val end = minOf(days, d + 30)
+            db.writeBlocking(reserveIds = (end - d) * 40L) { tx ->
+                for (day in d until end) {
+                    val at = start + day * Days.DAY_MS + 8L * 3_600_000L
+                    val hlc = Hlc.pack(at, (counter++) and 0xFFFF)
+                    val purchaseId = tx.nextId()
+                    val lines = ArrayList<LongArray>(15)
+                    var total = 0L
+                    for (l in 0 until 15) {
+                        var k = pick(cat)
+                        if (!cat.tracked[k]) k = cat.byRank[l]
+                        val qty = (6L + rnd.nextInt(60)) * 1000L
+                        val unitCost = cat.cost[k]
+                        val lineTotal = Rounding.mulDivHalfUp(unitCost, qty, 1000L)
+                        total += lineTotal
+                        lines.add(longArrayOf(tx.nextId(), cat.id[k], qty, unitCost, lineTotal))
+                    }
+                    tx.insert(
+                        "INSERT INTO purchase(id, supplier_id, ref_no, total, note, staff_id, at, hlc) VALUES(?,?,?,?,NULL,?,?,?)",
+                        purchaseId, suppliers[rnd.nextInt(suppliers.size)], "DO-$day", total, cat.staff[0], at, hlc,
+                    )
+                    for (v in lines) {
+                        tx.insert("INSERT INTO purchase_line(id, purchase_id, product_id, qty, unit_cost, total) VALUES(?,?,?,?,?,?)", v[0], purchaseId, v[1], v[2], v[3], v[4])
+                        tx.insert(
+                            "INSERT INTO stock_movement(id, product_id, kind, qty, unit_cost, ref_id, staff_id, at, hlc) VALUES(?,?,?,?,?,?,?,?,?)",
+                            v[0], v[1], MovementKind.RECEIVE, v[2], v[3], purchaseId, cat.staff[0], at, hlc,
+                        )
+                    }
+                }
+            }
+            d = end
+            progress.update("deliveries", d, days)
+        }
+        val adjustments = scale.sales / 50
+        val reasons = arrayOf("damaged", "expired", "lost", "correction")
+        db.writeBlocking(reserveIds = adjustments + 10L) { tx ->
+            for (a in 0 until adjustments) {
+                val k = pick(cat)
+                if (!cat.tracked[k]) continue
+                val at = start + (a.toLong() * scale.days * Days.DAY_MS) / adjustments.coerceAtLeast(1)
+                val r = reasons[rnd.nextInt(reasons.size)]
+                tx.insert(
+                    "INSERT INTO stock_movement(id, product_id, kind, qty, reason, staff_id, at, hlc) VALUES(?,?,?,?,?,?,?,?)",
+                    tx.nextId(), cat.id[k], if (r == "damaged" || r == "expired") MovementKind.WASTE else MovementKind.ADJUST,
+                    -(1L + rnd.nextInt(3)) * 1000L, r, cat.staff[0], at, Hlc.pack(at, (counter++) and 0xFFFF),
+                )
+            }
+        }
+        val sessions = (scale.days / 30).coerceAtLeast(1)
+        val perSession = (scale.products / 100).coerceAtLeast(5)
+        for (s in 0 until sessions) {
+            if (cancelled()) throw Cancelled()
+            db.writeBlocking(reserveIds = perSession + 10L) { tx ->
+                val at = start + (s + 1L) * 30L * Days.DAY_MS
+                val sessionId = tx.nextId()
+                val name = "Kiraan ${s + 1}"
+                tx.insert(
+                    "INSERT INTO count_session(id, name, status, started_at, finished_at, deleted, created_at, updated_at, ver_hlc, ver_dev) " +
+                        "VALUES(?,?,1,?,?,0,?,?,?,?)",
+                    sessionId, name, at, at + 3_600_000L, at, at, Hlc.pack(at, (counter++) and 0xFFFF), tx.deviceNo,
+                )
+                for (c in 0 until perSession) {
+                    val k = pick(cat)
+                    if (!cat.tracked[k]) continue
+                    val qty = (rnd.nextInt(200)).toLong() * 1000L
+                    val t = at + c * 1_000L
+                    tx.insert(
+                        "INSERT INTO stock_count(id, product_id, qty, session_id, staff_id, at, hlc, expected, unit_cost) VALUES(?,?,?,?,?,?,?,?,?)",
+                        tx.nextId(), cat.id[k], qty, sessionId, cat.staff[0], t, Hlc.pack(t, (counter++) and 0xFFFF),
+                        qty + (rnd.nextInt(5) - 2) * 1000L, cat.cost[k],
+                    )
+                }
+            }
+            progress.update("counts", s + 1, sessions)
         }
     }
 

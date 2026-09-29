@@ -8,8 +8,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | # | Phase | Status |
 |---|---|---|
 | 1 | Project skill, architecture, database schema, performance test harness | **done** — FULL perf passed on a real Android 15 phone; 2 GB tablet run pending |
-| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **built and verified in CI** — waiting for real-device feedback (tester build `v0.2.0-phase2`) |
-| 3 | Inventory, suppliers, stock movements | not started |
+| 2 | Selling screen, products, cash payments, receipt printing, drawer kick, scanner input | **done** — phone tests passed (2026-09-29); printer, scanners and drawer not yet tested (hardware not available, carried forward) |
+| 3 | Inventory, suppliers, stock movements | **in progress** |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | not started |
 | 5 | Reports and CSV import/export | not started |
 | 6 | Google Drive sync, local backup/restore, merge tests | not started |
@@ -132,7 +132,7 @@ Deliverables
 
 ---
 
-## Phase 2 — selling, products, cash, printing, drawer, scanner (waiting for feedback)
+## Phase 2 — selling, products, cash, printing, drawer, scanner (done)
 
 Built on the assumptions in D-024 (Malaysian tax/receipt defaults, generic ESC/POS hardware).
 
@@ -182,6 +182,13 @@ Built on the assumptions in D-024 (Malaysian tax/receipt defaults, generic ESC/P
       before; camera permission on first use
 - [ ] Tax/receipt compliance as answered by the user (open question 1) — defaults per D-024
 
+### Real-device feedback (Phase 2, 2026-09-29)
+
+The tester ran the build on a personal smartphone: the tests that could be run passed. The
+Bluetooth printer, cash drawer, HID/SPP scanners and the 2 GB tablet were not available, so
+items 2, 3, 5–8 and 12 below stay open and are re-checked when the hardware is at hand.
+The user asked to continue with Phase 3.
+
 ### Needs real-hardware testing (Phase 2)
 
 1. **Selling flow** on a phone (portrait) and the tablet (landscape): scan, search, catalogue
@@ -211,11 +218,23 @@ Built on the assumptions in D-024 (Malaysian tax/receipt defaults, generic ESC/P
 12. **Low-end device** (the 2 GB tablet): selling-screen smoothness and Diagnostics → Full test
     (now also measures receipt building and picture rendering).
 
-## Phase 3 — inventory, suppliers, stock movements (planned)
+## Phase 3 — inventory, suppliers, stock movements (in progress)
 
-- [ ] Stock in (receiving) with purchase records and cost update; stock adjustments with reasons
-- [ ] Stock count sessions (count sheets, variance report); low-stock alerts
-- [ ] Supplier list; purchase history; product stock history (sale lines + movements)
+- [x] Receive stock: scan (keyboard-wedge or camera) or pick products, carton barcodes add their
+      pack size, weighed goods ask for the weight; cost per unit or the invoice's line amount;
+      supplier and invoice/DO number; crash-safe draft; one transaction writes the purchase,
+      its lines, RECEIVE movements and moving-average cost updates (D-033, D-036)
+- [x] Stock adjustments with reasons (damaged, expired, lost, theft, own use, returned to
+      supplier, found, correction, other) and a note; opening stock for new products
+- [x] Stock counts: count sessions (all products or one category), scan or tap and type what is
+      on the shelf, counts apply at once so selling continues (D-035); variance report with
+      expected vs counted and value found/missing at cost
+- [x] Low-stock list; low-stock warning on the sale result for products that just ran low
+- [x] Suppliers (add/edit/delete), deliveries list (all or per supplier) and delivery detail
+- [x] Product stock history: sales, refunds, deliveries, adjustments and counts merged, with the
+      level after each; stock-changes log for all products
+- [x] Schema v2 migration (D-034); sync events for all stock work
+- [ ] CI (API 21/36), perf FULL, release APK size, tester build
 
 ## Phase 4 — users, roles, PIN, shifts, cash management, audit (planned)
 

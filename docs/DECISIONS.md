@@ -172,6 +172,34 @@ never pops the drawer open unexpectedly; receipts still print. Manual opens are 
 Everything Phase 2 needs fits schema v1. The default owner staff row (id 1, a seed row) is created
 with `INSERT OR IGNORE` when the database opens, so Phase 1 installs get it without a migration.
 
+### D-033 — Product cost = moving weighted average, updated on receiving (2026-09-29)
+Each delivery line moves the product's cost to (on-hand qty × cost + line amount) / (on-hand +
+received), rounded once; with nothing (or less than nothing) on hand the received cost is used.
+The new cost is an ordinary LWW edit of `product.cost`, so it syncs like any edit and importers
+never recompute averages. Why: profit reports stay right when purchase prices move, with no
+extra tables. Rejected: last purchase cost (swings profit on every price change), FIFO cost
+layers (complex, awkward to merge across devices).
+
+### D-034 — Schema v2 (Phase 3), the first real migration
+`count_session` (LWW) groups counts; `stock_count` gains `expected` and `unit_cost` (what the app
+had and the cost at count time, for variance reports); indexes `stock_count_session` (plain, not
+partial: session lists count rows in a correlated subquery, see D-021) and `stock_movement_hlc`
+(the stock-changes log). Migration 1→2 uses `ALTER TABLE … ADD COLUMN` (fine on SQLite 3.8) and
+`CREATE TABLE/INDEX`; `MigrationTest` checks it lands on exactly the fresh v2 schema.
+
+### D-035 — Stock counts apply as they are entered
+A counted quantity becomes the product's stock at once (a `stock_count` event); the session only
+groups counts and is closed at the end. So the shop keeps selling while counting: a sale after a
+product was counted is subtracted from the count. Rejected: collecting counts in a draft and
+applying them all at "finish" — sales made in between would be wiped out.
+
+### D-036 — Stock work sync events
+A delivery syncs as one PURCHASE event (purchase + lines); its RECEIVE movements carry the line
+ids, so an importer regenerates them idempotently. Adjustments and opening stock sync as
+STOCK_MOVE, counts as STOCK_COUNT, count sessions and suppliers as LWW rows. Stock adjustments
+need MANAGE_STOCK; the movement row (with staff and reason) is their record, so no separate
+audit entry. The delivery being typed is a LOCAL draft (`meta` key `draft.receive`).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

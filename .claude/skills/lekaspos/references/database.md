@@ -96,7 +96,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v1)
+## 6. Table catalog (schema v2)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -118,8 +118,9 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `sale_line` | EVENT (child) | lines; also the stock movements of sales | `sale_id`, `(product_id, hlc)` |
 | `payment` | EVENT (child) | tenders of a sale/refund | `sale_id`, `(shift_id, kind)` |
 | `sale_void` | EVENT | void of a whole sale (reason, approver) | `sale_id` |
-| `stock_movement` | EVENT | non-sale movements: receive, adjust, waste, … | `(product_id, hlc)` |
-| `stock_count` | EVENT | absolute counted quantity | `(product_id, hlc)` |
+| `stock_movement` | EVENT | non-sale movements: receive, adjust, waste, … (reason = `AdjustReason` code[: note]) | `(product_id, hlc)`, `hlc` |
+| `stock_count` | EVENT | absolute counted quantity + `expected`, `unit_cost` at count time (v2) | `(product_id, hlc)`, `(session_id, hlc)` |
+| `count_session` | LWW | a stock count (stock take): name, status, scope category (v2) | `started_at WHERE deleted = 0` |
 | `purchase`, `purchase_line` | EVENT | receiving from suppliers | `at`, `(supplier_id, at)`, `purchase_id` |
 | `credit_entry` | EVENT | customer credit charges/repayments | `(customer_id, hlc)` |
 | `audit_log` | EVENT | sensitive actions | `at`, `(action, at)` |
@@ -193,3 +194,6 @@ are plain columns without FK constraints because sync can deliver them in any or
   `SchemaSnapshotTest` fails if the latest snapshot file is missing or stale.
 - Column changes use the rebuild pattern (API 21 has no RENAME/DROP COLUMN). Rebuild inside
   the migration transaction with `PRAGMA foreign_keys` handled by `DbOpenHelper`.
+- `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
+  CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index).

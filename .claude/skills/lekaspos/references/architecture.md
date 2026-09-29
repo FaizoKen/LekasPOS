@@ -126,7 +126,8 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
 - Scanners: keyboard-wedge (HID) scanners are read in `SellActivity.dispatchKeyEvent` through
   `:core` `ScanBuffer` (burst timing, Enter/Tab or idle), so no field needs focus; slow typing
   goes to the search field. Dialogs without text fields forward keys to the same buffer. SPP
-  scanners (`hw.scanner.SppScanner`) run while the selling screen is visible. Camera scanning
+  scanners (`hw.scanner.SppScanner`) run while the selling screen is visible. The key-timing logic
+  lives in `ui.common.ScanInput`, shared by the selling, receiving, counting and product-picker screens. Camera scanning
   (`ui.scan.CameraScanActivity`, Camera1 + ZXing 3.3.3) either adds every item to the bill or
   returns one code. All paths end in `CartSession.scan`.
 - Bluetooth permissions: paired devices only (D-027); `BLUETOOTH_CONNECT` is requested when
