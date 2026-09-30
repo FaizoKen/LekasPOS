@@ -16,7 +16,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
 | 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
-| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **built** — tester build v0.10.0-phase10; waiting for real-device feedback |
+| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **built** — tester build v0.10.0-phase10-fix1 (no "Other item", D-050); waiting for real-device feedback |
 
 ## Open questions for the user
 
@@ -757,4 +757,5 @@ Try it as a new cashier would, without explanations.
 On v0.10.0-phase10 the owner found "Other item" beside Price check confusing for a new cashier,
 and said a cashier should not sell anything that is not registered. Agreed and removed (D-050):
 an unknown barcode is registered on the spot (Add product → on the bill). Fixed in the next
-tester build (v0.10.0-phase10-fix1); the rest of the Phase 10 list above still applies.
+tester build v0.10.0-phase10-fix1 (0.10.0-ci.58, 1,151 KB — 1,178,388 bytes; 131/131 on API 21 and 36,
+tablet and release smoke pass); the rest of the Phase 10 list above still applies.
