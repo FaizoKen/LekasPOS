@@ -92,6 +92,57 @@ jobs:
             app/build/test-results/
           retention-days: 14
 
+  # The release (R8) APK must keep running after start — fresh and as an upgrade from the last
+  # tester build. Separate from the instrumented tests (which use the debug build) and quick.
+  release-smoke:
+    name: Release smoke (API ${{ matrix.api }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 21
+            ram: 1024M
+          - api: 36
+            ram: 2048M
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: apks
+          path: apks
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PREV_APK_URL: https://github.com/FaizoKen/LekasPOS/releases/download/v0.5.0-phase5/LekasPOS-0.5.0-phase5.apk
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86_64
+          ram-size: ${{ matrix.ram }}
+          disk-size: 4096M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: bash scripts/ci/release-smoke.sh
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-smoke-api${{ matrix.api }}
+          path: results/
+
   instrumented:
     name: Instrumented tests (API ${{ matrix.api }})
     needs: build
