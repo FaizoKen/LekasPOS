@@ -43,6 +43,12 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `db_open` | open existing DB + pragmas + version check | 1M lines | ≤ 300 ms |
 | `heap` | Java heap after GC, steady selling (`perf/SoakTest`: 1,000 sales scan → cart → checkout; also checks old selling screens are freed) | — | ≤ 48 MB, growth ≤ 2 MB over 1,000 sales |
 
+Leak diagnosis: when `SoakTest` finds a closed screen still in memory it saves a heap dump
+(`perf/HeapDumps`, app `files/leaks/`); `scripts/ci/instrumented.sh` pulls it and prints the
+reference chain with LeakCanary's `shark-cli` (CI only; artifact `instrumented-api*/leaks-api*`).
+Found this way (Phase 10): a ScrollView's scrollbar fade (~1.2 s after attach) holding closed
+screens — screens that are recreated often use `android:scrollbars="none"` where no bar is needed.
+
 ## 2. The perf suite (`com.lekaspos.perf`, in `main` so it ships in release builds)
 
 - `PerfDataGenerator` builds a separate database file (`perf.db`, never the real one),

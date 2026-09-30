@@ -16,7 +16,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
 | 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
-| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **in progress** |
+| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **built** — tester build v0.10.0-phase10; waiting for real-device feedback |
 
 ## Open questions for the user
 
@@ -689,7 +689,7 @@ So: protected by default, and visible when not.
 The user replied "tested and all works" to v0.9.0-phase9 and asked for the UI polish next: simple
 and straightforward, light and fast, easy for a brand-new cashier — see Phase 10.
 
-## Phase 10 — cashier-first UI polish (in progress)
+## Phase 10 — cashier-first UI polish (built, waiting for device feedback)
 
 Audit of the selling flow (2026-09-30) and what changes (D-049):
 
@@ -708,3 +708,43 @@ Audit of the selling flow (2026-09-30) and what changes (D-049):
 - [x] Tests: popular items (ranking, 30 days, deleted left out, fresh prices), the line buttons on
       the emulator, screenshots of the payment dialog and the empty bill; perf case
       `popular_items`
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **1,152 KB** (1,179,834 bytes; budget 8 MB), version `0.10.0-ci.56` (tester build v0.10.0-phase10) |
+| JVM tests | `:core` and `:app` — all pass |
+| Instrumented tests (CI emulators) | **131/131 on API 21** and **131/131 on API 36** (new: `PopularItemsTest` ×3, the bill line's +/−/Remove on screen) |
+| Memory | the soak test caught closed selling screens held ~1.2 s by the empty-bill panel's scrollbar fade (found with a heap dump + LeakCanary's shark-cli, now automatic in CI when a leak test fails); fixed — closed screens are freed at once |
+| Tablet (API 36, landscape) | every screen opens; selling, payment and empty bill reviewed in both languages |
+| Release smoke | upgrade from the Phase 9 tester build and fresh install, API 21 and 36 — no crash |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 69/69 plans; `popular_items` 62 ms (budget 300); scan to bill 0.23 ms p95; sale commit 6.8 ms p95; rolling year 0.73 s |
+| Perf FULL, API 36 emulator | **PASS**, 69/69 plans; `popular_items` 35–44 ms |
+| Cold start to usable selling screen | API 21: 379–652 ms — budget 2 s |
+| Schema | unchanged (v6) |
+
+### Needs real-device testing (Phase 10)
+
+Try it as a new cashier would, without explanations.
+
+1. **Upgrade** over the Phase 9 build — bill, data and settings still there.
+2. **Scan** a few items: the last one is highlighted with **Remove · − · 1 · + · More**. Tap +, then −;
+   scan the same item again (the highlight follows it); tap another line to give it the buttons.
+   "−" stops at 1; Remove takes the line off.
+3. **More** on a line: type the quantity, discount (asks for permission as before), change price.
+   A weighed item shows its weight instead of −/+ (tap it to change the weight).
+4. **TOTAL and PAY**: the total is easy to read from a step back; Pay opens the payment.
+5. **Payment**: the amount box shows the due amount in grey; type 100 → "Change RM…" appears before
+   you press Cash; tap a note button (RM60, RM100) → done. Card / e-wallet buttons are visible on
+   your phone without scrolling. Split: type part in cash, then Card for the rest.
+6. **After the sale**: the result shows the change and "Received … · total …". Close it — the empty
+   bill shows the last sale's change; "Print a copy" with a printer.
+7. **Items** (phone) / the left side (tablet): the **Popular** tab after a few sales; items on the
+   bill show "×2"; search, tap a result → back to the bill.
+8. **Other item**: the keypad first; the name is optional (the keyboard opens only when you tap it).
+9. **Menu**: short list (price check, held bills, sales & refunds, shift, drawer, cancel bill);
+   **Manage shop ›** opens products, stock, categories, promotions, tax, reports, settings.
+10. **Hold** a bill: the "1 held" pill appears in the top bar; tap it to bring the bill back.
+11. **Bahasa Melayu**: every label fits (Item lain, Barang, Jumlah, Bayar, Buang, Lagi, Laris).
+12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
