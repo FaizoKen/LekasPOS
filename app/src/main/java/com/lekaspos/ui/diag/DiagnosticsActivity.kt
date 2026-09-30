@@ -2,6 +2,7 @@ package com.lekaspos.ui.diag
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -11,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import com.lekaspos.R
+import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
 import com.lekaspos.perf.PerfRunner
 import com.lekaspos.perf.PerfScale
@@ -30,6 +32,8 @@ import kotlinx.coroutines.launch
  * (the activity is exported only to holders of android.permission.DUMP, i.e. adb shell).
  */
 class DiagnosticsActivity : Activity() {
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     private val runner: PerfRunner by lazy { LekasApp.graph(this).perfRunner }
     private var startedScope: CoroutineScope? = null

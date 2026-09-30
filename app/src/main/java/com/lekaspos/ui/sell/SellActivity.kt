@@ -1,8 +1,9 @@
 package com.lekaspos.ui.sell
 
-import android.app.Activity
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -25,6 +26,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
 import com.lekaspos.app.Work
 import com.lekaspos.core.cart.CartItem
@@ -90,6 +92,8 @@ import kotlinx.coroutines.launch
  * and the camera feed the same [onScanned]. The bill itself lives in [CartSession].
  */
 class SellActivity : Activity(), LineActions, DialogHost {
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     private val graph get() = LekasApp.graph(this)
     private val scope = MainScope()

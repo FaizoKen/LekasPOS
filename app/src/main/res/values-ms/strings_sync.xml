@@ -54,6 +54,8 @@
     <string name="sync_state_running">Sedang bersegerak…</string>
     <string name="sync_state_sign_in">Google memerlukan anda log masuk semula sebelum kaunter ini boleh bersegerak.</string>
     <string name="sync_state_error">Segerak terakhir tidak selesai: %1$s. Ia dicuba semula secara automatik.</string>
+    <string name="sync_state_offline">Tiada sambungan internet. Kaunter ini bersegerak semula sebaik sahaja dalam talian.</string>
+    <string name="sync_state_corrupt">Satu fail segerak dalam Google Drive rosak, jadi penyegerakan dihentikan. Sila laporkan perkara ini.</string>
     <string name="sync_state_ok">Terkini.</string>
     <string name="sync_state_never">Belum bersegerak.</string>
     <string name="sync_sign_in">Log masuk semula</string>

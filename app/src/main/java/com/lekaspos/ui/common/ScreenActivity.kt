@@ -1,6 +1,7 @@
 package com.lekaspos.ui.common
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
@@ -14,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.lekaspos.R
 import com.lekaspos.app.AppGraph
+import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.sale.ActionRefused
@@ -37,6 +39,8 @@ import kotlinx.coroutines.withContext
  * ([onStarted]). Activities stay thin: state lives in AppGraph singletons.
  */
 abstract class ScreenActivity : Activity(), DialogHost {
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     val graph: AppGraph get() = LekasApp.graph(this)
 

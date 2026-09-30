@@ -200,7 +200,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             throw e
         } catch (e: Exception) {
             Log.w("Sync failed", e)
-            val msg = if (e is AuthNeeded) ERROR_SIGN_IN else e.message ?: e.javaClass.simpleName
+            val msg = errorCode(e)
             runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, LAST_ERROR, msg) } }
             _status.value = _status.value.copy(running = false, phase = null, lastError = msg, needsSignIn = msg == ERROR_SIGN_IN)
             throw e
@@ -386,6 +386,17 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
         /** Stored as the last error when the provider needs the user to sign in. */
         const val ERROR_SIGN_IN = "sign-in"
+        const val ERROR_OFFLINE = "offline"
+        const val ERROR_CORRUPT = "corrupt"
+
+        /** Known failures are stored as codes the screens translate; anything else as its message. */
+        fun errorCode(e: Exception): String = when (e) {
+            is AuthNeeded -> ERROR_SIGN_IN
+            is java.net.UnknownHostException, is java.net.ConnectException, is java.net.NoRouteToHostException,
+            is java.net.SocketTimeoutException -> ERROR_OFFLINE
+            is Problem -> if (e.reason == Problem.Reason.CORRUPT) ERROR_CORRUPT else e.message ?: e.reason.name
+            else -> e.message ?: e.javaClass.simpleName
+        }
         const val PHASE_PREPARE = "prepare"
         const val PHASE_SYNC = "sync"
 

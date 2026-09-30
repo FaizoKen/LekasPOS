@@ -336,6 +336,17 @@ checkpoints that `DerivedRebuild` respects — more risk than benefit before the
 Rejected: one shared database file on Drive (no concurrent writers), per-row files (thousands
 of API calls), Drive change feeds (need a broader scope), Firebase (backend, cost, privacy).
 
+### D-046 — App language chosen in the app, stored in a preferences file (Phase 7, 2026-09-30)
+Settings → App language: the phone's language, English or Bahasa Melayu, per phone (the
+receipt language stays a store setting). Every activity and the Application wrap their base
+context with the chosen locale (`AppLanguage.wrap`); changing it restarts the screens (the open
+bill lives in app-scoped state, so nothing is lost). The choice must be known before the first
+screen inflates and before any database opens, so it is a tiny SharedPreferences file read once
+at process start — the one deliberate disk read on the main thread (StrictMode allowed for that
+read only; < 1 ms). Rejected: the `meta` table (the database opens later, off the main thread),
+AppCompat's per-app locales (no AppCompat, D-002), Android 13's LocaleManager alone (API 33+
+only; two code paths). App-context strings (the seed role names) follow the language the app
+had when the database was first created.
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

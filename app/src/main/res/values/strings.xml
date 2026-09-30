@@ -257,6 +257,8 @@
     <string name="settings_scanner_sub">Keyboard and serial scanners, camera scanning</string>
     <string name="settings_audit">Activity log</string>
     <string name="settings_audit_sub">Voids, refunds, price changes, discounts, drawer opens</string>
+    <string name="settings_language">App language</string>
+    <string name="language_phone">Phone\'s language</string>
     <string name="settings_about">About</string>
     <string name="settings_about_sub">LekasPOS %1$s (%2$s build) · GPL-3.0</string>
     <string name="section_store">Store</string>

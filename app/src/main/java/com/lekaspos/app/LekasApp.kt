@@ -8,6 +8,9 @@ import com.lekaspos.util.StrictModeSetup
 
 class LekasApp : Application(), Configuration.Provider {
 
+    // Screens and app-context strings (e.g. the names of the seed roles) in the chosen language.
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(AppLanguage.wrap(base))
+
     lateinit var graph: AppGraph
         private set
 

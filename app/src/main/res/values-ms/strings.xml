@@ -143,7 +143,7 @@
     <string name="product_row_stock">Stok: %1$s</string>
     <string name="product_hidden">TERSEMBUNYI</string>
     <string name="product_new">Produk baru</string>
-    <string name="product_edit">Ubah produk</string>
+    <string name="product_edit">Sunting produk</string>
     <string name="product_name">Nama</string>
     <string name="product_price">Harga jualan</string>
     <string name="product_sell_mode">Dijual mengikut</string>
@@ -197,7 +197,7 @@
     <string name="tax_title">Kadar cukai</string>
     <string name="tax_empty">Tiada kadar cukai. Biarkan kosong jika anda tidak mengenakan cukai di kaunter.</string>
     <string name="tax_add">Tambah kadar cukai</string>
-    <string name="tax_edit">Ubah kadar cukai</string>
+    <string name="tax_edit">Sunting kadar cukai</string>
     <string name="tax_name">Nama, cth. SST</string>
     <string name="tax_code">Kod pada resit (pilihan)</string>
     <string name="tax_rate">Kadar dalam %</string>
@@ -253,6 +253,8 @@
     <string name="settings_scanner_sub">Pengimbas papan kekunci dan bersiri, imbasan kamera</string>
     <string name="settings_audit">Log aktiviti</string>
     <string name="settings_audit_sub">Pembatalan, bayaran balik, perubahan harga, diskaun, buka laci</string>
+    <string name="settings_language">Bahasa aplikasi</string>
+    <string name="language_phone">Bahasa telefon</string>
     <string name="settings_about">Perihal</string>
     <string name="settings_about_sub">LekasPOS %1$s (binaan %2$s) · GPL-3.0</string>
     <string name="section_store">Kedai</string>
@@ -433,7 +435,7 @@
     <string name="inv_supplier">Pembekal</string>
     <string name="inv_no_supplier">Tiada pembekal</string>
     <string name="inv_new_supplier">Pembekal baru</string>
-    <string name="inv_edit_supplier">Ubah pembekal</string>
+    <string name="inv_edit_supplier">Sunting pembekal</string>
     <string name="inv_supplier_name">Nama pembekal</string>
     <string name="inv_supplier_contact">Orang untuk dihubungi</string>
     <string name="inv_supplier_delete_confirm">Padam pembekal %1$s? Rekod penghantaran lalu kekal.</string>

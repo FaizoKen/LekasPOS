@@ -82,6 +82,8 @@ class SyncActivity : ScreenActivity() {
         s.running && s.phase == SyncEngine.PHASE_PREPARE -> getString(R.string.sync_state_preparing, s.done)
         s.running -> getString(R.string.sync_state_running)
         s.needsSignIn -> getString(R.string.sync_state_sign_in)
+        s.lastError == SyncEngine.ERROR_OFFLINE -> getString(R.string.sync_state_offline)
+        s.lastError == SyncEngine.ERROR_CORRUPT -> getString(R.string.sync_state_corrupt)
         s.lastError != null -> getString(R.string.sync_state_error, s.lastError)
         s.lastSuccessAt != null -> getString(R.string.sync_state_ok)
         else -> getString(R.string.sync_state_never)
@@ -141,12 +143,9 @@ class SyncActivity : ScreenActivity() {
                 if (name != null) graph.sync.enable(provider, name, account) else graph.sync.sync(provider)
                 null
             } catch (e: SyncEngine.Problem) {
-                when (e.reason) {
-                    SyncEngine.Problem.Reason.DEVICE_CLASH -> app.getString(R.string.sync_error_clash)
-                    else -> app.getString(R.string.sync_state_error, e.message)
-                }
+                if (e.reason == SyncEngine.Problem.Reason.DEVICE_CLASH) app.getString(R.string.sync_error_clash) else errorText(app, e)
             } catch (e: Exception) {
-                app.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
+                errorText(app, e)
             }
             if (name != null) {
                 graph.sync.refreshStatus()
@@ -156,6 +155,13 @@ class SyncActivity : ScreenActivity() {
                 screen.get()?.let { a -> a.runOnUiThread { if (!a.isFinishing && !a.isDestroyed) Dialogs.message(a, a.getString(R.string.sync_title), error) } }
             }
         }
+    }
+
+    private fun errorText(app: android.app.Application, e: Exception): String = when (SyncEngine.errorCode(e)) {
+        SyncEngine.ERROR_OFFLINE -> app.getString(R.string.sync_state_offline)
+        SyncEngine.ERROR_CORRUPT -> app.getString(R.string.sync_state_corrupt)
+        SyncEngine.ERROR_SIGN_IN -> app.getString(R.string.sync_state_sign_in)
+        else -> app.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
     }
 
     private fun syncNow() {

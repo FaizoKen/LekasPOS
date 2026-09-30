@@ -54,6 +54,8 @@
     <string name="sync_state_running">Syncing…</string>
     <string name="sync_state_sign_in">Google needs you to sign in again before this till can sync.</string>
     <string name="sync_state_error">The last sync did not finish: %1$s. It is tried again automatically.</string>
+    <string name="sync_state_offline">No internet connection. This till syncs again as soon as it is online.</string>
+    <string name="sync_state_corrupt">A sync file in Google Drive is damaged, so syncing has stopped. Please report this.</string>
     <string name="sync_state_ok">Up to date.</string>
     <string name="sync_state_never">Not synced yet.</string>
     <string name="sync_sign_in">Sign in again</string>

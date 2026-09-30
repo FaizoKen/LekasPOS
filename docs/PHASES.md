@@ -12,8 +12,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
-| 6 | Google Drive sync, local backup/restore, merge tests | **done — waiting for real-device feedback** (tester build v0.6.0-phase6-fix1; the first build crashed at start, fixed); archive of old sales deferred (D-045) |
-| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
+| 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
+| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **in progress** |
 
 ## Open questions for the user
 
@@ -26,8 +26,10 @@ to the user. **The next phase starts only after the user's real-device feedback.
    payments and change. For LHDN e-invoicing we assume B2C consolidated e-invoices (monthly
    export) plus an optional "request e-invoice" QR/link on receipts. Please confirm or
    correct before Phase 2 receipts are finalized.
+   **Answered 2026-09-30: keep as described.**
 2. **Application ID** — using `com.lekaspos.app`. It cannot change after the first Play
    upload; tell us if you own a domain you want to use instead.
+   **Answered 2026-09-30: keep `com.lekaspos.app`.**
 3. **Customers & credit** are in the feature list but not in any phase; proposed: Phase 4
    (together with cash management, since credit repayments go through the drawer).
 4. **Hardware for Phase 2** — which printer(s) (brand/model, 58 or 80 mm), scanner(s) (HID or
@@ -397,7 +399,7 @@ were reported. The checklist below stays for reference; hardware items remain ca
    it imports; it keeps going and shows the result.
 8. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 6 — Google Drive sync, backup/restore, merge tests (done — waiting for device feedback)
+## Phase 6 — Google Drive sync, backup/restore, merge tests (done)
 
 - [x] Backups (D-044): a daily automatic backup (last 7 kept), one before every app upgrade and
       before every restore; back up now; save or share a backup file (USB, SD card, Drive,
@@ -453,6 +455,12 @@ relaunches every 3 s. Fixed with a keep rule; scheduling can no longer crash the
 **release smoke** job now reproduces the tester's path (upgrade from the last tester build, then
 fresh) and gates every tester build. Fixed build: v0.6.0-phase6-fix1 (`0.6.0-ci.33`).
 
+### Real-device feedback (Phase 6, 2026-09-30)
+
+After the fixed build and the Google Cloud setup (project `lekaspos`, done together in the
+browser) the user replied "tested and all works", including sync through Google Drive. The
+checklist below stays for reference; hardware items remain carried forward.
+
 ### Needs real-device testing (Phase 6)
 
 Before the sync tests: the Google Cloud setup in the README (Drive API, consent screen with
@@ -485,7 +493,11 @@ test key SHA-1 `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`).
 11. Optional: a phone with two Google accounts — sync always uses the store's account.
 12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 7 — localization, settings, polish, profiling, release (planned)
+## Phase 7 — localization, settings, polish, profiling, release (in progress)
+
+Decisions (2026-09-30): no Google Play upload at the end of this phase (everything for a later
+upload is prepared: Data Safety answers, listing notes, upload-key and OAuth steps); the privacy
+policy is a GitHub Pages page of this repository; archiving old sales comes after the release.
 
 - [ ] All strings EN + BM reviewed; in-app language switch; settings screens (store, receipt,
       currency, tax, printer, scanner, drawer)

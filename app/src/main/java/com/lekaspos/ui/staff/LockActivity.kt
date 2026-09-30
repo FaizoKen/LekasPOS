@@ -2,6 +2,7 @@ package com.lekaspos.ui.staff
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -20,6 +21,7 @@ import android.window.OnBackInvokedDispatcher
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
 import com.lekaspos.data.staff.Staff
 import com.lekaspos.domain.StaffSession
@@ -46,6 +48,8 @@ import kotlinx.coroutines.launch
  * recovery code.
  */
 class LockActivity : Activity(), DialogHost {
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     private val graph get() = LekasApp.graph(this)
     private val scope = MainScope()
