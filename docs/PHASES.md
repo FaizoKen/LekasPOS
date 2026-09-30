@@ -13,7 +13,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
-| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **in progress** |
+| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done — waiting for real-device feedback** (tester build v0.7.0-phase7) |
 
 ## Open questions for the user
 
@@ -493,7 +493,7 @@ test key SHA-1 `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`).
 11. Optional: a phone with two Google accounts — sync always uses the store's account.
 12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 7 — localization, settings, polish, profiling, release (done — waiting for device feedback)
+## Phase 7 — localization, settings, polish, profiling, release (done — waiting for device feedback, tester build v0.7.0-phase7)
 
 Decisions (2026-09-30): no Google Play upload at the end of this phase (everything for a later
 upload is prepared: Data Safety answers, listing notes, upload-key and OAuth steps); the privacy
@@ -522,11 +522,11 @@ policy is a GitHub Pages page of this repository; archiving old sales comes afte
 
 | Check | Result |
 |---|---|
-| Release APK (R8, test key) | **1,103 KB** (1,129,449 bytes; budget 8 MB), version `0.7.0-ci.39` |
+| Release APK (R8, test key) | **1,103 KB** (1,129,473 bytes; budget 8 MB), version `0.7.0-ci.41` (tester build v0.7.0-phase7) |
 | JVM tests | `:core` 159, `:app` 21 — all pass |
 | Instrumented tests (CI emulators) | **112/112 on API 21** and **112/112 on API 36** (new: app language, 1,000-sale soak, selling-screen leak check, screenshots in both languages) |
 | Release smoke | upgrade from the Phase 6 tester build and fresh install, selling screen open 20 s, no crash — API 21 and 36 |
-| Tablet (API 36, 10-inch, landscape) | TABLET |
+| Tablet (API 36, 10-inch, landscape) | every screen opens (smoke test) and the main screens in both languages were reviewed from screenshots; fixed: report period buttons clipped their labels (no padding) |
 | Lint (release) | 0 errors |
 | Perf FULL, API 21 emulator (1 GB) | **PASS**, 67/67 query plans; sale commit 4.7 ms (p95 10 ms); word search 5 ms; reports: month 0.20 s, rolling year 1.20 s, calendar year 0.30 s; 200 sales from another till 0.32 s |
 | Perf FULL, API 36 emulator | **PASS**, 67/67 plans; sale commit 1.1 ms; rolling year 0.65 s |

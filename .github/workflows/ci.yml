@@ -124,7 +124,7 @@ jobs:
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          PREV_APK_URL: https://github.com/FaizoKen/LekasPOS/releases/download/v0.6.0-phase6-fix1/LekasPOS-0.6.0-phase6-fix1.apk
+          PREV_APK_URL: https://github.com/FaizoKen/LekasPOS/releases/download/v0.7.0-phase7/LekasPOS-0.7.0-phase7.apk
         with:
           api-level: ${{ matrix.api }}
           target: default
