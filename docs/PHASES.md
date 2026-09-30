@@ -15,7 +15,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
-| 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **in progress** |
+| 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **built** — tester build v0.9.0-phase9; waiting for real-device feedback |
 
 ## Open questions for the user
 
@@ -622,7 +622,7 @@ Update **every till** of the shop to this build (promotions only apply on tills 
 6. Carried over when the hardware is available: printer (the promotion line on paper), drawer,
    HID/SPP scanners, 2 GB tablet.
 
-## Phase 9 — data safety before UI polish (in progress)
+## Phase 9 — data safety before UI polish (built, waiting for device feedback)
 
 Question from the owner (2026-09-30): should a Google login be required to keep shops' data safe?
 Decision (D-048): **no** — it would lock out phones without Google Play services and offline
@@ -644,6 +644,20 @@ So: protected by default, and visible when not.
 - [x] Tests: a lost phone restored in full on a new one from Google Drive; folder copies, keep 7,
       missing folder; protection states; a damaged database keeps every good backup; the check
       finds real damage in a database file
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **1,139 KB** (1,166,149 bytes; budget 8 MB), version `0.9.0-ci.52` (tester build v0.9.0-phase9) |
+| JVM tests | `:core` and `:app` — all pass |
+| Instrumented tests (CI emulators) | **127/127 on API 21** and **127/127 on API 36** (new: `DataSafetyTest` ×7 — folder copies, keep 7, missing folder, protection states, damaged database keeps every good backup, quick_check finds real page damage; `SyncMergeTest.aLostPhoneIsRestoredWholeFromDrive`) |
+| Tablet (API 36, landscape) | every screen opens; welcome, backup, Google Drive backup and settings screens reviewed in both languages |
+| Release smoke | upgrade from the Phase 8 tester build and fresh install, API 21 and 36 — no crash |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 67/67 plans; scan to bill 0.19 ms; sale commit 4.8 ms; rolling year 1.15 s; 200 sales from another till 0.30 s |
+| Perf FULL, API 36 emulator | **PASS**, 67/67 plans |
+| Cold start to usable selling screen | API 21: 553–652 ms; API 36: 485–680 ms — budget 2 s (the protection status is read after the first frame, off the main thread) |
+| Schema | unchanged (v6); the new state lives in `meta` rows |
 
 ### Needs real-device testing (Phase 9)
 
