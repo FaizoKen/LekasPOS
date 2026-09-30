@@ -30,6 +30,10 @@ When a decision changes: update the reference file here **and** add an entry to
   JVM tests and single builds locally, emulators only when unavoidable, never two at once.
 - Tester builds = CI release APKs signed with the shared **test** key (GitHub secrets), version
   `0.<phase>.0-ci.<run>`; publish them as GitHub pre-releases when the user wants a download link.
+- Before publishing a tester build, the CI **release smoke** jobs must pass: the R8 release APK
+  installed over the last tester build and fresh, selling screen open 20 s, no crash
+  (`scripts/ci/release-smoke.sh`; update `PREV_APK_URL` in `ci.yml` after each release). The
+  instrumented tests run only the debug build — R8 problems show up only here.
   Never hand testers debug-signed builds; the Play **upload** key is separate (docs/BUILD.md).
 - Work autonomously inside a phase. Ask the user only for decisions that are genuinely
   theirs (business rules, legal/tax facts, accounts, money).

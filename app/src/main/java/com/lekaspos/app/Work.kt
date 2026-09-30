@@ -25,7 +25,12 @@ object Work {
     private const val SYNC = "sync-periodic"
     private const val SYNC_SOON = "sync-soon"
 
-    fun schedule(context: Context) {
+    /**
+     * Never throws: a till without background jobs still sells (backups and sync then run only
+     * by hand). A release build once crashed here because R8 had removed a class WorkManager
+     * needs (see proguard-rules.pro).
+     */
+    fun schedule(context: Context) = safely("Scheduling background jobs failed") {
         val wm = WorkManager.getInstance(context)
         val backup = PeriodicWorkRequestBuilder<BackupWorker>(24, TimeUnit.HOURS)
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).setRequiresStorageNotLow(true).build())
@@ -39,13 +44,23 @@ object Work {
     }
 
     /** A sync a couple of minutes after a sale (KEEP: a busy till is not postponed forever). Off the main thread. */
-    fun syncSoon(context: Context) {
+    fun syncSoon(context: Context) = safely("Scheduling a sync failed") {
         val req = OneTimeWorkRequestBuilder<SyncWorker>()
             .setInitialDelay(2, TimeUnit.MINUTES)
             .setConstraints(online())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(SYNC_SOON, ExistingWorkPolicy.KEEP, req)
+    }
+
+    private inline fun safely(what: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.e(what, e)
+        } catch (e: LinkageError) {
+            Log.e(what, e)
+        }
     }
 
     private fun online() = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build()

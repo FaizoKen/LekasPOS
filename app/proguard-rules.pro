@@ -14,3 +14,9 @@
 # Readable stack traces from testers (upload mapping.txt with every Play release).
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# WorkManager keeps its job list in a Room database whose generated class is created by
+# reflection (WorkDatabase_Impl.<init>()). R8 removed that constructor, and the release build
+# crashed ~1.5 s after the selling screen opened (Phase 6 tester build). Caught by the CI
+# release smoke test.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
