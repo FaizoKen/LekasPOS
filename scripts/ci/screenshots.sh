@@ -13,9 +13,12 @@ mkdir -p "$OUT"
 adb install -r -t "$APKS/app-debug.apk"
 adb install -r -t "$APKS/app-debug-androidTest.apk"
 
-# Landscape, fixed.
+# Landscape, fixed: rotate only when the screen is naturally portrait (pixel_tablet is landscape).
+size=$(adb shell wm size | tr -d '\r' | awk '/Physical/ {print $3}')
+w=${size%x*}; h=${size#*x}
+rotation=0; [ "${h:-0}" -gt "${w:-0}" ] && rotation=1
 adb shell settings put system accelerometer_rotation 0
-adb shell settings put system user_rotation 1
+adb shell settings put system user_rotation $rotation
 adb shell wm size | tee "$OUT/tablet-display.txt"
 adb shell wm density | tee -a "$OUT/tablet-display.txt"
 

@@ -52,6 +52,10 @@
         <item name="android:background">@drawable/toggle_bg</item>
         <item name="android:textColor">@color/toggle_text</item>
         <item name="android:minWidth">0dp</item>
+        <!-- The shape background has no padding of its own: without this the label touches (and
+             on tablets was clipped at) the edges. -->
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
     </style>
 
     <style name="Widget.Lekas.IconButton" parent="android:Widget.Material.ImageButton">
