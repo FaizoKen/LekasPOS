@@ -12,6 +12,8 @@ import com.lekaspos.testing.TestDb
 import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
+import com.lekaspos.ui.products.PromotionEditActivity
+import com.lekaspos.ui.products.PromotionsActivity
 import com.lekaspos.ui.reports.ReportsActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.settings.BackupActivity
@@ -59,6 +61,8 @@ class ScreenshotsTest {
         "sync" to SyncActivity::class.java,
         "backup" to BackupActivity::class.java,
         "setup" to SetupActivity::class.java,
+        "promotions" to PromotionsActivity::class.java,
+        "promotion-edit" to PromotionEditActivity::class.java,
     )
 
     @Test

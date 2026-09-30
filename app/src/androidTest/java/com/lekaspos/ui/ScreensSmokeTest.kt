@@ -29,6 +29,8 @@ import com.lekaspos.ui.inventory.StockHistoryActivity
 import com.lekaspos.ui.inventory.SuppliersActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
+import com.lekaspos.ui.products.PromotionEditActivity
+import com.lekaspos.ui.products.PromotionsActivity
 import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.settings.AuditLogActivity
@@ -90,6 +92,7 @@ class ScreensSmokeTest {
             ProductListActivity::class.java, CategoriesActivity::class.java, TaxRatesActivity::class.java,
             SalesActivity::class.java, SettingsActivity::class.java, StoreSettingsActivity::class.java,
             PrinterSettingsActivity::class.java, ScannerSettingsActivity::class.java, AuditLogActivity::class.java, BackupActivity::class.java, SyncActivity::class.java, SetupActivity::class.java,
+            PromotionsActivity::class.java, PromotionEditActivity::class.java,
             InventoryActivity::class.java, ReceiveActivity::class.java, SuppliersActivity::class.java, PurchasesActivity::class.java,
             CountSessionsActivity::class.java, LowStockActivity::class.java, MovementsActivity::class.java, ProductPickActivity::class.java,
         )) {
