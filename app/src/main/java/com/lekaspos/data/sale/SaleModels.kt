@@ -51,6 +51,9 @@ data class SaleLineDraft(
     val trackStock: Boolean = true,
     /** Refund lines only: put the goods back into stock. */
     val restock: Boolean = true,
+    /** The promotion that applied to this line (its saving is in [discount]), with its name at the time. */
+    val promoId: Long? = null,
+    val promoName: String? = null,
 )
 
 data class PaymentDraft(

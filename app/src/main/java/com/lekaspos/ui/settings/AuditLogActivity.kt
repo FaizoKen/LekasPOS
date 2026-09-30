@@ -112,6 +112,7 @@ class AuditLogActivity : ScreenActivity() {
         AuditAction.REPRINT -> R.string.audit_reprint
         AuditAction.PRODUCT_PRICE_CHANGE -> R.string.audit_product_price
         AuditAction.PRODUCT_DELETE -> R.string.audit_product_delete
+        AuditAction.PROMOTION_CHANGE -> R.string.audit_promotion
         AuditAction.BILL_CANCEL -> R.string.audit_bill_cancel
         AuditAction.APPROVAL -> R.string.audit_approval
         AuditAction.SIGN_IN -> R.string.audit_sign_in

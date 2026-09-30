@@ -94,6 +94,28 @@ object SyncDao {
         )
     }
 
+    // Events of kinds this version cannot apply yet (D-047): kept, applied after an update.
+
+    fun defer(tx: Db.Tx, e: SyncEvent) {
+        val payload = Outbox.json { w -> SegmentCodec.writeValue(w, e.payload) }
+        tx.insert(
+            "INSERT INTO sync_deferred(entity, op, row_id, hlc, payload) VALUES(?, ?, ?, ?, ?)",
+            e.entity, e.op, e.rowId, e.hlc, payload,
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun deferred(db: SQLiteDatabase): List<Pair<Long, SyncEvent>> = db.queryList(
+        "SELECT seq, entity, op, row_id, hlc, payload FROM sync_deferred ORDER BY seq", null,
+    ) { c ->
+        val payload = SegmentCodec.parse(c.getString(5)) as? Map<String, Any?> ?: emptyMap()
+        c.getLong(0) to SyncEvent(c.getInt(1), c.getInt(2), c.longOrNull(3), c.getLong(4), payload)
+    }
+
+    fun dropDeferred(tx: Db.Tx, seq: Long) {
+        tx.update("DELETE FROM sync_deferred WHERE seq = ?", seq)
+    }
+
     private fun segment(c: android.database.Cursor) = SegmentRow(
         c.getLong(0), c.getInt(1), c.getLong(2), c.getLong(3), c.getLong(4), c.getString(5), c.getLong(6), c.longOrNull(7),
     )

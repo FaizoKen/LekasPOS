@@ -67,6 +67,16 @@ object Migrations {
                     "updated_at INTEGER NOT NULL)",
             )
         },
+        // v5 → v6 (Phase 8, D-047): promotions; sale lines remember the promotion that applied;
+        // unknown sync events are kept from now on. The store's sync files are read again once:
+        // this till skipped the promotions of tills that were updated first (imports are idempotent).
+        Migration(5, 6) { db ->
+            db.execSQL(Schema.PROMOTION)
+            db.execSQL("ALTER TABLE sale_line ADD COLUMN promo_id INTEGER")
+            db.execSQL("ALTER TABLE sale_line ADD COLUMN promo_name TEXT")
+            db.execSQL(Schema.SYNC_DEFERRED)
+            db.execSQL("DELETE FROM sync_cursor")
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

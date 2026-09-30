@@ -16,6 +16,7 @@ import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.domain.sell.PriceCheck
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.ui.products.promoDeal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -115,6 +116,7 @@ class PriceCheckDialog(
                 a.getString(R.string.price_check_stock, MoneyFormat.formatQty(stock), i.unit)
             },
         )
+        for (p in i.promotions) lines.add(a.getString(R.string.price_check_promo, p.name, promoDeal(a, p, currency)))
         if (!i.active) lines.add(a.getString(R.string.price_check_hidden))
         return lines.joinToString("\n")
     }

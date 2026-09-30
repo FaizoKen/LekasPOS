@@ -187,6 +187,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             cleanLocal(db)
             if (Entity.SETTING in changed) graph.settings.reload()
             if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
+            if (Entity.PROMOTION in changed) graph.promotions.load()
             val now = System.currentTimeMillis()
             db.write(reserveIds = 0L) { tx ->
                 Meta.put(tx.db, LAST_OK, now.toString())
@@ -249,6 +250,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     /** Applies the other tills' new segments, each in order and in one transaction with its cursor. */
     private suspend fun import(db: Db, provider: SyncProvider, store: String, changed: MutableSet<Int>): Triple<Int, Int, Int> {
+        applyDeferred(db, changed)
         val remote = provider.list(SyncNames.segmentPrefix(store))
             .mapNotNull { f -> SyncNames.parseSegment(f.name)?.takeIf { it.store == store && it.dev != db.deviceNo }?.let { it to f } }
         val byDev = remote.groupBy { it.first.dev }
@@ -276,6 +278,20 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         return Triple(applied, events, byDev.keys.size)
     }
 
+    /** Events kept by an older version of this app (D-047) that this version can apply now. */
+    private suspend fun applyDeferred(db: Db, changed: MutableSet<Int>) {
+        val waiting = db.read { SyncDao.deferred(it) }
+        if (waiting.isEmpty()) return
+        db.write(reserveIds = 0L) { tx ->
+            val importer = Importer(tx.db)
+            for ((seq, e) in waiting) {
+                if (!importer.knows(e.entity)) continue
+                if (importer.apply(tx, e)) changed.add(e.entity)
+                SyncDao.dropDeferred(tx, seq)
+            }
+        }
+    }
+
     /**
      * Applies one downloaded segment in short transactions (at most [IMPORT_CHUNK] events or about
      * [IMPORT_TX_MS] ms each), so a sale never waits for a whole segment; the cursor moves only
@@ -295,7 +311,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                         val start = System.nanoTime()
                         while (i < batch.size) {
                             val e = batch[i++]
-                            if (importer.apply(tx, e)) changed.add(e.entity)
+                            if (!importer.knows(e.entity)) {
+                                SyncDao.defer(tx, e) // from a newer version: applied after this till is updated
+                            } else if (importer.apply(tx, e)) {
+                                changed.add(e.entity)
+                            }
                             if (System.nanoTime() - start >= IMPORT_TX_MS * 1_000_000L) break
                         }
                     }

@@ -3,10 +3,14 @@ package com.lekaspos.core.cart
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.Checked
 import com.lekaspos.core.money.Rounding
+import com.lekaspos.core.pricing.AppliedPromo
 import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.pricing.PriceLine
 import com.lekaspos.core.pricing.PricedCart
 import com.lekaspos.core.pricing.PricingEngine
+import com.lekaspos.core.pricing.PromoLine
+import com.lekaspos.core.pricing.Promotion
+import com.lekaspos.core.pricing.Promotions
 
 /**
  * One line of the open bill. Quantities are milli-units of the *selling* unit: a carton scanned
@@ -61,6 +65,16 @@ data class CartItem(
         taxBp = if (taxRateId != null) taxBp else 0,
     )
 
+    /** Whole units of an unchanged piece item take part in promotions (not packs, weighed goods,
+     *  scale labels, or lines the cashier re-priced or discounted). */
+    fun toPromoLine(): PromoLine = PromoLine(
+        productId = productId,
+        qty = qty,
+        unitPrice = unitPrice,
+        eligible = productId != null && sellMode == SellMode.UNIT && packQty == 1000L && fixedGross == null &&
+            !priceOverridden && discount == Discount.None,
+    )
+
     /**
      * Scanning the same plain item again adds to its quantity instead of a new line. Weighed,
      * price-changed, discounted and scale-label lines always stay separate.
@@ -88,8 +102,22 @@ data class Cart(
 
     fun item(key: Long): CartItem? = items.firstOrNull { it.key == key }
 
-    fun price(pricesIncludeTax: Boolean): PricedCart =
-        PricingEngine.price(items.map { it.toPriceLine() }, billDiscount, pricesIncludeTax)
+    /**
+     * Prices the bill. Active [promotions] first become the discount of the lines they apply to
+     * (only unchanged whole-unit piece lines take part), then everything goes through
+     * [PricingEngine] as usual, so tax, bill discounts and refunds need no special cases.
+     */
+    fun price(pricesIncludeTax: Boolean, promotions: List<Promotion> = emptyList()): PricedCart {
+        val applied: List<AppliedPromo?> =
+            if (promotions.isEmpty()) emptyList() else Promotions.apply(items.map { it.toPromoLine() }, promotions)
+        val lines = items.mapIndexed { i, item ->
+            val promo = applied.getOrNull(i)
+            val line = item.toPriceLine()
+            if (promo == null) line else line.copy(discount = Discount.Amount(promo.discount))
+        }
+        val priced = PricingEngine.price(lines, billDiscount, pricesIncludeTax)
+        return if (applied.any { it != null }) priced.copy(promotions = applied) else priced
+    }
 
     /** Number of pieces/packs for the "items" count; weighed lines count as one each. */
     val pieceCount: Long

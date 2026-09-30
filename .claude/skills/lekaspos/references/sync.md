@@ -117,6 +117,9 @@ Streaming read/write only (`SegmentCodec`).
 4. Publish the device card; reload settings / staff when those entities changed.
 5. `meta sync.last_ok / sync.last_error` (`"sign-in"` when the provider needs the user).
 
+Unknown kinds (v6, D-047): an event whose entity this version does not know is stored in LOCAL
+`sync_deferred` (not skipped) and applied at the start of a later round once an update knows it.
+
 Importer rules (`data/sync/Importer`): EVENT rows `INSERT OR IGNORE` by id, derived data only
 when new (a void before its sale is applied when the sale arrives; a purchase regenerates its
 RECEIVE movements with line ids); stock counts rebuild the product's level; LWW rows merge per

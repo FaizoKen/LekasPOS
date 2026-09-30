@@ -124,3 +124,34 @@ Bill level:
   derived from it. Line value = `roundHalfUp(qty × unitCost, 1000)`.
 - Count variance value = `roundHalfUp((counted − expected) × unitCost, 1000)` with the cost stored
   on the count (negative = loss).
+
+## 11. Promotions (Phase 8, D-047)
+
+`:core` `Promotions.apply` (pure), called by `Cart.price(inclTax, promotions)` before
+`PricingEngine`. Two kinds (`PromoKind`), each on a set of products (any mix counts):
+
+- **MULTI_PRICE** "N for P": every group of N units costs P (N ≥ 2, P ≥ 0).
+- **BUY_GET_FREE** "buy X get Y": in every set of X + Y units, the Y cheapest are free.
+
+Rules:
+- Only **eligible** lines take part: a catalogue product sold by the piece (`sellMode UNIT`,
+  pack size 1000), whole units (qty multiple of 1000), no scale-label price, no manual price
+  change, no manual line discount. Packs, weighed goods, "other items" never take part.
+- A product in several running promotions takes the one with the **lowest id**.
+- Units are sorted **dearest first** (ties by line order) and grouped in that order, so mixed
+  prices give the customer the bigger saving; for buy-get-free the last Y of each set are free.
+- A group's saving = regular − P, **never negative**; it is shared over the group's lines by
+  price with largest remainder (§2), so a line never saves more than its gross.
+- The saving becomes the line's `Discount.Amount`, so bill discounts, tax, cash rounding and
+  refunds (net per unit, §6) work unchanged. The sale line stores `promo_id` and the name at the
+  time (`promo_name`); receipts print that name instead of "Discount".
+
+| Case | Input | Expected |
+|---|---|---|
+| 3 for RM10 | 3 × 390 | saving 170 |
+| 3 for RM10 | 4 × 390 / 6 × 390 | 170 / 340 |
+| mix and match 3 for RM10 | 2 × 390 + 2 × 350 | group 390+390+350: saving 130 → 90 and 40 |
+| buy 1 get 1 | 2 / 3 / 4 × 500 | 500 / 500 / 1000 |
+| buy 2 get 1 | 600 + 500 + 400 | 400 free |
+| deal dearer than shelf | 3 × 300 for 1000 | no saving |
+| in the bill (6% inclusive) | 3 × 390 promo + 350 | net 1000 + 350, tax 57 on the promo line |

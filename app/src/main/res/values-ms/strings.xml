@@ -68,6 +68,7 @@
     <string name="price_check_stock">Stok ada: %1$s %2$s</string>
     <string name="price_check_no_stock">Stok tidak dijejak</string>
     <string name="price_check_hidden">Disembunyikan dari skrin jualan</string>
+    <string name="price_check_promo">Promosi: %1$s (%2$s)</string>
     <string name="setup_title">Selamat datang ke LekasPOS</string>
     <string name="setup_intro">Mari sediakan kedai anda. Semua ini boleh diubah kemudian dalam Tetapan.</string>
     <string name="setup_shop">Kedai anda</string>

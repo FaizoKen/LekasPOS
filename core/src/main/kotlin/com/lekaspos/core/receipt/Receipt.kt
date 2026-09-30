@@ -24,6 +24,8 @@ data class ReceiptItem(
     val gross: Long,
     /** Line discount (positive = money off; negative on refunds). */
     val discount: Long = 0L,
+    /** Name of the promotion behind [discount] (printed instead of "Discount"). */
+    val promo: String? = null,
 )
 
 data class ReceiptTax(val name: String, val bp: Int, val amount: Long)

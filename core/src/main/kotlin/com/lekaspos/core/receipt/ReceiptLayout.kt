@@ -88,7 +88,7 @@ class ReceiptLayout(
             val detail = if (item.weighed && unit != null) "  $qty $unit x $price/$unit" else "  $qty x $price"
             twoCol(detail, amount, out)
         }
-        if (item.discount != 0L) twoCol("  ${t.discount}", money(Checked.neg(item.discount)), out)
+        if (item.discount != 0L) twoCol("  ${item.promo ?: t.discount}", money(Checked.neg(item.discount)), out)
     }
 
     private fun totals(doc: ReceiptDoc, out: MutableList<PrintLine>) {

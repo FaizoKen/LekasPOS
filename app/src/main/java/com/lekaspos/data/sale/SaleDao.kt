@@ -36,7 +36,7 @@ object SaleDao {
     internal val LINE_COLS = arrayOf(
         "id", "sale_id", "line_no", "product_id", "ref_line_id", "name", "barcode", "unit", "category_id",
         "qty", "base_qty", "unit_price", "gross", "discount", "bill_discount", "net", "tax_rate_id",
-        "tax_bp", "tax", "cost", "price_overridden", "stock_qty", "hlc",
+        "tax_bp", "tax", "cost", "price_overridden", "stock_qty", "hlc", "promo_id", "promo_name",
     )
     internal val PAY_COLS = arrayOf(
         "id", "sale_id", "method_id", "kind", "amount", "tendered", "change_given", "ref", "shift_id", "paid_at",
@@ -79,7 +79,7 @@ object SaleDao {
             val v = arrayOf<Any?>(
                 tx.nextId(), id, i + 1, l.productId, l.refLineId, l.name, l.barcode, l.unit, l.categoryId,
                 l.qty, l.baseQty, l.unitPrice, l.gross, l.discount, l.billDiscount, l.net, l.taxRateId,
-                l.taxBp, l.tax, l.cost, l.priceOverridden, stockQty, hlc,
+                l.taxBp, l.tax, l.cost, l.priceOverridden, stockQty, hlc, l.promoId, l.promoName,
             )
             tx.insert(INSERT_LINE, *v)
             lineValues.add(v)

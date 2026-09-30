@@ -229,6 +229,14 @@
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />
         <activity
+            android:name=".ui.products.PromotionsActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
+            android:name=".ui.products.PromotionEditActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+        <activity
             android:name=".ui.scan.CameraScanActivity"
             android:configChanges="keyboard|keyboardHidden|navigation"
             android:exported="false" />

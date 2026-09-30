@@ -68,6 +68,8 @@ data class PricedCart(
     /** Amount due before cash rounding. */
     val total: Long,
     val pricesIncludeTax: Boolean,
+    /** Per line: the promotion that applied (its saving is that line's discount), or null. */
+    val promotions: List<AppliedPromo?> = emptyList(),
 ) {
     val discount: Long get() = lineDiscounts + billDiscount
 

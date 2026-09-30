@@ -562,13 +562,14 @@ Added after a feature audit against the basics of a small grocery till (2026-09-
 else was already in place (selling, payments, receipts, refunds, stock, staff, shifts, customers
 and credit, reports, backups, sync). The owner chose these four before polishing the UI:
 
-- [ ] **Other item** button on the selling screen: sell anything without a barcode by typing its
+- [x] **Other item** button on the selling screen: sell anything without a barcode by typing its
       price (until now only offered when a scanned barcode was unknown)
-- [ ] **Price check**: scan or search to see price, stock and promotion without adding to the bill
-- [ ] **First-run setup**: language, store name, owner PIN, printer, or join an existing store
+- [x] **Price check**: scan or search to see price, stock and promotion without adding to the bill
+- [x] **First-run setup**: language, store name, owner PIN, printer, or join an existing store
       through sync
-- [ ] **Promotions**: "N for RM X" and "buy X get Y free" on one or more products, optional dates;
-      applied automatically, on the receipt, synced (schema v6)
+- [x] **Promotions**: "N for RM X" and "buy X get Y free" on one or more products, optional dates;
+      applied automatically, on the bill and the receipt, synced (schema v6, D-047); price check
+      shows running deals; events of unknown kinds are now kept for later versions
 
 Optional extras from the audit, not planned: barcode/shelf labels, expiry dates per batch,
 supplier payments, loyalty points, product photos, customer display, Bluetooth scale reading.

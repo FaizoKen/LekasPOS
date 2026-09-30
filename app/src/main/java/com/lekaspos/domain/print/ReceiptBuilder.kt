@@ -63,7 +63,7 @@ object ReceiptBuilder {
             items = lines.map {
                 ReceiptItem(
                     name = it.name, qty = it.qty, unit = it.unit, weighed = it.qty % 1000L != 0L, unitPrice = it.unitPrice,
-                    gross = it.gross, discount = it.discount,
+                    gross = it.gross, discount = it.discount, promo = it.promoName,
                 )
             },
             subtotal = h.subtotal,

@@ -118,6 +118,7 @@ object AuditAction {
 
     /** Products imported from a CSV file (detail: how many created and updated). */
     const val PRODUCT_IMPORT = 24
+    const val PROMOTION_CHANGE = 25
 }
 
 /** Permission bits stored in `role.perms`. The owner role always has every permission. */
@@ -193,6 +194,15 @@ object PrintJobKind {
     const val SHIFT = 5
 }
 
+/** Promotion types (Phase 8, references/money.md §11). */
+object PromoKind {
+    /** "N for RM X": every group of `buyQty` units costs `groupPrice`. */
+    const val MULTI_PRICE = 0
+
+    /** "Buy X get Y free": in every set of `buyQty + freeQty` units, the `freeQty` cheapest are free. */
+    const val BUY_GET_FREE = 1
+}
+
 /** Entity type codes used by the outbox, sync files and the audit log. */
 object Entity {
     const val SETTING = 1
@@ -207,6 +217,7 @@ object Entity {
     const val PAYMENT_METHOD = 10
     const val SHIFT = 11
     const val COUNT_SESSION = 12
+    const val PROMOTION = 13
     const val SALE = 20
     const val SALE_VOID = 21
     const val STOCK_MOVE = 22

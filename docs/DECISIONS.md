@@ -347,6 +347,23 @@ read only; < 1 ms). Rejected: the `meta` table (the database opens later, off th
 AppCompat's per-app locales (no AppCompat, D-002), Android 13's LocaleManager alone (API 33+
 only; two code paths). App-context strings (the seed role names) follow the language the app
 had when the database was first created.
+### D-047 — Promotions as automatic line discounts; schema v6; unknown sync events are kept (Phase 8, 2026-09-30)
+Promotions ("N for RM X", "buy X get Y free", on one or more products, optional dates) are LWW
+master data (`promotion`, products as a comma-separated id list — rarely edited concurrently,
+last writer wins for the whole list). They are kept in memory (`PromotionService`) and applied
+by the pure `:core` rules (`references/money.md` §11) before `PricingEngine`: the saving becomes
+the line's discount, so tax, bill discounts, cash rounding, refunds and reports need no special
+cases. Sale lines store the promotion id and its name at the time (receipt reprints stay
+identical after renames or deletes). Only unchanged whole-unit piece lines take part; a line the
+cashier discounted or re-priced keeps the cashier's price. Changes need MANAGE_PRODUCTS and are
+audited (PROMOTION_CHANGE).
+Sync across versions: from v6 an event of a kind this version does not know is kept in the LOCAL
+`sync_deferred` table and applied once an update knows it (before it was skipped for good). The
+v5 → v6 migration clears the sync cursors once, so a till updated late re-reads the store's
+files and picks up the promotions it skipped (imports are idempotent).
+Rejected: promotions as price changes (lose the shelf price and the receipt line), a separate
+promotion discount column (every report and refund would need to know it), per-row product
+membership table (more sync rows for no gain at this size).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

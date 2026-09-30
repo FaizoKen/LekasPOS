@@ -38,6 +38,9 @@ class Importer(private val db: SQLiteDatabase) {
         }.associateBy { it.name }
     }
 
+    /** Whether this version can apply events of [entity]; others are kept (sync_deferred, D-047). */
+    fun knows(entity: Int): Boolean = entity in EVENT_ENTITIES || entity in LWW_TABLES
+
     /** Applies [e]; returns true when it changed something. Must run inside Db.write. */
     fun apply(tx: Db.Tx, e: SyncEvent): Boolean {
         val p = e.payload
@@ -177,6 +180,12 @@ class Importer(private val db: SQLiteDatabase) {
             Entity.PAYMENT_METHOD to "payment_method",
             Entity.SHIFT to "shift",
             Entity.COUNT_SESSION to "count_session",
+            Entity.PROMOTION to "promotion",
+        )
+
+        private val EVENT_ENTITIES = setOf(
+            Entity.SETTING, Entity.SALE, Entity.SALE_VOID, Entity.STOCK_MOVE, Entity.STOCK_COUNT, Entity.PURCHASE,
+            Entity.CASH_MOVE, Entity.AUDIT, Entity.CREDIT,
         )
 
         /** Columns that are versions or local bookkeeping, never fields of a change. */

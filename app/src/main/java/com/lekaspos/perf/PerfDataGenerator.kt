@@ -540,7 +540,7 @@ class PerfDataGenerator(
                 SaleDao.INSERT_LINE, lineId, saleId, k + 1, cat.id[p], null, cat.name[p], cat.code[p], cat.unit[p],
                 cat.category[p], qty[k], qty[k], cat.price[p], pl.gross, pl.lineDiscount, pl.billDiscount, pl.net,
                 if (cat.taxBp[p] > 0) cat.taxRate[p] else null, cat.taxBp[p], pl.tax, lineCost[k], false,
-                if (cat.tracked[p]) -qty[k] else 0L, hlc,
+                if (cat.tracked[p]) -qty[k] else 0L, hlc, null, null,
             )
         }
         tx.insert(SaleDao.INSERT_PAY, tx.nextId(), saleId, methodId, payKind, applied, tendered, change, null, shift, soldAt)
@@ -577,7 +577,7 @@ class PerfDataGenerator(
             SaleDao.INSERT_LINE, tx.nextId(), refundId, 1, cat.id[p], sale.lineId, cat.name[p], cat.code[p], cat.unit[p],
             cat.category[p], -sale.qty, -sale.qty, cat.price[p], -sale.gross, -sale.lineDiscount, -sale.billDiscount, -net,
             if (cat.taxBp[p] > 0) cat.taxRate[p] else null, cat.taxBp[p], -sale.tax, -sale.cost, false,
-            if (cat.tracked[p]) sale.qty else 0L, hlc,
+            if (cat.tracked[p]) sale.qty else 0L, hlc, null, null,
         )
         tx.insert(SaleDao.INSERT_PAY, tx.nextId(), refundId, Seed.Ids.PM_CARD, PaymentKind.CARD, -net, 0L, 0L, null, shift, at)
     }

@@ -12,6 +12,7 @@ import com.lekaspos.core.cart.CartItem
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.AppliedPromo
 import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.pricing.PricedCart
 import com.lekaspos.core.receipt.ReceiptLayout
@@ -19,7 +20,7 @@ import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.product.ProductListItem
 
 /** One row of the bill as shown: the item plus its priced amounts. */
-data class CartRow(val item: CartItem, val amount: Long, val highlighted: Boolean)
+data class CartRow(val item: CartItem, val amount: Long, val highlighted: Boolean, val promo: AppliedPromo? = null)
 
 class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapter<CartAdapter.Holder>() {
 
@@ -35,7 +36,8 @@ class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapte
     fun submit(items: List<CartItem>, priced: PricedCart, lastKey: Long) {
         val next = items.mapIndexed { i, it ->
             val pl = priced.lines.getOrNull(i)
-            CartRow(it, if (pl != null) pl.gross - pl.lineDiscount else 0L, it.key == lastKey)
+            val amount = if (pl != null) pl.gross - pl.lineDiscount else 0L
+            CartRow(it, amount, it.key == lastKey, priced.promotions.getOrNull(i))
         }
         val old = rows
         rows = next
@@ -60,12 +62,12 @@ class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapte
         val ctx = h.itemView.context
         h.name.text = it.name
         h.amount.text = MoneyFormat.format(row.amount, currency, withSymbol = false)
-        h.detail.text = detail(ctx, it)
+        h.detail.text = detail(ctx, it, row.promo)
         h.itemView.setBackgroundResource(if (row.highlighted) R.drawable.row_highlight else R.drawable.row_ripple)
         h.itemView.setOnClickListener { _ -> onClick(it) }
     }
 
-    private fun detail(ctx: android.content.Context, it: CartItem): String {
+    private fun detail(ctx: android.content.Context, it: CartItem, promo: AppliedPromo?): String {
         val price = MoneyFormat.format(it.unitPrice, currency, withSymbol = false)
         val qty = MoneyFormat.formatQty(it.qty)
         val sb = StringBuilder()
@@ -82,6 +84,10 @@ class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapte
             is Discount.Amount -> sb.append(" · -").append(MoneyFormat.format(d.minor, currency, withSymbol = false))
             is Discount.Percent -> sb.append(" · -").append(ReceiptLayout.percent(d.bp))
             Discount.None -> Unit
+        }
+        if (promo != null) {
+            val saving = MoneyFormat.format(promo.discount, currency, withSymbol = false)
+            sb.append(" · ").append(promo.name).append(" -").append(saving)
         }
         return sb.toString()
     }

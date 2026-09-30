@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 5
+    const val VERSION = 6
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -19,6 +19,30 @@ object Schema {
         ver_hlc INTEGER NOT NULL,
         ver_dev INTEGER NOT NULL,
         fver TEXT"""
+
+    /** Promotions (v6, Phase 8): LWW; `products` = the product ids, comma-separated. */
+    const val PROMOTION = """CREATE TABLE promotion (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            kind INTEGER NOT NULL,
+            buy_qty INTEGER NOT NULL,
+            free_qty INTEGER NOT NULL DEFAULT 0,
+            group_price INTEGER NOT NULL DEFAULT 0,
+            products TEXT NOT NULL DEFAULT '',
+            start_day INTEGER,
+            end_day INTEGER,
+            active INTEGER NOT NULL DEFAULT 1,
+        )"""
+
+    /** Sync events of a kind this version does not know yet, kept until an update knows it (v6, D-047). */
+    const val SYNC_DEFERRED = """CREATE TABLE sync_deferred (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity INTEGER NOT NULL,
+            op INTEGER NOT NULL,
+            row_id INTEGER,
+            hlc INTEGER NOT NULL,
+            payload TEXT NOT NULL
+        )"""
 
     val STATEMENTS: List<String> = listOf(
         // ---------- LOCAL: device identity, sequences, flags ----------
@@ -108,6 +132,7 @@ object Schema {
             note TEXT,$LWW
         )""",
         "CREATE INDEX supplier_name ON supplier(name_key) WHERE deleted = 0",
+        PROMOTION,
         """CREATE TABLE customer (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
@@ -225,7 +250,9 @@ object Schema {
             cost INTEGER NOT NULL DEFAULT 0,
             price_overridden INTEGER NOT NULL DEFAULT 0,
             stock_qty INTEGER NOT NULL DEFAULT 0,
-            hlc INTEGER NOT NULL
+            hlc INTEGER NOT NULL,
+            promo_id INTEGER,
+            promo_name TEXT
         )""",
         "CREATE INDEX sale_line_sale ON sale_line(sale_id)",
         "CREATE INDEX sale_line_product ON sale_line(product_id, hlc)",
@@ -470,6 +497,7 @@ object Schema {
             last_hlc INTEGER NOT NULL DEFAULT 0,
             updated_at INTEGER NOT NULL
         )""",
+        SYNC_DEFERRED,
         // AUTOINCREMENT: seq must never be reused after rows are deleted (segment sealing).
         """CREATE TABLE outbox (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -484,7 +512,7 @@ object Schema {
     /** Tables by sync class (every table must appear exactly once; checked by SchemaTest). */
     val LWW_TABLES = listOf(
         "setting", "role", "staff", "tax_rate", "category", "product", "product_barcode",
-        "supplier", "customer", "payment_method", "shift", "count_session",
+        "supplier", "customer", "payment_method", "shift", "count_session", "promotion",
     )
     val EVENT_TABLES = listOf(
         "cash_movement", "sale", "sale_line", "payment", "sale_void", "stock_movement",
@@ -494,7 +522,9 @@ object Schema {
         "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",
         "sum_day_payment", "sum_day_staff",
     )
-    val LOCAL_TABLES = listOf("meta", "cart", "cart_line", "print_job", "outbox", "sync_segment", "sync_cursor")
+    val LOCAL_TABLES = listOf(
+        "meta", "cart", "cart_line", "print_job", "outbox", "sync_segment", "sync_cursor", "sync_deferred",
+    )
 
     /** Tables whose `id` values come from this device's IdAllocator. */
     val GENERATED_ID_TABLES = LWW_TABLES.filter { it != "setting" } + EVENT_TABLES

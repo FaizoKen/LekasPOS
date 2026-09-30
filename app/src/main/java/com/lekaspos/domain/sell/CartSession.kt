@@ -28,6 +28,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -90,6 +91,7 @@ class CartSession(private val graph: AppGraph) {
     suspend fun load() = loadLock.withLock {
         if (_state.value.loaded) return@withLock
         graph.settings.load()
+        graph.promotions.load()
         val db = graph.db()
         val stored = db.read { r -> Triple(CartDao.loadOpen(r), CartDao.heldCount(r), CartDao.maxIds(r)) }
         val customer = stored.first?.customerId?.let { id -> db.read { CustomerDao.name(it, id) } }
@@ -325,9 +327,10 @@ class CartSession(private val graph: AppGraph) {
     suspend fun heldBills(): List<HeldBill> {
         flush()
         val inclTax = graph.settings.store.value.pricesIncludeTax
+        val promos = graph.promotions.active()
         return graph.db().read { r ->
             CartDao.held(r).map { row ->
-                val total = CartDao.load(r, row.id)?.let { toCart(it).price(inclTax).total } ?: 0L
+                val total = CartDao.load(r, row.id)?.let { toCart(it).price(inclTax, promos).total } ?: 0L
                 HeldBill(row.id, row.label, row.updatedAt, row.lines, total)
             }
         }
@@ -469,7 +472,13 @@ class CartSession(private val graph: AppGraph) {
         }
     }
 
-    private fun price(cart: Cart): PricedCart = cart.price(graph.settings.store.value.pricesIncludeTax)
+    private fun price(cart: Cart): PricedCart =
+        cart.price(graph.settings.store.value.pricesIncludeTax, graph.promotions.active())
+
+    /** Prices the open bill again (promotions changed, or started or ended today). */
+    fun reprice() {
+        _state.update { st -> if (st.loaded && !st.cart.isEmpty) st.copy(priced = price(st.cart)) else st }
+    }
 
     private fun lineNo(key: Long): Int = lineNos[key] ?: nextLineNo.also {
         lineNos[key] = it

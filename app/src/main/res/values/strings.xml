@@ -71,6 +71,7 @@
     <string name="price_check_stock">In stock: %1$s %2$s</string>
     <string name="price_check_no_stock">Stock not tracked</string>
     <string name="price_check_hidden">Hidden from the selling screen</string>
+    <string name="price_check_promo">Promotion: %1$s (%2$s)</string>
     <string name="setup_title">Welcome to LekasPOS</string>
     <string name="setup_intro">Let\'s get your shop ready. You can change all of this later in Settings.</string>
     <string name="setup_shop">Your shop</string>

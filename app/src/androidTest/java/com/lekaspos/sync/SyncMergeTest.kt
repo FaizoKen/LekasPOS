@@ -4,7 +4,12 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.CreditKind
+import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.model.MovementKind
+import com.lekaspos.core.model.PaymentKind
+import com.lekaspos.core.model.PromoKind
+import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.sync.SyncNames
 import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.Restore
@@ -13,11 +18,18 @@ import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.DerivedRebuild
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.Schema
+import com.lekaspos.data.db.Seed
 import com.lekaspos.data.db.long
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.promo.PromotionDao
+import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.data.sync.SegmentCodec
+import com.lekaspos.data.sync.SyncDao
+import com.lekaspos.data.sync.SyncEvent
+import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
 import java.io.ByteArrayInputStream
@@ -322,6 +334,59 @@ class SyncMergeTest {
         enable(b)
         syncAll(a, b)
         assertConverged(a, b)
+    }
+
+    @Test
+    fun promotionsAndTheirSalesTravelBetweenTills() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val milo = product(a, "Milo", 390L)
+        runBlocking {
+            a.promotions.save(null, PromotionRow(0L, "Milo 3 for RM10", PromoKind.MULTI_PRICE, 3, 0, 1_000L, listOf(milo)))
+        }
+        syncAll(a, b)
+        runBlocking {
+            assertEquals(listOf("Milo 3 for RM10"), b.promotions.all().map { it.name }) // reloaded by the import
+            // B sells three through its own bill: the promotion applies there too.
+            b.cart.load()
+            b.cart.addProduct(TestDb.sellable(b.db(), milo), qty = 3_000L)
+            assertEquals(1_000L, b.cart.state.value.priced.total)
+            val total = b.cart.state.value.priced.total
+            val s = Settlement.cash(total, total, 5L) as Settlement.Result.Settled
+            b.checkout.complete(listOf(Tender(Seed.Ids.PM_CASH, PaymentKind.CASH, "Cash", true, s.applied, total, s.change)), s.rounding)
+        }
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            val name = a.db().read { r -> r.queryList("SELECT promo_name FROM sale_line WHERE product_id = ?", arrayOf(milo.toString())) { it.getString(0) } }
+            assertEquals(listOf("Milo 3 for RM10"), name)
+        }
+    }
+
+    @Test
+    fun eventsOfUnknownKindsWaitUntilTheTillKnowsThem() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val milo = product(a, "Milo", 390L)
+        runBlocking {
+            a.promotions.save(null, PromotionRow(0L, "Kept", PromoKind.BUY_GET_FREE, 1, 1, 0L, listOf(milo)))
+            // As if B had received these while it was an older version that did not know them:
+            val event = a.db().read { SyncDao.outboxBatch(it, 100) }.last { it.entity == Entity.PROMOTION }
+            @Suppress("UNCHECKED_CAST")
+            val payload = SegmentCodec.parse(event.payload) as Map<String, Any?>
+            b.db().write(reserveIds = 0L) { tx ->
+                SyncDao.defer(tx, SyncEvent(event.entity, event.op, event.rowId, event.hlc, payload))
+                SyncDao.defer(tx, SyncEvent(99, EventOp.INSERT, 1L, event.hlc, mapOf("x" to 1L)))
+            }
+            b.sync.sync(provider)
+            // The promotion (known now) is applied; the kind 99 event keeps waiting.
+            assertEquals(listOf("Kept"), b.db().read { PromotionDao.list(it) }.map { it.name })
+            assertEquals(listOf(99), b.db().read { SyncDao.deferred(it) }.map { it.second.entity })
+        }
     }
 
     @Test

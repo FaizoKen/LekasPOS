@@ -189,6 +189,7 @@ class CheckoutService(private val graph: AppGraph) {
                 lines = cart.items.mapIndexed { i, item ->
                     val pl = priced.lines[i]
                     val taxed = item.taxRateId != null && item.taxBp > 0
+                    val promo = priced.promotions.getOrNull(i)
                     SaleLineDraft(
                         productId = item.productId, name = item.name, qty = item.qty, baseQty = item.baseQty,
                         unitPrice = item.unitPrice, gross = pl.gross, discount = pl.lineDiscount,
@@ -196,6 +197,7 @@ class CheckoutService(private val graph: AppGraph) {
                         taxRateId = if (taxed) item.taxRateId else null, taxBp = if (taxed) item.taxBp else 0,
                         cost = item.cost, barcode = item.barcode, unit = item.unit, categoryId = item.categoryId,
                         priceOverridden = item.priceOverridden, trackStock = item.trackStock,
+                        promoId = promo?.promotionId, promoName = promo?.name,
                     )
                 },
                 payments = tenders.map { PaymentDraft(it.methodId, it.kind, it.applied, it.tendered, it.change) },

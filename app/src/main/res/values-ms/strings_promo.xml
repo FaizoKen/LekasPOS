@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 8: promosi. -->
+<resources>
+    <string name="promo_title">Promosi</string>
+    <string name="promo_help">Tawaran yang digunakan sendiri oleh kaunter: “3 untuk RM10” atau “beli 1 percuma 1” bagi satu atau lebih produk. Hanya unit penuh produk yang dijual mengikut unit dikira; baris dengan diskaun manual atau harga yang diubah tidak termasuk.</string>
+    <string name="promo_empty">Belum ada promosi. Ketik + untuk menambah.</string>
+    <string name="promo_add">Promosi baharu</string>
+    <string name="promo_edit">Sunting promosi</string>
+    <string name="promo_deal_multi">%1$d untuk %2$s</string>
+    <string name="promo_deal_free">Beli %1$d percuma %2$d</string>
+    <string name="promo_products_count">produk: %1$d</string>
+    <string name="promo_state_off">dimatikan</string>
+    <string name="promo_state_ended">tamat</string>
+    <string name="promo_state_starts">bermula %1$s</string>
+    <string name="promo_state_until">hingga %1$s</string>
+    <string name="promo_state_on">berjalan</string>
+    <string name="promo_name">Nama (dipaparkan pada bil dan resit)</string>
+    <string name="promo_name_hint">Contoh: Milo 3 untuk RM10</string>
+    <string name="promo_kind">Jenis</string>
+    <string name="promo_kind_multi">Beberapa pada satu harga (cth. 3 untuk RM10)</string>
+    <string name="promo_kind_free">Beli beberapa, dapat percuma</string>
+    <string name="promo_buy_qty">Bilangan dibeli</string>
+    <string name="promo_free_qty">Bilangan percuma</string>
+    <string name="promo_group_price">Harga untuk semuanya</string>
+    <string name="promo_products">Produk</string>
+    <string name="promo_products_help">Sebarang campuran produk ini dikira untuk tawaran.</string>
+    <string name="promo_add_product">Tambah produk</string>
+    <string name="promo_no_products">Belum ada produk.</string>
+    <string name="promo_dates">Tarikh</string>
+    <string name="promo_starts">Bermula: %1$s</string>
+    <string name="promo_starts_any">Bermula: sekarang</string>
+    <string name="promo_ends">Tamat: %1$s (hari terakhir)</string>
+    <string name="promo_ends_never">Tamat: tiada tarikh tamat</string>
+    <string name="promo_no_date">Tiada tarikh</string>
+    <string name="promo_active">Berjalan</string>
+    <string name="promo_error_name">Masukkan nama.</string>
+    <string name="promo_error_multi_qty">Sekurang-kurangnya 2.</string>
+    <string name="promo_error_qty">Masukkan nombor dari 1.</string>
+    <string name="promo_error_price">Masukkan harga.</string>
+    <string name="promo_error_products">Tambah sekurang-kurangnya satu produk.</string>
+    <string name="promo_error_dates">Tarikh tamat sebelum tarikh mula.</string>
+    <string name="promo_saved">Promosi disimpan.</string>
+    <string name="promo_delete_confirm">Padam promosi “%1$s”? Jualan yang telah dibuat mengekalkan harganya.</string>
+    <string name="audit_promotion">Promosi diubah</string>
+</resources>
