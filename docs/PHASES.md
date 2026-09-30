@@ -14,7 +14,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
-| 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **in progress** |
+| 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done — waiting for real-device feedback** (tester build v0.8.0-phase8) |
 
 ## Open questions for the user
 
@@ -556,7 +556,7 @@ keep all data (every schema upgrade is migrated in place, with a backup taken fi
 6. Optional: a 10-inch tablet in landscape, and an old Android 5/6 phone.
 7. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 8 — feature completion before UI polish (in progress)
+## Phase 8 — feature completion before UI polish (done — waiting for device feedback)
 
 Added after a feature audit against the basics of a small grocery till (2026-09-30): everything
 else was already in place (selling, payments, receipts, refunds, stock, staff, shifts, customers
@@ -573,3 +573,45 @@ and credit, reports, backups, sync). The owner chose these four before polishing
 
 Optional extras from the audit, not planned: barcode/shelf labels, expiry dates per batch,
 supplier payments, loyalty points, product photos, customer display, Bluetooth scale reading.
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **1,126 KB** (1,153,240 bytes; budget 8 MB), version `0.8.0-ci.49` (tester build v0.8.0-phase8) |
+| JVM tests | `:core` incl. `PromotionsTest` (worked examples + 2,000 random bills: no line saves more than its gross, never a negative saving); `:app` incl. a DDL syntax guard — all pass |
+| Instrumented tests (CI emulators) | **119/119 on API 21** and **119/119 on API 36** (new: promotions end to end, promotions and their sales across two tills, kept sync events, price check, first-run setup); migration v5 → v6 |
+| Tablet (API 36, landscape) | every screen opens, including the new ones; screenshots reviewed in both languages (Malay promotion type names shortened) |
+| Release smoke | upgrade from the Phase 7 tester build and fresh install, API 21 and 36 — no crash |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 67/67 plans; scan to bill 0.19 ms (promotions included); sale commit 4.7 ms; rolling year 1.05 s; 200 sales from another till 0.34 s |
+| Perf FULL, API 36 emulator | **PASS**, 67/67 plans |
+| Cold start to usable selling screen | API 21: 547–654 ms; API 36: 569–673 ms — budget 2 s (the first-run welcome screen is now dismissed before timing; with it, API 21 showed an implausible ~100 ms) |
+| Memory | heap after GC flat over 1,000 sales — budget 48 MB |
+| Schema | v6 (D-047) — upgrades earlier installs in place; each till re-reads the store's sync files once |
+
+Found on the way: the first v6 build had a syntax error in the new table (a lost column template) and
+failed on every emulator; the JVM schema test only compared text and now rejects such slips.
+
+### Needs real-device testing (Phase 8)
+
+Update **every till** of the shop to this build (promotions only apply on tills that have it).
+
+1. **Upgrade**: install over the Phase 7 build — data and sync still there; no welcome screen.
+2. **Other item**: tap "+" next to the search bar → type a price (and a name) → it is on the bill
+   and the receipt; with a scanner connected, scanning still adds products normally.
+3. **Price check** (menu): scan a product, a pack barcode and a scale label, then type a name —
+   price, pack price, stock and promotion show; the bill is unchanged. Try the camera button.
+4. **Promotions** (menu → Promotions → +):
+   - "3 for RM10" on one product: scan it 1, 2, 3, 4 times — the saving appears at 3 and stays at 4;
+     the line shows the promotion's name and saving; pay and check the receipt.
+   - "any 3 for RM10" on two flavours of different prices: mix them — the saving is shared.
+   - "buy 1 get 1 free": scan 2 — one is free.
+   - Give a discount or change the price on a promotion line — your change wins.
+   - An end date in the past, or the switch off — no saving.
+   - Refund one item of a promotion sale — the refund is what that item actually cost.
+   - On the second till: the promotion arrives with sync and applies there too.
+5. **Welcome screen**: on a spare phone or after "Clear storage" (it deletes the data on that phone —
+   only on a test phone): the welcome screen appears once; change the language there; "Join my shop
+   with sync" opens Sync.
+6. Carried over when the hardware is available: printer (the promotion line on paper), drawer,
+   HID/SPP scanners, 2 GB tablet.
