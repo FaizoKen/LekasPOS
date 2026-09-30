@@ -779,3 +779,6 @@ app without Google Play yet. Decided with the owner (D-051):
       SHA-256 `e7cc22fa…39ec`); smoke baseline v1.0.0
 - Later: register the developer, package and key with Google before the 2027 rule reaches
   Malaysia (installs outside Play from registered developers only)
+
+The owner installed 1.0.0 on their phone over the tester build: "all works" (2026-09-30). The
+post-release CI run (release smoke upgrading from v1.0.0) is green.
