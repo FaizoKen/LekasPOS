@@ -234,12 +234,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         searchClear.setOnClickListener { clearSearch() }
         browseButton?.setOnClickListener { toggleCatalog() }
-        findViewById<View>(R.id.btn_other).setOnClickListener { sellOther() }
         browseButton?.visible(!twoPane)
-        findViewById<View>(R.id.btn_price_check).apply {
-            visible(twoPane) // phones: in the menu (the search row has no room for a third tool)
-            setOnClickListener { showPriceCheck() }
-        }
+        findViewById<View>(R.id.btn_price_check).setOnClickListener { showPriceCheck() }
         findViewById<TextView>(R.id.cart_empty_help).setText(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)
         if (!twoPane) search.setHint(R.string.sell_search_hint_short) // room for the tools beside it
         lastSalePrint.setOnClickListener { printLastSale() }
@@ -635,7 +631,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }.show()
     }
 
-    /** An item without a barcode (loose vegetables, kuih …): name optional, price typed in. */
+    /** Price check: scan or search to see price, stock and deals; the bill is not touched. */
     private fun showPriceCheck() {
         val camera: (() -> Unit)? = if (graph.settings.device.value.cameraScan && hasCamera) {
             {
@@ -648,16 +644,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera).also { it.show() }
     }
 
-    private fun sellOther() {
-        showOtherItem(this, currency) { name, price -> graph.cart.addCustom(name, price, null) }
-    }
-
+    /** Only registered products are sold (D-050): an unknown barcode is registered, then it is on the bill. */
     private fun unknownBarcode(code: String) {
-        showUnknownBarcode(
-            this, code,
-            onAddProduct = { startActivityForResult(ProductEditActivity.newIntent(this, barcode = code), REQ_NEW_PRODUCT) },
-            onSellOther = { showOtherItem(this, currency) { name, price -> graph.cart.addCustom(name, price, code) } },
-        )
+        showUnknownBarcode(this, code) { startActivityForResult(ProductEditActivity.newIntent(this, barcode = code), REQ_NEW_PRODUCT) }
     }
 
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")

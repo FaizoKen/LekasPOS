@@ -693,8 +693,8 @@ and straightforward, light and fast, easy for a brand-new cashier — see Phase 
 
 Audit of the selling flow (2026-09-30) and what changes (D-049):
 
-- [x] Words on every control: "Other item", "Items" (phones), "Price check" (tablets and
-      landscape), "Menu"; camera scanner inside the search box; "2 held" pill instead of ⏸
+- [x] Words on every control: "Price check", "Items" (phones), "Menu"; camera scanner inside
+      the search box; "2 held" pill instead of ⏸
 - [x] The line just scanned (or tapped) shows **Remove · − · quantity · + · More** in place —
       no dialog per tap; "−" stops at one
 - [x] Big **TOTAL** above a big **PAY**
@@ -704,7 +704,8 @@ Audit of the selling flow (2026-09-30) and what changes (D-049):
 - [x] Menu: cashier jobs first, back office under **Manage shop ›**
 - [x] Catalogue: **Popular** tab (best sellers, last 30 days) first; tiles on the bill show "×n";
       picking a search result goes back to the bill
-- [x] Other item: price keypad first, name optional underneath (no keyboard over the keypad)
+- [x] **No "Other item"** (owner's feedback on v0.10.0-phase10, D-050): only registered products
+      are sold; an unknown barcode offers "Add product" (then it is on the bill) or Cancel
 - [x] Tests: popular items (ranking, 30 days, deleted left out, fresh prices), the line buttons on
       the emulator, screenshots of the payment dialog and the empty bill; perf case
       `popular_items`
@@ -742,9 +743,18 @@ Try it as a new cashier would, without explanations.
    bill shows the last sale's change; "Print a copy" with a printer.
 7. **Items** (phone) / the left side (tablet): the **Popular** tab after a few sales; items on the
    bill show "×2"; search, tap a result → back to the bill.
-8. **Other item**: the keypad first; the name is optional (the keyboard opens only when you tap it).
+8. **Unknown barcode**: scan one the till does not know → "Add product" (the barcode is filled in;
+   a cashier without the product permission needs the manager's PIN) → Save → it is on the bill.
+   There is no "Other item" any more; loose items are products picked from Items.
 9. **Menu**: short list (price check, held bills, sales & refunds, shift, drawer, cancel bill);
    **Manage shop ›** opens products, stock, categories, promotions, tax, reports, settings.
 10. **Hold** a bill: the "1 held" pill appears in the top bar; tap it to bring the bill back.
-11. **Bahasa Melayu**: every label fits (Item lain, Barang, Jumlah, Bayar, Buang, Lagi, Laris).
+11. **Bahasa Melayu**: every label fits (Semak harga, Barang, Jumlah, Bayar, Buang, Lagi, Laris).
 12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
+
+### Real-device feedback (Phase 10, 2026-09-30)
+
+On v0.10.0-phase10 the owner found "Other item" beside Price check confusing for a new cashier,
+and said a cashier should not sell anything that is not registered. Agreed and removed (D-050):
+an unknown barcode is registered on the spot (Add product → on the bill). Fixed in the next
+tester build (v0.10.0-phase10-fix1); the rest of the Phase 10 list above still applies.

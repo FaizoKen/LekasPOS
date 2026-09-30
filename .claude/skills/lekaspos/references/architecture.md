@@ -192,9 +192,12 @@ restore that `Db.open` applies before opening the database (D-044).
 
 ## 8b. Cashier-first selling screen (Phase 10, D-049)
 
-- Every control a cashier uses carries a word, not only an icon: "Other item", "Items" (phones),
-  "Price check" (two-pane), "Menu"; the camera scanner sits inside the search box. Pills in the
-  top bar appear only when there is something to see (held bills, printer, backup).
+- Every control a cashier uses carries a word, not only an icon: "Price check", "Items" (phones),
+  "Menu"; the camera scanner sits inside the search box. Pills in the top bar appear only when
+  there is something to see (held bills, printer, backup).
+- Only registered products are sold (D-050): an unknown barcode offers "Add product" (then it is
+  on the bill) or Cancel; items without a barcode are products picked from Items (sold by weight
+  or with the price typed at the till). Old bills and sales with unregistered lines still load.
 - The selected bill line (the one scanned or changed last, or tapped) shows Remove, −, quantity,
   +, More in place; "−" stops at one (taking the last one off is Remove). Other lines stay one row.
 - Totals bar: summary, a big TOTAL, then Hold / Discount / PAY. The empty bill explains how to

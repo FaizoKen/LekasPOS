@@ -413,6 +413,20 @@ Rejected: a full-screen payment activity (a dialog over the bill keeps context a
 swipe-to-delete on lines (invisible to new cashiers), a first-run tutorial overlay (the empty
 bill's three lines do the same job every time), hiding menu entries by permission (the gate
 already asks for a manager; hidden entries confuse owners), product photos (size and speed).
+### D-050 — Only registered products are sold; no "Other item" (Phase 10 feedback, 2026-09-30)
+The owner pointed out that the "Other item" button (sell anything by typing a price, added in
+Phase 8) confuses new cashiers and lets a cashier sell things the system does not know: no
+stock, no cost or profit, a free-typed price with no permission check. Removed: the button, the
+"Sell as other item" choice for an unknown barcode, and the dialog. An unknown barcode now offers
+only "Add product" (name and price; the barcode is filled in; it needs the product permission or
+a manager's PIN) and the product then goes on the bill — the catalogue fills itself as the shop
+sells. Items without a barcode (loose vegetables, kuih) are registered once as products sold by
+weight or with "price entered at the till", and picked from Items / Popular. "Price check" takes
+the freed place on phones. Old held bills and past sales with unregistered lines still load,
+print and report ("Other items" in reports).
+Rejected: keeping it behind a permission (the unknown-barcode "Add product" already asks for the
+same approval, and registering keeps stock and reports right); a store setting (one more switch
+the owner must understand).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

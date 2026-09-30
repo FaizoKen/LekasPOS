@@ -2,13 +2,11 @@ package com.lekaspos.ui.sell
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.lekaspos.R
@@ -262,56 +260,15 @@ fun showHeldBills(
     d.trackedBy(a)
 }
 
-fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit, onSellOther: () -> Unit): AlertDialog =
+/** A barcode no product has: register it (then it goes on the bill), or cancel (D-050). */
+fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit): AlertDialog =
     AlertDialog.Builder(a)
         .setTitle(R.string.sell_not_found_title)
         .setMessage(a.getString(R.string.sell_not_found_message, code))
         .setPositiveButton(R.string.sell_add_product) { _, _ -> onAddProduct() }
-        .setNeutralButton(R.string.sell_sell_other) { _, _ -> onSellOther() }
         .setNegativeButton(R.string.cancel, null)
         .show()
         .trackedBy(a)
-
-/**
- * A one-off item that is not in the catalogue: the price first (the keypad is what the cashier
- * needs), the name optional underneath — no keyboard pops up over the keypad.
- */
-fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> Unit): AlertDialog {
-    val col = a.column()
-    val name = EditText(a).apply {
-        hint = a.getString(R.string.other_item_name)
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-        setSingleLine(true)
-    }
-    val display = a.display()
-    val keypad = Keypad(a, 9) { display.text = MoneyFormat.format(MoneyFormat.keypad(it, currency) ?: 0L, currency) }
-    col.addView(display, matchWrap().apply { bottomMargin = a.dp(8) })
-    col.addView(keypad.view, matchWrap())
-    col.addView(name, matchWrap().apply { topMargin = a.dp(8) })
-    // The column takes the first focus, so the name field (and the keyboard) wait for a tap.
-    col.isFocusableInTouchMode = true
-    keypad.clear()
-    val d = AlertDialog.Builder(a)
-        .setTitle(R.string.other_item_title)
-        .setView(col)
-        .setPositiveButton(R.string.ok, null)
-        .setNegativeButton(R.string.cancel, null)
-        .create()
-    d.setOnKeyListener { _, _, e -> if (name.hasFocus()) false else keypad.onKey(e) }
-    d.setOnShowListener {
-        col.requestFocus()
-        d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val price = MoneyFormat.keypad(keypad.digits, currency) ?: 0L
-            val label = name.text.toString().trim().ifEmpty { a.getString(R.string.other_item_default) }
-            if (price > 0L) {
-                d.dismiss()
-                onAdd(label, price)
-            }
-        }
-    }
-    d.show()
-    return d.trackedBy(a)
-}
 
 /** Forwards scanner/keyboard keys of a dialog without text fields to [handler]. */
 fun AlertDialog.forwardKeys(handler: (KeyEvent) -> Boolean) {

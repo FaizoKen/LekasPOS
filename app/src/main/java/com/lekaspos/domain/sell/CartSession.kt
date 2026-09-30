@@ -147,11 +147,6 @@ class CartSession(private val graph: AppGraph) {
         ),
     )
 
-    /** An item that is not in the catalogue (unknown barcode sold anyway, "misc" item). */
-    fun addCustom(name: String, price: Long, barcode: String?): Long = add(
-        CartItem(key = 0L, productId = null, name = name, barcode = barcode, qty = 1000L, unitPrice = price, trackStock = false),
-    )
-
     /** Adds [template] (its key is assigned here). Returns the key of the new or grown line, 0 if busy. */
     fun add(template: CartItem): Long {
         val st = _state.value

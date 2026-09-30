@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Search or scan, with the camera scanner inside the box, then labelled tools: items without
-     a barcode are typed in (Other item) or picked (Items; always shown on two-pane screens). -->
+<!-- Search or scan, with the camera scanner inside the box, then labelled tools: Price check,
+     and Items (phones; two-pane screens always show the items). Only registered products are
+     sold (D-050): an unknown barcode is registered first. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -60,29 +61,10 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/btn_other"
-        style="@style/Widget.Lekas.Tool"
-        android:layout_marginStart="4dp"
-        android:contentDescription="@string/other_item_title">
-
-        <ImageView
-            style="@style/Widget.Lekas.ToolIcon"
-            android:src="@drawable/ic_add" />
-
-        <TextView
-            style="@style/Text.Lekas.ToolLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxWidth="84dp"
-            android:singleLine="true"
-            android:text="@string/sell_tool_other" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/btn_price_check"
         style="@style/Widget.Lekas.Tool"
-        android:contentDescription="@string/price_check_title"
-        android:visibility="gone">
+        android:layout_marginStart="4dp"
+        android:contentDescription="@string/price_check_title">
 
         <ImageView
             style="@style/Widget.Lekas.ToolIcon"
