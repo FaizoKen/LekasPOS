@@ -792,7 +792,7 @@ release smoke green. Test build **v1.0.1** (pre-release; build 63, 1,153 KB — 
 SHA-256 `fdffa126…ff26`). After the owner's OK: mark v1.0.1 as the latest release (the website's
 Download link follows) and point `PREV_APK_URL` at it.
 
-## 1.1.0 — faster Google Drive backup (in progress)
+## 1.1.0 — faster Google Drive backup (test build, waiting for the owner's check)
 
 The owner found Google Drive backup slow and "stuck" before it showed that it was syncing
 (2026-09-30). Causes and fixes in D-053: instant "Connecting…" and step-by-step progress; cached
@@ -802,3 +802,19 @@ carries the new logo of the 1.0.1 test build (not released on its own).
 
 - [x] Tests: status steps during a round; the short listing and its fall-back to the whole folder
       on a gap; the change announcement after a commit; Drive time parsing (JVM)
+
+Results (2026-10-01): CI **135/135 on API 21 and 36**, tablet and release smoke green; perf FULL
+**PASS** on both (69/69 plans; cold start API 21 513–613 ms; 200 synced sales imported in 0.30 s
+p50 on API 21). Test build **v1.1.0** (pre-release; build 65, 1,162 KB — 1,189,705 bytes,
+SHA-256 `44442439…4ffa`); the public download stays v1.0.0 until the owner's OK.
+
+### Needs real-device testing (1.1.0)
+
+1. Install over 1.0.0 — data and backup settings still there; the new logo on the home screen.
+2. Settings → Google Drive backup → **Sync now**: "Connecting to Google…" shows at once, then the
+   steps, then "Everything is backed up · Last backup: just now".
+3. Make a sale, open the backup screen: "1 change waiting…", and within about 10 s it is sent by
+   itself (no button).
+4. Turn on airplane mode, make a sale, turn it off: the change is sent within a few seconds.
+5. With a second till: a price change on one shows on the other within a minute or so (the other
+   till syncs when its app opens, or within 45 s of its own changes; otherwise every 30 min).
