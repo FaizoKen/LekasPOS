@@ -3,6 +3,7 @@ package com.lekaspos.ui
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -105,6 +106,18 @@ class ScreenshotsTest {
             AppLanguage.set(ctx, lang)
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-empty.png"))
         }
+    }
+
+    /** The launcher icon as this Android draws it (API 21: the legacy vector; 26+: adaptive + mask). */
+    @Test
+    fun appIcon() {
+        val dir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "screens").apply { mkdirs() }
+        val icon = ctx.packageManager.getApplicationIcon(ctx.packageName)
+        val size = 192
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        icon.setBounds(0, 0, size, size)
+        icon.draw(Canvas(bitmap))
+        FileOutputStream(File(dir, "app-icon.png")).use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
     }
 
     private fun shoot(intent: Intent, file: File, action: (Activity) -> Unit = {}) {

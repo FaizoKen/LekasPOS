@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 72 72" width="72" height="72">
+  <title>LekasPOS</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22AB7A"/>
+      <stop offset="1" stop-color="#0C5A41"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="72" height="72" rx="16" fill="url(#bg)"/>
+  <path fill="#FFFFFF" transform="translate(54 54) scale(1.12)" d="M-13,-22 H13 A4,4 0 0,1 17,-18 V18 L12.75,22 L8.5,18 L4.25,22 L0,18 L-4.25,22 L-8.5,18 L-12.75,22 L-17,18 V-18 A4,4 0 0,1 -13,-22 Z M-2.2,-14 L-8.6,14 L10.6,14 L12.4,7 L0.4,7 L5.2,-14 Z"/>
+</svg>

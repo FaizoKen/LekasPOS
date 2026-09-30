@@ -49,3 +49,4 @@ h3 { font-size: 1.05rem; margin: 1.5rem 0 0.25rem; }
   text-decoration: none;
 }
 .button:hover, .button:focus { background: #145e43; }
+.logo { vertical-align: middle; margin-right: 0.35rem; border-radius: 12px; }

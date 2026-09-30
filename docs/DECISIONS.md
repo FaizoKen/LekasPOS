@@ -452,6 +452,18 @@ account — without publishing on Google Play yet. Decided with the owner:
 Rejected: a new release key (the owner's phone and testers would have to reinstall; no gain);
 staying in Testing with listed users (100 at most, weekly re-sign-in); an in-app update check
 against GitHub (network use beyond Drive; a link to the website is enough for now).
+### D-052 — App logo: torn receipt with a slanted "L" (2026-09-30)
+The launcher icon was the stock Material "shopping basket" — used by countless apps. The owner
+asked for a unique, modern logo: minimal, readable when small, with its own identity. New mark,
+drawn from scratch: a white till receipt with a torn (zig-zag) edge and a slanted "L" for
+*Lekas* ("fast") cut out of it, on an emerald gradient (#22AB7A → #0C5A41). Two shapes, two
+colours; legible at 16–24 px; fits the adaptive icon's 66dp safe circle; a monochrome layer for
+Android 13+ themed icons; the legacy (API 21–25) icon is the same mark on a round badge. The L is
+wound opposite to the receipt, so it is a hole without `fillType` (API 24+). The website and the
+README use the same mark (`site/icon.svg`).
+Rejected: a receipt with a lightning bolt (the standard "electricity bill" icon in Malaysian
+payment apps), speed lines and text lines (clutter at small sizes). Not checked against trademark
+registers: before registering the name or logo as a trademark, search MyIPO.
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

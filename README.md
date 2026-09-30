@@ -1,4 +1,4 @@
-# LekasPOS
+# <img src="site/icon.svg" alt="" width="48" height="48" align="top"> LekasPOS
 
 [![CI](https://github.com/FaizoKen/LekasPOS/actions/workflows/ci.yml/badge.svg)](https://github.com/FaizoKen/LekasPOS/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
