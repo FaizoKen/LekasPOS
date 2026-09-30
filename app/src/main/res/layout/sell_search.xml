@@ -36,6 +36,14 @@
         android:visibility="gone" />
 
     <ImageButton
+        android:id="@+id/btn_other"
+        style="@style/Widget.Lekas.IconButton"
+        android:layout_width="52dp"
+        android:layout_height="56dp"
+        android:contentDescription="@string/other_item_title"
+        android:src="@drawable/ic_add" />
+
+    <ImageButton
         android:id="@+id/btn_browse"
         style="@style/Widget.Lekas.IconButton"
         android:layout_width="56dp"

@@ -1,6 +1,9 @@
 package com.lekaspos.domain
 
 import com.lekaspos.app.AppGraph
+import com.lekaspos.data.db.Meta
+import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.DeviceSettings
 import com.lekaspos.data.settings.SettingsDao
 import com.lekaspos.data.settings.StoreSettings
@@ -53,5 +56,25 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         val db = graph.db()
         db.write(reserveIds = 0) { tx -> DeviceSettings.save(tx, d) }
         _device.value = d
+    }
+
+    /**
+     * First-run setup (Phase 8) is shown once, on a fresh install: no shop name, products or sales
+     * yet. Upgraded or restored databases, and tills that joined a store through sync, skip it.
+     */
+    suspend fun needsSetup(): Boolean {
+        load()
+        if (_store.value.name.isNotBlank()) return false
+        return graph.db().read { r ->
+            Meta.get(r, SETUP_DONE) != "1" && ProductDao.count(r) == 0L && SaleDao.count(r) == 0L
+        }
+    }
+
+    suspend fun markSetupDone() {
+        graph.db().write(reserveIds = 0) { tx -> Meta.put(tx.db, SETUP_DONE, "1") }
+    }
+
+    private companion object {
+        const val SETUP_DONE = "dev.setup_done"
     }
 }

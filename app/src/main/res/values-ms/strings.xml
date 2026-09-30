@@ -59,6 +59,25 @@
     <string name="other_item_title">Item lain</string>
     <string name="other_item_name">Nama (pilihan)</string>
     <string name="other_item_default">Item lain</string>
+    <string name="price_check_title">Semak harga</string>
+    <string name="price_check_hint">Imbas atau taip kod bar atau nama</string>
+    <string name="price_check_go">Semak</string>
+    <string name="price_check_camera">Kamera</string>
+    <string name="price_check_per">%1$s setiap %2$s</string>
+    <string name="price_check_pack">Pek %1$s: %2$s</string>
+    <string name="price_check_stock">Stok ada: %1$s %2$s</string>
+    <string name="price_check_no_stock">Stok tidak dijejak</string>
+    <string name="price_check_hidden">Disembunyikan dari skrin jualan</string>
+    <string name="setup_title">Selamat datang ke LekasPOS</string>
+    <string name="setup_intro">Mari sediakan kedai anda. Semua ini boleh diubah kemudian dalam Tetapan.</string>
+    <string name="setup_shop">Kedai anda</string>
+    <string name="setup_optional">Pilihan</string>
+    <string name="setup_printer">Sediakan pencetak resit</string>
+    <string name="setup_staff">Kakitangan dan PIN</string>
+    <string name="setup_join_help">Sudah menggunakan LekasPOS pada kaunter lain di kedai ini? Hidupkan segerak dengan akaun Google yang sama untuk mendapatkan produk dan tetapannya di sini.</string>
+    <string name="setup_join">Sertai kedai saya dengan segerak</string>
+    <string name="setup_start">Mula berjual</string>
+    <string name="setup_name_needed">Masukkan nama kedai anda.</string>
 
     <!-- Menu -->
     <string name="menu_products">Produk</string>

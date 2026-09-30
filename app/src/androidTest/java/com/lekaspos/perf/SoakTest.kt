@@ -90,6 +90,8 @@ class SoakTest {
 
     @Test
     fun theSellingScreenIsFreedAfterRecreation() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        runBlocking { com.lekaspos.app.LekasApp.graph(app).settings.markSetupDone() } // no welcome screen on top
         val refs = ArrayList<WeakReference<Activity>>()
         ActivityScenario.launch(SellActivity::class.java).use { scenario ->
             repeat(5) {

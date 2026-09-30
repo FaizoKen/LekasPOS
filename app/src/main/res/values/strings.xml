@@ -62,6 +62,25 @@
     <string name="other_item_title">Other item</string>
     <string name="other_item_name">Name (optional)</string>
     <string name="other_item_default">Other item</string>
+    <string name="price_check_title">Price check</string>
+    <string name="price_check_hint">Scan or type a barcode or name</string>
+    <string name="price_check_go">Check</string>
+    <string name="price_check_camera">Camera</string>
+    <string name="price_check_per">%1$s per %2$s</string>
+    <string name="price_check_pack">Pack of %1$s: %2$s</string>
+    <string name="price_check_stock">In stock: %1$s %2$s</string>
+    <string name="price_check_no_stock">Stock not tracked</string>
+    <string name="price_check_hidden">Hidden from the selling screen</string>
+    <string name="setup_title">Welcome to LekasPOS</string>
+    <string name="setup_intro">Let\'s get your shop ready. You can change all of this later in Settings.</string>
+    <string name="setup_shop">Your shop</string>
+    <string name="setup_optional">Optional</string>
+    <string name="setup_printer">Set up a receipt printer</string>
+    <string name="setup_staff">Staff and PINs</string>
+    <string name="setup_join_help">Already using LekasPOS on another till in this shop? Turn on sync with the same Google account to get its products and settings here.</string>
+    <string name="setup_join">Join my shop with sync</string>
+    <string name="setup_start">Start selling</string>
+    <string name="setup_name_needed">Enter your shop\'s name.</string>
 
     <!-- Menu -->
     <string name="menu_products">Products</string>

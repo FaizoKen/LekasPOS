@@ -14,6 +14,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
+| 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **in progress** |
 
 ## Open questions for the user
 
@@ -554,3 +555,20 @@ keep all data (every schema upgrade is migrated in place, with a backup taken fi
 5. **A long day**: sell for a while (or leave the app open for hours) — no slowdown, no crash.
 6. Optional: a 10-inch tablet in landscape, and an old Android 5/6 phone.
 7. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
+
+## Phase 8 — feature completion before UI polish (in progress)
+
+Added after a feature audit against the basics of a small grocery till (2026-09-30): everything
+else was already in place (selling, payments, receipts, refunds, stock, staff, shifts, customers
+and credit, reports, backups, sync). The owner chose these four before polishing the UI:
+
+- [ ] **Other item** button on the selling screen: sell anything without a barcode by typing its
+      price (until now only offered when a scanned barcode was unknown)
+- [ ] **Price check**: scan or search to see price, stock and promotion without adding to the bill
+- [ ] **First-run setup**: language, store name, owner PIN, printer, or join an existing store
+      through sync
+- [ ] **Promotions**: "N for RM X" and "buy X get Y free" on one or more products, optional dates;
+      applied automatically, on the receipt, synced (schema v6)
+
+Optional extras from the audit, not planned: barcode/shelf labels, expiry dates per batch,
+supplier payments, loyalty points, product photos, customer display, Bluetooth scale reading.

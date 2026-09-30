@@ -16,6 +16,7 @@ import com.lekaspos.ui.reports.ReportsActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.settings.BackupActivity
 import com.lekaspos.ui.settings.SettingsActivity
+import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.StoreSettingsActivity
 import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.shift.ShiftActivity
@@ -24,6 +25,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -37,6 +39,10 @@ class ScreenshotsTest {
 
     private val instr get() = InstrumentationRegistry.getInstrumentation()
     private val ctx get() = instr.targetContext
+
+    // The first-run welcome screen would open over the selling screen on a fresh emulator.
+    @Before
+    fun skipFirstRunSetup() = runBlocking { LekasApp.graph(ctx).settings.markSetupDone() }
 
     @After
     fun tearDown() = AppLanguage.set(ctx, AppLanguage.PHONE)
@@ -52,6 +58,7 @@ class ScreenshotsTest {
         "shift" to ShiftActivity::class.java,
         "sync" to SyncActivity::class.java,
         "backup" to BackupActivity::class.java,
+        "setup" to SetupActivity::class.java,
     )
 
     @Test

@@ -70,6 +70,7 @@ import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
+import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.shift.openShift
@@ -143,6 +144,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var outcomeDialog: AlertDialog? = null
     private var paymentDialog: AlertDialog? = null
     private var hasCamera = false
+    private var priceCheck: PriceCheckDialog? = null
+    private var setupChecked = false
     private var backCallback: Any? = null
     private val dialogs = DialogTracker()
 
@@ -206,6 +209,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         searchClear.setOnClickListener { clearSearch() }
         browseButton?.setOnClickListener { toggleCatalog() }
+        findViewById<View>(R.id.btn_other).setOnClickListener { sellOther() }
         browseButton?.visible(!twoPane)
         payButton.setOnClickListener { openPayment() }
         holdButton.setOnClickListener { hold() }
@@ -238,6 +242,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
             if (!reportedDrawn) {
                 reportedDrawn = true
                 reportFullyDrawn()
+            }
+            if (!setupChecked) {
+                setupChecked = true
+                if (graph.settings.needsSetup()) startActivity(Intent(this@SellActivity, SetupActivity::class.java))
             }
             delay(HARDWARE_DELAY_MS) // keep Bluetooth work out of the cold-start path
             graph.printer.start()
@@ -484,6 +492,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     /** Every scan ends here: HID buffer, search field, SPP scanner. */
     fun onScanned(code: String) {
+        priceCheck?.takeIf { it.isShowing }?.let {
+            it.lookup(code) // price check open: look up, never add to the bill
+            return
+        }
         if (graph.checkout.outcome.value != null) graph.checkout.acknowledge() // next customer
         scope.launch {
             when (val r = graph.cart.scan(code)) {
@@ -517,6 +529,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }.show()
     }
 
+    /** An item without a barcode (loose vegetables, kuih …): name optional, price typed in. */
+    private fun showPriceCheck() {
+        val camera: (() -> Unit)? = if (graph.settings.device.value.cameraScan && hasCamera) {
+            {
+                @Suppress("DEPRECATION")
+                startActivityForResult(CameraScanActivity.pickIntent(this), REQ_PRICE_SCAN)
+            }
+        } else {
+            null
+        }
+        priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera).also { it.show() }
+    }
+
+    private fun sellOther() {
+        showOtherItem(this, currency) { name, price -> graph.cart.addCustom(name, price, null) }
+    }
+
     private fun unknownBarcode(code: String) {
         showUnknownBarcode(
             this, code,
@@ -536,6 +565,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         if (requestCode == REQ_CUSTOMER && resultCode == RESULT_OK && data != null) {
             val id = data.getLongExtra(CustomersActivity.EXTRA_ID, 0L)
             if (id != 0L) graph.cart.setCustomer(id, data.getStringExtra(CustomersActivity.EXTRA_NAME))
+        }
+        if (requestCode == REQ_PRICE_SCAN && resultCode == RESULT_OK) {
+            data?.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { priceCheck?.lookup(it) }
         }
     }
 
@@ -775,6 +807,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
         val items = ArrayList<Int>(14)
+        items += listOf(R.string.other_item_title, R.string.price_check_title)
         items += listOf(R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.menu_tax_rates, R.string.menu_sales, R.string.menu_reports, R.string.menu_shift)
         if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
         items += listOf(R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics)
@@ -782,6 +815,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
+                R.string.other_item_title -> sellOther()
+                R.string.price_check_title -> showPriceCheck()
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
                 R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))
                 R.string.menu_categories -> startActivity(Intent(this, CategoriesActivity::class.java))
@@ -937,6 +972,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     companion object {
         private const val REQ_NEW_PRODUCT = 1
+        private const val REQ_PRICE_SCAN = 7
         private const val REQ_CUSTOMER = 2
         private const val IDLE_CHECK_MS = 15_000L
         private const val PAGE = 60

@@ -36,6 +36,7 @@ import com.lekaspos.ui.settings.BackupActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.ScannerSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
+import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.StoreSettingsActivity
 import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.products.ProductImportActivity
@@ -56,6 +57,7 @@ import com.lekaspos.data.db.Seed
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -67,6 +69,10 @@ import org.junit.runner.RunWith
 class ScreensSmokeTest {
 
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    // The first-run welcome screen would open over the selling screen on a fresh emulator.
+    @Before
+    fun skipFirstRunSetup() = runBlocking { LekasApp.graph(ctx).settings.markSetupDone() }
 
     private fun open(cls: Class<out Activity>, extras: Intent.() -> Unit = {}, check: (Activity) -> Unit = {}) =
         open(Intent(ctx, cls).apply(extras), check)
@@ -83,7 +89,7 @@ class ScreensSmokeTest {
         for (cls in listOf(
             ProductListActivity::class.java, CategoriesActivity::class.java, TaxRatesActivity::class.java,
             SalesActivity::class.java, SettingsActivity::class.java, StoreSettingsActivity::class.java,
-            PrinterSettingsActivity::class.java, ScannerSettingsActivity::class.java, AuditLogActivity::class.java, BackupActivity::class.java, SyncActivity::class.java,
+            PrinterSettingsActivity::class.java, ScannerSettingsActivity::class.java, AuditLogActivity::class.java, BackupActivity::class.java, SyncActivity::class.java, SetupActivity::class.java,
             InventoryActivity::class.java, ReceiveActivity::class.java, SuppliersActivity::class.java, PurchasesActivity::class.java,
             CountSessionsActivity::class.java, LowStockActivity::class.java, MovementsActivity::class.java, ProductPickActivity::class.java,
         )) {

@@ -18,6 +18,7 @@ import com.lekaspos.domain.report.ReportService
 import com.lekaspos.domain.sale.SaleActions
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
+import com.lekaspos.domain.sell.PriceCheck
 import com.lekaspos.domain.shift.ShiftService
 import com.lekaspos.domain.staff.StaffService
 import com.lekaspos.hw.printer.PrinterService
@@ -58,6 +59,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val reports: ReportService by lazy { ReportService(this) }
     val productCsv: ProductCsvService by lazy { ProductCsvService(this) }
     val cart: CartSession by lazy { CartSession(this) }
+    val priceCheck: PriceCheck by lazy { PriceCheck(this) }
     val checkout: CheckoutService by lazy { CheckoutService(this) }
     val sales: SaleActions by lazy { SaleActions(this) }
     val inventory: InventoryService by lazy { InventoryService(this) }
