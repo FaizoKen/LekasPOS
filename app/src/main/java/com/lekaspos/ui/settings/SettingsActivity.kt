@@ -49,7 +49,7 @@ class SettingsActivity : ScreenActivity() {
         val adapter = RowAdapter<Entry>(
             bind = { h, e ->
                 val sub = if (e.title == R.string.settings_about) {
-                    getString(R.string.settings_about_sub, BuildConfig.VERSION_NAME, BuildConfig.SIGNING_KEY)
+                    aboutLine()
                 } else if (e.action != null) {
                     languageName(AppLanguage.get(this))
                 } else {
@@ -68,15 +68,24 @@ class SettingsActivity : ScreenActivity() {
         list.adapter = adapter
     }
 
-    /** Version, licence, privacy policy, source code and the notices of the bundled libraries. */
+    /** "LekasPOS 1.0.0 (build 60) · GPL-3.0"; a build not signed with the release key says so. */
+    private fun aboutLine(): String {
+        val line = getString(R.string.settings_about_sub, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+        return if (BuildConfig.SIGNING_KEY == "release") line else "$line · ${BuildConfig.SIGNING_KEY}"
+    }
+
+    /**
+     * Version, licence, the website (downloads and updates — there is no app store to update from,
+     * D-051; the source code is linked there) and the notices of the bundled libraries.
+     */
     private fun about() {
         val text = listOf(getString(R.string.about_text, BuildConfig.VERSION_NAME), getString(R.string.about_notices))
             .joinToString("\n\n")
         AlertDialog.Builder(this)
             .setTitle(R.string.app_name)
             .setMessage(text)
-            .setPositiveButton(R.string.about_privacy) { _, _ -> open(PRIVACY_URL) }
-            .setNeutralButton(R.string.about_source) { _, _ -> open(SOURCE_URL) }
+            .setPositiveButton(R.string.about_website) { _, _ -> open(WEBSITE_URL) }
+            .setNeutralButton(R.string.about_privacy) { _, _ -> open(PRIVACY_URL) }
             .setNegativeButton(R.string.ok, null)
             .show()
             .trackedBy(this)
@@ -111,6 +120,6 @@ class SettingsActivity : ScreenActivity() {
 
     private companion object {
         const val PRIVACY_URL = "https://faizoken.github.io/LekasPOS/privacy.html"
-        const val SOURCE_URL = "https://github.com/FaizoKen/LekasPOS"
+        const val WEBSITE_URL = "https://faizoken.github.io/LekasPOS/"
     }
 }

@@ -31,9 +31,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      # Shared test key (repository secrets), so every test build installs over the previous one
-      # on testers' phones. Not available to pull requests from forks: those stay debug-signed.
-      - name: Test signing key
+      # The app's release key (repository secrets; still named TEST_* from the tester days —
+      # D-051), so every build installs over the previous one on everyone's phone. Not
+      # available to pull requests from forks: those stay debug-signed.
+      - name: Release signing key
         env:
           TEST_KEYSTORE_BASE64: ${{ secrets.TEST_KEYSTORE_BASE64 }}
           TEST_KEYSTORE_PASSWORD: ${{ secrets.TEST_KEYSTORE_PASSWORD }}
@@ -46,11 +47,11 @@ jobs:
               echo "storePassword=$TEST_KEYSTORE_PASSWORD"
               echo "keyAlias=$TEST_KEY_ALIAS"
               echo "keyPassword=$TEST_KEYSTORE_PASSWORD"
-              echo "keyKind=test"
+              echo "keyKind=release"
             } > keystore.properties
-            echo "Release APK signed with the shared test key" >> "$GITHUB_STEP_SUMMARY"
+            echo "Release APK signed with the release key" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "No test key available: release APK is debug-signed (not for testers' phones)" >> "$GITHUB_STEP_SUMMARY"
+            echo "No release key available: release APK is debug-signed (not for anyone's phone)" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Build, test, lint

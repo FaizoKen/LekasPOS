@@ -28,8 +28,11 @@ When a decision changes: update the reference file here **and** add an entry to
 - Heavy verification runs in GitHub Actions (`ci.yml`: tests on API 21 + API 36 emulators on
   every push; `perf.yml`: QUICK/FULL perf + cold start on demand). The local machine is weak:
   JVM tests and single builds locally, emulators only when unavoidable, never two at once.
-- Tester builds = CI release APKs signed with the shared **test** key (GitHub secrets), version
-  `0.<phase>.0-ci.<run>`; publish them as GitHub pre-releases when the user wants a download link.
+- Every CI release APK is signed with the one **release** key (GitHub secrets `TEST_*`, named in
+  the tester days; D-051) — it must never change. Version = `versionName` (e.g. `1.0.0`) + the CI
+  run number as `versionCode` ("build N"). Tester builds: GitHub **pre-releases**. Public
+  releases: a normal "latest" GitHub release with assets `LekasPOS.apk` (the website's Download
+  link) and `LekasPOS-<version>.apk` — docs/BUILD.md "Release checklist". Not on Google Play yet.
 - Before publishing a tester build, the CI **release smoke** jobs must pass: the R8 release APK
   installed over the last tester build and fresh, selling screen open 20 s, no crash
   (`scripts/ci/release-smoke.sh`; update `PREV_APK_URL` in `ci.yml` after each release). The

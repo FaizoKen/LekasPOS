@@ -6,19 +6,20 @@ upload time — the answers describe what the app does as of version 0.7.
 
 ## Before the first upload (owner only)
 
-1. Play Console developer account (one-time US$25, Google identity verification).
+Since 1.0.0 (D-051) the app is downloaded from the website, signed with the release key, and
+Google sign-in is public. Going on Play then means:
+
+1. Play Console developer account (one-time US$25, Google identity verification). This also
+   covers the developer registration Google will require for installs outside Play from 2027.
 2. Upload key: create it as in `docs/BUILD.md` ("Signing"), keep it and its password safe —
-   never in the repo or CI. Enroll in **Play App Signing** (Google holds the app signing key).
-3. Google Cloud project `lekaspos` (see README): add Android OAuth clients for the **upload key**
-   and the **Play App Signing key** (Play Console → Test and release → App integrity → App
-   signing → SHA-1), then Google Auth Platform → Branding: home page
-   `https://faizoken.github.io/LekasPOS/`, privacy policy
-   `https://faizoken.github.io/LekasPOS/privacy.html`; Audience → **Publish app** (only the
-   non-sensitive `drive.appdata` scope, so no verification review is expected).
-   The links' domain must be an authorized domain: add `faizoken.github.io` in Branding and
-   verify it in Google Search Console (HTML-file method: put the file Google gives you in `site/`).
+   never in the repo or CI. Enroll in **Play App Signing** with **"use my own app signing key"**
+   and give Play the **release key** (Play's PEPK tool encrypts it): downloaded copies and Play
+   installs then update each other, and the existing Android OAuth client keeps working.
+3. Google Cloud project `lekaspos`: nothing to add (branding, links and *In production* were
+   done for 1.0.0). Only if Play generates a new app signing key instead: add an Android OAuth
+   client for its SHA-1 — and downloaded copies can no longer update from Play.
 4. Build: `.\gradlew.bat :app:bundleRelease` with the upload key in `keystore.properties`
-   (`keyKind=upload`), version code above every tester build.
+   (`keyKind=upload`), version code above every CI build.
 
 ## Store listing (draft)
 

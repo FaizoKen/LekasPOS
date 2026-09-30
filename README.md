@@ -8,9 +8,9 @@ A lightweight, offline-first point-of-sale app for small grocery stores and mini
 and tablets with 1–2 GB RAM. No backend: all data lives on the device; Google Drive is used
 only for background sync and backup between the devices of one store.
 
-**Status:** Phase 7 of 7 (languages, polish, low-end profiling, release preparation). Tester
-builds: [Releases](https://github.com/FaizoKen/LekasPOS/releases). Progress:
-[`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
+**Download:** version 1.0.0 — [faizoken.github.io/LekasPOS](https://faizoken.github.io/LekasPOS/#download)
+(install and update steps), or the latest [release](https://github.com/FaizoKen/LekasPOS/releases/latest).
+Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
 [faizoken.github.io/LekasPOS/privacy.html](https://faizoken.github.io/LekasPOS/privacy.html).
 
 ## Features
@@ -66,9 +66,10 @@ docs/     phases, build/release, decisions
 
 ## Signing
 
-See [`docs/BUILD.md#signing`](docs/BUILD.md#signing). Test builds (CI artifacts and GitHub
-pre-releases) are signed with a shared test key, so each new build installs as an update.
-The Google Play upload key is separate and stays with the app owner.
+See [`docs/BUILD.md#signing`](docs/BUILD.md#signing). Every release APK (public downloads, CI
+artifacts, tester builds) is signed with the one release key, so each new build installs as an
+update (D-051). The Google Play upload key, if the app goes on Play, is separate and stays with
+the app owner.
 
 ## Google Cloud / OAuth setup (needed from Phase 6 — Google Drive sync)
 
@@ -81,27 +82,26 @@ store's Google Drive). That scope is *non-sensitive*, so no paid security assess
 2. **APIs & Services → Library:** enable the **Google Drive API**.
 3. **OAuth consent screen:** user type *External*; app name "LekasPOS", support email, app logo
    (optional), links to the privacy policy and home page; add the scope
-   `.../auth/drive.appdata`. Publish the app (move from *Testing* to *In production*) before the
-   Play release — with only non-sensitive scopes, verification is quick or not required.
-   While the app is in *Testing*, only the Google accounts listed as **test users** can sign in.
+   `.../auth/drive.appdata`. Publish the app (move from *Testing* to *In production*): with only
+   non-sensitive scopes no verification is required (without a logo). While the app is in
+   *Testing*, only listed **test users** can sign in, and their sign-in expires after 7 days.
 4. **Credentials → Create credentials → OAuth client ID → Android**, once per signing
    certificate, with package `com.lekaspos.app` and the certificate's SHA-1:
-   - the shared **test** key of the tester builds (GitHub pre-releases):
+   - the **release** key (all release APKs; named "test" in the tester days):
      `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`;
    - debug key: `keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android`
      (debug builds use package `com.lekaspos.app.debug` → make a separate client for it);
-   - your upload key (`keystore/lekaspos-upload.jks`);
-   - the **Play App Signing** key: Play Console → Setup → App integrity → App signing key
-     certificate → SHA-1.
+   - on Google Play with Play App Signing using this same release key (D-051), no other client
+     is needed; with a key Google generates, add one for its SHA-1 (Play Console → App integrity).
    Android clients have no client secret; nothing needs to be embedded in the app.
 5. All devices of one store sign in with the **same Google account** (the store account), because
    the app-data folder is private per account.
 
 Done for this repository (2026-09-30): project **LekasPOS** (ID `lekaspos`), Drive API enabled,
-consent screen External / *Testing* with the `drive.appdata` scope only, test user = the
-owner's account, Android client "LekasPOS tester builds (test key)" for `com.lekaspos.app` with
-the test key SHA-1. Still to add before the Play release: clients for the upload key and the
-Play App Signing key, privacy policy and home page links, then publish to *In production*.
+consent screen External with the `drive.appdata` scope only, home page and privacy policy on the
+authorized domain `faizoken.github.io`, Android client "LekasPOS tester builds (test key)" for
+`com.lekaspos.app` with the release key's SHA-1. For 1.0.0 the owner moves it to *In production*
+(Audience → Publish app, D-051).
 New settings can take from 5 minutes to a few hours to reach Google's servers.
 
 ## License

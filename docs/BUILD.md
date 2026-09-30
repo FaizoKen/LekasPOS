@@ -91,8 +91,8 @@ Diagnostics screen shows it):
 | Key | Signs | Where it lives |
 |---|---|---|
 | **debug** | debug builds; release builds when no key is configured | per machine (`~/.android/debug.keystore`, created by the build) — differs on every CI runner |
-| **test** | release APKs for testers (CI "apks" artifact, GitHub pre-releases) | GitHub secrets `TEST_KEYSTORE_BASE64`, `TEST_KEYSTORE_PASSWORD`, `TEST_KEY_ALIAS`; on the maintainer's laptop `%USERPROFILE%\.lekaspos\lekaspos-test.jks` |
-| **upload** | Google Play uploads (Phase 7) | only with the app owner; never in CI secrets of a public repo without a protected environment |
+| **release** (was "test") | every CI release APK: public downloads (GitHub releases, website) and testers' builds — D-051 | GitHub secrets `TEST_KEYSTORE_BASE64`, `TEST_KEYSTORE_PASSWORD`, `TEST_KEY_ALIAS` (names kept); on the maintainer's laptop `%USERPROFILE%\.lekaspos\lekaspos-test.jks` — **back it up in two safe places** |
+| **upload** | Google Play uploads, if the app goes on Play | only with the app owner; never in CI secrets of a public repo without a protected environment |
 
 Release builds read `keystore.properties` at the repo root (git-ignored):
 
@@ -101,37 +101,43 @@ storeFile=C:/Users/<you>/.lekaspos/lekaspos-test.jks
 storePassword=...
 keyAlias=lekaspos-test
 keyPassword=...
-keyKind=test          # or "upload" for the Play upload key
+keyKind=release       # or "upload" for the Play upload key
 ```
 
-Because every test build is signed with the same test key and CI stamps an increasing
-`versionCode` (`-Plekas.ciRun=<run number>`, version name `<phase version>-ci.<run>`, e.g. `0.2.0-ci.12`), testers can install
-each new build over the previous one and keep their data. Pull requests from forks don't get the
-secrets and fall back to debug signing.
+Every CI release APK is signed with the same release key and gets an increasing `versionCode`
+(`-Plekas.ciRun=<run number>`); `versionName` is the release version (e.g. `1.0.0`, shown as
+"1.0.0 (build 60)" in Settings → About). So every build installs over the previous one and keeps
+the shop's data. Pull requests from forks don't get the secrets and fall back to debug signing
+(About then shows "· debug").
 
-Test key certificate: `CN=LekasPOS Test Builds, O=LekasPOS, C=MY`, SHA-256
-`0a67abecd6cb31634eaca5edab9737be7f940ce9a86919b8f47e1ad99ab7d4b9`, valid until 2054.
+Release key certificate: `CN=LekasPOS Test Builds, O=LekasPOS, C=MY` (named in the tester days),
+SHA-256 `0a67abecd6cb31634eaca5edab9737be7f940ce9a86919b8f47e1ad99ab7d4b9`, valid until 2054.
 Check any APK with `apksigner verify --print-certs <apk>`.
 
-Rotating the test key (only if it leaks): generate a new one, update the three secrets and the
-local copy — testers must then uninstall once.
+**The release key can never change** without every shop uninstalling (and restoring a backup).
+Losing it means no more updates for anyone who downloaded the app. Keep the `.jks` file and its
+password in two safe places (e.g. a USB drive in a drawer and a password manager). If it ever
+leaks: a new key, new secrets, a new Android OAuth client — and everyone reinstalls.
 
-Create the Play **upload** key once, when publishing (keep it and its passwords safe, outside
-the repo):
+If the app goes on Google Play: create the Play **upload** key (below), and when enrolling in Play
+App Signing choose **use my own app signing key** and give Play this release key (Play's PEPK
+tool encrypts it). Then Play installs are signed like the downloads: they update each other and
+the existing Android OAuth client keeps working.
 
 ```powershell
 & "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore $env:USERPROFILE\.lekaspos\lekaspos-upload.jks `
   -alias upload -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Google Play uses Play App Signing: you upload with the upload key, Google re-signs for devices —
-so the Play version never updates over a test build (uninstall the test build first).
+## Release checklist
 
-## Release checklist (details grow with each phase)
-
-1. Bump `versionCode` / `versionName` in `app/build.gradle.kts`.
-2. `.\gradlew.bat :core:test :app:testDebugUnitTest :app:assembleRelease :app:lintRelease`.
-3. Instrumented tests green on `lekas-api21` and `lekas-api36`; perf suite within budget.
-4. Record APK size and results in `docs/PHASES.md`.
-5. Keep `app/build/outputs/mapping/release/mapping.txt` for crash de-obfuscation.
-6. (Phase 6+) Google Cloud OAuth client for the release signing certificate — see README.
+1. Set `versionName` in `app/build.gradle.kts` (the CI run number is the `versionCode`).
+2. Push; CI green (unit, lint, instrumented API 21 + 36, tablet, release smoke); perf FULL run.
+3. Record APK size and results in `docs/PHASES.md`.
+4. GitHub release `v<version>` on the CI build's commit, marked **latest** (not pre-release),
+   assets `LekasPOS.apk` (the website's "Download" link always takes the latest release's file of
+   that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes.
+5. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
+6. Keep the CI build's `mapping.txt` (build-reports artifact) for crash de-obfuscation.
+7. Google sign-in: the Android OAuth client in project `lekaspos` matches `com.lekaspos.app` +
+   the release key's SHA-1 (see README); the consent screen is "In production" (D-051).

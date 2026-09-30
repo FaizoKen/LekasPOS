@@ -6,9 +6,9 @@ plugins {
 }
 
 // Release signing: keystore.properties (git-ignored) at the repo root, see docs/BUILD.md.
-// keyKind = "test" (shared test key: CI + testers' devices) or "upload" (Google Play upload
-// key). Without the file, release builds are signed with the per-machine debug key — fine
-// on an emulator, never for testers' phones or Google Play.
+// keyKind = "release" (the app's signing key: CI, the public downloads and testers' devices,
+// D-051) or "upload" (Google Play upload key). Without the file, release builds are signed with
+// the per-machine debug key — fine on an emulator, never for anyone's phone or Google Play.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -16,8 +16,9 @@ val keystoreProps = Properties().apply {
 val hasReleaseKey = keystoreProps.getProperty("storeFile") != null
 val signingKind = if (hasReleaseKey) keystoreProps.getProperty("keyKind", "upload") else "debug"
 
-// CI passes its run number so every test build has a higher versionCode (installs as an
-// update) and a name testers can quote in bug reports, e.g. "0.1.0-ci.42".
+// CI passes its run number as the versionCode, so every build installs over the one before;
+// the app shows it as "1.0.0 (build 60)" for bug reports. The public release is the CI build of
+// its tagged commit (D-051). Bump versionName when a new release starts.
 val ciRun: String? = providers.gradleProperty("lekas.ciRun").orNull
 
 android {
@@ -29,7 +30,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = ciRun?.toInt() ?: 1
-        versionName = "0.10.0" + (ciRun?.let { "-ci.$it" } ?: "")
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

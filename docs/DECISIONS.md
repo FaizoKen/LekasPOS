@@ -427,6 +427,31 @@ print and report ("Other items" in reports).
 Rejected: keeping it behind a permission (the unknown-barcode "Add product" already asks for the
 same approval, and registering keeps stock and reports right); a store setting (one more switch
 the owner must understand).
+### D-051 — Public release 1.0.0 outside Google Play (2026-09-30)
+The owner wants any shop to use the app — including Google Drive backup with its own Google
+account — without publishing on Google Play yet. Decided with the owner:
+- **Google sign-in "In production"** (Google Auth Platform → Audience → Publish app). The only
+  scope is `drive.appdata`, classed non-sensitive: no verification review, no user cap, and no
+  7-day expiry of sign-ins (Testing mode expired them weekly). No logo (a logo starts a brand
+  review); home page and privacy policy on `faizoken.github.io` (authorized domain).
+- **One signing key for every public copy, forever**: the key the tester builds already used
+  (keyKind `release`; the GitHub secrets keep their `TEST_*` names). Changing it would force every
+  shop to uninstall. If the app goes on Google Play later, enroll in Play App Signing with **this
+  same key** ("use my own key"), so downloaded copies update from Play and the existing Android
+  OAuth client keeps working. The owner keeps two backups of the key file and its password.
+- **Distribution**: GitHub Releases (a normal, "latest" release with a fixed asset name
+  `LekasPOS.apk` plus a versioned copy) and a Download section on the website with install and
+  update steps; Settings → About → "Website & updates" (no app store updates the app).
+- **Version 1.0.0**: `versionName` is the release version; the CI run number stays the
+  `versionCode` (every build installs over the previous) and shows as "(build N)" in About. The
+  public release is the CI build of the tagged commit; the release smoke test upgrades from it.
+- Coming: Google will require apps installed outside Play on certified devices to come from a
+  registered developer (identity, package name, signing key) — Brazil, Indonesia, Singapore and
+  Thailand from September 2026, all countries in 2027. Before that reaches Malaysia, register
+  `com.lekaspos.app` and this key in the Android Developer Console (or through Play Console).
+Rejected: a new release key (the owner's phone and testers would have to reinstall; no gain);
+staying in Testing with listed users (100 at most, weekly re-sign-in); an in-app update check
+against GitHub (network use beyond Drive; a link to the website is enough for now).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

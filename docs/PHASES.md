@@ -16,7 +16,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
 | 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
-| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **built** — tester build v0.10.0-phase10-fix1 (no "Other item", D-050); waiting for real-device feedback |
+| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **done** — tested on the phone (2026-09-30, build v0.10.0-phase10-fix1) |
+| — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **in progress** |
 
 ## Open questions for the user
 
@@ -689,7 +690,7 @@ So: protected by default, and visible when not.
 The user replied "tested and all works" to v0.9.0-phase9 and asked for the UI polish next: simple
 and straightforward, light and fast, easy for a brand-new cashier — see Phase 10.
 
-## Phase 10 — cashier-first UI polish (built, waiting for device feedback)
+## Phase 10 — cashier-first UI polish (done)
 
 Audit of the selling flow (2026-09-30) and what changes (D-049):
 
@@ -759,3 +760,20 @@ and said a cashier should not sell anything that is not registered. Agreed and r
 an unknown barcode is registered on the spot (Add product → on the bill). Fixed in the next
 tester build v0.10.0-phase10-fix1 (0.10.0-ci.58, 1,151 KB — 1,178,388 bytes; 131/131 on API 21 and 36,
 tablet and release smoke pass); the rest of the Phase 10 list above still applies.
+
+The owner replied "tested and all works" to v0.10.0-phase10-fix1 (2026-09-30).
+
+## Release 1.0.0 — public, outside Google Play (in progress)
+
+The owner asked how other shops (any Google account, not only the tester account) can use the
+app without Google Play yet. Decided with the owner (D-051):
+
+- [ ] Google sign-in **In production** (Branding: home page, privacy policy, authorized domain
+      `faizoken.github.io` — done; Audience → Publish app — the owner's click)
+- [x] One release key for every public copy (the tester builds' key; keyKind `release`)
+- [x] Version **1.0.0**, shown as "1.0.0 (build N)" in Settings → About; About → "Website & updates"
+- [x] Website: Download section (always the latest release's `LekasPOS.apk`), install and update
+      steps in English and Malay
+- [ ] CI green, then the GitHub release `v1.0.0` (latest, not pre-release); smoke baseline
+- Later: register the developer, package and key with Google before the 2027 rule reaches
+  Malaysia (installs outside Play from registered developers only)
