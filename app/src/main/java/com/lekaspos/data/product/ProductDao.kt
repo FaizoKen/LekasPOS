@@ -468,6 +468,34 @@ object ProductDao {
         return db.queryList(SELL_PAGE, args(key, key, id, limit), ::listItem)
     }
 
+    // Best sellers by quantity over a range of days, from the daily summary (a range of its
+    // primary key, never the sales themselves). Both bounds keep the range narrow on SQLite 3.8.
+    private const val POPULAR_IDS =
+        "SELECT product_id FROM sum_day_product WHERE day >= ? AND day <= ? " +
+            "GROUP BY product_id HAVING SUM(qty) > 0 ORDER BY SUM(qty) DESC, product_id LIMIT ?"
+
+    /** The products sold most (by quantity) from [fromDay] to [toDay], best first. */
+    fun popularIds(db: SQLiteDatabase, fromDay: Long, toDay: Long, limit: Int): List<Long> =
+        db.queryList(POPULAR_IDS, args(fromDay, toDay, limit)) { it.getLong(0) }
+
+    private const val BY_ID_PREFIX =
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.deleted = 0 AND p.active = 1 AND p.id IN "
+
+    /** Sellable products among [ids], in the order of [ids] (deleted and inactive ones left out). */
+    fun listByIds(db: SQLiteDatabase, ids: List<Long>): List<ProductListItem> {
+        if (ids.isEmpty()) return emptyList()
+        val out = HashMap<Long, ProductListItem>(ids.size * 2)
+        for (chunk in ids.chunked(MAX_IN)) {
+            val sql = BY_ID_PREFIX + chunk.joinToString(",", "(", ")") { "?" }
+            for (item in db.queryList(sql, args(*chunk.toTypedArray()), ::listItem)) out[item.id] = item
+        }
+        return ids.mapNotNull { out[it] }
+    }
+
+    /** Bound parameters per IN list (SQLite allows 999). */
+    private const val MAX_IN = 200
+
     /** Hot queries whose plans the perf suite verifies (name → SQL). */
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "barcode_lookup" to FIND_BY_CODE_2,
@@ -479,5 +507,7 @@ object ProductDao {
         "product_sell_page" to SELL_PAGE,
         "product_export" to EXPORT_PAGE,
         "product_export_barcodes" to EXPORT_BARCODES,
+        "popular_ids" to POPULAR_IDS,
+        "products_by_ids" to BY_ID_PREFIX + "(?,?,?)",
     )
 }

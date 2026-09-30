@@ -1,48 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Catalogue tile. Selected (highlighted, with an "×2" badge) when the product is on the bill:
+     on a phone the bill is hidden while browsing, so the tile shows that the tap counted. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
     android:background="@drawable/tile_bg"
-    android:minHeight="88dp"
-    android:orientation="vertical"
-    android:padding="10dp">
-
-    <TextView
-        android:id="@+id/name"
-        style="@style/Text.Lekas.Body"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:minLines="2"
-        android:textSize="15sp" />
+    android:minHeight="88dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:gravity="bottom"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:minHeight="88dp"
+        android:orientation="vertical"
+        android:padding="10dp">
 
         <TextView
-            android:id="@+id/price"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:id="@+id/name"
+            style="@style/Text.Lekas.Body"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginEnd="24dp"
             android:layout_weight="1"
             android:ellipsize="end"
-            android:singleLine="true"
-            android:textColor="@color/brand"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:maxLines="2"
+            android:minLines="2"
+            android:textSize="15sp" />
 
-        <TextView
-            android:id="@+id/stock"
-            style="@style/Text.Lekas.Caption"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:singleLine="true" />
+            android:layout_marginTop="4dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/price"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/brand"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stock"
+                style="@style/Text.Lekas.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:singleLine="true" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+
+    <TextView
+        android:id="@+id/in_bill"
+        android:layout_width="wrap_content"
+        android:layout_height="24dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="6dp"
+        android:background="@drawable/count_bg"
+        android:gravity="center"
+        android:minWidth="24dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:singleLine="true"
+        android:textColor="@color/text_on_brand"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

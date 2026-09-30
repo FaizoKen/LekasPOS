@@ -15,7 +15,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
-| 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **built** — tester build v0.9.0-phase9; waiting for real-device feedback |
+| 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
+| 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **in progress** |
 
 ## Open questions for the user
 
@@ -622,7 +623,7 @@ Update **every till** of the shop to this build (promotions only apply on tills 
 6. Carried over when the hardware is available: printer (the promotion line on paper), drawer,
    HID/SPP scanners, 2 GB tablet.
 
-## Phase 9 — data safety before UI polish (built, waiting for device feedback)
+## Phase 9 — data safety before UI polish (done)
 
 Question from the owner (2026-09-30): should a Google login be required to keep shops' data safe?
 Decision (D-048): **no** — it would lock out phones without Google Play services and offline
@@ -682,3 +683,28 @@ So: protected by default, and visible when not.
    open the right screen; "Start selling" still works without choosing either.
 8. **Bahasa Melayu**: the pill ("Tiada sandaran"), the explanation and the backup screen fit.
 9. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
+
+### Real-device feedback (Phase 9, 2026-09-30)
+
+The user replied "tested and all works" to v0.9.0-phase9 and asked for the UI polish next: simple
+and straightforward, light and fast, easy for a brand-new cashier — see Phase 10.
+
+## Phase 10 — cashier-first UI polish (in progress)
+
+Audit of the selling flow (2026-09-30) and what changes (D-049):
+
+- [x] Words on every control: "Other item", "Items" (phones), "Price check" (tablets and
+      landscape), "Menu"; camera scanner inside the search box; "2 held" pill instead of ⏸
+- [x] The line just scanned (or tapped) shows **Remove · − · quantity · + · More** in place —
+      no dialog per tap; "−" stops at one
+- [x] Big **TOTAL** above a big **PAY**
+- [x] Empty bill: three lines on how to start, and the **last sale** (change again, print a copy)
+- [x] Payment: total → cash received with **live change** → one-tap notes → every method (3 per
+      row) → keypad; nothing needed falls off a 5-inch screen. Result: "Received … · total …"
+- [x] Menu: cashier jobs first, back office under **Manage shop ›**
+- [x] Catalogue: **Popular** tab (best sellers, last 30 days) first; tiles on the bill show "×n";
+      picking a search result goes back to the bill
+- [x] Other item: price keypad first, name optional underneath (no keyboard over the keypad)
+- [x] Tests: popular items (ranking, 30 days, deleted left out, fresh prices), the line buttons on
+      the emulator, screenshots of the payment dialog and the empty bill; perf case
+      `popular_items`

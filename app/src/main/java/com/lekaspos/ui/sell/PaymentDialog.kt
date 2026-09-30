@@ -38,6 +38,8 @@ class PaymentDialog(
     private lateinit var dialog: AlertDialog
     private lateinit var totalView: TextView
     private lateinit var remainingView: TextView
+    private lateinit var remainingRow: View
+    private lateinit var changeView: TextView
     private lateinit var cashHint: TextView
     private lateinit var tendersView: TextView
     private lateinit var amountView: TextView
@@ -51,33 +53,25 @@ class PaymentDialog(
         val root = activity.layoutInflater.inflate(R.layout.dialog_payment, null)
         totalView = root.findViewById(R.id.pay_total)
         remainingView = root.findViewById(R.id.pay_remaining)
+        remainingRow = root.findViewById(R.id.pay_remaining_row)
+        changeView = root.findViewById(R.id.pay_change)
         cashHint = root.findViewById(R.id.pay_cash_hint)
         tendersView = root.findViewById(R.id.pay_tenders)
         amountView = root.findViewById(R.id.pay_amount)
         errorView = root.findViewById(R.id.pay_error)
         quick = root.findViewById(R.id.pay_quick)
         root.findViewById<FrameLayout>(R.id.pay_keypad).addView(keypad.view)
-        val methodRow = root.findViewById<LinearLayout>(R.id.pay_methods)
+        val methodRows = root.findViewById<LinearLayout>(R.id.pay_methods)
         val density = activity.resources.displayMetrics.density
         if (total <= 0L) {
             // Nothing to pay (e.g. 100% discount): one button completes the sale.
             val b = Button(activity, null, 0, R.style.Widget_Lekas_Button_Primary)
             b.text = activity.getString(R.string.pay_complete)
             b.setOnClickListener { finish(0L) }
-            methodRow.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            methodRows.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             root.findViewById<View>(R.id.pay_keypad).visible(false)
         } else {
-            for ((i, m) in methods.withIndex()) {
-                val b = Button(activity, null, 0, if (m.kind == PaymentKind.CASH) R.style.Widget_Lekas_Button_Primary else R.style.Widget_Lekas_Button_Secondary)
-                b.text = m.name
-                b.setOnClickListener { pay(m) }
-                methodRow.addView(
-                    b,
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        if (i > 0) marginStart = (6 * density).toInt()
-                    },
-                )
-            }
+            addMethods(methodRows, density)
         }
         dialog = AlertDialog.Builder(activity)
             .setTitle(R.string.pay_title)
@@ -88,6 +82,29 @@ class PaymentDialog(
         refresh()
         dialog.show()
         return dialog.trackedBy(activity)
+    }
+
+    /** Every payment method, [PER_ROW] to a row so long names (e-wallets) never get cut off. */
+    private fun addMethods(rows: LinearLayout, density: Float) {
+        val gap = (6 * density).toInt()
+        val perRow = PER_ROW.coerceAtMost(methods.size).coerceAtLeast(1)
+        for ((r, chunk) in methods.chunked(perRow).withIndex()) {
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                isBaselineAligned = false
+            }
+            for ((i, m) in chunk.withIndex()) {
+                val style = if (m.kind == PaymentKind.CASH) R.style.Widget_Lekas_Button_Primary else R.style.Widget_Lekas_Button_Secondary
+                val b = Button(activity, null, 0, style)
+                b.text = m.name
+                b.minWidth = 0
+                b.setOnClickListener { pay(m) }
+                row.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap })
+            }
+            // A short last row keeps the buttons the same width as the rows above.
+            repeat(perRow - chunk.size) { row.addView(View(activity), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap }) }
+            rows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { if (r > 0) topMargin = gap })
+        }
     }
 
     private fun enteredAmount(): Long? = if (keypad.digits.isEmpty()) null else MoneyFormat.keypad(keypad.digits, currency)
@@ -153,6 +170,7 @@ class PaymentDialog(
     private fun refresh() {
         totalView.text = money(total)
         remainingView.text = money(remaining)
+        remainingRow.visible(tenders.isNotEmpty()) // only a split payment has something "still to pay"
         val due = Settlement.cashDue(remaining, step)
         cashHint.text = activity.getString(R.string.pay_cash_due, money(due))
         cashHint.visible(due != remaining && remaining > 0L)
@@ -169,6 +187,11 @@ class PaymentDialog(
     private fun renderAmount() {
         val v = enteredAmount()
         amountView.text = if (v == null) activity.getString(R.string.pay_amount_hint, money(remaining)) else money(v)
+        // The change shows while the cashier types what the customer gave, before any button.
+        val due = Settlement.cashDue(remaining, step)
+        val change = if (v != null && v > due) v - due else 0L
+        changeView.text = activity.getString(R.string.pay_change, money(change))
+        changeView.visible(change > 0L)
     }
 
     /** "Exact" and the next banknote amounts above the cash due. */
@@ -189,6 +212,7 @@ class PaymentDialog(
         for ((i, a) in amounts.withIndex()) {
             val b = Button(activity, null, 0, R.style.Widget_Lekas_Button_Secondary)
             b.text = if (i == 0) activity.getString(R.string.pay_exact) else MoneyFormat.format(a, currency)
+            b.minWidth = 0 // four notes across a 5-inch phone
             b.setOnClickListener {
                 keypad.set(a.toString())
                 pay(cash)
@@ -203,4 +227,8 @@ class PaymentDialog(
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
+
+    private companion object {
+        const val PER_ROW = 3
+    }
 }

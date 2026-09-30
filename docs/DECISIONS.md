@@ -390,6 +390,29 @@ Rejected: required Google sign-in (above); nagging dialogs at every start (owner
 dismiss them — a quiet pill that only appears when there is a real risk is kept honest);
 backups to the phone's shared Downloads folder (lost with the phone, and needs storage
 permissions on old Android); our own cloud (no backend, by design).
+### D-049 — Cashier-first selling screen (Phase 10, 2026-09-30)
+The owner asked for a UI that a brand-new cashier can use without guessing: straightforward, no
+decoration, still light and fast. An audit of the selling flow found: icon-only controls (⏸ held
+bills, ＋ other item, ▦ catalogue, ⋮ menu), a quantity change that took a dialog per tap, a
+16-item menu mixing till jobs with back-office screens, a payment dialog whose card/e-wallet
+buttons fell below the fold on a 5-inch phone, no change shown while typing the cash received,
+search results that hid the bill after a pick, and the change gone once the result closed.
+Decided:
+- Words on every control a cashier uses (icon above a short label), camera inside the search
+  box, pills only when there is something to see (held bills appear as "2 held").
+- The selected bill line (scanned last, or tapped) shows Remove, −, quantity, +, More in place.
+  "−" stops at one: removing is its own red button, never an extra tap on "−".
+- A big TOTAL above a big PAY; the empty bill says how to start and shows the last sale's change
+  and a reprint (kept in memory for the session; the sale itself is in the database as always).
+- Payment: total, cash received with live change, one-tap notes, all methods (3 per row), keypad
+  last. The result shows "Received … · total …" under a highlighted change.
+- Menu: cashier jobs; everything else under "Manage shop ›" (one extra tap for the owner).
+- Catalogue: a "Popular" tab (best sellers of the last 30 days from `sum_day_product`, ranking
+  cached 10 minutes, products read fresh), tiles marked "×n" when on the bill.
+Rejected: a full-screen payment activity (a dialog over the bill keeps context and is cheaper),
+swipe-to-delete on lines (invisible to new cashiers), a first-run tutorial overlay (the empty
+bill's three lines do the same job every time), hiding menu entries by permission (the gate
+already asks for a manager; hidden entries confuse owners), product photos (size and speed).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

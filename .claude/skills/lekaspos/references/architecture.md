@@ -73,8 +73,8 @@ network on the main thread already throws on API 21+.
   writer thread (UI updates first from memory, persistence follows asynchronously). After a
   crash or kill, `CartSession` reloads the open cart → "crash-safe restart back to the bill".
 - One Activity per major screen. The selling screen (`SellActivity`) is the launcher and home
-  (`launchMode=singleTask`). Small interactions (qty, discount, payment) are dialogs built from
-  our own layouts.
+  (`launchMode=singleTask`). Small interactions (discount, payment) are dialogs built from our own
+  layouts; the bill line's quantity is changed in place (§8b).
 - Collect flows only between `onStart` and `onStop` (a scope per Activity start); cancel in
   `onStop`. Never keep an Activity/View reference in a singleton.
 - Activities declare `android:configChanges="keyboard|keyboardHidden|navigation"`: Bluetooth
@@ -189,6 +189,22 @@ restore that `Db.open` applies before opening the database (D-044).
   `screens-api*`) for layout review; the release smoke job gates tester builds.
 - Privacy policy: `site/privacy.html` (+ `privasi.html`), published by `pages.yml`; keep it and
   `docs/PLAY.md` (Data Safety answers) true whenever data handling changes.
+
+## 8b. Cashier-first selling screen (Phase 10, D-049)
+
+- Every control a cashier uses carries a word, not only an icon: "Other item", "Items" (phones),
+  "Price check" (two-pane), "Menu"; the camera scanner sits inside the search box. Pills in the
+  top bar appear only when there is something to see (held bills, printer, backup).
+- The selected bill line (the one scanned or changed last, or tapped) shows Remove, −, quantity,
+  +, More in place; "−" stops at one (taking the last one off is Remove). Other lines stay one row.
+- Totals bar: summary, a big TOTAL, then Hold / Discount / PAY. The empty bill explains how to
+  start and shows the last sale of this session (`CheckoutService.last`: change again, a copy).
+- Payment dialog order: total, cash received + live change, one-tap notes, every method (3 per
+  row), then the keypad — nothing a cashier needs falls below the fold on a 5-inch phone.
+- Menu: cashier jobs first; the back office under one "Manage shop" submenu.
+- Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from
+  `sum_day_product` over 30 days, kept 10 minutes; products read fresh by id). Tiles of products
+  on the bill are highlighted with "×n"; picking a search result closes the search.
 
 ## 9. Errors, logging, crash safety
 

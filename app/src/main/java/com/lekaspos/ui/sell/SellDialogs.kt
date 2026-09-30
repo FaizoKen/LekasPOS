@@ -207,71 +207,22 @@ class DiscountDialog(
     }
 }
 
-/** Actions offered for one line of the bill. */
-interface LineActions {
-    fun changeQty(item: CartItem, qty: Long)
-    fun enterQty(item: CartItem)
-    fun discount(item: CartItem)
-    fun price(item: CartItem)
-    fun remove(item: CartItem)
-}
-
-fun showLineDialog(a: Activity, item: CartItem, amount: Long, currency: CurrencySpec, actions: LineActions): AlertDialog {
-    val col = a.column()
-    val weighed = item.sellMode == SellMode.WEIGHT || item.fixedGross != null
-    val price = MoneyFormat.format(item.unitPrice, currency)
-    col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply {
-        text = if (weighed && item.unit != null) "$price / ${item.unit}" else a.getString(R.string.line_each, price)
-    }, matchWrap())
-    col.addView(TextView(a, null, 0, R.style.Text_Lekas_Display).apply {
-        gravity = Gravity.CENTER
-        text = MoneyFormat.format(amount, currency)
-    }, matchWrap().apply { topMargin = a.dp(4) })
-
-    lateinit var dialog: AlertDialog
-    fun button(label: Int, style: Int, onClick: () -> Unit) = Button(a, null, 0, style).apply {
-        text = a.getString(label)
-        setOnClickListener {
-            dialog.dismiss()
-            onClick()
-        }
-    }
-
-    if (!weighed) {
-        val row = LinearLayout(a).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val minus = button(R.string.line_minus, R.style.Widget_Lekas_Button_Secondary) { actions.changeQty(item, item.qty - 1000L) }
-        val plus = button(R.string.line_plus, R.style.Widget_Lekas_Button_Secondary) { actions.changeQty(item, item.qty + 1000L) }
-        val qty = Button(a, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
-            text = MoneyFormat.formatQty(item.qty)
-            textSize = 22f
-            setOnClickListener {
-                dialog.dismiss()
-                actions.enterQty(item)
-            }
-        }
-        row.addView(minus, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        row.addView(qty, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.4f).apply { marginStart = a.dp(8); marginEnd = a.dp(8) })
-        row.addView(plus, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        col.addView(row, matchWrap().apply { topMargin = a.dp(8) })
-    } else if (item.fixedGross == null) {
-        col.addView(button(R.string.line_weight, R.style.Widget_Lekas_Button_Secondary) { actions.enterQty(item) }, matchWrap().apply { topMargin = a.dp(8) })
-    }
-    val row2 = LinearLayout(a).apply {
-        orientation = LinearLayout.HORIZONTAL
-        isBaselineAligned = false // a wrapped label (Malay is longer) keeps both buttons level
-    }
-    val half = { LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f) }
-    row2.addView(button(R.string.line_discount, R.style.Widget_Lekas_Button_Secondary) { actions.discount(item) }, half())
-    row2.addView(button(R.string.line_price, R.style.Widget_Lekas_Button_Secondary) { actions.price(item) }, half().apply { marginStart = a.dp(8) })
-    col.addView(row2, matchWrap().apply { topMargin = a.dp(8) })
-    col.addView(button(R.string.line_remove, R.style.Widget_Lekas_Button_Danger) { actions.remove(item) }, matchWrap().apply { topMargin = a.dp(8) })
-
-    dialog = AlertDialog.Builder(a).setTitle(item.name).setView(col).setNegativeButton(R.string.close, null).create()
-    dialog.show()
-    return dialog.trackedBy(a)
+/**
+ * The less common things for one bill line (quantity and weight are on the line itself): type
+ * the quantity or weight, discount, change the price.
+ */
+fun showLineMore(a: Activity, item: CartItem, onQty: () -> Unit, onDiscount: () -> Unit, onPrice: () -> Unit): AlertDialog {
+    val actions = ArrayList<Pair<Int, () -> Unit>>(3)
+    if (item.fixedGross == null) actions += (if (item.sellMode == SellMode.WEIGHT) R.string.line_weight else R.string.line_qty) to onQty
+    actions += R.string.line_discount to onDiscount
+    actions += R.string.line_price to onPrice
+    val labels = actions.map { a.getString(it.first) }.toTypedArray<CharSequence>()
+    return AlertDialog.Builder(a)
+        .setTitle(item.name)
+        .setItems(labels) { _, which -> actions[which].second() }
+        .setNegativeButton(R.string.close, null)
+        .show()
+        .trackedBy(a)
 }
 
 fun showHeldBills(
@@ -321,7 +272,10 @@ fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit, onSe
         .show()
         .trackedBy(a)
 
-/** A one-off item that is not in the catalogue: a name and a price. */
+/**
+ * A one-off item that is not in the catalogue: the price first (the keypad is what the cashier
+ * needs), the name optional underneath — no keyboard pops up over the keypad.
+ */
 fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> Unit): AlertDialog {
     val col = a.column()
     val name = EditText(a).apply {
@@ -331,9 +285,11 @@ fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> 
     }
     val display = a.display()
     val keypad = Keypad(a, 9) { display.text = MoneyFormat.format(MoneyFormat.keypad(it, currency) ?: 0L, currency) }
-    col.addView(name, matchWrap())
-    col.addView(display, matchWrap().apply { topMargin = a.dp(8); bottomMargin = a.dp(8) })
+    col.addView(display, matchWrap().apply { bottomMargin = a.dp(8) })
     col.addView(keypad.view, matchWrap())
+    col.addView(name, matchWrap().apply { topMargin = a.dp(8) })
+    // The column takes the first focus, so the name field (and the keyboard) wait for a tap.
+    col.isFocusableInTouchMode = true
     keypad.clear()
     val d = AlertDialog.Builder(a)
         .setTitle(R.string.other_item_title)
@@ -343,6 +299,7 @@ fun showOtherItem(a: Activity, currency: CurrencySpec, onAdd: (String, Long) -> 
         .create()
     d.setOnKeyListener { _, _, e -> if (name.hasFocus()) false else keypad.onKey(e) }
     d.setOnShowListener {
+        col.requestFocus()
         d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val price = MoneyFormat.keypad(keypad.digits, currency) ?: 0L
             val label = name.text.toString().trim().ifEmpty { a.getString(R.string.other_item_default) }

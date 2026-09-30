@@ -3,11 +3,17 @@ package com.lekaspos.ui
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
+import com.lekaspos.core.model.PaymentKind
+import com.lekaspos.core.pricing.Settlement
+import com.lekaspos.data.db.Seed
+import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
 import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
@@ -85,14 +91,30 @@ class ScreenshotsTest {
             for ((name, cls) in screens) shoot(Intent(ctx, cls), File(dir, "$lang-$name.png"))
             val newProduct = Intent(ctx, ProductEditActivity::class.java).putExtra(ProductEditActivity.EXTRA_BARCODE, "9556001234567")
             shoot(newProduct, File(dir, "$lang-product-new.png"))
+            // The payment dialog over the bill (D-049: every button above the keypad).
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay.png")) { it.findViewById<View>(R.id.btn_pay).performClick() }
+        }
+        // Pay the bill: the empty bill then shows how to start and the last sale's change.
+        runBlocking {
+            val total = graph.cart.state.value.priced.total
+            val given = (total / 10_000L + 1L) * 10_000L
+            val s = Settlement.cash(total, given, 5L) as Settlement.Result.Settled
+            graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CASH, PaymentKind.CASH, "Cash", true, s.applied, given, s.change)), s.rounding)
+        }
+        for (lang in listOf(AppLanguage.ENGLISH, AppLanguage.MALAY)) {
+            AppLanguage.set(ctx, lang)
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-empty.png"))
         }
     }
 
-    private fun shoot(intent: Intent, file: File) {
-        ActivityScenario.launch<Activity>(intent).use {
+    private fun shoot(intent: Intent, file: File, action: (Activity) -> Unit = {}) {
+        ActivityScenario.launch<Activity>(intent).use { scenario ->
             instr.waitForIdleSync()
             Thread.sleep(1_200) // lists load off the main thread
             instr.waitForIdleSync()
+            scenario.onActivity(action)
+            instr.waitForIdleSync()
+            Thread.sleep(600)
             val bitmap: Bitmap? = instr.uiAutomation.takeScreenshot()
             if (bitmap != null) FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
         }

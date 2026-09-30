@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 10: skrin juruwang (D-049). -->
+<resources>
+    <string name="sell_tool_other">Item lain</string>
+    <string name="sell_tool_items">Barang</string>
+    <string name="sell_total">Jumlah</string>
+    <string name="sell_popular">Laris</string>
+    <plurals name="held_pill">
+        <item quantity="other">%d disimpan</item>
+    </plurals>
+    <string name="menu_manage">Urus kedai</string>
+    <string name="sell_empty_title">Imbas barang untuk mula</string>
+    <string name="sell_empty_help">• Imbas kod bar, atau taip nama di kotak carian.\n• Tiada kod bar? Ketik Barang untuk memilihnya, atau Item lain untuk menaip harganya.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
+    <string name="sell_empty_help_wide">• Imbas kod bar, taip nama di kotak carian, atau ketik barang di sebelah kiri.\n• Tiada kod bar dan tiada dalam senarai? Ketik Item lain untuk menaip harganya.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
+    <string name="last_sale_title">Jualan terakhir · %1$s · resit %2$s</string>
+    <string name="last_sale_change">Jumlah %1$s · diterima %2$s\nBaki %3$s</string>
+    <string name="last_sale_paid">Jumlah %1$s · dibayar</string>
+    <string name="line_remove_short">Buang</string>
+    <string name="line_more">Lagi</string>
+    <string name="pay_received">Tunai diterima (ketik wang kertas, atau taip jumlah)</string>
+    <string name="pay_change">Baki %1$s</string>
+    <string name="result_received">Diterima %1$s · jumlah %2$s</string>
+    <string name="tile_in_bill">×%1$s</string>
+</resources>

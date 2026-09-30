@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 10: the cashier's screens (D-049). -->
+<resources>
+    <string name="sell_tool_other">Other item</string>
+    <string name="sell_tool_items">Items</string>
+    <string name="sell_total">Total</string>
+    <string name="sell_popular">Popular</string>
+    <plurals name="held_pill">
+        <item quantity="one">%d held</item>
+        <item quantity="other">%d held</item>
+    </plurals>
+    <string name="menu_manage">Manage shop</string>
+    <string name="sell_empty_title">Scan an item to start</string>
+    <string name="sell_empty_help">• Scan a barcode, or type a name in the search box.\n• No barcode? Tap Items to pick it, or Other item to type its price.\n• Tap a line on the bill to change how many, or to remove it.</string>
+    <string name="sell_empty_help_wide">• Scan a barcode, type a name in the search box, or tap an item on the left.\n• No barcode and not in the list? Tap Other item to type its price.\n• Tap a line on the bill to change how many, or to remove it.</string>
+    <string name="last_sale_title">Last sale · %1$s · receipt %2$s</string>
+    <string name="last_sale_change">Total %1$s · received %2$s\nChange %3$s</string>
+    <string name="last_sale_paid">Total %1$s · paid</string>
+    <string name="line_remove_short">Remove</string>
+    <string name="line_more">More</string>
+    <string name="pay_received">Cash received (tap a note, or type the amount)</string>
+    <string name="pay_change">Change %1$s</string>
+    <string name="result_received">Received %1$s · total %2$s</string>
+    <string name="tile_in_bill">×%1$s</string>
+</resources>

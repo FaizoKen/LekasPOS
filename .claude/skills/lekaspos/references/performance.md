@@ -36,6 +36,7 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `report_month` | same for 30 days | 1M lines | ≤ 1000 ms |
 | `report_year` / `report_calendar_year` | same for 365 days / a calendar year (whole months from `sum_month_product`, D-043) | 1M lines | ≤ 3000 ms |
 | `slow_movers` / `stock_value` | products with stock not sold in 30 days; stock at cost by category | 50k products | ≤ 1000 / 500 ms |
+| `popular_items` | the catalogue's Popular tab: best sellers of 30 days from `sum_day_product` + their tiles (D-049) | 1M lines | ≤ 300 ms |
 | `export_receipts_month` / `export_products` | a month of receipts (~20k) / every product as CSV, streamed | FULL | ≤ 10 s / 20 s (n = 1) |
 | `import_chunk_200` | one import transaction: 200 CSV rows parsed, checked, created | FULL | ≤ 3000 ms |
 | `sync_import_200_sales` / `sync_import_200_edits` | another till's 200 sales / 200 price edits applied by the importer in one transaction (real imports split into ~100 ms transactions, D-045) | FULL | ≤ 3000 / 1500 ms |

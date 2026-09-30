@@ -58,6 +58,46 @@
         <item name="android:paddingEnd">14dp</item>
     </style>
 
+    <!-- Small buttons on the selected bill line (remove, −, +, more): 56dp tall, no minimum width. -->
+    <style name="Widget.Lekas.Button.Line" parent="Widget.Lekas.Button.Secondary">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Widget.Lekas.Button.LineDanger" parent="Widget.Lekas.Button.Line">
+        <item name="android:textColor">@color/danger</item>
+    </style>
+
+    <!-- Selling screen tool: an icon over a word, so nobody has to guess what it does (D-049). -->
+    <style name="Widget.Lekas.Tool" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:minWidth">60dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingEnd">6dp</item>
+        <item name="android:background">@drawable/icon_toggle_bg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="Widget.Lekas.ToolIcon" parent="">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:tint">@color/brand</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="Text.Lekas.ToolLabel" parent="android:TextAppearance.Material.Caption">
+        <item name="android:textColor">@color/brand</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="Widget.Lekas.IconButton" parent="android:Widget.Material.ImageButton">
         <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
         <item name="android:tint">@color/text_secondary</item>

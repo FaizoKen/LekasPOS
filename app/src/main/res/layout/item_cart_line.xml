@@ -1,46 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One bill line. The selected line (the one just scanned or tapped) shows its buttons right
+     here: remove, −, quantity, +, more (D-049). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_vertical"
-    android:minHeight="64dp"
-    android:orientation="horizontal"
-    android:paddingStart="16dp"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
     android:paddingTop="8dp"
-    android:paddingEnd="16dp"
+    android:paddingEnd="12dp"
     android:paddingBottom="8dp">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/name"
+                style="@style/Text.Lekas.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/detail"
+                style="@style/Text.Lekas.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textSize="14sp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/name"
+            android:id="@+id/amount"
             style="@style/Text.Lekas.Body"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/detail"
-            style="@style/Text.Lekas.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:textSize="14sp" />
+            android:layout_marginStart="12dp"
+            android:textSize="18sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/amount"
-        style="@style/Text.Lekas.Body"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/controls"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:textSize="17sp"
-        android:textStyle="bold" />
+        android:layout_marginTop="6dp"
+        android:baselineAligned="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/line_remove"
+            style="@style/Widget.Lekas.Button.LineDanger"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/line_remove_short" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/line_minus"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="48dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/line_minus"
+            android:scaleType="center"
+            android:src="@drawable/ic_minus"
+            android:tint="@color/brand" />
+
+        <Button
+            android:id="@+id/line_qty"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:minWidth="44dp"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/line_plus"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="48dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/line_plus"
+            android:scaleType="center"
+            android:src="@drawable/ic_add"
+            android:tint="@color/brand" />
+
+        <Button
+            android:id="@+id/line_more"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="@string/line_more" />
+    </LinearLayout>
 </LinearLayout>

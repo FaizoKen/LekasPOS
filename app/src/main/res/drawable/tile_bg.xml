@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Catalogue tile; selected = the product is already on the bill. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="#221B7F5B">
     <item>
-        <shape android:shape="rectangle">
-            <corners android:radius="8dp" />
-            <solid android:color="@color/surface" />
-            <stroke android:width="1dp" android:color="@color/divider" />
-        </shape>
+        <selector>
+            <item android:state_selected="true">
+                <shape android:shape="rectangle">
+                    <corners android:radius="8dp" />
+                    <solid android:color="@color/highlight" />
+                    <stroke android:width="2dp" android:color="@color/brand" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="rectangle">
+                    <corners android:radius="8dp" />
+                    <solid android:color="@color/surface" />
+                    <stroke android:width="1dp" android:color="@color/divider" />
+                </shape>
+            </item>
+        </selector>
     </item>
 </ripple>

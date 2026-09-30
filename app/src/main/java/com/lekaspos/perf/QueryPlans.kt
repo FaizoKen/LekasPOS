@@ -35,7 +35,9 @@ object QueryPlans {
      * Lookups by key: must SEARCH. A full scan through an index ("SCAN TABLE sale USING INDEX
      * sale_sold", SQLite 3.8 skipping a partial index) is as slow as a table scan.
      */
-    private val KEY_LOOKUPS = setOf("refunded_total", "voids_of_sale", "refunds_of", "refunded_by_line", "receipt_lookup")
+    private val KEY_LOOKUPS = setOf(
+        "refunded_total", "voids_of_sale", "refunds_of", "refunded_by_line", "receipt_lookup", "popular_ids", "products_by_ids",
+    )
 
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */
     private val INDEX_ORDERED = setOf(

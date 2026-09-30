@@ -20,24 +20,43 @@ import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.product.ProductListItem
 
 /** One row of the bill as shown: the item plus its priced amounts. */
-data class CartRow(val item: CartItem, val amount: Long, val highlighted: Boolean, val promo: AppliedPromo? = null)
+data class CartRow(val item: CartItem, val amount: Long, val selected: Boolean, val promo: AppliedPromo? = null)
 
-class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapter<CartAdapter.Holder>() {
+/** What a tap on a bill line and the buttons of the selected line do. */
+interface LineActions {
+    fun select(item: CartItem)
+    fun changeQty(item: CartItem, qty: Long)
+    fun enterQty(item: CartItem)
+    fun more(item: CartItem)
+    fun remove(item: CartItem)
+}
+
+/**
+ * The bill. The selected line (the one just scanned, or tapped) shows its buttons in place —
+ * remove, −, quantity, +, more — so changing a count is one tap, not a dialog (D-049).
+ */
+class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartAdapter.Holder>() {
 
     class Holder(v: View) : RecyclerView.ViewHolder(v) {
         val name: TextView = v.findViewById(R.id.name)
         val detail: TextView = v.findViewById(R.id.detail)
         val amount: TextView = v.findViewById(R.id.amount)
+        val controls: View = v.findViewById(R.id.controls)
+        val remove: View = v.findViewById(R.id.line_remove)
+        val minus: View = v.findViewById(R.id.line_minus)
+        val qty: TextView = v.findViewById(R.id.line_qty)
+        val plus: View = v.findViewById(R.id.line_plus)
+        val more: View = v.findViewById(R.id.line_more)
     }
 
     private var rows: List<CartRow> = emptyList()
     var currency: CurrencySpec = CurrencySpec.MYR
 
-    fun submit(items: List<CartItem>, priced: PricedCart, lastKey: Long) {
+    fun submit(items: List<CartItem>, priced: PricedCart, selectedKey: Long) {
         val next = items.mapIndexed { i, it ->
             val pl = priced.lines.getOrNull(i)
             val amount = if (pl != null) pl.gross - pl.lineDiscount else 0L
-            CartRow(it, amount, it.key == lastKey, priced.promotions.getOrNull(i))
+            CartRow(it, amount, it.key == selectedKey, priced.promotions.getOrNull(i))
         }
         val old = rows
         rows = next
@@ -63,8 +82,28 @@ class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapte
         h.name.text = it.name
         h.amount.text = MoneyFormat.format(row.amount, currency, withSymbol = false)
         h.detail.text = detail(ctx, it, row.promo)
-        h.itemView.setBackgroundResource(if (row.highlighted) R.drawable.row_highlight else R.drawable.row_ripple)
-        h.itemView.setOnClickListener { _ -> onClick(it) }
+        h.itemView.setBackgroundResource(if (row.selected) R.drawable.row_highlight else R.drawable.row_ripple)
+        h.itemView.setOnClickListener { _ -> actions.select(it) }
+        h.controls.visibility = if (row.selected) View.VISIBLE else View.GONE
+        if (row.selected) bindControls(h, it)
+    }
+
+    private fun bindControls(h: Holder, it: CartItem) {
+        val weighed = it.sellMode == SellMode.WEIGHT
+        val counted = !weighed && it.fixedGross == null
+        h.minus.visibility = if (counted) View.VISIBLE else View.GONE
+        h.plus.visibility = if (counted) View.VISIBLE else View.GONE
+        h.qty.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
+        h.qty.text = if (weighed) "${MoneyFormat.formatQty(it.qty)} ${it.unit ?: "kg"}" else MoneyFormat.formatQty(it.qty)
+        // One is the least: taking the last one off is "Remove", never a tap too many on "−".
+        val canLower = it.qty > ONE
+        h.minus.isEnabled = canLower
+        h.minus.alpha = if (canLower) 1f else 0.35f
+        h.minus.setOnClickListener { _ -> actions.changeQty(it, it.qty - ONE) }
+        h.plus.setOnClickListener { _ -> actions.changeQty(it, it.qty + ONE) }
+        h.qty.setOnClickListener { _ -> actions.enterQty(it) }
+        h.remove.setOnClickListener { _ -> actions.remove(it) }
+        h.more.setOnClickListener { _ -> actions.more(it) }
     }
 
     private fun detail(ctx: android.content.Context, it: CartItem, promo: AppliedPromo?): String {
@@ -91,6 +130,10 @@ class CartAdapter(private val onClick: (CartItem) -> Unit) : RecyclerView.Adapte
         }
         return sb.toString()
     }
+
+    private companion object {
+        const val ONE = 1000L
+    }
 }
 
 class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : RecyclerView.Adapter<ProductTileAdapter.Holder>() {
@@ -99,11 +142,23 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         val name: TextView = v.findViewById(R.id.name)
         val price: TextView = v.findViewById(R.id.price)
         val stock: TextView = v.findViewById(R.id.stock)
+        val inBill: TextView = v.findViewById(R.id.in_bill)
     }
 
     var items: List<ProductListItem> = emptyList()
         private set
     var currency: CurrencySpec = CurrencySpec.MYR
+
+    /** Product id → quantity on the bill (selling units, milli). */
+    private var onBill: Map<Long, Long> = emptyMap()
+
+    /** Marks the tiles of products on the bill; only tiles whose count changed are redrawn. */
+    fun setOnBill(next: Map<Long, Long>) {
+        val old = onBill
+        if (old == next) return
+        onBill = next
+        for ((i, p) in items.withIndex()) if (old[p.id] != next[p.id]) notifyItemChanged(i)
+    }
 
     @SuppressLint("NotifyDataSetChanged") // a new result set replaces the old one
     fun submit(list: List<ProductListItem>) {
@@ -134,6 +189,10 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         }
         val stock = p.stockQty
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
+        val q = onBill[p.id]
+        h.itemView.isSelected = q != null
+        h.inBill.visibility = if (q != null) View.VISIBLE else View.GONE
+        if (q != null) h.inBill.text = h.itemView.context.getString(R.string.tile_in_bill, MoneyFormat.formatQty(q))
         h.itemView.setOnClickListener { onClick(p) }
     }
 }
@@ -170,5 +229,8 @@ class CategoryChipAdapter(private val onClick: (Long) -> Unit) : RecyclerView.Ad
 
     companion object {
         const val ALL = -1L
+
+        /** Best sellers of the last 30 days (D-049). */
+        const val POPULAR = -2L
     }
 }

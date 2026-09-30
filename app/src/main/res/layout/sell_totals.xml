@@ -23,28 +23,57 @@
         android:singleLine="true"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/summary"
-        style="@style/Text.Lekas.Caption"
+    <!-- "3 items · discount …" and the bill's total in big figures. -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
+        android:baselineAligned="true"
+        android:orientation="horizontal"
         android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:singleLine="true"
-        android:textSize="14sp" />
+        android:paddingEnd="4dp">
+
+        <TextView
+            android:id="@+id/summary"
+            style="@style/Text.Lekas.Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textSize="14sp" />
+
+        <TextView
+            style="@style/Text.Lekas.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/sell_total"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/total"
+            style="@style/Text.Lekas.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_hold"
             style="@style/Widget.Lekas.Button.Secondary"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:minWidth="0dp"
             android:text="@string/sell_hold" />
@@ -53,7 +82,7 @@
             android:id="@+id/btn_discount"
             style="@style/Widget.Lekas.Button.Secondary"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:minWidth="0dp"
@@ -65,10 +94,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
-            android:layout_weight="2.2"
+            android:layout_weight="1.6"
             android:minHeight="64dp"
             android:text="@string/sell_pay_empty"
-            android:textSize="20sp"
+            android:textSize="24sp"
             android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

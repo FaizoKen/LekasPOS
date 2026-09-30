@@ -29,13 +29,11 @@
 
     <!-- Skrin jualan -->
     <string name="sell_search_hint">Cari atau imbas</string>
-    <string name="sell_cart_empty">Imbas kod bar, cari, atau pilih dari katalog untuk mula bil.</string>
     <string name="sell_browse">Katalog</string>
     <string name="sell_camera">Imbas dengan kamera</string>
     <string name="sell_menu">Menu</string>
     <string name="sell_hold">Simpan</string>
     <string name="sell_discount">Diskaun</string>
-    <string name="sell_pay">Bayar %1$s</string>
     <string name="sell_pay_empty">Bayar</string>
     <plurals name="sell_items">
         <item quantity="other">%d item</item>
@@ -91,14 +89,12 @@
     <string name="menu_diagnostics">Diagnostik</string>
 
     <!-- Baris bil -->
-    <string name="line_each">%1$s seunit</string>
     <string name="line_minus">−1</string>
     <string name="line_plus">+1</string>
     <string name="line_qty">Kuantiti</string>
     <string name="line_weight">Berat</string>
     <string name="line_discount">Diskaun</string>
     <string name="line_price">Tukar harga</string>
-    <string name="line_remove">Buang dari bil</string>
     <string name="price_title">Harga</string>
     <string name="discount_title">Diskaun item</string>
     <string name="bill_discount_title">Diskaun bil</string>

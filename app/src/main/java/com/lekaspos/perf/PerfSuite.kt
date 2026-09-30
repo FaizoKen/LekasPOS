@@ -274,6 +274,12 @@ class PerfSuite(
         })
         add(measure("stock_value", 500.0, warmup = 1, n = 5) { ReportDao.stockValue(r) })
 
+        // The catalogue's "Popular" tab (D-049): the ranking (kept 10 minutes), then the tiles.
+        progress.update("popular_items")
+        add(measure("popular_items", 300.0, warmup = 1, n = 10) {
+            ProductDao.listByIds(r, ProductDao.popularIds(r, today - 29, today, 50))
+        })
+
         progress.update("exports")
         val sink = CountingSink()
         val currency = CurrencySpec.MYR

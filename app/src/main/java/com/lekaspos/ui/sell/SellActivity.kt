@@ -1,6 +1,5 @@
 package com.lekaspos.ui.sell
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
@@ -36,6 +35,7 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.time.DateText
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.PaymentMethod
@@ -82,6 +82,7 @@ import com.lekaspos.ui.staff.LockActivity
 import com.lekaspos.ui.staff.changeOwnPin
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
+import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -110,7 +111,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var titleView: TextView
     private lateinit var printerState: TextView
     private lateinit var syncState: TextView
-    private lateinit var heldBadge: TextView
+    private lateinit var heldPill: TextView
     private lateinit var cameraButton: View
     private lateinit var search: EditText
     private lateinit var searchClear: View
@@ -123,6 +124,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var productGrid: RecyclerView
     private lateinit var catalogEmpty: TextView
     private lateinit var summary: TextView
+    private lateinit var totalView: TextView
+    private lateinit var lastSale: View
+    private lateinit var lastSaleTitle: TextView
+    private lateinit var lastSaleText: TextView
+    private lateinit var lastSalePrint: View
     private lateinit var holdButton: Button
     private lateinit var discountButton: Button
     private lateinit var payButton: Button
@@ -136,10 +142,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var twoPane = false
     private var catalogOpen = false
 
-    private val cartAdapter = CartAdapter { openLine(it) }
+    private val cartAdapter = CartAdapter(this)
+
+    /** The bill line showing its buttons: the one scanned last, until another is tapped. */
+    private var selectedKey = 0L
+    private var lastSeenKey = 0L
+    private var lastSeenLine: CartItem? = null
     private val productAdapter = ProductTileAdapter { tapProduct(it) }
     private val categoryAdapter = CategoryChipAdapter { selectCategory(it) }
     private var selectedCategory = CategoryChipAdapter.ALL
+    private var categoryChosen = false
     private var catalogJob: Job? = null
     private var catalogEnd = false
     private var searchJob: Job? = null
@@ -164,7 +176,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         titleView = findViewById(R.id.title)
         printerState = findViewById(R.id.printer_state)
         syncState = findViewById(R.id.sync_state)
-        heldBadge = findViewById(R.id.held_badge)
+        heldPill = findViewById(R.id.held_pill)
         cameraButton = findViewById(R.id.btn_camera)
         search = findViewById(R.id.search)
         searchClear = findViewById(R.id.search_clear)
@@ -177,6 +189,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         productGrid = findViewById(R.id.product_grid)
         catalogEmpty = findViewById(R.id.catalog_empty)
         summary = findViewById(R.id.summary)
+        totalView = findViewById(R.id.total)
+        lastSale = findViewById(R.id.last_sale)
+        lastSaleTitle = findViewById(R.id.last_sale_title)
+        lastSaleText = findViewById(R.id.last_sale_text)
+        lastSalePrint = findViewById(R.id.last_sale_print)
         holdButton = findViewById(R.id.btn_hold)
         discountButton = findViewById(R.id.btn_discount)
         payButton = findViewById(R.id.btn_pay)
@@ -217,11 +234,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
         browseButton?.setOnClickListener { toggleCatalog() }
         findViewById<View>(R.id.btn_other).setOnClickListener { sellOther() }
         browseButton?.visible(!twoPane)
+        findViewById<View>(R.id.btn_price_check).apply {
+            visible(twoPane) // phones: in the menu (the search row has no room for a third tool)
+            setOnClickListener { showPriceCheck() }
+        }
+        findViewById<TextView>(R.id.cart_empty_help).setText(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)
+        lastSalePrint.setOnClickListener { printLastSale() }
         payButton.setOnClickListener { openPayment() }
         holdButton.setOnClickListener { hold() }
         discountButton.setOnClickListener { billDiscount() }
         findViewById<View>(R.id.btn_menu).setOnClickListener { showMenu(it) }
-        findViewById<View>(R.id.btn_held).setOnClickListener { showHeld() }
+        heldPill.setOnClickListener { showHeld() }
         cameraButton.setOnClickListener { startActivity(CameraScanActivity.sellIntent(this)) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
         staffChip.setOnClickListener { staffMenu(it) }
@@ -284,6 +307,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.sync.status.map { it.lastSuccessAt }.distinctUntilChanged().collect { graph.backups.refreshProtection() } }
         s.launch { graph.sppScanner.codes.collect { onScanned(it) } }
+        s.launch { graph.checkout.last.collect { renderLastSale(it) } }
         s.launch {
             graph.checkout.outcome.collect {
                 showOutcome(it)
@@ -316,21 +340,33 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     // ------------------------------------------------------------------ rendering
 
-    @SuppressLint("SetTextI18n") // the held-bills badge is a bare count
     private fun render(st: CartSession.State) {
         if (!st.loaded) return
-        cartAdapter.submit(st.cart.items, st.priced, st.lastKey)
-        val pos = cartAdapter.positionOf(st.lastKey)
-        if (pos >= 0) cartList.scrollToPosition(pos)
+        // A new scan (or change) selects its line — also the same product scanned again, which
+        // changes the line but not its key; a tap selects another line until the next scan.
+        val last = st.cart.item(st.lastKey)
+        val scanned = st.lastKey != lastSeenKey || last != lastSeenLine
+        if (scanned) {
+            lastSeenKey = st.lastKey
+            lastSeenLine = last
+            selectedKey = st.lastKey
+        }
+        if (st.cart.item(selectedKey) == null) selectedKey = 0L
+        cartAdapter.submit(st.cart.items, st.priced, selectedKey)
+        if (scanned) cartAdapter.positionOf(selectedKey).takeIf { it >= 0 }?.let { cartList.scrollToPosition(it) }
         val empty = st.cart.isEmpty
         cartEmpty.visible(empty)
+        cartList.visible(!empty)
         payButton.isEnabled = !empty && st.canEdit
-        payButton.text = if (empty) getString(R.string.sell_pay_empty) else getString(R.string.sell_pay, money(st.priced.total))
+        totalView.text = money(st.priced.total)
         holdButton.isEnabled = !empty && st.canEdit
         discountButton.isEnabled = !empty && st.canEdit
         summary.text = summaryText(st)
-        heldBadge.text = st.heldCount.toString()
-        heldBadge.visible(st.heldCount > 0)
+        heldPill.text = resources.getQuantityString(R.plurals.held_pill, st.heldCount, st.heldCount)
+        heldPill.visible(st.heldCount > 0)
+        val onBill = HashMap<Long, Long>()
+        for (item in st.cart.items) item.productId?.let { onBill[it] = (onBill[it] ?: 0L) + item.qty }
+        productAdapter.setOnBill(onBill)
         val credit = graph.settings.store.value.creditEnabled
         customerChip.visible(credit)
         if (credit) customerChip.text = st.customerName?.let { getString(R.string.sell_customer, it) } ?: getString(R.string.sell_customer_none)
@@ -389,6 +425,32 @@ class SellActivity : Activity(), LineActions, DialogHost {
             parts.add(getString(if (p.pricesIncludeTax) R.string.sell_summary_tax_incl else R.string.sell_summary_tax, money(p.tax)))
         }
         return parts.joinToString(" · ")
+    }
+
+    /** The empty bill shows the last sale: the change again (customers ask), and a copy of the receipt. */
+    private fun renderLastSale(done: CheckoutService.Done?) {
+        lastSale.visible(done != null)
+        if (done == null) return
+        lastSaleTitle.text = getString(R.string.last_sale_title, DateText.time(done.at, TimeZone.getDefault()), done.receiptNo)
+        lastSaleText.text = if (done.change > 0L) {
+            getString(R.string.last_sale_change, money(done.total), money(done.received), money(done.change))
+        } else {
+            getString(R.string.last_sale_paid, money(done.total))
+        }
+        lastSalePrint.visible(graph.settings.device.value.hasPrinter)
+    }
+
+    private fun printLastSale() {
+        val done = graph.checkout.last.value ?: return
+        withApproval(graph, scope, Perm.REPRINT) { approval ->
+            scope.launch {
+                try {
+                    graph.sales.print(done.saleId, copy = true, approval = approval)
+                } catch (e: Exception) {
+                    notAllowed()
+                }
+            }
+        }
     }
 
     private fun renderPrinter(s: PrinterService.Status, pending: Int) {
@@ -687,9 +749,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val s = started ?: return
         s.launch {
             val cats = graph.db().read { CategoryDao.list(it) }
-            val chips = ArrayList<Category>(cats.size + 1)
+            val popular = graph.popular.load().isNotEmpty()
+            val chips = ArrayList<Category>(cats.size + 2)
+            if (popular) chips.add(Category(CategoryChipAdapter.POPULAR, getString(R.string.sell_popular)))
             chips.add(Category(CategoryChipAdapter.ALL, getString(R.string.sell_all)))
             chips.addAll(cats)
+            // Best sellers first once the shop has sold something; the owner's choice is kept after that.
+            if (!categoryChosen && popular) selectedCategory = CategoryChipAdapter.POPULAR
             if (chips.none { it.id == selectedCategory }) selectedCategory = CategoryChipAdapter.ALL
             categoryAdapter.submit(chips)
             categoryAdapter.selected = selectedCategory
@@ -698,6 +764,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun selectCategory(id: Long) {
+        categoryChosen = true
         selectedCategory = id
         categoryAdapter.selected = id
         loadCatalog(reset = true)
@@ -710,8 +777,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val category = selectedCategory
         val after = if (reset) null else productAdapter.items.lastOrNull()
         catalogJob = scope.launch {
-            val page = graph.db().read { r ->
-                if (category == CategoryChipAdapter.ALL) ProductDao.sellPage(r, after, PAGE) else ProductDao.byCategory(r, category, after, PAGE)
+            val popular = category == CategoryChipAdapter.POPULAR
+            val page = if (popular) {
+                graph.popular.load() // one short list, no more pages
+            } else {
+                graph.db().read { r ->
+                    if (category == CategoryChipAdapter.ALL) ProductDao.sellPage(r, after, PAGE) else ProductDao.byCategory(r, category, after, PAGE)
+                }
             }
             if (reset) {
                 productAdapter.submit(page)
@@ -719,13 +791,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
             } else {
                 productAdapter.append(page)
             }
-            catalogEnd = page.size < PAGE
+            catalogEnd = popular || page.size < PAGE
             catalogEmpty.text = getString(R.string.sell_no_products)
             catalogEmpty.visible(productAdapter.itemCount == 0)
         }
     }
 
-    private fun tapProduct(item: ProductListItem) = addProductById(item.id)
+    /** A tile: added to the bill. Picked from search results, the search closes and the bill shows again. */
+    private fun tapProduct(item: ProductListItem) {
+        addProductById(item.id)
+        if (search.text.isNotEmpty()) clearSearch()
+    }
 
     private fun addProductById(id: Long) {
         scope.launch {
@@ -742,15 +818,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     // ------------------------------------------------------------------ bill actions
 
-    private fun openLine(item: CartItem) {
-        val st = graph.cart.state.value
-        if (!st.canEdit) return
-        val i = st.cart.items.indexOfFirst { it.key == item.key }
-        val pl = st.priced.lines.getOrNull(i) ?: return
-        showLineDialog(this, item, pl.gross - pl.lineDiscount, currency, this)
+    /** A tap on a line shows its buttons (a second tap hides them). */
+    override fun select(item: CartItem) {
+        selectedKey = if (selectedKey == item.key) 0L else item.key
+        render(graph.cart.state.value)
     }
 
     override fun changeQty(item: CartItem, qty: Long) = graph.cart.setQty(item.key, qty)
+
+    override fun more(item: CartItem) {
+        if (!graph.cart.state.value.canEdit) return
+        showLineMore(this, item, onQty = { enterQty(item) }, onDiscount = { lineDiscount(item) }, onPrice = { linePrice(item) })
+    }
 
     override fun enterQty(item: CartItem) {
         if (item.sellMode == SellMode.WEIGHT) {
@@ -764,7 +843,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
-    override fun discount(item: CartItem) {
+    private fun lineDiscount(item: CartItem) {
         withApproval(graph, scope, Perm.DISCOUNT) { approval ->
             DiscountDialog(this, getString(R.string.discount_title), currency, item.discount) { d ->
                 if (!graph.cart.setLineDiscount(item.key, d, approval)) notAllowed()
@@ -772,7 +851,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
-    override fun price(item: CartItem) {
+    private fun linePrice(item: CartItem) {
         withApproval(graph, scope, Perm.PRICE_OVERRIDE) { approval ->
             AmountDialog(this, getString(R.string.price_title), AmountDialog.Kind.MONEY, currency, initial = item.unitPrice, allowZero = true) { p ->
                 if (!graph.cart.overridePrice(item.key, p, approval)) notAllowed()
@@ -843,21 +922,28 @@ class SellActivity : Activity(), LineActions, DialogHost {
         Dialogs.message(this, null, getString(R.string.not_allowed))
     }
 
+    /**
+     * The cashier's jobs first; the shop's back office (products, stock, reports, settings…) under
+     * one "Manage shop" entry, so a new cashier sees a short list (D-049).
+     */
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
-        val items = ArrayList<Int>(14)
-        items += listOf(R.string.other_item_title, R.string.price_check_title)
-        items += listOf(
-            R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.promo_title,
-            R.string.menu_tax_rates, R.string.menu_sales, R.string.menu_reports, R.string.menu_shift,
-        )
+        val items = ArrayList<Int>(10)
+        items += listOf(R.string.price_check_title, R.string.held_title, R.string.menu_sales)
         if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
-        items += listOf(R.string.menu_open_drawer, R.string.menu_cancel_bill, R.string.menu_settings, R.string.menu_diagnostics)
+        items += listOf(R.string.menu_shift, R.string.menu_open_drawer, R.string.menu_cancel_bill)
         if (graph.staff.state.value.loginRequired) items += R.string.menu_lock
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
+        val manage = m.menu.addSubMenu(0, R.string.menu_manage, items.size, getString(R.string.menu_manage) + "  ›")
+        val office = listOf(
+            R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.promo_title,
+            R.string.menu_tax_rates, R.string.menu_reports, R.string.menu_settings, R.string.menu_diagnostics,
+        )
+        manage.setHeaderTitle(R.string.menu_manage)
+        for ((i, res) in office.withIndex()) manage.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
-                R.string.other_item_title -> sellOther()
+                R.string.held_title -> showHeld()
                 R.string.price_check_title -> showPriceCheck()
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
                 R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))
@@ -972,7 +1058,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val v = layoutInflater.inflate(R.layout.dialog_result, null)
         val device = graph.settings.device.value
         v.findViewById<TextView>(R.id.result_label).setText(if (done.change > 0L) R.string.result_change else R.string.result_paid)
-        v.findViewById<TextView>(R.id.result_amount).text = money(if (done.change > 0L) done.change else done.total)
+        v.findViewById<TextView>(R.id.result_amount).apply {
+            text = money(if (done.change > 0L) done.change else done.total)
+            if (done.change > 0L) setBackgroundResource(R.drawable.change_bg)
+        }
+        v.findViewById<TextView>(R.id.result_received).apply {
+            text = getString(R.string.result_received, money(done.received), money(done.total))
+            visible(done.change > 0L)
+        }
         v.findViewById<TextView>(R.id.result_receipt).text = getString(R.string.result_receipt, done.receiptNo)
         v.findViewById<TextView>(R.id.result_print_state).text = when {
             done.receiptQueued -> getString(R.string.result_printing)

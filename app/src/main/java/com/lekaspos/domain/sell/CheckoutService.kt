@@ -60,6 +60,9 @@ class CheckoutService(private val graph: AppGraph) {
         /** The bill's customer and what they owe after this sale (customers & credit). */
         val customerName: String? = null,
         val customerBalance: Long? = null,
+        /** What the customer handed over (all tenders), and when: shown with the change. */
+        val received: Long = total,
+        val at: Long = 0L,
     )
 
     /** Result of the last checkout until the selling screen acknowledges it (survives rotation). */
@@ -73,6 +76,11 @@ class CheckoutService(private val graph: AppGraph) {
 
     private val _outcome = MutableStateFlow<Outcome?>(null)
     val outcome: StateFlow<Outcome?> = _outcome
+
+    private val _last = MutableStateFlow<Done?>(null)
+
+    /** The last sale of this session (this process): the empty bill shows its change and a reprint. */
+    val last: StateFlow<Done?> = _last
 
     /**
      * Completes the sale in the app scope, so leaving or rotating the screen can never cancel a
@@ -149,8 +157,9 @@ class CheckoutService(private val graph: AppGraph) {
             val low = StockDao.lowAmong(tx.db, draft.lines.mapNotNull { if (it.trackStock) it.productId else null })
             val customer = customerId?.let { CustomerDao.name(tx.db, it) }
             val owes = customerId?.let { CustomerDao.balance(tx.db, it) }
-            Done(sale.id, sale.receiptNo, draft.total, draft.change, queued, low, customer, owes)
+            Done(sale.id, sale.receiptNo, draft.total, draft.change, queued, low, customer, owes, tenders.sumOf { it.tendered }, now)
         }
+        _last.value = done
         graph.printer.wake()
         graph.syncSoon()
         return done

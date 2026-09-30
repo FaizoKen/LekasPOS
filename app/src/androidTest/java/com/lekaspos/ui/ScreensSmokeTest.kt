@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.View
 import android.widget.EditText
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -172,6 +173,47 @@ class ScreensSmokeTest {
         }
         assertFalse(graph.staff.state.value.loginRequired)
     }
+
+    /** D-049: the line just added shows its buttons; +, − and Remove work in place. */
+    @Test
+    fun theSelectedBillLineChangesTheCountInPlace() {
+        val graph = LekasApp.graph(ctx)
+        val db = runBlocking { graph.db() }
+        val key = runBlocking {
+            graph.cart.load()
+            assertTrue(graph.cart.clear())
+            graph.cart.addProduct(TestDb.sellable(db, TestDb.product(db, "Smoke line item", 250L)))
+        }
+        ActivityScenario.launch(SellActivity::class.java).use { scenario ->
+            fun tap(id: Int) {
+                val deadline = SystemClock.uptimeMillis() + 5_000L
+                var tapped = false
+                while (!tapped) {
+                    scenario.onActivity { a ->
+                        a.findViewById<View>(id)?.takeIf { it.isShown && it.isEnabled }?.let {
+                            it.performClick()
+                            tapped = true
+                        }
+                    }
+                    if (!tapped) {
+                        assertTrue(SystemClock.uptimeMillis() < deadline, "button ${a11yName(id)} never showed")
+                        Thread.sleep(50)
+                    }
+                }
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            }
+            tap(R.id.line_plus)
+            assertEquals(2_000L, graph.cart.state.value.cart.item(key)?.qty)
+            tap(R.id.line_plus)
+            tap(R.id.line_minus)
+            assertEquals(2_000L, graph.cart.state.value.cart.item(key)?.qty)
+            tap(R.id.line_remove)
+            assertTrue(graph.cart.state.value.cart.isEmpty)
+            scenario.onActivity { a -> assertTrue(a.findViewById<View>(R.id.cart_empty).isShown) }
+        }
+    }
+
+    private fun a11yName(id: Int) = ctx.resources.getResourceEntryName(id)
 
     @Test
     fun sellingScreenTakesKeyboardWedgeScans() {

@@ -1,54 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Search or scan, with the camera scanner inside the box, then labelled tools: items without
+     a barcode are typed in (Other item) or picked (Items; always shown on two-pane screens). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="8dp"
-    android:paddingTop="8dp"
+    android:paddingTop="6dp"
     android:paddingEnd="4dp"
     android:paddingBottom="4dp">
 
-    <EditText
-        android:id="@+id/search"
+    <LinearLayout
+        android:id="@+id/search_box"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:addStatesFromChildren="true"
         android:background="@drawable/field_bg"
-        android:drawableStart="@drawable/ic_search"
-        android:drawablePadding="8dp"
-        android:hint="@string/sell_search_hint"
-        android:imeOptions="actionSearch|flagNoExtractUi"
-        android:importantForAutofill="no"
-        android:inputType="text|textNoSuggestions"
+        android:gravity="center_vertical"
         android:minHeight="52dp"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:singleLine="true" />
+        android:orientation="horizontal">
 
-    <ImageButton
-        android:id="@+id/search_clear"
-        style="@style/Widget.Lekas.IconButton"
-        android:layout_width="48dp"
-        android:layout_height="52dp"
-        android:contentDescription="@string/clear"
-        android:src="@drawable/ic_close"
-        android:visibility="gone" />
+        <EditText
+            android:id="@+id/search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@null"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="8dp"
+            android:hint="@string/sell_search_hint"
+            android:imeOptions="actionSearch|flagNoExtractUi"
+            android:importantForAutofill="no"
+            android:inputType="text|textNoSuggestions"
+            android:minHeight="52dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp"
+            android:singleLine="true" />
 
-    <ImageButton
+        <ImageButton
+            android:id="@+id/search_clear"
+            style="@style/Widget.Lekas.IconButton"
+            android:layout_width="44dp"
+            android:layout_height="52dp"
+            android:contentDescription="@string/clear"
+            android:src="@drawable/ic_close"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/btn_camera"
+            style="@style/Widget.Lekas.IconButton"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:contentDescription="@string/sell_camera"
+            android:src="@drawable/ic_camera"
+            android:tint="@color/brand"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/btn_other"
-        style="@style/Widget.Lekas.IconButton"
-        android:layout_width="52dp"
-        android:layout_height="56dp"
-        android:contentDescription="@string/other_item_title"
-        android:src="@drawable/ic_add" />
+        style="@style/Widget.Lekas.Tool"
+        android:layout_marginStart="4dp"
+        android:contentDescription="@string/other_item_title">
 
-    <ImageButton
+        <ImageView
+            style="@style/Widget.Lekas.ToolIcon"
+            android:src="@drawable/ic_add" />
+
+        <TextView
+            style="@style/Text.Lekas.ToolLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="84dp"
+            android:singleLine="true"
+            android:text="@string/sell_tool_other" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_price_check"
+        style="@style/Widget.Lekas.Tool"
+        android:contentDescription="@string/price_check_title"
+        android:visibility="gone">
+
+        <ImageView
+            style="@style/Widget.Lekas.ToolIcon"
+            android:src="@drawable/ic_tag" />
+
+        <TextView
+            style="@style/Text.Lekas.ToolLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="84dp"
+            android:singleLine="true"
+            android:text="@string/price_check_title" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/btn_browse"
-        style="@style/Widget.Lekas.IconButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:background="@drawable/icon_toggle_bg"
-        android:contentDescription="@string/sell_browse"
-        android:src="@drawable/ic_grid" />
+        style="@style/Widget.Lekas.Tool"
+        android:contentDescription="@string/sell_browse">
+
+        <ImageView
+            style="@style/Widget.Lekas.ToolIcon"
+            android:src="@drawable/ic_grid" />
+
+        <TextView
+            style="@style/Text.Lekas.ToolLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="84dp"
+            android:singleLine="true"
+            android:text="@string/sell_tool_items" />
+    </LinearLayout>
 </LinearLayout>

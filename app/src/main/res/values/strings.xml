@@ -31,13 +31,11 @@
 
     <!-- Selling screen -->
     <string name="sell_search_hint">Search or scan</string>
-    <string name="sell_cart_empty">Scan a barcode, search, or pick from the catalogue to start a bill.</string>
     <string name="sell_browse">Catalogue</string>
     <string name="sell_camera">Scan with camera</string>
     <string name="sell_menu">Menu</string>
     <string name="sell_hold">Hold</string>
     <string name="sell_discount">Discount</string>
-    <string name="sell_pay">Pay %1$s</string>
     <string name="sell_pay_empty">Pay</string>
     <plurals name="sell_items">
         <item quantity="one">%d item</item>
@@ -94,14 +92,12 @@
     <string name="menu_diagnostics">Diagnostics</string>
 
     <!-- Bill lines -->
-    <string name="line_each">%1$s each</string>
     <string name="line_minus">−1</string>
     <string name="line_plus">+1</string>
     <string name="line_qty">Quantity</string>
     <string name="line_weight">Weight</string>
     <string name="line_discount">Discount</string>
     <string name="line_price">Change price</string>
-    <string name="line_remove">Remove from bill</string>
     <string name="price_title">Price</string>
     <string name="discount_title">Item discount</string>
     <string name="bill_discount_title">Bill discount</string>
