@@ -13,7 +13,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
-| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done — waiting for real-device feedback** (tester build v0.7.0-phase7) |
+| 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
 
 ## Open questions for the user
 
@@ -493,7 +493,7 @@ test key SHA-1 `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`).
 11. Optional: a phone with two Google accounts — sync always uses the store's account.
 12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 7 — localization, settings, polish, profiling, release (done — waiting for device feedback, tester build v0.7.0-phase7)
+## Phase 7 — localization, settings, polish, profiling, release (done)
 
 Decisions (2026-09-30): no Google Play upload at the end of this phase (everything for a later
 upload is prepared: Data Safety answers, listing notes, upload-key and OAuth steps); the privacy
@@ -533,6 +533,14 @@ policy is a GitHub Pages page of this repository; archiving old sales comes afte
 | Cold start to usable selling screen | API 21: 568–676 ms; API 36: 579–744 ms — budget 2 s |
 | Memory | heap after GC 5.4 MB (API 21) / 3.3 MB (API 36), no growth over 1,000 sales — budget 48 MB |
 | Schema | v5 (no change in Phase 7) |
+
+### Real-device feedback (Phase 7, 2026-09-30)
+
+The user replied "tested and all works" to the v0.7.0-phase7 build. All seven phases are done.
+Still open: hardware tests (printer, cash drawer, HID/SPP scanners, 2 GB tablet) when the
+hardware is available; the Google Play upload when the owner decides (`docs/PLAY.md`); archiving
+of old sales as a later, optional feature — it never deletes data on its own, and app updates
+keep all data (every schema upgrade is migrated in place, with a backup taken first).
 
 ### Needs real-device testing (Phase 7)
 
