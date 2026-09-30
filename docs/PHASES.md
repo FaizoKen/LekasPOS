@@ -493,13 +493,56 @@ test key SHA-1 `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`).
 11. Optional: a phone with two Google accounts — sync always uses the store's account.
 12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 7 — localization, settings, polish, profiling, release (in progress)
+## Phase 7 — localization, settings, polish, profiling, release (done — waiting for device feedback)
 
 Decisions (2026-09-30): no Google Play upload at the end of this phase (everything for a later
 upload is prepared: Data Safety answers, listing notes, upload-key and OAuth steps); the privacy
 policy is a GitHub Pages page of this repository; archiving old sales comes after the release.
 
-- [ ] All strings EN + BM reviewed; in-app language switch; settings screens (store, receipt,
-      currency, tax, printer, scanner, drawer)
-- [ ] Profiling on `lekas-api21` (1 GB) and `lekas-api36`; 1,000-sale soak (heap flat, no leaks)
-- [ ] Privacy policy + Google Play Data Safety answers; release build + final checklist
+- [x] Strings reviewed: every English string has a Malay one, no placeholder mismatches, no
+      hard-coded UI text; "Sunting" for Edit everywhere; sync failures (offline, damaged file)
+      shown as sentences in both languages instead of raw error text
+- [x] Settings → **App language** (phone's language / English / Bahasa Melayu, D-046), separate
+      from the receipt language; Settings → **About** (licence, privacy policy, source code,
+      open-source notices)
+- [x] Layout review from screenshots in both languages (small phone on API 21 and API 36, tablet
+      in landscape): two-button rows stay level when a Malay label wraps; Malay backup title
+      shortened. Settings screens (store, receipt, tax, printer, drawer, scanner) were built in
+      Phases 2–6 and checked here
+- [x] Profiling: 1,000-sale soak through scan → cart → checkout — heap after GC flat (5.4 MB on
+      the 1 GB API 21 emulator, 3.3 MB on API 36; budget 48 MB); old selling screens are freed
+      after recreation; perf FULL and cold start on both emulators
+- [x] Privacy policy (English + Malay) at https://faizoken.github.io/LekasPOS/privacy.html
+      (`site/`, GitHub Pages); Google Play preparation in `docs/PLAY.md` (listing, Data Safety,
+      upload key, OAuth production steps)
+- [x] Release checks: release smoke on every build (upgrade from the last tester build + fresh,
+      API 21 and 36), release APK size, lint
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **1,103 KB** (1,129,449 bytes; budget 8 MB), version `0.7.0-ci.39` |
+| JVM tests | `:core` 159, `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **112/112 on API 21** and **112/112 on API 36** (new: app language, 1,000-sale soak, selling-screen leak check, screenshots in both languages) |
+| Release smoke | upgrade from the Phase 6 tester build and fresh install, selling screen open 20 s, no crash — API 21 and 36 |
+| Tablet (API 36, 10-inch, landscape) | TABLET |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 67/67 query plans; sale commit 4.7 ms (p95 10 ms); word search 5 ms; reports: month 0.20 s, rolling year 1.20 s, calendar year 0.30 s; 200 sales from another till 0.32 s |
+| Perf FULL, API 36 emulator | **PASS**, 67/67 plans; sale commit 1.1 ms; rolling year 0.65 s |
+| Cold start to usable selling screen | API 21: 568–676 ms; API 36: 579–744 ms — budget 2 s |
+| Memory | heap after GC 5.4 MB (API 21) / 3.3 MB (API 36), no growth over 1,000 sales — budget 48 MB |
+| Schema | v5 (no change in Phase 7) |
+
+### Needs real-device testing (Phase 7)
+
+1. **Upgrade**: install over the Phase 6 build — everything still there, sync still on.
+2. **App language**: Settings → App language → Bahasa Melayu, then English, then Phone's
+   language — every screen follows; an open bill survives the switch; receipts keep the receipt
+   language from Settings → Store.
+3. **Malay screens**: go through selling, payment, products, stock, reports, staff, shifts,
+   customers, backup and sync in Malay — report any text that is wrong, awkward or cut off.
+4. **About**: Settings → About → Privacy policy and Source code open in the browser.
+5. **A long day**: sell for a while (or leave the app open for hours) — no slowdown, no crash.
+6. Optional: a 10-inch tablet in landscape, and an old Android 5/6 phone.
+7. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.

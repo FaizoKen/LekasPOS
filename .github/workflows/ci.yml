@@ -143,6 +143,48 @@ jobs:
           name: release-smoke-api${{ matrix.api }}
           path: results/
 
+  # A 10-inch tablet in landscape (the usual counter setup): every screen opens, and the main
+  # screens are captured in both languages for layout review.
+  tablet:
+    name: Tablet layout (API 36, landscape)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: apks
+          path: apks
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: default
+          arch: x86_64
+          profile: pixel_tablet
+          ram-size: 2048M
+          disk-size: 4096M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: bash scripts/ci/screenshots.sh
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tablet
+          path: results/
+
   instrumented:
     name: Instrumented tests (API ${{ matrix.api }})
     needs: build
