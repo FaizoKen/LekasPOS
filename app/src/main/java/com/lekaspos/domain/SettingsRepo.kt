@@ -66,7 +66,7 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         load()
         if (_store.value.name.isNotBlank()) return false
         return graph.db().read { r ->
-            Meta.get(r, SETUP_DONE) != "1" && ProductDao.count(r) == 0L && SaleDao.count(r) == 0L
+            Meta.get(r, SETUP_DONE) != "1" && !ProductDao.any(r) && !SaleDao.any(r)
         }
     }
 

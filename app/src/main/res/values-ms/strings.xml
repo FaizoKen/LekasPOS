@@ -75,8 +75,8 @@
     <string name="setup_optional">Pilihan</string>
     <string name="setup_printer">Sediakan pencetak resit</string>
     <string name="setup_staff">Kakitangan dan PIN</string>
-    <string name="setup_join_help">Sudah menggunakan LekasPOS pada kaunter lain di kedai ini? Hidupkan segerak dengan akaun Google yang sama untuk mendapatkan produk dan tetapannya di sini.</string>
-    <string name="setup_join">Sertai kedai saya dengan segerak</string>
+    <string name="setup_join_help">Pernah menggunakan LekasPOS pada telefon yang hilang atau rosak, atau sudah menggunakannya pada kaunter lain di kedai ini? Hidupkan sandaran Google Drive dengan akaun Google yang sama untuk mendapatkan semuanya semula di sini.</string>
+    <string name="setup_join">Pulihkan atau sertai kedai saya dari Google Drive</string>
     <string name="setup_start">Mula berjual</string>
     <string name="setup_name_needed">Masukkan nama kedai anda.</string>
 

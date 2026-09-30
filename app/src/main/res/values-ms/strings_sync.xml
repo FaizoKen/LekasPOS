@@ -32,10 +32,10 @@
     <string name="backup_delete_confirm">Padam sandaran ini daripada telefon?</string>
     <string name="backup_restore_sync">Kaunter ini bersegerak dengan kaunter lain: selepas pemulihan ia menyertai kedai sebagai kaunter baharu, dan segerak perlu dihidupkan semula.</string>
 
-    <string name="sync_title">Segerak antara kaunter</string>
-    <string name="settings_sync_sub">Pastikan setiap kaunter kedai sentiasa terkini melalui Google Drive</string>
-    <string name="sync_help">Segerak memastikan produk, harga, stok, jualan, staf, pelanggan dan tetapan setiap kaunter dalam kedai ini sama. Ia menggunakan folder aplikasi tersembunyi dalam Google Drive kedai (ia tidak kelihatan antara fail anda, dan tiada aplikasi lain boleh membacanya). Jualan tidak pernah menunggu segerak: kaunter berfungsi tanpa internet dan dikemas kini apabila dalam talian semula.</string>
-    <string name="sync_help_short">Kaunter bersegerak sendiri setiap 30 minit dan sejurus selepas jualan, apabila dalam talian. Kaunter lain menyertai dengan menghidupkan segerak menggunakan akaun Google yang sama.</string>
+    <string name="sync_title">Sandaran Google Drive</string>
+    <string name="settings_sync_sub">Sandaran ke Google Drive, pulihkan pada telefon baharu, selaraskan setiap kaunter</string>
+    <string name="sync_help">Setiap jualan dan perubahan disalin ke folder aplikasi tersembunyi dalam Google Drive kedai (ia tidak kelihatan antara fail anda, dan tiada aplikasi lain boleh membacanya). Jika telefon ini hilang atau rosak, pasang LekasPOS pada telefon baharu dan hidupkan ini dengan akaun Google yang sama: semuanya kembali. Kaunter lain di kedai menggunakan salinan yang sama untuk kekal selaras. Jualan tidak pernah menunggunya: kaunter berfungsi tanpa internet dan dikemas kini apabila dalam talian semula.</string>
+    <string name="sync_help_short">Menyalin ke Google Drive sendiri setiap 30 minit dan sejurus selepas jualan, apabila dalam talian. Telefon baharu atau kaunter lain di kedai mendapat semuanya dengan menghidupkan ini menggunakan akaun Google yang sama.</string>
     <string name="sync_no_play">Segerak memerlukan perkhidmatan Google Play, yang tiada pada telefon ini. Sandaran masih berfungsi (Tetapan → Sandaran &amp; pemulihan).</string>
     <string name="sync_till_name">Nama kaunter ini</string>
     <string name="sync_till_name_needed">Masukkan nama untuk kaunter ini.</string>
@@ -69,6 +69,6 @@
     <string name="sync_error_connect">Tidak dapat menyambung ke Google: %1$s</string>
     <string name="sync_error_clash">Kaunter lain dalam kedai ini mempunyai nombor kaunter yang sama. Buat sandaran, kemudian pulihkannya pada telefon ini sebagai kaunter baharu, dan hidupkan segerak semula.</string>
     <string name="sync_other_account">Anda log masuk sebagai %1$s, tetapi kaunter ini bersegerak dengan %2$s. Log masuk dengan %2$s, atau matikan dan hidupkan semula segerak untuk memindahkan kedai ke akaun lain.</string>
-    <string name="sync_pill_sign_in">Segerak: log masuk</string>
-    <string name="sync_pill_stale">Belum segerak</string>
+    <string name="sync_pill_sign_in">Sandaran: log masuk</string>
+    <string name="sync_pill_stale">Tiada sandaran</string>
 </resources>

@@ -372,6 +372,9 @@ object SaleDao {
 
     fun count(db: SQLiteDatabase): Long = db.long("SELECT COUNT(*) FROM sale")
 
+    /** Any sale at all (O(1), unlike [count]). */
+    fun any(db: SQLiteDatabase): Boolean = db.long("SELECT EXISTS(SELECT 1 FROM sale)") == 1L
+
     fun isVoided(db: SQLiteDatabase, saleId: Long): Boolean =
         db.queryOne("SELECT status FROM sale WHERE id = ?", args(saleId)) { it.getInt(0) == SaleStatus.VOIDED } ?: false
 

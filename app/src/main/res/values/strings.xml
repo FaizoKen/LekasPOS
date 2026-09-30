@@ -78,8 +78,8 @@
     <string name="setup_optional">Optional</string>
     <string name="setup_printer">Set up a receipt printer</string>
     <string name="setup_staff">Staff and PINs</string>
-    <string name="setup_join_help">Already using LekasPOS on another till in this shop? Turn on sync with the same Google account to get its products and settings here.</string>
-    <string name="setup_join">Join my shop with sync</string>
+    <string name="setup_join_help">Had LekasPOS on a phone that was lost or broken, or already using it on another till in this shop? Turn on Google Drive backup with the same Google account to get everything back here.</string>
+    <string name="setup_join">Restore or join my shop from Google Drive</string>
     <string name="setup_start">Start selling</string>
     <string name="setup_name_needed">Enter your shop\'s name.</string>
 

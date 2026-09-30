@@ -31,15 +31,18 @@ entered and are responsible for the customer and staff details you record.</p>
 <ul>
 <li><strong>Nothing, by default.</strong> The app has no account with us, no servers, no
 analytics, no advertising and no crash-reporting services. It works fully offline.</li>
-<li><strong>Google Drive sync (optional).</strong> If you turn on sync (Settings → Sync) and sign
-in with a Google account, the app stores its sync files in that account's <em>hidden app data
-folder</em> in Google Drive, so the shop's tills share the same data. The app asks Google only for
+<li><strong>Google Drive backup (optional).</strong> If you turn on Google Drive backup (Settings →
+Google Drive backup) and sign in with a Google account, the app stores its sync files in that
+account's <em>hidden app data folder</em> in Google Drive, so the shop's tills share the same data. The app asks Google only for
 this folder (the <code>drive.appdata</code> permission): it cannot see or change any of your
 other Drive files, and other apps cannot read its folder. The files travel directly between
 your phones and Google over an encrypted connection (HTTPS). The app reads the account's e-mail
 address only to show you which account is in use. Google's
 <a href="https://policies.google.com/privacy">privacy policy</a> applies to data kept in Google
 Drive. Sign-in uses Google Play services.</li>
+<li><strong>Daily copy to a folder (optional).</strong> If you pick a folder (for example on an SD
+card or USB drive), the app writes one backup file a day there and keeps the last 7. It stays on
+that card or drive; nothing is sent anywhere.</li>
 <li><strong>Files you choose to share.</strong> Backup files and CSV exports go only where you
 send or save them (for example WhatsApp, e-mail, a USB stick or your Drive).</li>
 </ul>
@@ -60,6 +63,8 @@ and are not stored or sent anywhere.</li>
 on that phone (including the backups kept on it).</li>
 <li>Turning off sync stops sending data. To delete the synced files, open Google Drive on the web
 → Settings → Manage apps → LekasPOS → Options → Delete hidden app data.</li>
+<li>Backup files copied to a folder you picked (SD card, USB drive) are not deleted with the app;
+delete them in a file manager.</li>
 <li>Backup and CSV files you saved elsewhere are yours to delete.</li>
 </ul>
 

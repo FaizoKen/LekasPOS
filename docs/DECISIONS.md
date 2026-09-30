@@ -364,6 +364,32 @@ files and picks up the promotions it skipped (imports are idempotent).
 Rejected: promotions as price changes (lose the shelf price and the receipt line), a separate
 promotion discount column (every report and refund would need to know it), per-row product
 membership table (more sync rows for no gain at this size).
+### D-048 — Data safety: no required Google login; protected by default, visible when not (Phase 9, 2026-09-30)
+The owner asked whether a Google login should be required so shops cannot lose their data. It is
+not required. A required login would lock out phones without Google Play services, block the
+first sale on a day without internet, and still not protect a shop that never turns backup on.
+The real risk is the data existing on one phone only: lost, broken, reset or the app removed —
+and the automatic backups on the phone go with it. So:
+- First-run setup has a "Protect your shop's data" step: Google Drive backup (recommended) or a
+  daily copy to a folder (SD card / USB drive); it can be skipped.
+- The selling screen shows a **Not backed up** pill when there is data (a product or a sale) but
+  no copy off this phone in the last 3 days. A copy off the phone is a successful Google Drive
+  sync round, a copy to the folder, or a saved/shared backup file (`meta` timestamps). Tapping
+  it explains the risk and offers both fixes. Nothing shows while the data is safe.
+- The automatic daily backup is also copied to the folder the owner picked (system folder
+  picker, persisted permission, `lekaspos-<date>-<time>.lekasbak`, newest 7 kept, only our own
+  files are ever listed or deleted). A failed copy is shown on the backup screen.
+- Before each automatic backup the database is checked (`PRAGMA quick_check`). A damaged
+  database is not backed up at all — rotating would replace good backups with damaged ones —
+  and the selling screen shows **Data problem** until a later check passes.
+- Sync is presented as "Google Drive backup": it protects a single till too, and a new phone
+  gets the whole shop back by turning it on with the same account ("Restore or join my shop
+  from Google Drive" on the welcome screen). An instrumented test restores a lost phone from
+  Drive in full.
+Rejected: required Google sign-in (above); nagging dialogs at every start (owners learn to
+dismiss them — a quiet pill that only appears when there is a real risk is kept honest);
+backups to the phone's shared Downloads folder (lost with the phone, and needs storage
+permissions on old Android); our own cloud (no backend, by design).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

@@ -45,6 +45,7 @@ import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
+import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
@@ -58,6 +59,7 @@ import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.customers.pickCustomer
 import com.lekaspos.ui.diag.DiagnosticsActivity
@@ -69,6 +71,7 @@ import com.lekaspos.ui.reports.ReportsActivity
 import com.lekaspos.ui.sales.ReceiptShare
 import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
+import com.lekaspos.ui.settings.BackupActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
 import com.lekaspos.ui.settings.SettingsActivity
 import com.lekaspos.ui.settings.SetupActivity
@@ -86,6 +89,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -219,7 +224,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         findViewById<View>(R.id.btn_held).setOnClickListener { showHeld() }
         cameraButton.setOnClickListener { startActivity(CameraScanActivity.sellIntent(this)) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
-        syncState.setOnClickListener { startActivity(Intent(this, SyncActivity::class.java)) }
         staffChip.setOnClickListener { staffMenu(it) }
         customerChip.setOnClickListener { customerAction() }
         beeper = Beeper.create()
@@ -254,6 +258,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val app = applicationContext
             graph.appScope.launch(Dispatchers.IO) { Work.schedule(app) } // background jobs, after the till is usable (WorkManager starts here, off the main thread)
             graph.sync.refreshStatus()
+            graph.backups.refreshProtection()
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
@@ -274,9 +279,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.settings.device.collect { cameraButton.visible(it.cameraScan && hasCamera) } }
         s.launch { combine(graph.printer.status, graph.printer.pending) { st, n -> st to n }.collect { renderPrinter(it.first, it.second) } }
-        s.launch { graph.sync.status.collect { renderSync(it) } }
+        s.launch {
+            combine(graph.sync.status, graph.backups.protection) { a, b -> a to b }.collect { renderSafety(it.first, it.second) }
+        }
+        s.launch { graph.sync.status.map { it.lastSuccessAt }.distinctUntilChanged().collect { graph.backups.refreshProtection() } }
         s.launch { graph.sppScanner.codes.collect { onScanned(it) } }
-        s.launch { graph.checkout.outcome.collect { showOutcome(it) } }
+        s.launch {
+            graph.checkout.outcome.collect {
+                showOutcome(it)
+                if (it != null) graph.backups.refreshProtection() // the first sale makes "not backed up" possible
+            }
+        }
         loadCategories()
     }
 
@@ -390,17 +403,42 @@ class SellActivity : Activity(), LineActions, DialogHost {
         printerState.visible(text != null)
     }
 
-    /** Quiet while sync works; a pill only when it needs the user or has not worked for a day. */
-    private fun renderSync(s: SyncEngine.Status) {
-        val stale = s.pending > 0L && System.currentTimeMillis() - (s.lastSuccessAt ?: 0L) > SYNC_STALE_MS
-        val text = when {
-            !s.enabled -> null
-            s.needsSignIn -> getString(R.string.sync_pill_sign_in)
-            stale && !s.running -> getString(R.string.sync_pill_stale)
+    /**
+     * Quiet while the data is safe (D-048). A pill only when something needs the owner: Google
+     * sign-in, a damaged database, sync not working for a day, or no copy off this phone lately.
+     */
+    private fun renderSafety(s: SyncEngine.Status, p: BackupService.Protection) {
+        val quiet = System.currentTimeMillis() - (s.lastSuccessAt ?: 0L) > SYNC_STALE_MS
+        val stale = s.enabled && !s.running && s.pending > 0L && quiet
+        val risk = p.state == BackupService.Protection.State.AT_RISK
+        val pill: Pair<Int, () -> Unit>? = when {
+            s.enabled && s.needsSignIn -> R.string.sync_pill_sign_in to { open(SyncActivity::class.java) }
+            p.state == BackupService.Protection.State.DAMAGED ->
+                R.string.safety_pill_damaged to { open(BackupActivity::class.java) }
+            stale -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
+            risk && s.enabled -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
+            risk -> R.string.safety_pill_at_risk to { explainAtRisk() }
             else -> null
         }
-        syncState.text = text
-        syncState.visible(text != null)
+        syncState.text = pill?.let { getString(it.first) }
+        syncState.setOnClickListener { pill?.second?.invoke() }
+        syncState.visible(pill != null)
+    }
+
+    private fun open(target: Class<*>) = startActivity(Intent(this, target))
+
+    /** The shop's data is only on this phone: what that means and the two ways to fix it. */
+    private fun explainAtRisk() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.safety_title)
+            .setMessage(R.string.safety_at_risk)
+            .setPositiveButton(R.string.safety_use_drive) { _, _ -> open(SyncActivity::class.java) }
+            .setNeutralButton(R.string.safety_use_folder) { _, _ ->
+                startActivity(Intent(this, BackupActivity::class.java).putExtra(BackupActivity.EXTRA_PICK_FOLDER, true))
+            }
+            .setNegativeButton(R.string.safety_later, null)
+            .show()
+            .trackedBy(this)
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)

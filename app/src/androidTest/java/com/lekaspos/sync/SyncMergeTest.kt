@@ -29,6 +29,7 @@ import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.sync.SegmentCodec
 import com.lekaspos.data.sync.SyncDao
 import com.lekaspos.data.sync.SyncEvent
+import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
@@ -387,6 +388,58 @@ class SyncMergeTest {
             assertEquals(listOf("Kept"), b.db().read { PromotionDao.list(it) }.map { it.name })
             assertEquals(listOf(99), b.db().read { SyncDao.deferred(it) }.map { it.second.entity })
         }
+    }
+
+    /** D-048: the only phone is lost; a new one turns on Google Drive backup and gets the whole shop back. */
+    @Test
+    fun aLostPhoneIsRestoredWholeFromDrive() {
+        val a = till()
+        enable(a, "Counter")
+        val milo = product(a, "Milo", 1_890L)
+        val gula = product(a, "Gula", 280L)
+        val siti = runBlocking {
+            a.settings.load()
+            a.settings.saveStore(a.settings.store.value.copy(name = "Kedai Runcit Ali", creditEnabled = true))
+            a.staffAdmin.save(null, "Aminah", Seed.Ids.ROLE_CASHIER, true)
+            a.promotions.save(null, PromotionRow(0L, "Milo 3 for RM10", PromoKind.MULTI_PRICE, 3, 0, 1_000L, listOf(milo)))
+            a.db().writeBlocking { tx -> StockDao.insertCount(tx, gula, 40_000L, null, null, "shelf", System.currentTimeMillis()) }
+            val c = a.customers.save(null, Customer(0L, "Siti", creditLimit = 10_000L))
+            a.db().writeBlocking { tx -> CustomerDao.insertCredit(tx, c.id, CreditKind.CHARGE, 2_500L, null, null, null, null, null, System.currentTimeMillis()) }
+            c
+        }
+        repeat(5) { sell(a, gula) }
+        sell(a, milo, 2_000L)
+        syncAll(a)
+        val before = runBlocking { a.db().read { content(it) } }
+        val store = runBlocking { a.db().read { Meta.get(it, Meta.STORE_UUID) } }
+        val lostDevice = runBlocking { a.db().deviceNo }
+        tills.remove(a)
+        TestGraph.destroy(a) // the phone is gone
+
+        val n = till()
+        assertTrue(runBlocking { n.settings.needsSetup() }) // a new phone starts at the welcome screen
+        enable(n, "Counter")
+        syncAll(n)
+        runBlocking {
+            val after = n.db().read { content(it) }
+            for (k in before.keys) {
+                assertTrue(after.getValue(k).containsAll(before.getValue(k)), "table $k was not restored whole")
+            }
+            assertEquals(before["sale"], after["sale"])
+            assertEquals(before["stock_level"], after["stock_level"])
+            assertEquals(store, n.db().read { Meta.get(it, Meta.STORE_UUID) })
+            assertNotEquals(lostDevice, n.db().deviceNo) // its own sales never collide with the lost phone's
+            assertEquals(35_000L, n.db().read { StockDao.level(it, gula) })
+            assertEquals(2_500L, n.db().read { CustomerDao.balance(it, siti.id) })
+            assertEquals(listOf("Milo 3 for RM10"), n.promotions.all().map { it.name })
+            assertTrue(n.staffAdmin.staff().any { it.name == "Aminah" })
+            n.settings.load()
+            assertEquals("Kedai Runcit Ali", n.settings.store.value.name)
+            assertTrue(!n.settings.needsSetup()) // no welcome screen after the restore
+            assertEquals(BackupService.Protection.State.PROTECTED, n.backups.refreshProtection().state)
+        }
+        sell(n, milo) // and selling goes on at once
+        runBlocking { assertEquals(7L, n.db().read { it.long("SELECT COUNT(*) FROM sale") }) }
     }
 
     @Test

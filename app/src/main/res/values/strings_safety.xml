@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 9: data safety (D-048). -->
+<resources>
+    <string name="safety_title">Your shop’s data</string>
+    <string name="safety_pill_at_risk">Not backed up</string>
+    <string name="safety_pill_damaged">Data problem</string>
+    <string name="safety_at_risk">Your sales and products are only on this phone. If it is lost, broken or reset, or the app is removed, they are gone for good.\n\nKeep a copy in Google Drive (recommended — it also keeps other tills in step), or a daily copy on an SD card or USB drive.</string>
+    <string name="safety_use_drive">Google Drive</string>
+    <string name="safety_use_folder">SD card / USB</string>
+    <string name="safety_later">Later</string>
+    <string name="safety_at_risk_short">⚠ No copy of this data off this phone in the last 3 days.</string>
+    <string name="safety_protected">Last copy off this phone: %1$s</string>
+    <string name="safety_damaged">⚠ The daily database check found a problem (%1$s). The last good backups are kept and no new ones replace them. Get help before restoring.</string>
+    <string name="safety_setup_drive">Back up to Google Drive (recommended)</string>
+    <string name="safety_setup_folder">Daily copy to SD card or USB</string>
+    <string name="setup_protect">Protect your shop’s data</string>
+    <string name="setup_protect_help">Without a copy off this phone, a lost or broken phone means losing every sale and product. You can also do this later in Settings.</string>
+    <string name="backup_folder_pick">Daily copy to a folder (SD card / USB)…</string>
+    <string name="backup_folder_copy">Copy to the folder now</string>
+    <string name="backup_folder_off">Stop copying to the folder</string>
+    <string name="backup_folder_on">Daily copy to: %1$s</string>
+    <string name="backup_folder_error">The last copy to the folder failed: %1$s</string>
+    <string name="backup_folder_done">Copied to the folder.</string>
+    <string name="backup_folder_failed">Could not copy to the folder. Is the card or drive still there?</string>
+</resources>

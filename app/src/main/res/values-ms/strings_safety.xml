@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasa 9: keselamatan data (D-048). -->
+<resources>
+    <string name="safety_title">Data kedai anda</string>
+    <string name="safety_pill_at_risk">Tiada sandaran</string>
+    <string name="safety_pill_damaged">Masalah data</string>
+    <string name="safety_at_risk">Jualan dan produk anda hanya ada dalam telefon ini. Jika telefon hilang, rosak atau ditetapkan semula, atau aplikasi dipadam, semuanya hilang terus.\n\nSimpan salinan dalam Google Drive (disyorkan — ia juga menyelaraskan kaunter lain), atau salinan harian dalam kad SD atau pemacu USB.</string>
+    <string name="safety_use_drive">Google Drive</string>
+    <string name="safety_use_folder">Kad SD / USB</string>
+    <string name="safety_later">Nanti</string>
+    <string name="safety_at_risk_short">⚠ Tiada salinan data ini di luar telefon ini dalam 3 hari terakhir.</string>
+    <string name="safety_protected">Salinan terakhir di luar telefon ini: %1$s</string>
+    <string name="safety_damaged">⚠ Semakan harian pangkalan data menemui masalah (%1$s). Sandaran baik yang terakhir disimpan dan tiada sandaran baharu menggantikannya. Dapatkan bantuan sebelum memulihkan.</string>
+    <string name="safety_setup_drive">Sandaran ke Google Drive (disyorkan)</string>
+    <string name="safety_setup_folder">Salinan harian ke kad SD atau USB</string>
+    <string name="setup_protect">Lindungi data kedai anda</string>
+    <string name="setup_protect_help">Tanpa salinan di luar telefon ini, telefon yang hilang atau rosak bermakna kehilangan semua jualan dan produk. Anda juga boleh melakukannya kemudian dalam Tetapan.</string>
+    <string name="backup_folder_pick">Salinan harian ke folder (kad SD / USB)…</string>
+    <string name="backup_folder_copy">Salin ke folder sekarang</string>
+    <string name="backup_folder_off">Berhenti menyalin ke folder</string>
+    <string name="backup_folder_on">Salinan harian ke: %1$s</string>
+    <string name="backup_folder_error">Salinan terakhir ke folder gagal: %1$s</string>
+    <string name="backup_folder_done">Disalin ke folder.</string>
+    <string name="backup_folder_failed">Tidak dapat menyalin ke folder. Adakah kad atau pemacu masih ada?</string>
+</resources>

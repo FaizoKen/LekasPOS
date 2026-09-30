@@ -14,7 +14,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
 | 6 | Google Drive sync, local backup/restore, merge tests | **done** — tested on the phone (2026-09-30, build v0.6.0-phase6-fix1, sync through the store's Google Drive); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | **done** — tested on the phone (2026-09-30, build v0.7.0-phase7) |
-| 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done — waiting for real-device feedback** (tester build v0.8.0-phase8) |
+| 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
+| 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **in progress** |
 
 ## Open questions for the user
 
@@ -556,7 +557,7 @@ keep all data (every schema upgrade is migrated in place, with a backup taken fi
 6. Optional: a 10-inch tablet in landscape, and an old Android 5/6 phone.
 7. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 8 — feature completion before UI polish (done — waiting for device feedback)
+## Phase 8 — feature completion before UI polish (done)
 
 Added after a feature audit against the basics of a small grocery till (2026-09-30): everything
 else was already in place (selling, payments, receipts, refunds, stock, staff, shifts, customers
@@ -592,6 +593,11 @@ supplier payments, loyalty points, product photos, customer display, Bluetooth s
 Found on the way: the first v6 build had a syntax error in the new table (a lost column template) and
 failed on every emulator; the JVM schema test only compared text and now rejects such slips.
 
+### Real-device feedback (Phase 8, 2026-09-30)
+
+The user replied "tested and all works" to v0.8.0-phase8, and asked whether a Google login should
+be required for data safety — see Phase 9.
+
 ### Needs real-device testing (Phase 8)
 
 Update **every till** of the shop to this build (promotions only apply on tills that have it).
@@ -615,3 +621,26 @@ Update **every till** of the shop to this build (promotions only apply on tills 
    with sync" opens Sync.
 6. Carried over when the hardware is available: printer (the promotion line on paper), drawer,
    HID/SPP scanners, 2 GB tablet.
+
+## Phase 9 — data safety before UI polish (in progress)
+
+Question from the owner (2026-09-30): should a Google login be required to keep shops' data safe?
+Decision (D-048): **no** — it would lock out phones without Google Play services and offline
+first days, and still not protect a shop that never turns backup on. The real risk is the data
+existing only on one phone (lost, broken, reset or uninstalled — the local backups go with it).
+So: protected by default, and visible when not.
+
+- [x] First-run setup: a "Protect your shop's data" step — Google Drive backup (recommended) or
+      a daily copy to a folder (SD card / USB); can be skipped
+- [x] **Not backed up** pill on the selling screen when there is data but no copy off this phone
+      in the last 3 days (Drive, folder or a saved backup file); tap for what it means and the
+      two fixes. Nothing shows while the data is safe
+- [x] Automatic daily backup also copied to a folder the owner picks (no Google needed), last 7
+      kept; a failed copy (card removed) is shown on the backup screen
+- [x] Sync presented as **Google Drive backup** (protects one till too); welcome screen offers
+      "Restore or join my shop from Google Drive"
+- [x] Database check (`quick_check`) before each automatic backup; a damaged database is not
+      backed up (the good backups stay), and the selling screen shows **Data problem**
+- [x] Tests: a lost phone restored in full on a new one from Google Drive; folder copies, keep 7,
+      missing folder; protection states; a damaged database keeps every good backup; the check
+      finds real damage in a database file

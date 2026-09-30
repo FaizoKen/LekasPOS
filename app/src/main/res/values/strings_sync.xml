@@ -32,10 +32,10 @@
     <string name="backup_delete_confirm">Delete this backup from the phone?</string>
     <string name="backup_restore_sync">This till syncs with other tills: after the restore it joins the store as a new till, and sync must be turned on again.</string>
 
-    <string name="sync_title">Sync between tills</string>
-    <string name="settings_sync_sub">Keep every till of the store up to date through Google Drive</string>
-    <string name="sync_help">Sync keeps the products, prices, stock, sales, staff, customers and settings of every till in this store the same. It uses a hidden app folder in the store\'s Google Drive (it does not appear among your files, and no other app can read it). Selling never waits for sync: a till works offline and catches up when it is online again.</string>
-    <string name="sync_help_short">Tills sync by themselves every 30 minutes and shortly after sales, whenever they are online. Other tills join by turning on sync with the same Google account.</string>
+    <string name="sync_title">Google Drive backup</string>
+    <string name="settings_sync_sub">Back up to Google Drive, restore on a new phone, keep every till up to date</string>
+    <string name="sync_help">Every sale and change is copied to a hidden app folder in the store\'s Google Drive (it does not appear among your files, and no other app can read it). If this phone is lost or broken, install LekasPOS on a new one and turn this on with the same Google account: everything comes back. Other tills of the store use the same copy to stay the same. Selling never waits for it: a till works offline and catches up when it is online again.</string>
+    <string name="sync_help_short">Copies to Google Drive by itself every 30 minutes and shortly after sales, whenever online. A new phone or another till of the store gets everything by turning this on with the same Google account.</string>
     <string name="sync_no_play">Sync needs Google Play services, which this phone does not have. Backups still work (Settings → Backup &amp; restore).</string>
     <string name="sync_till_name">Name of this till</string>
     <string name="sync_till_name_needed">Enter a name for this till.</string>
@@ -69,6 +69,6 @@
     <string name="sync_error_connect">Could not connect to Google: %1$s</string>
     <string name="sync_error_clash">Another till in this store has the same till number. Make a backup, then restore it on this phone as a new till, and turn on sync again.</string>
     <string name="sync_other_account">You signed in as %1$s, but this till syncs with %2$s. Sign in with %2$s, or turn sync off and on again to move the store to another account.</string>
-    <string name="sync_pill_sign_in">Sync: sign in</string>
-    <string name="sync_pill_stale">Not synced</string>
+    <string name="sync_pill_sign_in">Backup: sign in</string>
+    <string name="sync_pill_stale">Not backed up</string>
 </resources>

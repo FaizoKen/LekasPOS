@@ -72,6 +72,9 @@ object BackupFiles {
         }
     }
 
+    /** SQLite's own integrity check (`quick_check`): "ok", or what is damaged. Reads the whole file. */
+    fun integrity(db: SQLiteDatabase): String = db.pragma("PRAGMA quick_check") ?: "no answer"
+
     /** Backs up database files that are not open (before an upgrade or a restore replaces them). */
     fun writeClosed(dbFile: File, out: OutputStream, appVersion: String, reason: String) {
         val wal = File(dbFile.path + "-wal").takeIf { it.exists() && it.length() > 0L }

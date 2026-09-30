@@ -301,6 +301,9 @@ object ProductDao {
 
     fun count(db: SQLiteDatabase): Long = db.long("SELECT COUNT(*) FROM product WHERE deleted = 0")
 
+    /** Any product at all (O(1), unlike [count]). */
+    fun any(db: SQLiteDatabase): Boolean = db.long("SELECT EXISTS(SELECT 1 FROM product WHERE deleted = 0)") == 1L
+
     // ------------------------------------------------------------------ editing (LWW, synced)
 
     /** Creates a product and its barcodes as LWW rows (with outbox events when sync is on). */

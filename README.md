@@ -23,8 +23,10 @@ builds: [Releases](https://github.com/FaizoKen/LekasPOS/releases). Progress:
   audit log.
 - **Reports:** any period, profit and margin, best and slow sellers, stock value; CSV exports and
   product CSV import.
-- **Data:** daily backups on the phone, backup files to share or restore, and sync between the
-  shop's tills through its own Google Drive (hidden app folder).
+- **Data:** daily backups on the phone (checked for damage first), a daily copy to an SD card or
+  USB drive, backup files to share or restore, and Google Drive backup — which also keeps the
+  shop's tills in step and restores a lost phone in full. No Google account is required; the
+  selling screen shows "Not backed up" when the data exists only on that phone.
 - English and Bahasa Melayu (switchable in the app); Android 5.0 and newer, phones and tablets.
 
 ## Documentation map

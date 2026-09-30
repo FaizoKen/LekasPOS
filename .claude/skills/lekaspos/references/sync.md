@@ -183,6 +183,13 @@ sync screen, `forId(meta sync.provider)` for background work.
 - Automatic: daily (`BackupWorker`, keep 7) and before every schema upgrade (keep 3);
   "replaced-*" copies before a restore (keep 3). Manual: back up now, save via SAF, share.
 - Restore: staged into `files/restore/`, app restarts, applied in `Db.open` before opening.
+- Data safety (D-048): before each automatic backup `PRAGMA quick_check`; damage → no backup,
+  no pruning, `meta dev.db_problem` → "Data problem" pill. The automatic backup is copied to
+  the owner's folder (`BackupFolder`: SAF tree with persisted permission; files
+  `lekaspos-<date>-<HHmm>.lekasbak`, newest 7, only our own names are listed/deleted).
+  `BackupService.protection`: NO_DATA / PROTECTED (a copy off the phone < 3 days old: Drive
+  sync `sync.last_ok`, folder `dev.backup_folder_ok`, saved file `dev.backup_export_ok`) /
+  AT_RISK ("Not backed up" pill) / DAMAGED. Google login is never required.
 - Archive of old sales: not built yet.
 
 ## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)
@@ -191,6 +198,6 @@ N separate databases sharing a `FolderProvider` folder. Scenarios: second till j
 existing data (backfill), per-field edits and delete vs edit, a week offline (1,200 sales,
 several segments), out-of-order (edit before creation, void before sale) and repeated
 delivery, count vs offline sales, credit + settings, restored till rejoining without ID or
-receipt collisions, interrupted backfill. Every scenario asserts identical LWW/EVENT tables
-and derived tables equal to `DerivedRebuild.all`. Test data must be written through the app's
-synced paths (e.g. `ProductDao.create`, not the raw bulk `insert`).
+receipt collisions, interrupted backfill, a lost phone restored in full on a new one. Every
+scenario asserts identical LWW/EVENT tables and derived tables equal to `DerivedRebuild.all`. Test data
+must be written through the app's synced paths (e.g. `ProductDao.create`, not the raw bulk `insert`).

@@ -57,6 +57,13 @@ class SetupActivity : ScreenActivity() {
         phone = f.text(getString(R.string.store_phone), s.phone, InputType.TYPE_CLASS_PHONE)
         address = f.text(getString(R.string.store_address), s.address, words, lines = 2)
 
+        f.section(getString(R.string.setup_protect))
+        f.info(getString(R.string.setup_protect_help))
+        f.button(getString(R.string.safety_setup_drive)) { startActivity(Intent(this, SyncActivity::class.java)) }
+        f.button(getString(R.string.safety_setup_folder)) {
+            startActivity(Intent(this, BackupActivity::class.java).putExtra(BackupActivity.EXTRA_PICK_FOLDER, true))
+        }
+
         f.section(getString(R.string.setup_optional))
         f.button(getString(R.string.setup_printer)) { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
         f.button(getString(R.string.setup_staff)) { startActivity(Intent(this, StaffActivity::class.java)) }

@@ -19,6 +19,14 @@ object Meta {
     const val SYNC_LAST_OK = "sync.last_ok"
     const val SYNC_LAST_ERROR = "sync.last_error"
 
+    // Data safety on this phone (D-048), LOCAL.
+    const val BACKUP_FOLDER = "dev.backup_folder"
+    const val BACKUP_FOLDER_NAME = "dev.backup_folder_name"
+    const val BACKUP_FOLDER_OK = "dev.backup_folder_ok"
+    const val BACKUP_FOLDER_ERROR = "dev.backup_folder_error"
+    const val BACKUP_EXPORT_OK = "dev.backup_export_ok"
+    const val DB_PROBLEM = "dev.db_problem"
+
     fun docSeqKey(kind: Int) = "doc_seq_$kind"
 
     fun get(db: SQLiteDatabase, key: String): String? =

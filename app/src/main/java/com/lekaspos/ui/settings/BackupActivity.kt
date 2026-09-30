@@ -1,9 +1,12 @@
 package com.lekaspos.ui.settings
 
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.text.format.Formatter
 import android.view.View
 import android.widget.ImageButton
@@ -73,16 +76,65 @@ class BackupActivity : ScreenActivity() {
         lateinit var more: ImageButton
         more = addAction(R.drawable.ic_more, R.string.sell_menu) { menu(more) }
         guard(Perm.SETTINGS)
+        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_PICK_FOLDER, false)) pickFolder()
     }
 
     override fun onStarted(scope: CoroutineScope) = reload()
 
     private fun reload() {
         launchUi {
+            val p = graph.backups.refreshProtection()
+            header.text = listOfNotNull(safetyText(p), getString(R.string.backup_help)).joinToString("\n\n")
             val items = graph.backups.list()
             adapter.submit(items)
             empty.visible(items.isEmpty())
         }
+    }
+
+    /** Where the data is safe, or why it is not (D-048). */
+    private fun safetyText(p: BackupService.Protection): String? {
+        val lines = ArrayList<String>(3)
+        when (p.state) {
+            BackupService.Protection.State.DAMAGED -> lines.add(getString(R.string.safety_damaged, p.damage ?: ""))
+            BackupService.Protection.State.AT_RISK -> lines.add(getString(R.string.safety_at_risk_short))
+            BackupService.Protection.State.PROTECTED ->
+                p.lastOffPhone?.let { lines.add(getString(R.string.safety_protected, DateText.dateTime(it, tz))) }
+            BackupService.Protection.State.NO_DATA -> Unit
+        }
+        p.folderName?.let { lines.add(getString(R.string.backup_folder_on, it.ifBlank { "-" })) }
+        p.folderError?.let { lines.add(getString(R.string.backup_folder_error, it)) }
+        return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
+    }
+
+    /** The system folder picker: an SD card, USB drive or any folder outside the app. */
+    private fun pickFolder() {
+        val pick = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+            .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        try {
+            @Suppress("DEPRECATION")
+            startActivityForResult(pick, REQ_FOLDER)
+        } catch (e: ActivityNotFoundException) {
+            Dialogs.message(this, null, getString(R.string.backup_folder_failed))
+        }
+    }
+
+    private fun copyToFolder() {
+        launchUi {
+            toast(R.string.backup_working)
+            toast(if (graph.backups.copyToFolderNow()) R.string.backup_folder_done else R.string.backup_folder_failed)
+            reload()
+        }
+    }
+
+    /** A readable name for the picked folder (e.g. "Backups" on the SD card). */
+    private fun folderName(tree: Uri): String? = try {
+        val doc = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        contentResolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    } catch (e: Exception) {
+        null
     }
 
     private fun reasonLabel(name: String): Int = when {
@@ -104,7 +156,9 @@ class BackupActivity : ScreenActivity() {
 
     private fun menu(anchor: View) {
         val m = PopupMenu(this, anchor)
-        val items = listOf(R.string.backup_save_file, R.string.backup_share, R.string.backup_restore_file)
+        val items = ArrayList(listOf(R.string.backup_folder_pick))
+        if (graph.backups.protection.value.folderName != null) items += listOf(R.string.backup_folder_copy, R.string.backup_folder_off)
+        items += listOf(R.string.backup_save_file, R.string.backup_share, R.string.backup_restore_file)
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
@@ -116,6 +170,12 @@ class BackupActivity : ScreenActivity() {
                     )
                 }
                 R.string.backup_share -> share()
+                R.string.backup_folder_pick -> pickFolder()
+                R.string.backup_folder_copy -> copyToFolder()
+                R.string.backup_folder_off -> launchUi {
+                    graph.backups.setFolder(null, null)
+                    reload()
+                }
                 R.string.backup_restore_file -> {
                     @Suppress("DEPRECATION")
                     startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), REQ_OPEN)
@@ -154,6 +214,13 @@ class BackupActivity : ScreenActivity() {
         val uri = data?.data ?: return
         if (resultCode != RESULT_OK) return
         when (requestCode) {
+            REQ_FOLDER -> launchUi {
+                val name = withContext(Dispatchers.IO) { folderName(uri) }
+                graph.backups.setFolder(uri, name)
+                val copied = graph.backups.copyToFolderNow()
+                toast(if (copied) R.string.backup_folder_done else R.string.backup_folder_failed)
+                reload()
+            }
             REQ_SAVE -> launchUi {
                 toast(R.string.backup_working)
                 withContext(Dispatchers.IO) { contentResolver.openOutputStream(uri, "wt") }?.use { graph.backups.export(it) }
@@ -224,6 +291,8 @@ class BackupActivity : ScreenActivity() {
     companion object {
         private const val REQ_SAVE = 31
         private const val REQ_OPEN = 32
+        private const val REQ_FOLDER = 33
+        const val EXTRA_PICK_FOLDER = "pick_folder"
         private const val MIME = "application/octet-stream"
     }
 }
