@@ -77,6 +77,13 @@ store's Google Drive). That scope is *non-sensitive*, so no paid security assess
 5. All devices of one store sign in with the **same Google account** (the store account), because
    the app-data folder is private per account.
 
+Done for this repository (2026-09-30): project **LekasPOS** (ID `lekaspos`), Drive API enabled,
+consent screen External / *Testing* with the `drive.appdata` scope only, test user = the
+owner's account, Android client "LekasPOS tester builds (test key)" for `com.lekaspos.app` with
+the test key SHA-1. Still to add before the Play release: clients for the upload key and the
+Play App Signing key, privacy policy and home page links, then publish to *In production*.
+New settings can take from 5 minutes to a few hours to reach Google's servers.
+
 ## License
 
 LekasPOS is free software, licensed under the **GNU General Public License, version 3**
