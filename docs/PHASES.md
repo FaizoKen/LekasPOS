@@ -782,3 +782,12 @@ app without Google Play yet. Decided with the owner (D-051):
 
 The owner installed 1.0.0 on their phone over the tester build: "all works" (2026-09-30). The
 post-release CI run (release smoke upgrading from v1.0.0) is green.
+
+## 1.0.1 — new app logo (test build, waiting for the owner's check)
+
+New original logo (D-052): a torn till receipt with a slanted "L" cut out, on emerald; minimal
+(two shapes) at the owner's request. CI 132/132 on API 21 and 36 (ScreenshotsTest now saves the
+launcher icon as each Android draws it — legacy badge on API 21, adaptive icon on 36), tablet and
+release smoke green. Test build **v1.0.1** (pre-release; build 63, 1,153 KB — 1,180,450 bytes,
+SHA-256 `fdffa126…ff26`). After the owner's OK: mark v1.0.1 as the latest release (the website's
+Download link follows) and point `PREV_APK_URL` at it.
