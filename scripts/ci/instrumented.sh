@@ -29,6 +29,8 @@ if [ "$status" -eq 124 ]; then
   echo "Instrumented tests did not finish within $TEST_TIMEOUT"
 fi
 adb logcat -d -v time > "$OUT/logcat-api$api.txt" 2>/dev/null || true
+# Screenshots from ScreenshotsTest (layout review in both languages).
+adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/screens "$OUT/screens-api$api" > /dev/null 2>&1 || true
 
 if grep -q '^OK (' "$OUT/instrumented-api$api.txt"; then
   summary=$(grep '^OK (' "$OUT/instrumented-api$api.txt")

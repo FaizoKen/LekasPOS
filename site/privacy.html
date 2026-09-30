@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LekasPOS privacy policy</title>
+<meta name="description" content="What the LekasPOS point-of-sale app does with your data.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p class="lang"><strong>English</strong> · <a href="privasi.html" hreflang="ms">Bahasa Melayu</a></p>
+<h1>LekasPOS privacy policy</h1>
+<p class="updated">Last updated: 30 September 2026</p>
+
+<p>LekasPOS is a free, open-source point-of-sale app for small shops
+(<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
+what happens to the information you put into it. In short: <strong>your data stays on your
+phone, and — only if you turn on sync — in your own Google Drive. The developer never receives
+any of it.</strong></p>
+
+<h2>What the app stores</h2>
+<p>Everything you enter or record while running your shop: products, prices and stock; sales,
+refunds and payments; suppliers and purchases; staff names, roles and PINs; customers (names,
+phone numbers, credit balances); shifts, cash movements, settings and an audit log of sensitive
+actions. PINs are stored only as salted, hashed values, never as the digits themselves.</p>
+<p>This data is kept in the app's private storage on the phone. You (the shop) decide what is
+entered and are responsible for the customer and staff details you record.</p>
+
+<h2>What leaves the phone</h2>
+<ul>
+<li><strong>Nothing, by default.</strong> The app has no account with us, no servers, no
+analytics, no advertising and no crash-reporting services. It works fully offline.</li>
+<li><strong>Google Drive sync (optional).</strong> If you turn on sync (Settings → Sync) and sign
+in with a Google account, the app stores its sync files in that account's <em>hidden app data
+folder</em> in Google Drive, so the shop's tills share the same data. The app asks Google only for
+this folder (the <code>drive.appdata</code> permission): it cannot see or change any of your
+other Drive files, and other apps cannot read its folder. The files travel directly between
+your phones and Google over an encrypted connection (HTTPS). The app reads the account's e-mail
+address only to show you which account is in use. Google's
+<a href="https://policies.google.com/privacy">privacy policy</a> applies to data kept in Google
+Drive. Sign-in uses Google Play services.</li>
+<li><strong>Files you choose to share.</strong> Backup files and CSV exports go only where you
+send or save them (for example WhatsApp, e-mail, a USB stick or your Drive).</li>
+</ul>
+
+<h2>Permissions</h2>
+<ul>
+<li><strong>Bluetooth</strong> — to print receipts and read barcode scanners you have already
+paired in Android settings. The app does not scan for nearby devices or use your location.</li>
+<li><strong>Camera</strong> (optional) — to scan barcodes. Images are processed on the phone
+and are not stored or sent anywhere.</li>
+<li><strong>Internet and network state</strong> — only for Google Drive sync.</li>
+<li><strong>Keep awake</strong> — so backups and sync can finish in the background.</li>
+</ul>
+
+<h2>Deleting your data</h2>
+<ul>
+<li>Uninstalling the app, or Android Settings → Apps → LekasPOS → Clear storage, deletes the data
+on that phone (including the backups kept on it).</li>
+<li>Turning off sync stops sending data. To delete the synced files, open Google Drive on the web
+→ Settings → Manage apps → LekasPOS → Options → Delete hidden app data.</li>
+<li>Backup and CSV files you saved elsewhere are yours to delete.</li>
+</ul>
+
+<h2>Children</h2>
+<p>LekasPOS is a tool for businesses and is not directed at children.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the new version is published on this page with a new date. The
+history of every change is public in the
+<a href="https://github.com/FaizoKen/LekasPOS/commits/main/site/privacy.html">source
+repository</a>.</p>
+
+<h2>Contact</h2>
+<p>Questions about privacy: open an issue at
+<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.</p>
+</main>
+</body>
+</html>

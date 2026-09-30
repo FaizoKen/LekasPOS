@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dasar privasi LekasPOS</title>
+<meta name="description" content="Apa yang dilakukan oleh aplikasi jualan LekasPOS dengan data anda.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<p class="lang"><a href="privacy.html" hreflang="en">English</a> · <strong>Bahasa Melayu</strong></p>
+<h1>Dasar privasi LekasPOS</h1>
+<p class="updated">Kemas kini terakhir: 30 September 2026</p>
+
+<p>LekasPOS ialah aplikasi jualan (POS) percuma dan sumber terbuka untuk kedai kecil
+(<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
+apa yang berlaku kepada maklumat yang anda masukkan. Ringkasnya: <strong>data anda kekal dalam
+telefon anda, dan — hanya jika anda menghidupkan segerak — dalam Google Drive anda sendiri.
+Pembangun tidak pernah menerima sebarang data ini.</strong></p>
+
+<h2>Apa yang disimpan oleh aplikasi</h2>
+<p>Semua yang anda masukkan atau rekodkan semasa menjalankan kedai: produk, harga dan stok;
+jualan, bayaran balik dan bayaran; pembekal dan pembelian; nama, peranan dan PIN kakitangan;
+pelanggan (nama, nombor telefon, baki kredit); syif, pergerakan tunai, tetapan dan log audit bagi
+tindakan sensitif. PIN disimpan hanya sebagai nilai cincang bergaram, bukan digit PIN itu
+sendiri.</p>
+<p>Data ini disimpan dalam storan peribadi aplikasi di telefon. Anda (kedai) menentukan apa yang
+dimasukkan dan bertanggungjawab atas butiran pelanggan dan kakitangan yang anda rekodkan.</p>
+
+<h2>Apa yang keluar dari telefon</h2>
+<ul>
+<li><strong>Tiada apa-apa, secara lalai.</strong> Aplikasi ini tiada akaun dengan kami, tiada
+pelayan, tiada analitik, tiada iklan dan tiada perkhidmatan laporan ranap. Ia berfungsi
+sepenuhnya tanpa internet.</li>
+<li><strong>Segerak Google Drive (pilihan).</strong> Jika anda menghidupkan segerak (Tetapan →
+Segerak) dan log masuk dengan akaun Google, aplikasi menyimpan fail segeraknya dalam <em>folder
+data aplikasi tersembunyi</em> akaun itu di Google Drive, supaya semua kaunter kedai berkongsi
+data yang sama. Aplikasi hanya meminta akses kepada folder ini daripada Google (kebenaran
+<code>drive.appdata</code>): ia tidak dapat melihat atau mengubah fail Drive anda yang lain, dan
+aplikasi lain tidak dapat membaca foldernya. Fail dihantar terus antara telefon anda dan Google
+melalui sambungan yang disulitkan (HTTPS). Aplikasi membaca alamat e-mel akaun itu hanya untuk
+menunjukkan akaun yang digunakan. <a href="https://policies.google.com/privacy?hl=ms">Dasar
+privasi Google</a> terpakai kepada data dalam Google Drive. Log masuk menggunakan perkhidmatan
+Google Play.</li>
+<li><strong>Fail yang anda pilih untuk dikongsi.</strong> Fail sandaran dan eksport CSV hanya
+pergi ke tempat anda menghantar atau menyimpannya (contohnya WhatsApp, e-mel, pemacu USB atau
+Drive anda).</li>
+</ul>
+
+<h2>Kebenaran</h2>
+<ul>
+<li><strong>Bluetooth</strong> — untuk mencetak resit dan membaca pengimbas kod bar yang telah
+anda pasangkan dalam tetapan Android. Aplikasi tidak mengimbas peranti berdekatan atau
+menggunakan lokasi anda.</li>
+<li><strong>Kamera</strong> (pilihan) — untuk mengimbas kod bar. Imej diproses dalam telefon dan
+tidak disimpan atau dihantar ke mana-mana.</li>
+<li><strong>Internet dan keadaan rangkaian</strong> — hanya untuk segerak Google Drive.</li>
+<li><strong>Kekal berjaga</strong> — supaya sandaran dan segerak dapat diselesaikan di latar
+belakang.</li>
+</ul>
+
+<h2>Memadam data anda</h2>
+<ul>
+<li>Menyahpasang aplikasi, atau Tetapan Android → Apl → LekasPOS → Kosongkan storan, memadam data
+dalam telefon itu (termasuk sandaran yang disimpan di dalamnya).</li>
+<li>Mematikan segerak menghentikan penghantaran data. Untuk memadam fail yang telah disegerakkan,
+buka Google Drive di web → Tetapan → Urus apl → LekasPOS → Pilihan → Padam data apl
+tersembunyi.</li>
+<li>Fail sandaran dan CSV yang anda simpan di tempat lain adalah milik anda untuk dipadam.</li>
+</ul>
+
+<h2>Kanak-kanak</h2>
+<p>LekasPOS ialah alat untuk perniagaan dan tidak ditujukan kepada kanak-kanak.</p>
+
+<h2>Perubahan</h2>
+<p>Jika dasar ini berubah, versi baharu diterbitkan di halaman ini dengan tarikh baharu. Sejarah
+setiap perubahan boleh dilihat secara terbuka dalam
+<a href="https://github.com/FaizoKen/LekasPOS/commits/main/site/privasi.html">repositori kod
+sumber</a>.</p>
+
+<h2>Hubungi</h2>
+<p>Soalan tentang privasi: buka isu di
+<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.</p>
+</main>
+</body>
+</html>

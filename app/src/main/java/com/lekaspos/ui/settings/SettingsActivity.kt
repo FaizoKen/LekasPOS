@@ -1,6 +1,9 @@
 package com.lekaspos.ui.settings
 
+import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,6 +15,7 @@ import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.sell.SellActivity
@@ -40,14 +44,14 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
             Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
-            Entry(R.string.settings_about, null, null),
+            Entry(R.string.settings_about, null, null) { about() },
         )
         val adapter = RowAdapter<Entry>(
             bind = { h, e ->
-                val sub = if (e.action != null) {
-                    languageName(AppLanguage.get(this))
-                } else if (e.target == null) {
+                val sub = if (e.title == R.string.settings_about) {
                     getString(R.string.settings_about_sub, BuildConfig.VERSION_NAME, BuildConfig.SIGNING_KEY)
+                } else if (e.action != null) {
+                    languageName(AppLanguage.get(this))
                 } else {
                     e.subtitle?.let { getString(it) }
                 }
@@ -62,6 +66,28 @@ class SettingsActivity : ScreenActivity() {
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
+    }
+
+    /** Version, licence, privacy policy, source code and the notices of the bundled libraries. */
+    private fun about() {
+        val text = listOf(getString(R.string.about_text, BuildConfig.VERSION_NAME), getString(R.string.about_notices))
+            .joinToString("\n\n")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.app_name)
+            .setMessage(text)
+            .setPositiveButton(R.string.about_privacy) { _, _ -> open(PRIVACY_URL) }
+            .setNeutralButton(R.string.about_source) { _, _ -> open(SOURCE_URL) }
+            .setNegativeButton(R.string.ok, null)
+            .show()
+            .trackedBy(this)
+    }
+
+    private fun open(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: ActivityNotFoundException) {
+            toast(url)
+        }
     }
 
     private fun languageName(code: String): String = when (code) {
@@ -81,5 +107,10 @@ class SettingsActivity : ScreenActivity() {
                 startActivity(restart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
             }
         }
+    }
+
+    private companion object {
+        const val PRIVACY_URL = "https://faizoken.github.io/LekasPOS/privacy.html"
+        const val SOURCE_URL = "https://github.com/FaizoKen/LekasPOS"
     }
 }
