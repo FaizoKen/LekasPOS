@@ -89,6 +89,12 @@ fi
 # 3. Cold start of the release build: launch-to-first-frame and launch-to-usable (reportFullyDrawn).
 act="$PKG/com.lekaspos.ui.sell.SellActivity"
 : > "$OUT/startup-api$api.txt"
+# A fresh install shows the first-run welcome screen once (it marks itself done when it opens);
+# get it out of the way first so it does not take part in the timed launches.
+adb shell am start -W -n "$act" > /dev/null
+sleep 6
+adb shell input keyevent KEYCODE_BACK
+sleep 2
 for i in $(seq 1 10); do
   adb shell am force-stop "$PKG"
   sleep 2
