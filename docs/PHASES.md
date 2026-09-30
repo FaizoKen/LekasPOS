@@ -12,7 +12,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
-| 6 | Google Drive sync, local backup/restore, merge tests | **in progress** |
+| 6 | Google Drive sync, local backup/restore, merge tests | **done — waiting for real-device feedback** (tester build v0.6.0-phase6); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
 
 ## Open questions for the user
@@ -397,13 +397,82 @@ were reported. The checklist below stays for reference; hardware items remain ca
    it imports; it keeps going and shows the result.
 8. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
-## Phase 6 — Google Drive sync, backup/restore, merge tests (in progress)
+## Phase 6 — Google Drive sync, backup/restore, merge tests (done — waiting for device feedback)
 
-- [ ] `SyncProvider`, `FolderProvider`, `GoogleDriveProvider` (appDataFolder, resumable transfers)
-- [ ] Outbox sealing, segment upload/import, snapshots, bootstrap, GC; WorkManager scheduling
-- [ ] Sign-in with Google Identity Services `AuthorizationClient`; sync status UI
-- [ ] Local automatic backups, manual export/import (SAF), archive old sales
-- [ ] Merge test suite (references/sync.md §12)
+- [x] Backups (D-044): a daily automatic backup (last 7 kept), one before every app upgrade and
+      before every restore; back up now; save or share a backup file (USB, SD card, Drive,
+      WhatsApp) — all without Google Play services. Restore from a kept backup or a file,
+      either as this till (the old phone is gone) or as a new till; staged, checked, applied
+      at the next start
+- [x] Sync core (D-045): outbox sealed into immutable, checksummed segment files per till;
+      other tills' segments applied in order, idempotently, in short transactions (a sale
+      never waits for a whole segment); per-field merge for catalogue/settings/staff/customers;
+      stock = last count + movements; device cards, store manifest, receipt-prefix and
+      device-number clash handling; a joining till publishes what it already has (backfill)
+- [x] Google Drive provider (hidden app folder, `drive.appdata` only), resumable uploads,
+      token refresh; Google sign-in with `AuthorizationClient`, pinned to the store's account
+- [x] Background sync with WorkManager: every 30 minutes and ~2 minutes after a sale;
+      Settings → Sync (turn on, status, sync now, sign in again, tills in the store, turn off);
+      a pill on the selling screen only when sync needs the user or has not worked for a day
+- [x] Merge test suite (references/sync.md §12): 8 multi-till scenarios on shared-folder
+      "tills", each checking identical data and derived tables equal to a full rebuild
+- [x] Fixed on the way: a restored till that had synced now always becomes a new till (its
+      old number's later sales and receipt numbers are already in the store); on Android 5–6 a
+      cut-short backup file made restore (and the backup list) spin forever — now refused;
+      on SQLite 3.8 a refund-total lookup inside a subquery skipped its index, so each sale
+      from another till took 26 ms to apply at 250k sales — now a direct lookup (~3 ms)
+- [ ] Deferred (D-045): snapshot bootstrap and deleting old segments from Drive (not needed
+      at current sizes); **archiving old sales** (moved out of Phase 6 — every budget holds
+      at 1M+ sale lines, and purging synced history safely needs extra checkpoints)
+
+### Results (2026-09-30)
+
+| Check | Result |
+|---|---|
+| Release APK (R8, test key) | **1,063 KB** (1,088,717 bytes; Phase 5: 777 KB; budget 8 MB) — WorkManager and the sync/backup code ~+97 KB, Google sign-in (play-services-auth) ~+185 KB, version `0.6.0-ci.30` |
+| JVM tests | `:core` 159 (incl. sync file names, cursors, LWW merge rules), `:app` 21 — all pass |
+| Instrumented tests (CI emulators) | **107/107 on API 21** and **107/107 on API 36**: backup while selling is consistent, restore as the same till / as a new till, cut-short and non-backup files refused, 7 automatic backups kept; merge suite (second till joins with its own data, field-by-field edits, delete vs edit, a week offline with 1,200 sales, out-of-order and repeated delivery, count vs offline sales, credit and settings, restored till rejoins without collisions, interrupted first sync); every older schema (v1–v4) migrates to v5; sync and backup screens open |
+| Lint (release) | 0 errors |
+| Perf FULL, API 21 emulator (1 GB) | **PASS**, 67/67 query plans indexed; sync import from another till: 200 sales 0.54 s (p95 1.1 s; was 5.2 s before the fix above), 200 price edits 0.10 s; sale commit 8 ms; reports: month 0.21 s, rolling year 1.17 s, calendar year 0.28 s; CSV import 200 rows 0.25 s |
+| Perf FULL, API 36 emulator | **PASS**, 67/67 plans; 200 remote sales 36 ms, 200 edits 4 ms; rolling year 0.56 s |
+| Cold start to usable selling screen | API 21: 586–710 ms; API 36: 455–544 ms — budget 2 s |
+| Schema | v5 (D-045: LOCAL `sync_segment`, `sync_cursor`) — upgrades Phase 1–5 installs in place |
+
+Not verified here: talking to the real Google Drive. The Drive code is built and reviewed, and
+everything above it is tested through a shared-folder provider; the first real run is on the
+phone (below), which needs the Google Cloud OAuth setup in the README.
+
+### Needs real-device testing (Phase 6)
+
+Before the sync tests: the Google Cloud setup in the README (Drive API, consent screen with
+your Google account as a **test user**, Android OAuth client for `com.lekaspos.app` with the
+test key SHA-1 `69:63:1E:7C:98:0C:32:C9:39:C1:8D:B9:B9:48:01:54:2A:1B:84:B8`).
+
+1. **Upgrade**: install over the Phase 5 build — everything still there. Settings → Backup &
+   restore lists a backup "Before an app upgrade".
+2. **Backup**: Back up now; ⋮ → Save a backup file (e.g. Downloads) and ⋮ → Share (WhatsApp or
+   Drive). The next day, an "Automatic" backup is listed.
+3. **Restore**: make a test sale, then tap an earlier backup → "Restore this till" → the app
+   restarts without that sale; a "Before a restore" backup is listed (restore it to undo).
+   Also ⋮ → Restore from a file… with the file saved in step 2.
+4. **Turn on sync** (Settings → Sync) on phone A: till name "Counter 1" → Turn on sync →
+   choose the store's Google account → allow. Status "Up to date", your account shown.
+5. **Second till** (a second phone/tablet, fresh install or with its own data): same account,
+   name "Counter 2". After it finishes, both have the same products, staff, customers and
+   settings; each keeps its own receipt prefix (e.g. `AB-`, `CD-`).
+6. **Changes travel**: change a price on A, tap Sync now on A then on B → new price on B.
+   Sell on B with Wi-Fi/data off (airplane mode), turn it back on → after a sync, A's reports
+   include B's sales and the stock of that product is the same on both.
+7. **Offline**: a day of selling on B without internet; the "Not synced" pill appears after 24 h
+   with unsent sales; it disappears after B is online again.
+8. **Sign-in**: at myaccount.google.com → Security → Your connections to third-party apps →
+   LekasPOS → remove access. After the next sync the selling screen shows "Sync: sign in";
+   Settings → Sync → Sign in again fixes it.
+9. **Turn off sync** on B: its data stays; the other till is not affected.
+10. **Restore on a syncing till**: the restore warns that the till joins as a new till;
+    afterwards turn sync on again — no duplicate receipts, no lost sales.
+11. Optional: a phone with two Google accounts — sync always uses the store's account.
+12. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.
 
 ## Phase 7 — localization, settings, polish, profiling, release (planned)
 
