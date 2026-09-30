@@ -31,7 +31,7 @@ object Schema {
             products TEXT NOT NULL DEFAULT '',
             start_day INTEGER,
             end_day INTEGER,
-            active INTEGER NOT NULL DEFAULT 1,
+            active INTEGER NOT NULL DEFAULT 1,$LWW
         )"""
 
     /** Sync events of a kind this version does not know yet, kept until an update knows it (v6, D-047). */
