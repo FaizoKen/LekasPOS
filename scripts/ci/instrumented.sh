@@ -29,8 +29,17 @@ if [ "$status" -eq 124 ]; then
   echo "Instrumented tests did not finish within $TEST_TIMEOUT"
 fi
 adb logcat -d -v time > "$OUT/logcat-api$api.txt" 2>/dev/null || true
-# Screenshots from ScreenshotsTest (layout review in both languages).
-adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/screens "$OUT/screens-api$api" > /dev/null 2>&1 || true
+
+# Screenshots from ScreenshotsTest (layout review in both languages): external app files, or
+# internal files through run-as (debug build) where the emulator has no external storage.
+shots="$OUT/screens-api$api"
+adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/screens "$shots" > /dev/null 2>&1 || true
+if [ ! -d "$shots" ]; then
+  mkdir -p "$shots"
+  for f in $(adb shell run-as com.lekaspos.app.debug ls files/screens 2>/dev/null | tr -d '\r'); do
+    adb exec-out run-as com.lekaspos.app.debug cat "files/screens/$f" > "$shots/$f"
+  done
+fi
 
 if grep -q '^OK (' "$OUT/instrumented-api$api.txt"; then
   summary=$(grep '^OK (' "$OUT/instrumented-api$api.txt")

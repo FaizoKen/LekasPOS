@@ -178,6 +178,18 @@ selling screen is usable); `AppGraph.syncSoon()` after each sale. Screens: Setti
 Settings → Backup & restore. `BackupService` makes and prunes backups; `Restore` stages a
 restore that `Db.open` applies before opening the database (D-044).
 
+## 8a. Language and release polish (Phase 7)
+
+- App language (Settings → App language, D-046): `AppLanguage` wraps every activity's and the
+  Application's base context (`attachBaseContext`); new activities must extend `ScreenActivity` or
+  add the same override. The receipt language is a separate store setting.
+- Every user-visible text is a resource in `values/` and `values-ms/`; failures shown to users are
+  mapped to strings (e.g. sync errors are stored as codes such as `offline`, not raw messages).
+- `ScreenshotsTest` saves the main screens in both languages (CI artifact `instrumented-api*` →
+  `screens-api*`) for layout review; the release smoke job gates tester builds.
+- Privacy policy: `site/privacy.html` (+ `privasi.html`), published by `pages.yml`; keep it and
+  `docs/PLAY.md` (Data Safety answers) true whenever data handling changes.
+
 ## 9. Errors, logging, crash safety
 
 - Data-path exceptions are never swallowed: they propagate to the use case, which reports a

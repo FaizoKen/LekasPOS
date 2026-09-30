@@ -154,7 +154,10 @@ object InventoryUi {
             minimumHeight = (48 * a.resources.displayMetrics.density).toInt()
         }
         col.addView(reason, lp())
-        val tabs = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
+        val tabs = LinearLayout(a).apply {
+            orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = false
+        }
         val out = Button(a, null, 0, R.style.Widget_Lekas_Toggle).apply { text = a.getString(R.string.inv_remove_stock) }
         val inn = Button(a, null, 0, R.style.Widget_Lekas_Toggle).apply { text = a.getString(R.string.inv_add_stock) }
         fun renderDirection() {

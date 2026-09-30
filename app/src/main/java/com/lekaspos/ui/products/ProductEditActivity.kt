@@ -132,7 +132,11 @@ class ProductEditActivity : ScreenActivity() {
         codeList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         form.add(codeList)
         renderCodes()
-        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        // Not baseline-aligned: when a label wraps (longer in Malay), both buttons stay level and equally tall.
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = false
+        }
         val add = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
             text = getString(R.string.product_barcode_add)
             setOnClickListener { addBarcode() }
@@ -141,8 +145,8 @@ class ProductEditActivity : ScreenActivity() {
             text = getString(R.string.product_pack_add)
             setOnClickListener { addPack() }
         }
-        buttons.addView(add, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        buttons.addView(pack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8) })
+        buttons.addView(add, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        buttons.addView(pack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8) })
         form.add(buttons)
         plu = form.text(getString(R.string.product_plu), codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }?.code, InputType.TYPE_CLASS_NUMBER)
 

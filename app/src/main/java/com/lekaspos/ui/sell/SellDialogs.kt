@@ -163,7 +163,10 @@ class DiscountDialog(
 
     fun show(): AlertDialog {
         val col = activity.column()
-        val tabs = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
+        val tabs = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = false
+        }
         amountTab.text = activity.getString(R.string.discount_amount)
         percentTab.text = activity.getString(R.string.discount_percent)
         amountTab.setOnClickListener {
@@ -256,9 +259,13 @@ fun showLineDialog(a: Activity, item: CartItem, amount: Long, currency: Currency
     } else if (item.fixedGross == null) {
         col.addView(button(R.string.line_weight, R.style.Widget_Lekas_Button_Secondary) { actions.enterQty(item) }, matchWrap().apply { topMargin = a.dp(8) })
     }
-    val row2 = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-    row2.addView(button(R.string.line_discount, R.style.Widget_Lekas_Button_Secondary) { actions.discount(item) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-    row2.addView(button(R.string.line_price, R.style.Widget_Lekas_Button_Secondary) { actions.price(item) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = a.dp(8) })
+    val row2 = LinearLayout(a).apply {
+        orientation = LinearLayout.HORIZONTAL
+        isBaselineAligned = false // a wrapped label (Malay is longer) keeps both buttons level
+    }
+    val half = { LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f) }
+    row2.addView(button(R.string.line_discount, R.style.Widget_Lekas_Button_Secondary) { actions.discount(item) }, half())
+    row2.addView(button(R.string.line_price, R.style.Widget_Lekas_Button_Secondary) { actions.price(item) }, half().apply { marginStart = a.dp(8) })
     col.addView(row2, matchWrap().apply { topMargin = a.dp(8) })
     col.addView(button(R.string.line_remove, R.style.Widget_Lekas_Button_Danger) { actions.remove(item) }, matchWrap().apply { topMargin = a.dp(8) })
 

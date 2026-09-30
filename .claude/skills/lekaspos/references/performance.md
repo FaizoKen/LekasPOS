@@ -40,7 +40,7 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `import_chunk_200` | one import transaction: 200 CSV rows parsed, checked, created | FULL | ≤ 3000 ms |
 | `sync_import_200_sales` / `sync_import_200_edits` | another till's 200 sales / 200 price edits applied by the importer in one transaction (real imports split into ~100 ms transactions, D-045) | FULL | ≤ 3000 / 1500 ms |
 | `db_open` | open existing DB + pragmas + version check | 1M lines | ≤ 300 ms |
-| `heap` | Java heap after GC, steady selling | — | ≤ 48 MB, no growth over 1,000 sales |
+| `heap` | Java heap after GC, steady selling (`perf/SoakTest`: 1,000 sales scan → cart → checkout; also checks old selling screens are freed) | — | ≤ 48 MB, growth ≤ 2 MB over 1,000 sales |
 
 ## 2. The perf suite (`com.lekaspos.perf`, in `main` so it ships in release builds)
 

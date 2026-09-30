@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fasa 6: sandaran, pemulihan dan penyegerakan. -->
 <resources>
-    <string name="backup_title">Sandaran &amp; pemulihan</string>
+    <string name="backup_title">Sandaran</string>
     <string name="settings_backup_sub">Sandaran dalam telefon ini, fail sandaran, pulihkan</string>
     <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Untuk menyimpan salinan di tempat lain, simpan atau kongsi fail sandaran (USB, kad SD, Google Drive, WhatsApp). Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
     <string name="backup_empty">Belum ada sandaran dalam telefon ini.</string>

@@ -8,8 +8,24 @@ A lightweight, offline-first point-of-sale app for small grocery stores and mini
 and tablets with 1–2 GB RAM. No backend: all data lives on the device; Google Drive is used
 only for background sync and backup between the devices of one store.
 
-**Status:** Phase 1 of 7 (architecture, database, performance harness). See
-[`docs/PHASES.md`](docs/PHASES.md) for progress and open questions.
+**Status:** Phase 7 of 7 (languages, polish, low-end profiling, release preparation). Tester
+builds: [Releases](https://github.com/FaizoKen/LekasPOS/releases). Progress:
+[`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
+[faizoken.github.io/LekasPOS/privacy.html](https://faizoken.github.io/LekasPOS/privacy.html).
+
+## Features
+
+- **Selling:** barcode scanners (Bluetooth/USB keyboard or serial) and camera scanning, search
+  and category grid, weighed items and scale labels, discounts, held bills, cash with rounding,
+  card, e-wallet, split and credit payments; ESC/POS Bluetooth receipt printers and cash drawer.
+- **Stock:** receiving and purchases, suppliers, stock counts, movement history, low stock.
+- **People:** staff with PINs and roles, manager approval, shifts and cash, customers and credit,
+  audit log.
+- **Reports:** any period, profit and margin, best and slow sellers, stock value; CSV exports and
+  product CSV import.
+- **Data:** daily backups on the phone, backup files to share or restore, and sync between the
+  shop's tills through its own Google Drive (hidden app folder).
+- English and Bahasa Melayu (switchable in the app); Android 5.0 and newer, phones and tablets.
 
 ## Documentation map
 
@@ -18,6 +34,8 @@ only for background sync and backup between the devices of one store.
 | [`docs/PHASES.md`](docs/PHASES.md) | Delivery phases, status, results, open questions |
 | [`docs/BUILD.md`](docs/BUILD.md) | Toolchain, build/test commands, emulators, signing, release checklist |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Why things are the way they are (dependencies, DB, sync, IDs, …) |
+| [`docs/PLAY.md`](docs/PLAY.md) | Google Play preparation: listing, Data Safety answers, release steps |
+| [`site/`](site/) | Public web page and privacy policy (GitHub Pages) |
 | [`.claude/skills/lekaspos/`](.claude/skills/lekaspos/SKILL.md) | Project rules: architecture, conventions, performance budget, money, schema, sync, definition of done |
 
 ## Quick start

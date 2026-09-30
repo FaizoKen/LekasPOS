@@ -67,7 +67,8 @@ class ScreenshotsTest {
                 }
             }
         }
-        val dir = File(ctx.getExternalFilesDir(null), "screens").apply { mkdirs() }
+        // The API 21 CI emulator has no external storage: fall back to internal files (CI copies them with run-as).
+        val dir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "screens").apply { mkdirs() }
         for (lang in listOf(AppLanguage.ENGLISH, AppLanguage.MALAY)) {
             AppLanguage.set(ctx, lang)
             for ((name, cls) in screens) shoot(Intent(ctx, cls), File(dir, "$lang-$name.png"))

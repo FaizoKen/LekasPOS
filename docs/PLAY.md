@@ -15,6 +15,8 @@ upload time — the answers describe what the app does as of version 0.7.
    `https://faizoken.github.io/LekasPOS/`, privacy policy
    `https://faizoken.github.io/LekasPOS/privacy.html`; Audience → **Publish app** (only the
    non-sensitive `drive.appdata` scope, so no verification review is expected).
+   The links' domain must be an authorized domain: add `faizoken.github.io` in Branding and
+   verify it in Google Search Console (HTML-file method: put the file Google gives you in `site/`).
 4. Build: `.\gradlew.bat :app:bundleRelease` with the upload key in `keystore.properties`
    (`keyKind=upload`), version code above every tester build.
 
