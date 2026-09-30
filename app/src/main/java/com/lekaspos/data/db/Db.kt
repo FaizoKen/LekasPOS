@@ -48,6 +48,16 @@ class Db private constructor(
     @Volatile
     var syncEnabled: Boolean = Meta.get(sqlite, Meta.SYNC_ENABLED) == "1"
 
+    /**
+     * Called on the writer thread right after a transaction that queued sync events commits, so
+     * the change can be sent soon (auto sync, D-053). Must return at once (post the work).
+     */
+    @Volatile
+    var onOutboxCommit: (() -> Unit)? = null
+
+    /** A sync event was queued in the open transaction (writer thread only). */
+    private var outboxTouched = false
+
     private val statements = HashMap<String, SQLiteStatement>()
     private var persistedHlc: Long = hlc.current()
 
@@ -97,6 +107,7 @@ class Db private constructor(
         if (sqlite.inTransaction()) return block(Tx(this)) // nested write: join the outer one
         // Reserve IDs *before* BEGIN: the reservation must be committed on its own (D-006).
         ids.ensure(reserveIds)
+        outboxTouched = false
         sqlite.beginTransactionNonExclusive()
         var newHlc = persistedHlc
         val result = try {
@@ -109,6 +120,14 @@ class Db private constructor(
             sqlite.endTransaction()
         }
         persistedHlc = newHlc // reached only when the commit succeeded
+        if (outboxTouched) {
+            outboxTouched = false
+            try {
+                onOutboxCommit?.invoke()
+            } catch (e: Exception) {
+                com.lekaspos.util.Log.w("Auto sync notice failed", e) // never fails the committed write
+            }
+        }
         return result
     }
 
@@ -134,6 +153,11 @@ class Db private constructor(
 
         fun nextId(): Long = owner.ids.nextId()
         fun hlcNow(): Long = owner.hlc.now()
+
+        /** A sync event was queued in this transaction: [onOutboxCommit] runs after the commit. */
+        fun outboxQueued() {
+            owner.outboxTouched = true
+        }
 
         /** A compiled statement cached for the life of the DB (hot paths). */
         fun stmt(sql: String): SQLiteStatement = owner.statement(sql)

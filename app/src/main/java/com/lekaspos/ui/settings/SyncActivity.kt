@@ -18,6 +18,7 @@ import com.lekaspos.ui.common.ScreenActivity
 import java.lang.ref.WeakReference
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -39,7 +40,17 @@ class SyncActivity : ScreenActivity() {
     override fun onStarted(scope: CoroutineScope) {
         scope.launch {
             graph.sync.refreshStatus()
+            val s = graph.sync.status.value
+            if (s.enabled && !s.running && s.pending > 0L) graph.autoSync.now() // changes waiting: send them while the owner looks
             graph.sync.status.collect { build(it) }
+        }
+        scope.launch {
+            // "2 min ago" keeps counting while the screen is open.
+            while (true) {
+                delay(AGO_REFRESH_MS)
+                val s = graph.sync.status.value
+                if (s.enabled) build(s) // not while the till name is being typed
+            }
         }
     }
 
@@ -65,7 +76,7 @@ class SyncActivity : ScreenActivity() {
             f.info(state(s))
             f.row(getString(R.string.sync_account), s.account ?: "-")
             f.row(getString(R.string.sync_this_till), s.deviceName ?: "-")
-            f.row(getString(R.string.sync_last), s.lastSuccessAt?.let { DateText.dateTime(it, tz) } ?: getString(R.string.sync_never))
+            f.row(getString(R.string.sync_last), s.lastSuccessAt?.let { ago(it) } ?: getString(R.string.sync_never))
             f.row(getString(R.string.sync_pending), s.pending.toString())
             if (s.devices > 0) f.row(getString(R.string.sync_other_tills), s.devices.toString())
             if (s.needsSignIn) f.button(getString(R.string.sync_sign_in), primary = true) { signIn() }
@@ -78,15 +89,36 @@ class SyncActivity : ScreenActivity() {
         content.addView(f.view)
     }
 
+    /** What sync is doing right now, step by step, so it never looks stuck (D-053). */
     private fun state(s: SyncEngine.Status): String = when {
-        s.running && s.phase == SyncEngine.PHASE_PREPARE -> getString(R.string.sync_state_preparing, s.done)
-        s.running -> getString(R.string.sync_state_running)
+        s.running -> when (s.phase) {
+            SyncEngine.PHASE_CONNECT -> getString(R.string.sync_connecting)
+            SyncEngine.PHASE_PREPARE -> getString(R.string.sync_state_preparing, s.done)
+            SyncEngine.PHASE_SEND -> getString(R.string.sync_state_sending, s.done + 1L, s.total).takeIf { s.total > 0L && s.done < s.total }
+                ?: getString(R.string.sync_state_checking)
+            SyncEngine.PHASE_RECEIVE -> getString(R.string.sync_state_receiving, s.done + 1L, s.total).takeIf { s.total > 0L && s.done < s.total }
+                ?: getString(R.string.sync_state_checking)
+            SyncEngine.PHASE_FINISH -> getString(R.string.sync_state_finishing)
+            else -> getString(R.string.sync_state_running)
+        }
         s.needsSignIn -> getString(R.string.sync_state_sign_in)
         s.lastError == SyncEngine.ERROR_OFFLINE -> getString(R.string.sync_state_offline)
         s.lastError == SyncEngine.ERROR_CORRUPT -> getString(R.string.sync_state_corrupt)
         s.lastError != null -> getString(R.string.sync_state_error, s.lastError)
+        s.pending > 0L -> resources.getQuantityString(R.plurals.sync_state_waiting, s.pending.toInt(), s.pending.toInt())
         s.lastSuccessAt != null -> getString(R.string.sync_state_ok)
         else -> getString(R.string.sync_state_never)
+    }
+
+    /** "just now", "5 min ago", "3 hours ago", then the date and time. */
+    private fun ago(at: Long): String {
+        val mins = (System.currentTimeMillis() - at) / 60_000L
+        return when {
+            mins < 1L -> getString(R.string.sync_ago_now)
+            mins < 60L -> resources.getQuantityString(R.plurals.sync_ago_minutes, mins.toInt(), mins.toInt())
+            mins < 24L * 60L -> resources.getQuantityString(R.plurals.sync_ago_hours, (mins / 60L).toInt(), (mins / 60L).toInt())
+            else -> DateText.dateTime(at, tz)
+        }
     }
 
     // ------------------------------------------------------------------ actions
@@ -110,9 +142,14 @@ class SyncActivity : ScreenActivity() {
 
     /** Asks Google for access; the consent screen (first time, revoked access) comes back in [onActivityResult]. */
     private fun connect(account: String?) {
+        graph.sync.starting() // "Connecting to Google…" at once, and no second tap on the button
         launchUi {
-            toast(R.string.sync_connecting)
-            onConnect(SyncProviders.connect(this@SyncActivity, account))
+            try {
+                onConnect(SyncProviders.connect(this@SyncActivity, account))
+            } catch (e: Exception) {
+                graph.sync.notStarted()
+                throw e
+            }
         }
     }
 
@@ -123,7 +160,10 @@ class SyncActivity : ScreenActivity() {
                 @Suppress("DEPRECATION")
                 startIntentSenderForResult(c.intent.intentSender, REQ_AUTH, null, 0, 0, 0)
             }
-            is SyncProviders.Connect.Unavailable -> Dialogs.message(this, getString(R.string.sync_title), getString(R.string.sync_error_connect, c.message))
+            is SyncProviders.Connect.Unavailable -> {
+                graph.sync.notStarted()
+                Dialogs.message(this, getString(R.string.sync_title), getString(R.string.sync_error_connect, c.message))
+            }
         }
     }
 
@@ -132,6 +172,7 @@ class SyncActivity : ScreenActivity() {
         val known = graph.sync.status.value.account
         if (name == null && account != null && known != null && !account.equals(known, ignoreCase = true)) {
             // Another account has another (empty) app folder: this till would leave the store.
+            graph.sync.notStarted()
             Dialogs.message(this, getString(R.string.sync_title), getString(R.string.sync_other_account, account, known))
             return
         }
@@ -164,19 +205,8 @@ class SyncActivity : ScreenActivity() {
         else -> app.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
     }
 
-    private fun syncNow() {
-        launchUi {
-            val provider = graph.sync.provider() ?: return@launchUi
-            val graph = graph
-            graph.appScope.launch {
-                try {
-                    graph.sync.sync(provider)
-                } catch (e: Exception) {
-                    // shown in the status line
-                }
-            }
-        }
-    }
+    /** At once: the status turns to "Connecting to Google…" before anything else happens. */
+    private fun syncNow() = graph.autoSync.now()
 
     private fun showTills() {
         launchUi {
@@ -208,6 +238,7 @@ class SyncActivity : ScreenActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != REQ_AUTH) return
         if (resultCode != RESULT_OK) {
+            graph.sync.notStarted()
             toast(R.string.sync_not_granted)
             return
         }
@@ -230,5 +261,6 @@ class SyncActivity : ScreenActivity() {
     private companion object {
         const val REQ_AUTH = 0x5359
         const val STATE_NAME = "lekas.sync.name"
+        const val AGO_REFRESH_MS = 30_000L
     }
 }

@@ -46,17 +46,34 @@
     <string name="sync_section_status">Status</string>
     <string name="sync_account">Google account</string>
     <string name="sync_this_till">This till</string>
-    <string name="sync_last">Last synced</string>
+    <string name="sync_last">Last backup</string>
     <string name="sync_never">Not yet</string>
     <string name="sync_pending">Changes waiting to upload</string>
     <string name="sync_other_tills">Other tills</string>
     <string name="sync_state_preparing">Preparing this till\'s data (records: %1$d)…</string>
-    <string name="sync_state_running">Syncing…</string>
+    <string name="sync_state_running">Backing up…</string>
+    <string name="sync_state_sending">Sending changes to Google Drive (%1$d of %2$d)…</string>
+    <string name="sync_state_receiving">Getting changes from the other tills (%1$d of %2$d)…</string>
+    <string name="sync_state_checking">Checking Google Drive for changes from the other tills…</string>
+    <string name="sync_state_finishing">Finishing…</string>
+    <plurals name="sync_state_waiting">
+        <item quantity="one">%d change waiting to be sent — it goes by itself in a few seconds.</item>
+        <item quantity="other">%d changes waiting to be sent — they go by themselves in a few seconds.</item>
+    </plurals>
+    <string name="sync_ago_now">just now</string>
+    <plurals name="sync_ago_minutes">
+        <item quantity="one">%d minute ago</item>
+        <item quantity="other">%d minutes ago</item>
+    </plurals>
+    <plurals name="sync_ago_hours">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
     <string name="sync_state_sign_in">Google needs you to sign in again before this till can sync.</string>
     <string name="sync_state_error">The last sync did not finish: %1$s. It is tried again automatically.</string>
     <string name="sync_state_offline">No internet connection. This till syncs again as soon as it is online.</string>
     <string name="sync_state_corrupt">A sync file in Google Drive is damaged, so syncing has stopped. Please report this.</string>
-    <string name="sync_state_ok">Up to date.</string>
+    <string name="sync_state_ok">Everything is backed up.</string>
     <string name="sync_state_never">Not synced yet.</string>
     <string name="sync_sign_in">Sign in again</string>
     <string name="sync_now">Sync now</string>

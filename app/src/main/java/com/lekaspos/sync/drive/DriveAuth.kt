@@ -36,6 +36,9 @@ object DriveAuth {
 
     class SignInNeeded : AuthNeeded("Google sign-in needed")
 
+    @Volatile
+    private var securityChecked = false
+
     /** [account]: the store's Google account once known, so a phone with several accounts asks for the right one. */
     private fun request(account: String?): AuthorizationRequest {
         val b = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(DriveProvider.SCOPE)))
@@ -49,10 +52,13 @@ object DriveAuth {
     /** Blocks on Play Services: never call on the main thread. */
     suspend fun authorize(ctx: Context, account: String? = null): Result = withContext(Dispatchers.IO) {
         if (!playServicesAvailable(ctx)) return@withContext Result.Unavailable("Google Play services are not available")
-        try {
-            ProviderInstaller.installIfNeeded(ctx) // up-to-date TLS on old Android
-        } catch (e: Exception) {
-            Log.w("Security provider update failed", e)
+        if (!securityChecked) {
+            securityChecked = true // once per app process: it can take a second or more
+            try {
+                ProviderInstaller.installIfNeeded(ctx) // up-to-date TLS on old Android
+            } catch (e: Exception) {
+                Log.w("Security provider update failed", e)
+            }
         }
         try {
             val r = Tasks.await(Identity.getAuthorizationClient(ctx).authorize(request(account)))

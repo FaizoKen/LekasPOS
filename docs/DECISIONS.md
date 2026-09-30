@@ -464,6 +464,31 @@ README use the same mark (`site/icon.svg`).
 Rejected: a receipt with a lightning bolt (the standard "electricity bill" icon in Malaysian
 payment apps), speed lines and text lines (clutter at small sizes). Not checked against trademark
 registers: before registering the name or logo as a trademark, search MyIPO.
+### D-053 — Faster Google Drive backup that never looks stuck (2026-09-30)
+The owner found Drive backup slow and "stuck" before it showed that it was syncing. Causes found:
+the status changed only after the sync lock was free and the Google token had arrived; a new
+token (and the security-provider check) on every round; a new TLS connection for every request
+(`disconnect()` after each); a "does it exist?" lookup before every upload and before every
+device-card update; the whole segment folder listed every round (slower every month); 30 s
+connect / 60 s read timeouts; after a sale, WorkManager waited ≥ 2 minutes (and only sales
+triggered it). Fixed:
+- **Feedback**: "Connecting to Google…" the moment sync is asked for; then "Sending changes (1 of
+  2)", "Getting changes from the other tills (1 of 3)", "Finishing"; plain results ("Everything
+  is backed up", "3 changes waiting — they go by themselves in a few seconds", "Last backup: 2
+  minutes ago"). Turning on and signing in show "Connecting…" at once (no second tap).
+- **Speed**: tokens cached per account (45 min); connections reused; first uploads without a
+  lookup (a retry looks first); the device card patched by id and re-sent only when it changed
+  or every 15 min; the listing asks only for files created since the newest one seen (minus 15
+  min, by Drive's clock), the whole folder once a day and whenever a short listing shows a gap;
+  15 s / 30 s timeouts. A quiet round is about one request.
+- **Sooner** (`AutoSync`, in the app): 10 s after any committed change that queued sync events
+  (a sale, a price, a count, a customer …, via `Db.onOutboxCommit`), 5 s after the selling screen
+  opens, 3 s after the internet comes back, at once for "Sync now" or when the sync screen opens
+  with changes waiting; automatic rounds at least 45 s apart. WorkManager stays as the fallback
+  while the app is closed.
+Rejected: WorkManager expedited work (quota-limited, no delay, not for every sale); a foreground
+service (a permanent notification for a background chore); parallel uploads (rounds are small
+now; order and idempotence stay simple).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

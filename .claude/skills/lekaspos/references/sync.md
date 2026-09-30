@@ -164,16 +164,29 @@ sync screen, `forId(meta sync.provider)` for background work.
   pill, "Sign in again" on the sync screen. Account e-mail from `about?fields=user(emailAddress)`.
 - All devices of a store use the **same Google account**. Each signing certificate (test key,
   upload key, Play signing key, debug) needs an Android OAuth client in Google Cloud (README).
-- REST over `HttpURLConnection`: list with `name contains` + exact prefix filter, multipart
-  upload ≤ 5 MB else resumable (resumes from the `Range` Drive reports), `alt=media` download,
-  PATCH via `X-HTTP-Method-Override`, one retry with a fresh token after 401. 30 s connect /
-  60 s read timeouts; `ProviderInstaller` for modern TLS on API 21.
-- Scheduling (`app/Work.kt`): periodic 30 min (network + battery not low, exponential backoff
-  from 30 s) + one-off "sync-soon" 2 min after a sale (KEEP, at most one enqueue per minute,
-  `AppGraph.syncSoon`) + "Sync now". `SyncWorker` ends quietly when sign-in is needed.
-- Status: `SyncEngine.status` (enabled, running, phase prepare/sync, records prepared, pending
-  events, last OK, last error, needs sign-in, account, till name, other tills). The selling
-  screen shows a pill only for "sign in" or "not synced for 24 h with pending changes".
+- REST over `HttpURLConnection`: list with `name contains` + exact prefix filter (optionally
+  `createdTime > …`), multipart upload ≤ 5 MB else resumable (resumes from the `Range` Drive
+  reports), `alt=media` download, PATCH via `X-HTTP-Method-Override`, one retry with a fresh
+  token after 401. Connections are **reused** (a response read to the end is closed, never
+  disconnected); 15 s connect / 30 s read timeouts; `ProviderInstaller` once per process for
+  modern TLS on API 21. Access tokens are cached per account for 45 min (D-053).
+- Round cost (D-053): a segment's first upload skips the "does it exist?" lookup (`fresh`; a
+  retry after a crash looks first, marked by `meta sync.upload_try`); the device card is PATCHed
+  by its remembered id and re-sent only when it changed or every 15 min; the segment listing asks
+  only for files created after the newest one seen minus 15 min (`sync.list_since`, by Drive's
+  clock) — the whole folder once a day, on the first round and when a short listing shows a gap.
+  A quiet round is ~1 request.
+- Scheduling (D-053): in the app, `AutoSync` runs a round 10 s after any committed change that
+  queued sync events (`Db.onOutboxCommit`), 5 s after the selling screen opens, 3 s after the
+  internet comes back (network callback) and at once for "Sync now"; automatic rounds ≥ 45 s
+  apart. WorkManager (`app/Work.kt`) stays as the fallback while the app is closed: periodic
+  30 min (network + battery not low, backoff from 30 s) + one-off "sync-soon" 2 min after a
+  change (cancelled once the app has synced). `SyncWorker` ends quietly when sign-in is needed.
+- Status: `SyncEngine.status` (enabled, running, phase connect/prepare/send/receive/finish with
+  done/total, pending events, last OK, last error, needs sign-in, account, till name, other
+  tills). "Connecting…" shows the moment a sync is asked for (`starting()`), before waiting for
+  Google or a running round. The selling screen shows a pill only for "sign in" or "not synced
+  for 24 h with pending changes".
 
 ## 11. Backup (works without Google Play Services — D-044)
 

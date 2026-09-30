@@ -26,6 +26,7 @@ import com.lekaspos.domain.staff.StaffService
 import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
+import com.lekaspos.sync.AutoSync
 import com.lekaspos.sync.SyncEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -46,7 +47,10 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val dbOpening: Deferred<Db> = appScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
-        Db.open(app, dbName, seedNames())
+        Db.open(app, dbName, seedNames()).also { db ->
+            // Changes queued for upload are sent soon (D-053) — only the app's own database, not test graphs.
+            if (dbName == Schema.FILE_NAME) db.onOutboxCommit = { syncSoon() }
+        }
     }
 
     /** The store database, opened on first use off the main thread. */
@@ -73,14 +77,19 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val backups: BackupService by lazy { BackupService(this, app) }
     val sync: SyncEngine by lazy { SyncEngine(this, app) }
 
+    val autoSync: AutoSync by lazy { AutoSync(this, app) }
+
     private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
 
     /**
-     * After a sale: a background sync a couple of minutes later (references/sync.md §10). At most
-     * once a minute, off the main thread, and only for the app's own database (not test graphs).
+     * After any change queued for upload (a sale, a price, a count …; called by the database right
+     * after the commit): a sync in the app within seconds ([AutoSync], D-053), and a WorkManager job
+     * a couple of minutes later in case the app is closed first (at most once a minute). Only for
+     * the app's own database (not test graphs).
      */
     fun syncSoon() {
         if (dbName != Schema.FILE_NAME) return
+        autoSync.changed()
         val now = SystemClock.elapsedRealtime()
         val last = lastSyncSoon.get()
         if (now - last < SYNC_SOON_GAP_MS || !lastSyncSoon.compareAndSet(last, now)) return

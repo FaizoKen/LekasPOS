@@ -4,8 +4,11 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-/** A file in the store's sync folder. [props] are small key/values stored with it (sha256, count). */
-data class RemoteFile(val name: String, val id: String, val size: Long, val props: Map<String, String> = emptyMap())
+/**
+ * A file in the store's sync folder. [props] are small key/values stored with it (sha256, count);
+ * [created] is when the folder received it, by the folder's own clock (0 = unknown).
+ */
+data class RemoteFile(val name: String, val id: String, val size: Long, val props: Map<String, String> = emptyMap(), val created: Long = 0L)
 
 /** The provider needs the user to sign in again (access revoked, password changed …). */
 open class AuthNeeded(message: String) : java.io.IOException(message)
@@ -18,14 +21,19 @@ open class AuthNeeded(message: String) : java.io.IOException(message)
 interface SyncProvider {
     val id: String
 
-    /** Files whose names start with [prefix]. */
-    suspend fun list(prefix: String): List<RemoteFile>
+    /**
+     * Files whose names start with [prefix]; with [since], only those created after it (by the
+     * folder's clock, as in [RemoteFile.created]) — a quick listing that stays short as the store
+     * grows (D-053). A provider may return more than asked, never less.
+     */
+    suspend fun list(prefix: String, since: Long? = null): List<RemoteFile>
 
     /**
      * Stores [file] as [name]. With [replace] an existing file of that name (this till's own
      * device card) is overwritten; otherwise an existing file is left as it is (same content).
+     * [fresh]: this file was certainly never sent before, so the provider may skip looking for it.
      */
-    suspend fun put(name: String, file: File, props: Map<String, String> = emptyMap(), replace: Boolean = false): RemoteFile
+    suspend fun put(name: String, file: File, props: Map<String, String> = emptyMap(), replace: Boolean = false, fresh: Boolean = false): RemoteFile
 
     suspend fun get(remote: RemoteFile, dest: File)
 
@@ -41,12 +49,13 @@ class FolderProvider(private val dir: File) : SyncProvider {
 
     override val id: String = "folder"
 
-    override suspend fun list(prefix: String): List<RemoteFile> {
+    override suspend fun list(prefix: String, since: Long?): List<RemoteFile> {
         val files = dir.listFiles { f -> f.isFile && f.name.startsWith(prefix) && !f.name.startsWith(".") && !f.name.endsWith(TMP) }.orEmpty()
-        return files.sortedBy { it.name }.map { RemoteFile(it.name, it.name, it.length(), props(it)) }
+        return files.filter { since == null || it.lastModified() > since }.sortedBy { it.name }
+            .map { RemoteFile(it.name, it.name, it.length(), props(it), it.lastModified()) }
     }
 
-    override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean): RemoteFile {
+    override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
         dir.mkdirs()
         val target = File(dir, name)
         if (target.exists() && !replace) return RemoteFile(name, name, target.length(), props(target))

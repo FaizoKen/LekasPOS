@@ -390,6 +390,92 @@ class SyncMergeTest {
         }
     }
 
+    /** D-053: while a round runs, the status says what it is doing (the screen never looks stuck). */
+    @Test
+    fun theStatusSaysWhatARoundIsDoing() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val roti = product(a, "Roti", 350L)
+        syncAll(a, b)
+        sell(a, roti)
+        val sending = ArrayList<SyncEngine.Status>()
+        val watchA = object : SyncProvider by provider {
+            override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
+                sending.add(a.sync.status.value)
+                return provider.put(name, file, props, replace, fresh)
+            }
+        }
+        runBlocking { a.sync.sync(watchA) }
+        assertTrue(sending.any { it.running && it.phase == SyncEngine.PHASE_SEND && it.total == 1L }, "no 'sending 1 of 1' while uploading: $sending")
+        assertTrue(!a.sync.status.value.running)
+        val receiving = ArrayList<SyncEngine.Status>()
+        val watchB = object : SyncProvider by provider {
+            override suspend fun get(remote: RemoteFile, dest: File) {
+                receiving.add(b.sync.status.value)
+                provider.get(remote, dest)
+            }
+        }
+        runBlocking { b.sync.sync(watchB) }
+        assertTrue(receiving.any { it.running && it.phase == SyncEngine.PHASE_RECEIVE && it.total >= 1L }, "no 'receiving' while downloading: $receiving")
+        assertTrue(!b.sync.status.value.running)
+        assertConverged(a, b)
+    }
+
+    /**
+     * D-053: a round lists only the files created since the newest one it has seen; when that
+     * short listing shows a gap (a file the folder listed late), it lists the whole folder.
+     */
+    @Test
+    fun aRoundListsOnlyNewFilesAndAGapFallsBackToTheWholeFolder() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val milo = product(a, "Milo", 390L)
+        syncAll(a, b)
+        val sinces = ArrayList<Long?>()
+        val recording = object : SyncProvider by provider {
+            override suspend fun list(prefix: String, since: Long?): List<RemoteFile> {
+                if (prefix.startsWith("seg-")) sinces.add(since)
+                return provider.list(prefix, since)
+            }
+        }
+        runBlocking { a.sync.sync(recording) }
+        assertEquals(1, sinces.size)
+        assertTrue(sinces.single() != null, "a normal round lists only new files")
+
+        // B sells; its segment is made to look old, as if the folder had listed it very late.
+        sell(b, milo)
+        runBlocking { b.sync.sync(provider) }
+        val bDev = runBlocking { b.db().deviceNo }
+        val old = System.currentTimeMillis() - 2L * 24L * 60L * 60L * 1000L
+        for (f in folder.listFiles().orEmpty()) if (SyncNames.parseSegment(f.name)?.dev == bDev) f.setLastModified(old)
+        sell(b, milo, 2_000L)
+        runBlocking { b.sync.sync(provider) }
+
+        sinces.clear()
+        runBlocking { a.sync.sync(recording) }
+        assertEquals(2, sinces.size, "the short listing saw a gap and the whole folder was listed")
+        assertTrue(sinces[0] != null && sinces[1] == null)
+        runBlocking { assertEquals(2L, a.db().read { it.long("SELECT COUNT(*) FROM sale") }) } // both of B's sales
+        assertConverged(a, b)
+    }
+
+    /** D-053: a committed change that queued sync events is announced once (auto sync starts); other writes are not. */
+    @Test
+    fun aChangeQueuedForUploadIsAnnouncedAfterItsCommit() {
+        val a = till()
+        enable(a)
+        var announced = 0
+        runBlocking { a.db().onOutboxCommit = { announced++ } }
+        product(a, "Gula", 280L)
+        assertEquals(1, announced)
+        runBlocking { a.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, "test.note", "x") } }
+        assertEquals(1, announced, "a write without sync events is not announced")
+    }
+
     /** D-048: the only phone is lost; a new one turns on Google Drive backup and gets the whole shop back. */
     @Test
     fun aLostPhoneIsRestoredWholeFromDrive() {

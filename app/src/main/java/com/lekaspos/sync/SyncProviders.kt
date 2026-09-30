@@ -52,18 +52,35 @@ object SyncProviders {
         return Connect.Ready(provider, account ?: known)
     }
 
-    /** Google Drive with tokens from Google Identity Services; [first] is a token the UI just got. */
+    /**
+     * Google Drive with tokens from Google Identity Services; [first] is a token the UI just got.
+     * Tokens are kept for the whole app process (Google's last about an hour), so a sync round does
+     * not wait for Play services each time (D-053); a 401 fetches a new one.
+     */
     private fun drive(ctx: Context, first: String?, account: String?): DriveProvider {
-        var cached = first
+        if (first != null) Tokens.put(account, first)
         return DriveProvider { refresh ->
-            val t = cached
-            if (t != null && !refresh) {
-                t
-            } else {
-                DriveAuth.silentToken(ctx, account).also { cached = it }
-            }
+            (if (refresh) null else Tokens.get(account)) ?: DriveAuth.silentToken(ctx, account).also { Tokens.put(account, it) }
         }
     }
+
+    /** Access tokens by account, for [TOKEN_TTL_MS] (Google's are valid for about an hour). */
+    private object Tokens {
+        private class Entry(val token: String, val at: Long)
+
+        private val byAccount = java.util.concurrent.ConcurrentHashMap<String, Entry>()
+
+        fun get(account: String?): String? {
+            val e = byAccount[account.orEmpty()] ?: return null
+            return e.token.takeIf { android.os.SystemClock.elapsedRealtime() - e.at < TOKEN_TTL_MS }
+        }
+
+        fun put(account: String?, token: String) {
+            byAccount[account.orEmpty()] = Entry(token, android.os.SystemClock.elapsedRealtime())
+        }
+    }
+
+    private const val TOKEN_TTL_MS = 45L * 60L * 1000L
 
     fun forId(ctx: Context, id: String?, account: String?): SyncProvider? = when (id) {
         GDRIVE -> drive(ctx.applicationContext, null, account)

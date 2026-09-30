@@ -280,6 +280,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val app = applicationContext
             graph.appScope.launch(Dispatchers.IO) { Work.schedule(app) } // background jobs, after the till is usable (WorkManager starts here, off the main thread)
             graph.sync.refreshStatus()
+            graph.autoSync.start() // the other tills' changes now, and again when the internet comes back (D-053)
             graph.backups.refreshProtection()
         }
         s.launch { graph.cart.state.collect { render(it) } }

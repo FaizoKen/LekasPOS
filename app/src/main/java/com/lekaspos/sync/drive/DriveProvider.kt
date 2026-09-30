@@ -22,6 +22,11 @@ import kotlinx.coroutines.withContext
  * REST v3 over HttpURLConnection, scope `drive.appdata` only — the files are invisible in the
  * user's Drive and to other apps. [token] gives a current OAuth access token (it is fetched
  * again after a 401). Small files go up as one multipart request, larger ones resumably.
+ *
+ * Speed (D-053): connections are kept open and reused between requests (a successful response
+ * is read to the end and closed, never disconnected); this till's own files are remembered by
+ * id, so replacing its device card is one request; a first upload does not look for the file
+ * first; and a listing can ask only for files created after a time.
  */
 class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : SyncProvider {
 
@@ -33,8 +38,11 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
      * Drive's `name contains` matches word prefixes, so the query uses only the first word of
      * [prefix] ("seg", "dev", "store"); the exact prefix is checked here.
      */
-    override suspend fun list(prefix: String): List<RemoteFile> =
-        query("name contains '${quote(prefix.substringBefore('-'))}' and trashed = false")
+    override suspend fun list(prefix: String, since: Long?): List<RemoteFile> =
+        query(
+            "name contains '${quote(prefix.substringBefore('-'))}' and trashed = false" +
+                (since?.let { " and createdTime > '${rfc3339(it)}'" } ?: ""),
+        )
             .filter { it.name.startsWith(prefix) }
             .sortedBy { it.name }
 
@@ -46,7 +54,7 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         val out = ArrayList<RemoteFile>()
         var page: String? = null
         do {
-            val url = "$API/files?spaces=appDataFolder&pageSize=1000&fields=${enc("nextPageToken,files(id,name,size,appProperties)")}" +
+            val url = "$API/files?spaces=appDataFolder&pageSize=1000&fields=${enc("nextPageToken,files(id,name,size,appProperties,createdTime)")}" +
                 "&q=${enc(q)}" + (page?.let { "&pageToken=${enc(it)}" } ?: "")
             val json = request("GET", url) { null }.let { String(it, Charsets.UTF_8) }
             @Suppress("UNCHECKED_CAST")
@@ -56,7 +64,8 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 val file = f as? Map<String, Any?> ?: continue
                 val name = file["name"] as? String ?: continue
                 val props = (file["appProperties"] as? Map<String, Any?>).orEmpty().mapValues { it.value.toString() }
-                out.add(RemoteFile(name, file["id"] as String, (file["size"] as? String)?.toLongOrNull() ?: 0L, props))
+                val created = (file["createdTime"] as? String)?.let { parseTime(it) } ?: 0L
+                out.add(RemoteFile(name, file["id"] as String, (file["size"] as? String)?.toLongOrNull() ?: 0L, props, created))
             }
             page = m["nextPageToken"] as? String
         } while (page != null)
@@ -66,38 +75,49 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
     /** Escapes a string literal for a Drive query. */
     private fun quote(s: String) = s.replace("\\", "\\\\").replace("'", "\\'")
 
-    override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean): RemoteFile {
-        val existing = find(name)
+    override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
+        if (replace) {
+            val id = knownIds[name]
+            if (id != null) {
+                try {
+                    patch(id, file)
+                    return RemoteFile(name, id, file.length(), props)
+                } catch (e: HttpError) {
+                    if (e.code != 404) throw e
+                    knownIds.remove(name) // deleted meanwhile: look it up again below
+                }
+            }
+        }
+        val existing = if (fresh) null else find(name)
         if (existing != null) {
             if (!replace) return existing // uploaded before a crash: never make a second copy
-            request("PATCH", "$UPLOAD/files/${existing.id}?uploadType=media") { c ->
-                c.setRequestProperty("Content-Type", "application/octet-stream")
-                FileBody(file)
-            }
+            patch(existing.id, file)
+            knownIds[name] = existing.id
             return existing.copy(size = file.length())
         }
         val meta = metadata(name, props)
         val id = if (file.length() <= MULTIPART_MAX) multipart(meta, file) else resumable(meta, file)
+        if (replace) knownIds[name] = id
         return RemoteFile(name, id, file.length(), props)
+    }
+
+    private suspend fun patch(id: String, file: File) {
+        request("PATCH", "$UPLOAD/files/$id?uploadType=media") { c ->
+            c.setRequestProperty("Content-Type", "application/octet-stream")
+            FileBody(file)
+        }
     }
 
     override suspend fun get(remote: RemoteFile, dest: File) {
         withContext(Dispatchers.IO) {
-            val c = open("GET", "$API/files/${remote.id}?alt=media", token(false))
-            try {
-                if (c.responseCode == 401) {
-                    c.disconnect()
-                    val retry = open("GET", "$API/files/${remote.id}?alt=media", token(true))
-                    try {
-                        stream(retry, dest)
-                    } finally {
-                        retry.disconnect()
-                    }
-                } else {
-                    stream(c, dest)
-                }
-            } finally {
+            val url = "$API/files/${remote.id}?alt=media"
+            val c = open("GET", url, token(false))
+            if (keepAlive(c) { c.responseCode } == 401) {
                 c.disconnect()
+                val retry = open("GET", url, token(true))
+                keepAlive(retry) { stream(retry, dest) }
+            } else {
+                keepAlive(c) { stream(c, dest) }
             }
         }
     }
@@ -223,7 +243,7 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         var refresh = false
         while (true) {
             val c = open(method, url, token(refresh))
-            try {
+            val result = keepAlive(c) {
                 val body = prepare(c)
                 if (body != null) {
                     c.doOutput = true
@@ -232,14 +252,15 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 }
                 val code = c.responseCode
                 if (code == 401 && !refresh) {
-                    refresh = true
-                    continue
+                    c.errorStream?.use { it.readBytes() }
+                    null // an expired token: once more with a fresh one
+                } else {
+                    if (code !in 200..299) throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
+                    c.inputStream.use { it.readBytes() }
                 }
-                if (code !in 200..299) throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
-                return@withContext c.inputStream.use { it.readBytes() }
-            } finally {
-                c.disconnect()
             }
+            if (result != null) return@withContext result
+            refresh = true
         }
         @Suppress("UNREACHABLE_CODE")
         ByteArray(0)
@@ -254,8 +275,9 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         } else {
             c.requestMethod = method
         }
-        c.connectTimeout = 30_000
-        c.readTimeout = 60_000
+        // Short enough that a dead network is reported in seconds, not minutes.
+        c.connectTimeout = CONNECT_TIMEOUT_MS
+        c.readTimeout = READ_TIMEOUT_MS
         c.setRequestProperty("Authorization", "Bearer $token")
         return c
     }
@@ -275,11 +297,42 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
+    /**
+     * Runs [block] on [c]; a response read to the end leaves the connection in the pool for the
+     * next request. A failed exchange drops it (it may be half-read or broken); failures are rare.
+     */
+    private inline fun <T> keepAlive(c: HttpURLConnection, block: () -> T): T =
+        try {
+            block()
+        } catch (e: IOException) {
+            c.disconnect()
+            throw e
+        }
+
     companion object {
         private const val API = "https://www.googleapis.com/drive/v3"
         private const val UPLOAD = "https://www.googleapis.com/upload/drive/v3"
         private const val MULTIPART_MAX = 5L * 1024L * 1024L
         private const val RESUME_TRIES = 5
+        private const val CONNECT_TIMEOUT_MS = 15_000
+        private const val READ_TIMEOUT_MS = 30_000
+
+        /** This process's own files by name (its device card): replaced without a lookup. */
+        private val knownIds = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+        /** Drive times are RFC 3339 in UTC, e.g. 2026-09-30T12:34:56.789Z (no java.time on API 21). */
+        internal fun parseTime(s: String): Long? = try {
+            val base = utc().parse(s.substring(0, 19))?.time
+            val millis = s.substringAfter('.', "").takeWhile { it.isDigit() }.padEnd(3, '0').take(3).toLong()
+            base?.plus(millis)
+        } catch (e: Exception) {
+            null
+        }
+
+        internal fun rfc3339(ms: Long): String = utc().format(java.util.Date(ms))
+
+        private fun utc() = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
         const val SCOPE = "https://www.googleapis.com/auth/drive.appdata"
     }
 }

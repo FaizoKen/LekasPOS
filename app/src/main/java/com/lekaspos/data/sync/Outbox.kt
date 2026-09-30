@@ -13,6 +13,7 @@ object Outbox {
 
     fun append(tx: Db.Tx, entity: Int, op: Int, rowId: Long?, hlc: Long, payload: String) {
         tx.insert(INSERT, hlc, entity, op, rowId, payload)
+        tx.outboxQueued()
     }
 
     /** Builds a JSON payload with the android.util streaming writer (no JSON library). */

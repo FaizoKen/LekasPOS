@@ -53,6 +53,11 @@ object Work {
         WorkManager.getInstance(context).enqueueUniqueWork(SYNC_SOON, ExistingWorkPolicy.KEEP, req)
     }
 
+    /** The app already synced (auto sync, D-053): the fallback "sync soon" job is not needed. Off the main thread. */
+    fun cancelSyncSoon(context: Context) = safely("Cancelling a sync failed") {
+        WorkManager.getInstance(context).cancelUniqueWork(SYNC_SOON)
+    }
+
     private inline fun safely(what: String, block: () -> Unit) {
         try {
             block()

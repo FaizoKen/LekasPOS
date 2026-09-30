@@ -160,8 +160,7 @@ class CheckoutService(private val graph: AppGraph) {
             Done(sale.id, sale.receiptNo, draft.total, draft.change, queued, low, customer, owes, tenders.sumOf { it.tendered }, now)
         }
         _last.value = done
-        graph.printer.wake()
-        graph.syncSoon()
+        graph.printer.wake() // the sale's sync events start an upload by themselves (Db.onOutboxCommit)
         return done
     }
 

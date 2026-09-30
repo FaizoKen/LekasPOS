@@ -791,3 +791,14 @@ launcher icon as each Android draws it — legacy badge on API 21, adaptive icon
 release smoke green. Test build **v1.0.1** (pre-release; build 63, 1,153 KB — 1,180,450 bytes,
 SHA-256 `fdffa126…ff26`). After the owner's OK: mark v1.0.1 as the latest release (the website's
 Download link follows) and point `PREV_APK_URL` at it.
+
+## 1.1.0 — faster Google Drive backup (in progress)
+
+The owner found Google Drive backup slow and "stuck" before it showed that it was syncing
+(2026-09-30). Causes and fixes in D-053: instant "Connecting…" and step-by-step progress; cached
+Google tokens, reused connections, fewer requests per round, a short listing of new files only;
+a round 10 s after any change, when the app opens and when the internet comes back. 1.1.0 also
+carries the new logo of the 1.0.1 test build (not released on its own).
+
+- [x] Tests: status steps during a round; the short listing and its fall-back to the whole folder
+      on a gap; the change announcement after a commit; Drive time parsing (JVM)
