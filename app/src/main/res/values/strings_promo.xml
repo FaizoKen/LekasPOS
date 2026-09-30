@@ -17,8 +17,8 @@
     <string name="promo_name">Name (shown on the bill and the receipt)</string>
     <string name="promo_name_hint">For example: Milo 3 for RM10</string>
     <string name="promo_kind">Type</string>
-    <string name="promo_kind_multi">Several for one price (e.g. 3 for RM10)</string>
-    <string name="promo_kind_free">Buy some, get some free</string>
+    <string name="promo_kind_multi">Multi-buy price</string>
+    <string name="promo_kind_free">Buy X get Y free</string>
     <string name="promo_buy_qty">How many to buy</string>
     <string name="promo_free_qty">How many free</string>
     <string name="promo_group_price">Price for all of them</string>

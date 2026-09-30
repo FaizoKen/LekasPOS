@@ -17,8 +17,8 @@
     <string name="promo_name">Nama (dipaparkan pada bil dan resit)</string>
     <string name="promo_name_hint">Contoh: Milo 3 untuk RM10</string>
     <string name="promo_kind">Jenis</string>
-    <string name="promo_kind_multi">Beberapa pada satu harga (cth. 3 untuk RM10)</string>
-    <string name="promo_kind_free">Beli beberapa, dapat percuma</string>
+    <string name="promo_kind_multi">Harga beli banyak</string>
+    <string name="promo_kind_free">Beli X percuma Y</string>
     <string name="promo_buy_qty">Bilangan dibeli</string>
     <string name="promo_free_qty">Bilangan percuma</string>
     <string name="promo_group_price">Harga untuk semuanya</string>
