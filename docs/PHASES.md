@@ -12,7 +12,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 3 | Inventory, suppliers, stock movements | **done** — phone tests passed (2026-09-29); printer, scanners and drawer still carried forward |
 | 4 | Users, roles, PIN, shifts, cash management, audit log | **done** — tested on the phone (2026-09-30); printer, scanners and drawer still carried forward |
 | 5 | Reports and CSV import/export | **done** — user approved (2026-09-30); printer, scanners and drawer still carried forward |
-| 6 | Google Drive sync, local backup/restore, merge tests | **done — waiting for real-device feedback** (tester build v0.6.0-phase6); archive of old sales deferred (D-045) |
+| 6 | Google Drive sync, local backup/restore, merge tests | **done — waiting for real-device feedback** (tester build v0.6.0-phase6-fix1; the first build crashed at start, fixed); archive of old sales deferred (D-045) |
 | 7 | Localization, settings, polish, low-end profiling, release build, final checklist | not started |
 
 ## Open questions for the user
@@ -429,7 +429,8 @@ were reported. The checklist below stays for reference; hardware items remain ca
 
 | Check | Result |
 |---|---|
-| Release APK (R8, test key) | **1,063 KB** (1,088,717 bytes; Phase 5: 777 KB; budget 8 MB) — WorkManager and the sync/backup code ~+97 KB, Google sign-in (play-services-auth) ~+185 KB, version `0.6.0-ci.30` |
+| Release APK (R8, test key) | **1,099 KB** (1,125,040 bytes; Phase 5: 777 KB; budget 8 MB) — WorkManager and the sync/backup code, Google sign-in (play-services-auth ~+185 KB); version `0.6.0-ci.33` (tester build v0.6.0-phase6-fix1) |
+| Release smoke (CI, new) | R8 release APK installed over the Phase 5 build and fresh, selling screen open 20 s: no crash on API 21 and API 36 |
 | JVM tests | `:core` 159 (incl. sync file names, cursors, LWW merge rules), `:app` 21 — all pass |
 | Instrumented tests (CI emulators) | **107/107 on API 21** and **107/107 on API 36**: backup while selling is consistent, restore as the same till / as a new till, cut-short and non-backup files refused, 7 automatic backups kept; merge suite (second till joins with its own data, field-by-field edits, delete vs edit, a week offline with 1,200 sales, out-of-order and repeated delivery, count vs offline sales, credit and settings, restored till rejoins without collisions, interrupted first sync); every older schema (v1–v4) migrates to v5; sync and backup screens open |
 | Lint (release) | 0 errors |
@@ -441,6 +442,16 @@ were reported. The checklist below stays for reference; hardware items remain ca
 Not verified here: talking to the real Google Drive. The Drive code is built and reviewed, and
 everything above it is tested through a shared-folder provider; the first real run is on the
 phone (below), which needs the Google Cloud OAuth setup in the README.
+
+### Tester feedback (Phase 6, 2026-09-30)
+
+The first tester build (`0.6.0-ci.30`) closed itself ~3 s after opening, every time. Cause: R8
+removed the constructor WorkManager uses to create its job database, so scheduling the background
+jobs (1.5 s after the selling screen is usable) threw in the app scope. None of the checks ran
+the release build long enough: the instrumented tests use the debug build, the cold-start loop
+relaunches every 3 s. Fixed with a keep rule; scheduling can no longer crash the app; a CI
+**release smoke** job now reproduces the tester's path (upgrade from the last tester build, then
+fresh) and gates every tester build. Fixed build: v0.6.0-phase6-fix1 (`0.6.0-ci.33`).
 
 ### Needs real-device testing (Phase 6)
 
