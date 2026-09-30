@@ -644,3 +644,27 @@ So: protected by default, and visible when not.
 - [x] Tests: a lost phone restored in full on a new one from Google Drive; folder copies, keep 7,
       missing folder; protection states; a damaged database keeps every good backup; the check
       finds real damage in a database file
+
+### Needs real-device testing (Phase 9)
+
+1. **Upgrade** over the Phase 8 build — data, sync and settings still there. Settings now lists
+   **Google Drive backup** (was "Sync between tills").
+2. **The pill**: on a phone with Google Drive backup off and sales or products, the selling screen
+   shows **Not backed up** a few seconds after opening. Tap it — the explanation offers Google
+   Drive, SD card / USB, or Later. With Google Drive backup on and working, no pill.
+3. **Daily copy to a folder**: Settings → Backup & restore → ⋮ → "Daily copy to a folder (SD card / USB)…" →
+   in the system picker make a new folder (Android 11+ does not allow the card's top level or
+   Download itself) → Use this folder → Allow. Expect "Copied to the folder.", the backup screen
+   shows the folder and "Last copy off this phone: …", and the pill is gone. A file manager shows
+   `lekaspos-<date>-<time>.lekasbak` in that folder.
+4. **Card or drive removed**: take it out → ⋮ → "Copy to the folder now" → "Could not copy…", and
+   the backup screen shows the error. Put it back → copying works again.
+5. **Restore from the folder**: Backup & restore → ⋮ → Restore from a file… → pick a `lekaspos-…` file — only
+   on a test phone, it replaces the data.
+6. **Lost phone drill** (spare phone, or "Clear storage" on a test phone): welcome screen → "Restore
+   or join my shop from Google Drive" → sign in with the shop's account → products, sales, stock,
+   customers, staff and promotions come back; the welcome screen does not return.
+7. **Welcome screen** on a fresh install: the new "Protect your shop's data" section; both buttons
+   open the right screen; "Start selling" still works without choosing either.
+8. **Bahasa Melayu**: the pill ("Tiada sandaran"), the explanation and the backup screen fit.
+9. Carried over when the hardware is available: printer, drawer, HID/SPP scanners, 2 GB tablet.

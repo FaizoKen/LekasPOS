@@ -2,8 +2,8 @@
 <!-- Phase 6: backups, restore and sync. -->
 <resources>
     <string name="backup_title">Backup &amp; restore</string>
-    <string name="settings_backup_sub">Backups on this phone, backup files, restore</string>
-    <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before every app upgrade or restore. To keep a copy somewhere else, save or share a backup file (USB, SD card, Google Drive, WhatsApp). Tap a backup to restore it; hold to delete it.</string>
+    <string name="settings_backup_sub">Backups on this phone, daily copy to SD card or USB, backup files, restore</string>
+    <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before every app upgrade or restore. These are lost with the phone: keep a copy off it with Google Drive backup, a daily copy to an SD card or USB drive (⋮ menu), or by saving or sharing a backup file. Tap a backup to restore it; hold to delete it.</string>
     <string name="backup_empty">No backups on this phone yet.</string>
     <string name="backup_counts">sales: %1$d · products: %2$d</string>
     <string name="backup_reason_auto">Automatic</string>
@@ -36,7 +36,7 @@
     <string name="settings_sync_sub">Back up to Google Drive, restore on a new phone, keep every till up to date</string>
     <string name="sync_help">Every sale and change is copied to a hidden app folder in the store\'s Google Drive (it does not appear among your files, and no other app can read it). If this phone is lost or broken, install LekasPOS on a new one and turn this on with the same Google account: everything comes back. Other tills of the store use the same copy to stay the same. Selling never waits for it: a till works offline and catches up when it is online again.</string>
     <string name="sync_help_short">Copies to Google Drive by itself every 30 minutes and shortly after sales, whenever online. A new phone or another till of the store gets everything by turning this on with the same Google account.</string>
-    <string name="sync_no_play">Sync needs Google Play services, which this phone does not have. Backups still work (Settings → Backup &amp; restore).</string>
+    <string name="sync_no_play">Google Drive backup needs Google Play services, which this phone does not have. Keep a daily copy on an SD card or USB drive instead (Settings → Backup &amp; restore → ⋮).</string>
     <string name="sync_till_name">Name of this till</string>
     <string name="sync_till_name_needed">Enter a name for this till.</string>
     <string name="sync_same_account">Use the same Google account on every till of the store. The first till creates the store\'s sync folder; the others join it and receive its data.</string>

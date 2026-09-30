@@ -2,8 +2,8 @@
 <!-- Fasa 6: sandaran, pemulihan dan penyegerakan. -->
 <resources>
     <string name="backup_title">Sandaran</string>
-    <string name="settings_backup_sub">Sandaran dalam telefon ini, fail sandaran, pulihkan</string>
-    <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Untuk menyimpan salinan di tempat lain, simpan atau kongsi fail sandaran (USB, kad SD, Google Drive, WhatsApp). Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
+    <string name="settings_backup_sub">Sandaran dalam telefon ini, salinan harian ke kad SD atau USB, fail sandaran, pulihkan</string>
+    <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Ia hilang bersama telefon: simpan salinan di luarnya dengan sandaran Google Drive, salinan harian ke kad SD atau pemacu USB (menu ⋮), atau dengan menyimpan atau berkongsi fail sandaran. Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
     <string name="backup_empty">Belum ada sandaran dalam telefon ini.</string>
     <string name="backup_counts">jualan: %1$d · produk: %2$d</string>
     <string name="backup_reason_auto">Automatik</string>
@@ -36,7 +36,7 @@
     <string name="settings_sync_sub">Sandaran ke Google Drive, pulihkan pada telefon baharu, selaraskan setiap kaunter</string>
     <string name="sync_help">Setiap jualan dan perubahan disalin ke folder aplikasi tersembunyi dalam Google Drive kedai (ia tidak kelihatan antara fail anda, dan tiada aplikasi lain boleh membacanya). Jika telefon ini hilang atau rosak, pasang LekasPOS pada telefon baharu dan hidupkan ini dengan akaun Google yang sama: semuanya kembali. Kaunter lain di kedai menggunakan salinan yang sama untuk kekal selaras. Jualan tidak pernah menunggunya: kaunter berfungsi tanpa internet dan dikemas kini apabila dalam talian semula.</string>
     <string name="sync_help_short">Menyalin ke Google Drive sendiri setiap 30 minit dan sejurus selepas jualan, apabila dalam talian. Telefon baharu atau kaunter lain di kedai mendapat semuanya dengan menghidupkan ini menggunakan akaun Google yang sama.</string>
-    <string name="sync_no_play">Segerak memerlukan perkhidmatan Google Play, yang tiada pada telefon ini. Sandaran masih berfungsi (Tetapan → Sandaran &amp; pemulihan).</string>
+    <string name="sync_no_play">Sandaran Google Drive memerlukan perkhidmatan Google Play, yang tiada pada telefon ini. Simpan salinan harian dalam kad SD atau pemacu USB sebagai ganti (Tetapan → Sandaran → ⋮).</string>
     <string name="sync_till_name">Nama kaunter ini</string>
     <string name="sync_till_name_needed">Masukkan nama untuk kaunter ini.</string>
     <string name="sync_same_account">Gunakan akaun Google yang sama pada setiap kaunter kedai. Kaunter pertama mencipta folder segerak kedai; yang lain menyertainya dan menerima datanya.</string>
