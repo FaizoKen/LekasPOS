@@ -100,8 +100,7 @@ store's Google Drive). That scope is *non-sensitive*, so no paid security assess
 Done for this repository (2026-09-30): project **LekasPOS** (ID `lekaspos`), Drive API enabled,
 consent screen External with the `drive.appdata` scope only, home page and privacy policy on the
 authorized domain `faizoken.github.io`, Android client "LekasPOS tester builds (test key)" for
-`com.lekaspos.app` with the release key's SHA-1. For 1.0.0 the owner moves it to *In production*
-(Audience → Publish app, D-051).
+`com.lekaspos.app` with the release key's SHA-1; *In production* since 2026-09-30 (1.0.0, D-051).
 New settings can take from 5 minutes to a few hours to reach Google's servers.
 
 ## License

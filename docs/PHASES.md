@@ -17,7 +17,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 8 | Feature completion: "other item" button, price check, first-run setup, promotions | **done** — tested on the phone (2026-09-30, build v0.8.0-phase8) |
 | 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
 | 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **done** — tested on the phone (2026-09-30, build v0.10.0-phase10-fix1) |
-| — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **in progress** |
+| — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
 
 ## Open questions for the user
 
@@ -763,17 +763,19 @@ tablet and release smoke pass); the rest of the Phase 10 list above still applie
 
 The owner replied "tested and all works" to v0.10.0-phase10-fix1 (2026-09-30).
 
-## Release 1.0.0 — public, outside Google Play (in progress)
+## Release 1.0.0 — public, outside Google Play (released 2026-09-30)
 
 The owner asked how other shops (any Google account, not only the tester account) can use the
 app without Google Play yet. Decided with the owner (D-051):
 
-- [ ] Google sign-in **In production** (Branding: home page, privacy policy, authorized domain
-      `faizoken.github.io` — done; Audience → Publish app — the owner's click)
+- [x] Google sign-in **In production** (2026-09-30): home page, privacy policy, authorized domain
+      `faizoken.github.io`; published by the owner — any Google account can use Drive backup
 - [x] One release key for every public copy (the tester builds' key; keyKind `release`)
 - [x] Version **1.0.0**, shown as "1.0.0 (build N)" in Settings → About; About → "Website & updates"
 - [x] Website: Download section (always the latest release's `LekasPOS.apk`), install and update
       steps in English and Malay
-- [ ] CI green, then the GitHub release `v1.0.0` (latest, not pre-release); smoke baseline
+- [x] CI green (131/131 on API 21 and 36, tablet, release smoke); GitHub release **v1.0.0** (latest,
+      not pre-release; `LekasPOS.apk` + `LekasPOS-1.0.0.apk`, 1,151 KB — 1,178,444 bytes, build 60,
+      SHA-256 `e7cc22fa…39ec`); smoke baseline v1.0.0
 - Later: register the developer, package and key with Google before the 2027 rule reaches
   Malaysia (installs outside Play from registered developers only)
