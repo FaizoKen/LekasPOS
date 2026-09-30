@@ -146,6 +146,7 @@ object SegmentCodec {
             gz.flush()
             fos.flush()
             fos.fd.sync()
+            w.close() // ends the Deflater; the file is already complete and synced
         }
         return file.length() to hex(digest.digest())
     }

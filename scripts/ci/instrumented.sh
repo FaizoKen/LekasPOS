@@ -26,7 +26,9 @@ tr -d '\r' < "$raw" > "$OUT/instrumented-api$api.txt"
 if [ "$status" -eq 124 ]; then
   echo "Instrumented tests did not finish within $TEST_TIMEOUT: dumping thread stacks"
   adb root > /dev/null 2>&1 || true
-  sleep 3
+  sleep 2
+  timeout 60 adb wait-for-device || true
+  sleep 2
   pid=$(adb shell ps | tr -d '\r' | awk '$NF == "com.lekaspos.app.debug" { print $2 }' | head -1)
   if [ -n "$pid" ]; then
     adb shell kill -3 "$pid" || true

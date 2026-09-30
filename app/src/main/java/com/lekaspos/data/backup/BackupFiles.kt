@@ -31,6 +31,7 @@ object BackupFiles {
     private const val HEADER = "backup.json"
     private const val DB = "lekaspos.db"
     private const val WAL = "lekaspos.db-wal"
+    private const val MAX_ZERO_READS = 1_000
 
     data class Header(
         val format: Int,
@@ -85,7 +86,7 @@ object BackupFiles {
         ZipInputStream(input.buffered()).use { z ->
             val first = z.nextEntry ?: return null
             if (first.name != HEADER) return null
-            parseHeader(z)
+            parseHeader(CutShortGuard(z))
         }
     } catch (e: Exception) {
         null
@@ -103,9 +104,9 @@ object BackupFiles {
             while (true) {
                 val e = z.nextEntry ?: break
                 when (e.name) {
-                    HEADER -> header = parseHeader(z)
-                    DB -> FileOutputStream(File(dir, DB)).use { z.copyTo(it, 64 * 1024) }
-                    WAL -> FileOutputStream(File(dir, WAL)).use { z.copyTo(it, 64 * 1024) }
+                    HEADER -> header = parseHeader(CutShortGuard(z))
+                    DB -> FileOutputStream(File(dir, DB)).use { CutShortGuard(z).copyTo(it, 64 * 1024) }
+                    WAL -> FileOutputStream(File(dir, WAL)).use { CutShortGuard(z).copyTo(it, 64 * 1024) }
                     else -> Unit // unknown parts of a newer format are ignored
                 }
             }
@@ -163,8 +164,8 @@ object BackupFiles {
         )
     }
 
-    private fun zip(out: OutputStream, h: Header, db: File, wal: File?) {
-        val z = ZipOutputStream(out.buffered(64 * 1024))
+    /** Writes the ZIP to [out] and leaves [out] open (closing the ZIP stream releases its Deflater). */
+    private fun zip(out: OutputStream, h: Header, db: File, wal: File?) = ZipOutputStream(NonClosing(out).buffered(64 * 1024)).use { z ->
         z.putNextEntry(ZipEntry(HEADER))
         val w = JsonWriter(OutputStreamWriter(NonClosing(z), Charsets.UTF_8))
         w.beginObject()
@@ -190,8 +191,6 @@ object BackupFiles {
             FileInputStream(wal).use { it.copyTo(z, 64 * 1024) }
             z.closeEntry()
         }
-        z.finish()
-        z.flush()
     }
 
     private fun parseHeader(input: InputStream): Header {
@@ -249,6 +248,30 @@ object BackupFiles {
     private class NonClosingIn(private val input: InputStream) : InputStream() {
         override fun read(): Int = input.read()
         override fun read(b: ByteArray, off: Int, len: Int): Int = input.read(b, off, len)
+        override fun close() = Unit
+    }
+
+    /**
+     * Before Android 7.0, ZipInputStream returns 0 bytes forever at the end of an entry that was
+     * cut short (a half-copied file) instead of failing, so a plain copy loop never ends. Many 0
+     * reads in a row (valid data always makes progress) become an error here.
+     */
+    private class CutShortGuard(private val input: InputStream) : InputStream() {
+        override fun read(): Int {
+            val one = ByteArray(1)
+            return if (read(one, 0, 1) < 0) -1 else one[0].toInt() and 0xFF
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (len == 0) return 0
+            var zeros = 0
+            while (true) {
+                val n = input.read(b, off, len)
+                if (n != 0) return n
+                if (++zeros > MAX_ZERO_READS) throw Invalid("the backup file is cut short")
+            }
+        }
+
         override fun close() = Unit
     }
 }
