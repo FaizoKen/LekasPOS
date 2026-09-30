@@ -83,10 +83,9 @@ object BackupFiles {
 
     /** The header of a backup file, or null when it is not one. */
     fun readHeader(input: InputStream): Header? = try {
-        ZipInputStream(input.buffered()).use { z ->
-            val first = z.nextEntry ?: return null
-            if (first.name != HEADER) return null
-            parseHeader(CutShortGuard(z))
+        readZip(input) { z ->
+            val first = z.nextEntry
+            if (first == null || first.name != HEADER) null else parseHeader(CutShortGuard(z))
         }
     } catch (e: Exception) {
         null
@@ -100,7 +99,7 @@ object BackupFiles {
         dir.deleteRecursively()
         dir.mkdirs()
         var header: Header? = null
-        ZipInputStream(input.buffered()).use { z ->
+        readZip(input) { z ->
             while (true) {
                 val e = z.nextEntry ?: break
                 when (e.name) {
@@ -125,6 +124,24 @@ object BackupFiles {
         File(dir, WAL).delete()
         File(dir, "$DB-shm").delete()
         return h
+    }
+
+    /**
+     * Reads a ZIP with [block]. After a failure only the file stream is closed: before Android
+     * 7.0, ZipInputStream.close() first skips the rest of the current entry, which never ends
+     * when that entry was cut short (see [CutShortGuard]).
+     */
+    private inline fun <T> readZip(input: InputStream, block: (ZipInputStream) -> T): T {
+        val raw = input.buffered()
+        val z = ZipInputStream(raw)
+        val result = try {
+            block(z)
+        } catch (e: Throwable) {
+            raw.close()
+            throw e
+        }
+        z.close()
+        return result
     }
 
     /** The database file [unpack] produced in [dir]. */
