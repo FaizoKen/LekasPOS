@@ -829,8 +829,15 @@ with a test (D-054). 1.2.0 also carries 1.1.0's faster Drive backup and the new 
 - [x] Fixes and tests: see D-054 (permissions and audit, PIN lockout per person, scanner keys in
       dialogs, quantity overflow, split payment, rotation, top bar on small phones, sync identity
       after off/on and restores, CSV round trip, printing queue and Bluetooth, camera, reports)
-- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
-- [ ] Test build published as a pre-release
+- [x] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [x] Test build published as a pre-release
+
+Results (2026-10-01): CI **161/161 on API 21 and 36** (26 new tests), lint, tablet and release
+smoke green; perf FULL **PASS** on both (72/72 plans; cold start API 21 122–524 ms; report_year
+703 ms p50, budget 3 s; sale commit 7.4 ms p95). Test build **v1.2.0** (pre-release; build 68,
+1,181 KB — 1,209,645 bytes, SHA-256 `f308740a…226c`); the public download stays v1.0.0 until the
+owner's OK. Left for the owner (D-054): stock with cost 0 and the average cost; the receipt's
+"weighed" guess (needs a schema change); receipt prefixes of two tills joining at once.
 
 ### Needs real-device testing (1.2.0)
 
