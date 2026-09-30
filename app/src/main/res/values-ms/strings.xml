@@ -126,7 +126,6 @@
     <string name="pay_total">Jumlah</string>
     <string name="pay_remaining">Baki perlu dibayar</string>
     <string name="pay_cash_due">Tunai (dibundarkan): %1$s</string>
-    <string name="pay_amount_hint">Amaun (asal %1$s)</string>
     <string name="pay_exact">Tepat</string>
     <string name="pay_complete">Selesai jualan</string>
     <string name="pay_tender_row">%1$s: %2$s</string>

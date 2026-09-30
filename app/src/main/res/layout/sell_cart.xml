@@ -12,12 +12,15 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
-    <!-- An empty bill: how to start, and the last sale (its change, and a copy of the receipt). -->
+    <!-- An empty bill: how to start, and the last sale (its change, and a copy of the receipt).
+         No scrollbar: a shown scrollbar schedules its fade (~1.2 s), which holds a closed screen
+         in memory until then (found by SoakTest). -->
     <ScrollView
         android:id="@+id/cart_empty"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -66,6 +69,21 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/last_sale_change"
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/change_bg"
+                    android:paddingStart="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/last_sale_print"

@@ -16,6 +16,7 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.domain.sell.Tender
+import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.trackedBy
 
@@ -186,7 +187,9 @@ class PaymentDialog(
 
     private fun renderAmount() {
         val v = enteredAmount()
-        amountView.text = if (v == null) activity.getString(R.string.pay_amount_hint, money(remaining)) else money(v)
+        // Nothing typed: the amount still to pay, in grey — what "Cash" takes if pressed now.
+        amountView.text = money(v ?: remaining)
+        amountView.setTextColor(activity.colorOf(if (v == null) R.color.text_disabled else R.color.text_primary))
         // The change shows while the cashier types what the customer gave, before any button.
         val due = Settlement.cashDue(remaining, step)
         val change = if (v != null && v > due) v - due else 0L

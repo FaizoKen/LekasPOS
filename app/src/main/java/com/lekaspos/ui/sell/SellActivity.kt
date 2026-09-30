@@ -128,6 +128,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var lastSale: View
     private lateinit var lastSaleTitle: TextView
     private lateinit var lastSaleText: TextView
+    private lateinit var lastSaleChange: TextView
     private lateinit var lastSalePrint: View
     private lateinit var holdButton: Button
     private lateinit var discountButton: Button
@@ -193,6 +194,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         lastSale = findViewById(R.id.last_sale)
         lastSaleTitle = findViewById(R.id.last_sale_title)
         lastSaleText = findViewById(R.id.last_sale_text)
+        lastSaleChange = findViewById(R.id.last_sale_change)
         lastSalePrint = findViewById(R.id.last_sale_print)
         holdButton = findViewById(R.id.btn_hold)
         discountButton = findViewById(R.id.btn_discount)
@@ -239,6 +241,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             setOnClickListener { showPriceCheck() }
         }
         findViewById<TextView>(R.id.cart_empty_help).setText(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)
+        if (!twoPane) search.setHint(R.string.sell_search_hint_short) // room for the tools beside it
         lastSalePrint.setOnClickListener { printLastSale() }
         payButton.setOnClickListener { openPayment() }
         holdButton.setOnClickListener { hold() }
@@ -433,10 +436,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
         if (done == null) return
         lastSaleTitle.text = getString(R.string.last_sale_title, DateText.time(done.at, TimeZone.getDefault()), done.receiptNo)
         lastSaleText.text = if (done.change > 0L) {
-            getString(R.string.last_sale_change, money(done.total), money(done.received), money(done.change))
+            getString(R.string.last_sale_received, money(done.total), money(done.received))
         } else {
             getString(R.string.last_sale_paid, money(done.total))
         }
+        lastSaleChange.text = getString(R.string.pay_change, money(done.change))
+        lastSaleChange.visible(done.change > 0L)
         lastSalePrint.visible(graph.settings.device.value.hasPrinter)
     }
 

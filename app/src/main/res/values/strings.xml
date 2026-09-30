@@ -130,7 +130,6 @@
     <string name="pay_total">Total</string>
     <string name="pay_remaining">Still to pay</string>
     <string name="pay_cash_due">In cash (rounded): %1$s</string>
-    <string name="pay_amount_hint">Amount (default %1$s)</string>
     <string name="pay_exact">Exact</string>
     <string name="pay_complete">Complete sale</string>
     <string name="pay_tender_row">%1$s: %2$s</string>

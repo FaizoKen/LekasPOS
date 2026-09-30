@@ -3,6 +3,7 @@
 <resources>
     <string name="sell_tool_other">Item lain</string>
     <string name="sell_tool_items">Barang</string>
+    <string name="sell_search_hint_short">Cari</string>
     <string name="sell_total">Jumlah</string>
     <string name="sell_popular">Laris</string>
     <plurals name="held_pill">
@@ -13,7 +14,7 @@
     <string name="sell_empty_help">• Imbas kod bar, atau taip nama di kotak carian.\n• Tiada kod bar? Ketik Barang untuk memilihnya, atau Item lain untuk menaip harganya.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
     <string name="sell_empty_help_wide">• Imbas kod bar, taip nama di kotak carian, atau ketik barang di sebelah kiri.\n• Tiada kod bar dan tiada dalam senarai? Ketik Item lain untuk menaip harganya.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
     <string name="last_sale_title">Jualan terakhir · %1$s · resit %2$s</string>
-    <string name="last_sale_change">Jumlah %1$s · diterima %2$s\nBaki %3$s</string>
+    <string name="last_sale_received">Jumlah %1$s · diterima %2$s</string>
     <string name="last_sale_paid">Jumlah %1$s · dibayar</string>
     <string name="line_remove_short">Buang</string>
     <string name="line_more">Lagi</string>

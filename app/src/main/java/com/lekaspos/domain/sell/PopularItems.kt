@@ -19,7 +19,8 @@ class PopularItems(private val graph: AppGraph) {
 
     suspend fun load(now: Long = System.currentTimeMillis()): List<ProductListItem> {
         val db = graph.db()
-        if (rankedAt == 0L || now - rankedAt > TTL_MS) {
+        // An empty ranking (a new shop) is not kept: the first sales show up at once.
+        if (ranking.isEmpty() || now - rankedAt > TTL_MS) {
             val today = Days.epochDay(now, TimeZone.getDefault())
             ranking = db.read { ProductDao.popularIds(it, today - DAYS + 1, today, LIMIT + SPARE) }
             rankedAt = now
