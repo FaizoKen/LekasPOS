@@ -38,18 +38,19 @@ object ReceiptShare {
 
     private const val COLS = 32
 
-    fun chooseAndShare(a: Activity, saleId: Long) {
+    /** [copy]: a receipt from the sales history, marked as a copy like a reprint (the customer's own right after the sale is not). */
+    fun chooseAndShare(a: Activity, saleId: Long, copy: Boolean = false) {
         Dialogs.choose(a, a.getString(R.string.share_title), listOf(a.getString(R.string.share_image), a.getString(R.string.share_pdf))) {
-            share(a, saleId, pdf = it == 1)
+            share(a, saleId, pdf = it == 1, copy = copy)
         }
     }
 
-    fun share(a: Activity, saleId: Long, pdf: Boolean) {
+    fun share(a: Activity, saleId: Long, pdf: Boolean, copy: Boolean = false) {
         val app = a.applicationContext
         val graph = LekasApp.graph(app)
         graph.appScope.launch(Dispatchers.Main) {
             try {
-                val file = withContext(Dispatchers.IO) { render(app, saleId, pdf) } ?: return@launch
+                val file = withContext(Dispatchers.IO) { render(app, saleId, pdf, copy) } ?: return@launch
                 val uri = FileProvider.getUriForFile(app, app.packageName + ".files", file)
                 val send = Intent(Intent.ACTION_SEND)
                     .setType(if (pdf) "application/pdf" else "image/png")
@@ -70,11 +71,11 @@ object ReceiptShare {
     }
 
     /** Blocking: renders the receipt into cache/shared. */
-    private suspend fun render(ctx: Context, saleId: Long, pdf: Boolean): File? {
+    private suspend fun render(ctx: Context, saleId: Long, pdf: Boolean, copy: Boolean): File? {
         val graph = LekasApp.graph(ctx)
         val store = graph.settings.store.value
         val tz = TimeZone.getDefault()
-        val doc = graph.db().read { ReceiptBuilder.build(it, saleId, copy = false, store, tz) } ?: return null
+        val doc = graph.db().read { ReceiptBuilder.build(it, saleId, copy = copy, store, tz) } ?: return null
         val logoWanted = store.printLogo && Images.hasLogo(ctx)
         val lines = ReceiptBuilder.layout(doc, COLS, store, logoWanted, tz)
         val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }

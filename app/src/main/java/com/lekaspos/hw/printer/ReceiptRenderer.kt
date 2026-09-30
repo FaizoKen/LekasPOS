@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import com.lekaspos.core.escpos.MonoImage
 import com.lekaspos.core.receipt.PrintLine
 import com.lekaspos.core.text.TextWidth
+import kotlin.math.ceil
 
 /**
  * Draws laid-out receipt lines on a Canvas: a bitmap for image-mode printing and sharing, or a
@@ -28,16 +29,7 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
     private val baseSize = paint.textSize
     private val imagePaint = Paint()
 
-    fun height(lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?): Int {
-        var h = PADDING * 2
-        for (l in lines) h += when (l) {
-            is PrintLine.Text -> (if (l.big) lineH * 2 else lineH).toInt()
-            PrintLine.Logo -> (logo?.height ?: 0) + GAP
-            is PrintLine.Qr -> (qr?.height ?: 0) + GAP
-            is PrintLine.Feed -> (lineH * l.lines).toInt()
-        }
-        return h
-    }
+    fun height(lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?): Int = heightOf(lines, lineH, logo, qr)
 
     fun draw(canvas: Canvas, lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?) {
         var y = PADDING.toFloat()
@@ -49,18 +41,12 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
                     paint.isFakeBoldText = l.bold
                     val baseline = y + lineH * scale * 0.78f
                     for ((col, run) in runs(l.text)) canvas.drawText(run, col * cell * scale, baseline, paint)
-                    y += lineH * scale
                 }
-                PrintLine.Logo -> if (logo != null) {
-                    drawMono(canvas, logo, y)
-                    y += logo.height + GAP
-                }
-                is PrintLine.Qr -> if (qr != null) {
-                    drawMono(canvas, qr, y)
-                    y += qr.height + GAP
-                }
-                is PrintLine.Feed -> y += lineH * l.lines
+                PrintLine.Logo -> if (logo != null) drawMono(canvas, logo, y)
+                is PrintLine.Qr -> if (qr != null) drawMono(canvas, qr, y)
+                is PrintLine.Feed -> Unit
             }
+            y += advance(l, lineH, logo, qr)
         }
     }
 
@@ -93,6 +79,24 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
     companion object {
         private const val PADDING = 8
         private const val GAP = 8
+
+        /** How far [l] moves down the page; [draw] and [heightOf] share it so the page fits every line. */
+        fun advance(l: PrintLine, lineH: Float, logo: MonoImage?, qr: MonoImage?): Float = when (l) {
+            is PrintLine.Text -> if (l.big) lineH * 2f else lineH
+            PrintLine.Logo -> if (logo != null) (logo.height + GAP).toFloat() else 0f
+            is PrintLine.Qr -> if (qr != null) (qr.height + GAP).toFloat() else 0f
+            is PrintLine.Feed -> lineH * l.lines
+        }
+
+        /**
+         * Page height in pixels. Summed in floats exactly as [draw] advances: rounding each line down
+         * lost 0.38 px per line at 42 columns, and the last lines of a long receipt were cut off.
+         */
+        fun heightOf(lines: List<PrintLine>, lineH: Float, logo: MonoImage?, qr: MonoImage?): Int {
+            var y = PADDING.toFloat()
+            for (l in lines) y += advance(l, lineH, logo, qr)
+            return ceil(y).toInt() + PADDING
+        }
 
         /** Splits a padded line into (start column, text) runs at gaps of 2+ spaces. */
         fun runs(text: String): List<Pair<Int, String>> {

@@ -2,6 +2,9 @@ package com.lekaspos.ui.common
 
 import android.app.Dialog
 import android.content.Context
+import android.view.KeyEvent
+import android.widget.EditText
+import java.util.WeakHashMap
 
 /**
  * A screen that closes its open dialogs when it is destroyed (rotation, back), so no window
@@ -25,8 +28,45 @@ class DialogTracker : DialogHost {
     }
 }
 
-/** Registers [d] with its screen if the screen is a [DialogHost]; returns [d]. */
+/**
+ * Hardware keys in dialogs. A keyboard-wedge barcode scanner "types" its digits and ends with
+ * Enter. The first key takes the window out of touch mode, Android then gives keyboard focus to
+ * the dialog's first button, and an Enter that nobody consumed presses it — a scan with the
+ * payment dialog open completed the sale as exact cash (2026-10 review). So every dialog
+ * swallows the keys that press a focused view; keypads also drop scanner-speed digits.
+ */
+object DialogKeys {
+    /** Keys closer together than this come from a scanner, not a person. */
+    const val BURST_GAP_MS = 35L
+    const val BURST_IDLE_MS = 300L
+
+    /** Keys that press (or move to) whatever view has keyboard focus. */
+    fun pressesFocused(keyCode: Int): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_DPAD_CENTER,
+        KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_TAB,
+        -> true
+        else -> false
+    }
+
+    /** Dialogs with their own key handler ([keys]); the others get the default guard in [trackedBy]. */
+    internal val handled = WeakHashMap<Dialog, Boolean>()
+}
+
+/** Sets this dialog's handler for hardware keys (keypad, PIN pad, scans passed on to the screen). */
+fun <T : Dialog> T.keys(handler: (KeyEvent) -> Boolean): T {
+    DialogKeys.handled[this] = true
+    setOnKeyListener { _, _, e -> handler(e) }
+    return this
+}
+
+/**
+ * Registers [this] with its screen if the screen is a [DialogHost]; returns it. A dialog without
+ * its own key handler never lets Enter, Tab or Space press a button (text fields keep them).
+ */
 fun <T : Dialog> T.trackedBy(ctx: Context): T {
     (ctx as? DialogHost)?.track(this)
+    if (DialogKeys.handled[this] != true) {
+        setOnKeyListener { d, _, e -> DialogKeys.pressesFocused(e.keyCode) && (d as? Dialog)?.currentFocus !is EditText }
+    }
     return this
 }

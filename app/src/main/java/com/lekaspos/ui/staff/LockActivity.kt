@@ -177,8 +177,6 @@ class LockActivity : Activity(), DialogHost {
                     staff.size == 1 -> select(staff[0])
                     else -> showList()
                 }
-                val wait = graph.staff.waitMs()
-                if (wait > 0L) startCountdown(wait)
             } catch (e: Exception) {
                 Log.e("Loading staff failed", e)
                 Dialogs.message(this@LockActivity, getString(R.string.error_title), getString(R.string.error_generic, e.message ?: e.javaClass.simpleName))
@@ -208,9 +206,23 @@ class LockActivity : Activity(), DialogHost {
         changeButton.visible(staff.size > 1)
         forgotButton.visible(s.isOwner)
         pinPad.clear()
-        if (countdown?.isActive != true) pinPad.setMessage(null)
+        // The wait after wrong PINs belongs to one person: another may sign in meanwhile.
+        if (countdown?.isActive == true) {
+            countdown?.cancel()
+            pinPad.setEnabled(true)
+        }
+        pinPad.setMessage(null)
         listPanel.visible(false)
         pinPanel.visible(true)
+        scope.launch {
+            val wait = try {
+                graph.staff.waitMs(s.id)
+            } catch (e: Exception) {
+                Log.e("Reading the PIN wait failed", e)
+                0L
+            }
+            if (wait > 0L && chosen?.id == s.id) startCountdown(wait)
+        }
     }
 
     private fun showList() {

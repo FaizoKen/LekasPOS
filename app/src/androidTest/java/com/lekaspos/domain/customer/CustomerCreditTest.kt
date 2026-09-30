@@ -111,7 +111,16 @@ class CustomerCreditTest {
         graph.staff.signIn(cashier, "1111")
         assertTrue(graph.permissions.allowed(Perm.CREDIT_SALE))
 
-        val ali = graph.customers.save(null, Customer(0L, "Ali", creditLimit = 5_000L))
+        // A cashier may add customers, but not set or lift the limit that stops her own credit sales.
+        refused(ActionRefused.Reason.NOT_ALLOWED) { graph.customers.save(null, Customer(0L, "Ali", creditLimit = 5_000L)) }
+        val setLimit = assertNotNull(graph.permissions.approve(manager, "5555", Perm.CREDIT_LIMIT).second)
+        val ali = graph.customers.save(null, Customer(0L, "Ali", creditLimit = 5_000L), limitApproval = setLimit)
+        refused(ActionRefused.Reason.NOT_ALLOWED) { graph.customers.save(ali, ali.copy(creditLimit = 0L)) } // 0 = no limit
+        graph.customers.save(ali, ali.copy(phone = "012-3456789")) // other details: no approval needed
+        val limitAudit = db.read { AuditDao.byAction(it, AuditAction.CREDIT_LIMIT_CHANGE, null) }.single()
+        assertEquals(cashier, limitAudit.staffId)
+        assertEquals(manager, limitAudit.approvedBy)
+        assertEquals(5_000L, limitAudit.amount)
         val beras = TestDb.product(db, "Beras 5kg", 3_000L)
         onCredit(ali, beras)
         refused(ActionRefused.Reason.OVER_CREDIT_LIMIT) { onCredit(ali, beras) } // 30 + 30 > 50
@@ -160,6 +169,32 @@ class CustomerCreditTest {
         }
         val otherLine = graph.sales.refundInfo(other.saleId)!!.lines.single().id
         refused(ActionRefused.Reason.NEEDS_CUSTOMER) { graph.sales.refund(other.saleId, mapOf(otherLine to 1_000L), true, "x", credit) }
+    }
+
+    /**
+     * Found in the 2026-10 review: the next-page query started from the search prefix instead of
+     * the last row, so every page after the first repeated earlier customers. Names are added in
+     * reverse order here, so ids and names sort in opposite directions (the case that showed it).
+     */
+    @Test
+    fun customerPagesNeverRepeatOrSkipACustomer() = runBlocking {
+        for (i in 170 downTo 1) graph.customers.save(null, Customer(0L, "Pelanggan %03d".format(i)))
+        val seen = ArrayList<String>()
+        var after: com.lekaspos.data.customer.CustomerItem? = null
+        var pages = 0
+        while (true) {
+            val page = graph.customers.page("", after)
+            seen.addAll(page.map { it.name })
+            pages++
+            if (page.size < 50 || pages > 10) break
+            after = page.last()
+        }
+        assertEquals((1..170).map { "Pelanggan %03d".format(it) }, seen)
+        assertEquals(4, pages)
+        // A search prefix pages the same way.
+        val p1 = graph.customers.page("Pelanggan 1", null)
+        val p2 = graph.customers.page("Pelanggan 1", p1.last())
+        assertEquals((100..170).map { "Pelanggan %03d".format(it) }, (p1 + p2).map { it.name })
     }
 
     @Test

@@ -42,12 +42,23 @@ object QueryPlans {
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */
     private val INDEX_ORDERED = setOf(
         "history_first", "history_next", "product_history", "category_page", "search_prefix", "search_barcode_prefix",
+        "search_prefix_all", "search_barcode_prefix_all",
         "product_manage_page", "product_sell_page", "audit_first", "audit_next",
         "low_stock_next", "movements_first", "movements_next", "purchases_first", "purchases_next",
         "purchases_supplier_first", "purchases_supplier_next", "session_counts_first", "session_counts_next",
         "count_sessions", "history_sales", "history_moves", "history_counts", "supplier_list",
         "shift_first", "shift_next", "customer_first", "customer_next", "statement_first", "statement_next",
         "audit_action_first", "audit_action_next", "receipts_first", "receipts_next", "product_export",
+    )
+
+    /**
+     * Reads "after a version": the plan must show this range on the index, not an equality alone
+     * (a `SEARCH … (product_id=?)` passes the scan check yet reads every event of the product).
+     * Both plan formats print the range as `hlc>?`.
+     */
+    private val INDEX_RANGES = mapOf(
+        "stock_moves_after" to "hlc>?",
+        "stock_sales_after" to "hlc>?",
     )
 
     fun hotQueries(): List<Pair<String, String>> =
@@ -108,6 +119,8 @@ object QueryPlans {
                 violations.add("sorts instead of reading index order: $line")
             }
         }
+        val range = INDEX_RANGES[name]
+        if (range != null && plan.none { it.contains(range) }) violations.add("no index range $range: $plan")
         return PlanCheck(name, plan, violations)
     }
 }

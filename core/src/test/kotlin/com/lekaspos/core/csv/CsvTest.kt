@@ -132,6 +132,42 @@ class CsvTest {
     }
 
     @Test
+    fun textASpreadsheetWouldRunIsDefused() {
+        val sb = StringBuilder()
+        val w = CsvWriter(sb)
+        w.row("=HYPERLINK(\"http://x\",\"y\")", "@SUM(A1)", "+60123", "-5.00", "-", "- Gula", "1,234.50", "12%", "Milo")
+        assertEquals("\"'=HYPERLINK(\"\"http://x\"\",\"\"y\"\")\",'@SUM(A1),+60123,-5.00,'-,'- Gula,\"1,234.50\",12%,Milo\r\n", sb.toString())
+        // Read back through the product import, the names are what they were.
+        for (s in listOf("=1+1", "@me", "- Gula", "-", "+ promo")) assertEquals(s, CsvWriter.undefuse(CsvWriter.defuse(s)))
+        assertEquals("'-5", CsvWriter.undefuse("'-5")) // an apostrophe the owner typed stays
+        assertEquals("Milo", CsvWriter.undefuse("Milo"))
+    }
+
+    @Test
+    fun anExportedRowComesBackToTheSameProduct() {
+        val h = ProductCsv.header(ProductCsv.COLUMNS.map { it.header })
+        val r = ProductCsv.Row("Bawang merah", 800L, sellMode = SellMode.WEIGHT, id = 4_398_046_511_123L)
+        val fields = ProductCsv.format(r, myr)
+        assertEquals("#4398046511123", fields.last())
+        assertEquals(4_398_046_511_123L, (ProductCsv.parse(fields, h, myr) as ProductCsv.Parsed.Ok).row.id)
+        // A spreadsheet that dropped the # still gives the number; junk is simply no number.
+        val plain = fields.toMutableList().also { it[it.size - 1] = "4398046511123" }
+        assertEquals(4_398_046_511_123L, (ProductCsv.parse(plain, h, myr) as ProductCsv.Parsed.Ok).row.id)
+        val junk = fields.toMutableList().also { it[it.size - 1] = "abc" }
+        assertNull((ProductCsv.parse(junk, h, myr) as ProductCsv.Parsed.Ok).row.id)
+    }
+
+    @Test
+    fun aBarcodeASpreadsheetTurnedIntoANumberIsRefused() {
+        val h = ProductCsv.header(listOf("name", "price", "barcode"))
+        for (code in listOf("9.55600E+12", "9.556E+12", "9,55600E+12")) {
+            val bad = ProductCsv.parse(listOf("Milo", "18.90", code), h, myr)
+            assertEquals(listOf(ProductCsv.Problem.BARCODE_BAD), (bad as ProductCsv.Parsed.Bad).problems.map { it.first }, code)
+        }
+        assertIs<ProductCsv.Parsed.Ok>(ProductCsv.parse(listOf("Milo", "18.90", "9556001234567"), h, myr))
+    }
+
+    @Test
     fun wordsForSellModesYesNoAndPercentages() {
         assertEquals(SellMode.WEIGHT, ProductCsv.sellMode("Timbang"))
         assertEquals(SellMode.WEIGHT, ProductCsv.sellMode("kg"))

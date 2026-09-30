@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.lekaspos.R
+import com.lekaspos.app.LekasApp
 import com.lekaspos.core.staff.PinHash
 import com.lekaspos.ui.colorOf
 
@@ -46,6 +47,7 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
     }
 
     private fun press(key: String) {
+        LekasApp.graph(context).staff.touch() // dialogs are windows of their own: the screen does not see these taps
         when (key) {
             DEL -> if (pin.isNotEmpty()) pin = pin.dropLast(1)
             OK -> {

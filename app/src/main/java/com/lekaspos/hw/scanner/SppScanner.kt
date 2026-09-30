@@ -1,11 +1,14 @@
 package com.lekaspos.hw.scanner
 
 import android.content.Context
+import android.os.SystemClock
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.scan.ScanBuffer
 import com.lekaspos.hw.bt.Bluetooth
 import com.lekaspos.hw.bt.SppLink
 import com.lekaspos.util.Log
 import java.io.IOException
+import java.io.InputStream
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -52,9 +55,11 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                 }
                 val l = SppLink(adapter, address)
                 link = l
+                if (!isActive) break // stop() ran before it could see this link
                 try {
                     _status.value = Status.CONNECTING
-                    l.open()
+                    l.open() // stop() closes the link, which aborts a connect in progress
+                    if (!isActive) throw IOException("stopped")
                     _status.value = Status.CONNECTED
                     backoff = 2_000L
                     read(l)
@@ -87,11 +92,19 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
         start()
     }
 
+    /**
+     * Delivers each code: at CR or LF, or, for scanners set up without a suffix, once no byte
+     * followed for [ScanBuffer.IDLE_MS] (the same rule as for keyboard scanners).
+     */
     private fun read(l: SppLink) {
         val input = l.input()
         val buf = ByteArray(256)
         val line = StringBuilder(32)
         while (true) {
+            if (line.isNotEmpty() && !moreWithin(input, ScanBuffer.IDLE_MS)) {
+                _codes.tryEmit(line.toString())
+                line.setLength(0)
+            }
             val n = input.read(buf)
             if (n < 0) throw IOException("scanner disconnected")
             for (i in 0 until n) {
@@ -106,5 +119,19 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                 }
             }
         }
+    }
+
+    /** True when a byte arrives within [ms]. Polled: a blocking Bluetooth read cannot time out. */
+    private fun moreWithin(input: InputStream, ms: Long): Boolean {
+        val until = SystemClock.uptimeMillis() + ms
+        while (input.available() == 0) {
+            if (SystemClock.uptimeMillis() >= until) return false
+            Thread.sleep(POLL_MS)
+        }
+        return true
+    }
+
+    companion object {
+        private const val POLL_MS = 20L
     }
 }

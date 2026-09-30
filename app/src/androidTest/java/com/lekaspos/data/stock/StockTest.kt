@@ -5,6 +5,7 @@ import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.time.Hlc
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.perf.QueryPlans
 import com.lekaspos.testing.TestDb
 import java.util.Random
 import java.util.TimeZone
@@ -13,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** references/database.md §7: stock = latest count + everything after it (by HLC). */
 @RunWith(AndroidJUnit4::class)
@@ -88,6 +90,47 @@ class StockTest {
             )
         }
         assertEquals(9_000, rebuilt())
+    }
+
+    @Test
+    fun eventsAtTheCountsHlcAreOrderedByDevice() {
+        val h = Hlc.pack(System.currentTimeMillis(), 5)
+        fun id(dev: Int, seq: Long) = (dev.toLong() shl 41) or seq
+        val insertMove = "INSERT INTO stock_movement(id, product_id, kind, qty, at, hlc) VALUES(?,?,?,?,?,?)"
+        db.writeBlocking { tx ->
+            tx.insert("INSERT INTO stock_count(id, product_id, qty, at, hlc) VALUES(?,?,?,?,?)", id(1_000, 1L), p, 5_000L, 0L, h)
+            tx.insert(insertMove, id(999, 2L), p, MovementKind.ADJUST, 1_000L, 0L, h) // same HLC, lower device: before the count
+            tx.insert(insertMove, id(1_001, 3L), p, MovementKind.ADJUST, 2_000L, 0L, h) // same HLC, higher device: after it
+            tx.insert(insertMove, id(999, 4L), p, MovementKind.ADJUST, 4_000L, 0L, h + 1)
+            tx.insert(insertMove, id(1_001, 5L), p, MovementKind.ADJUST, 8_000L, 0L, h - 1)
+        }
+        // Two sales, moved to the count's HLC as if made on devices either side of it.
+        val early = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 1_000L)), tz) }
+        val late = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 3_000L)), tz) }
+        db.writeBlocking { tx ->
+            tx.update("UPDATE sale_line SET id = ?, hlc = ? WHERE sale_id = ?", id(999, 6L), h, early.id)
+            tx.update("UPDATE sale_line SET id = ?, hlc = ? WHERE sale_id = ?", id(1_001, 7L), h, late.id)
+        }
+        assertEquals(5_000L + 2_000L + 4_000L - 3_000L, rebuilt())
+    }
+
+    @Test
+    fun readsAfterACountUseAnHlcRangeOfTheIndex() {
+        val queries = StockDao.HOT_QUERIES.toMap()
+        for (name in listOf("stock_moves_after", "stock_sales_after")) {
+            val check = db.readBlocking { QueryPlans.check(it, name, queries.getValue(name)) }
+            assertEquals(emptyList<String>(), check.violations, check.plan.toString())
+            assertTrue(check.plan.any { it.contains("hlc>?") }, check.plan.toString())
+        }
+    }
+
+    @Test
+    fun switchedOffProductsRaiseNoLowStockAlert() {
+        val off = TestDb.product(db, "Beras Lama", 2_000, active = false)
+        db.writeBlocking { tx -> tx.update("UPDATE product SET low_stock = 5000 WHERE id IN (?, ?)", p, off) }
+        assertEquals(listOf(p), db.readBlocking { StockDao.lowStock(it) }.map { it.productId })
+        assertEquals(1L, db.readBlocking { StockDao.lowStockCount(it) })
+        assertEquals(emptyList(), db.readBlocking { StockDao.lowAmong(it, listOf(off)) })
     }
 
     @Test

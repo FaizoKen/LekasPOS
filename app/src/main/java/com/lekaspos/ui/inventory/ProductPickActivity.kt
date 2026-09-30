@@ -98,7 +98,7 @@ class ProductPickActivity : ScreenActivity() {
         val q = search.text.toString()
         job = scope.launch {
             if (debounce) delay(200L)
-            val items = graph.db().read { r -> if (q.isBlank()) ProductDao.managePage(r, null, PAGE) else ProductDao.search(r, q, 100) }
+            val items = graph.db().read { r -> if (q.isBlank()) ProductDao.managePage(r, null, PAGE) else ProductDao.search(r, q, 100, includeInactive = true) }
             adapter.submit(items)
             end = q.isNotBlank() || items.size < PAGE
             empty.setText(R.string.products_none_found)

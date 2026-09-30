@@ -71,14 +71,21 @@ object Refunds {
             val left = amount - already
             return if (amount >= 0L) minOf(v, left) else maxOf(v, left)
         }
+        val gross = share(src.gross, done?.gross ?: 0L)
+        val billDiscount = share(src.billDiscount, done?.billDiscount ?: 0L)
+        // The line discount follows from the others, so the part adds up like the line itself
+        // (gross − discounts = net): rounding each on its own left the receipt 1 sen out.
+        val discountLeft = src.discount - (done?.discount ?: 0L)
+        val discount = (gross - billDiscount - share(src.net, done?.net ?: 0L))
+            .coerceIn(minOf(0L, discountLeft), maxOf(0L, discountLeft))
         return RefundPart(
             lineId = src.lineId,
             qty = qty,
             baseQty = share(src.baseQty, done?.baseQty ?: 0L),
-            gross = share(src.gross, done?.gross ?: 0L),
-            discount = share(src.discount, done?.discount ?: 0L),
-            billDiscount = share(src.billDiscount, done?.billDiscount ?: 0L),
-            net = share(src.net, done?.net ?: 0L),
+            gross = gross,
+            discount = discount,
+            billDiscount = billDiscount,
+            net = gross - billDiscount - discount,
             tax = share(src.tax, done?.tax ?: 0L),
             cost = share(src.cost, done?.cost ?: 0L),
         )

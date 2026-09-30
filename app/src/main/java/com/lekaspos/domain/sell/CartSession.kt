@@ -12,6 +12,7 @@ import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.pricing.PricedCart
+import com.lekaspos.core.pricing.Promotion
 import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.cart.CartDao
@@ -86,6 +87,7 @@ class CartSession(private val graph: AppGraph) {
 
     private val ops = Channel<Op>(Channel.UNLIMITED)
     private val loadLock = Mutex()
+    private var writerStarted = false
 
     /** Restores the open bill once per process. */
     suspend fun load() = loadLock.withLock {
@@ -97,7 +99,10 @@ class CartSession(private val graph: AppGraph) {
         val customer = stored.first?.customerId?.let { id -> db.read { CustomerDao.name(it, id) } }
         nextCartId = stored.third.first + 1L
         nextLineId = stored.third.second + 1L
-        startWriter(db)
+        if (!writerStarted) {
+            writerStarted = true
+            startWriter(db)
+        }
         val base = State(loaded = true, heldCount = stored.second)
         _state.value = stored.first?.let { fromStored(it, base, customer) } ?: base
     }
@@ -168,14 +173,27 @@ class CartSession(private val graph: AppGraph) {
             )
         }
         val key = nextLineId
-        val r = cart.add(template.copy(key = key, addedAt = now))
-        if (!r.merged) {
-            nextLineId++
-            lineNos[key] = nextLineNo++
+        val r = try {
+            cart.add(template.copy(key = key, addedAt = now))
+        } catch (e: ArithmeticException) {
+            return 0L
         }
         val line = r.cart.item(r.key) ?: return 0L
-        val rows = (retaxed.filter { it.key != line.key } + line).map { it.toLine(lineNo(it.key)) }
-        commit(r.cart, r.key) { tx, cartId -> for (row in rows) CartDao.putLine(tx, cartId, row, now) }
+        if (line.qty > MAX_QTY) return 0L
+        if (!r.merged) lineNos[key] = nextLineNo
+        val rows = try {
+            (retaxed.filter { it.key != line.key } + line).map { it.toLine(lineNo(it.key)) }
+        } catch (e: ArithmeticException) {
+            null
+        }
+        if (rows == null || !commit(r.cart, r.key) { tx, cartId -> for (row in rows) CartDao.putLine(tx, cartId, row, now) }) {
+            if (!r.merged) lineNos.remove(key)
+            return 0L
+        }
+        if (!r.merged) {
+            nextLineId++
+            nextLineNo++
+        }
         return r.key
     }
 
@@ -210,12 +228,25 @@ class CartSession(private val graph: AppGraph) {
 
     // ------------------------------------------------------------------ editing lines
 
-    fun setQty(key: Long, qty: Long) {
+    /** Sets a line's quantity; false when it is refused (bill frozen, or more than [MAX_QTY]). */
+    fun setQty(key: Long, qty: Long): Boolean {
         val st = _state.value
-        if (!st.canEdit || st.cart.item(key) == null) return
-        if (qty <= 0L) return remove(key)
-        val cart = st.cart.setQty(key, qty)
-        putLine(cart, key)
+        if (!st.canEdit || st.cart.item(key) == null || qty > MAX_QTY) return false
+        if (qty <= 0L) {
+            remove(key)
+            return true
+        }
+        return putLine(st.cart.setQty(key, qty), key)
+    }
+
+    /**
+     * The − and + buttons: changes the quantity the line has *now* by [delta]. (Taps come faster
+     * than the list redraws, so a button must never carry the quantity it was drawn with.)
+     */
+    fun changeQty(key: Long, delta: Long) {
+        val item = _state.value.cart.item(key) ?: return
+        val next = item.qty + delta
+        if (next > 0L) setQty(key, next)
     }
 
     fun remove(key: Long) {
@@ -223,8 +254,21 @@ class CartSession(private val graph: AppGraph) {
         if (!st.canEdit || st.cart.item(key) == null) return
         lineNos.remove(key)
         val now = System.currentTimeMillis()
-        commit(st.cart.remove(key), st.cart.items.lastOrNull { it.key != key }?.key ?: 0L) { tx, cartId ->
+        val left = st.cart.remove(key)
+        if (left.isEmpty && st.customerId == null) {
+            // The last line is gone: the bill ends here, its discount with it.
+            val cartId = st.cartId
+            if (cartId != 0L) enqueue { tx -> CartDao.deleteCart(tx, cartId) }
+            resetEmpty(st.heldCount)
+            return
+        }
+        // An empty bill keeps its customer (shown on the screen) but never a bill discount, which
+        // an empty bill does not show: it would have gone to the next customer's first item.
+        val dropDiscount = left.isEmpty && left.billDiscount != Discount.None
+        val next = if (dropDiscount) left.withBillDiscount(Discount.None) else left
+        commit(next, st.cart.items.lastOrNull { it.key != key }?.key ?: 0L) { tx, cartId ->
             CartDao.deleteLine(tx, cartId, key, now)
+            if (dropDiscount) CartDao.setBillDiscount(tx, cartId, DiscountKind.NONE, 0L, now)
         }
     }
 
@@ -235,10 +279,9 @@ class CartSession(private val graph: AppGraph) {
         if (!st.canEdit) return false
         val actor = graph.permissions.actorOrNull(Perm.DISCOUNT, approval) ?: return false
         val detail = "${item.name}: ${describe(d)}"
-        putLine(st.cart.setDiscount(key, d), key) { tx, now ->
+        return putLine(st.cart.setDiscount(key, d), key) { tx, now ->
             AuditDao.log(tx, AuditAction.LINE_DISCOUNT, actor.staffId, now, Entity.PRODUCT, item.productId, amountOf(d), detail, actor.approvedBy)
         }
-        return true
     }
 
     /** Price override (permission or a manager's [approval], audited). Returns false when not allowed. */
@@ -249,10 +292,9 @@ class CartSession(private val graph: AppGraph) {
         val actor = graph.permissions.actorOrNull(Perm.PRICE_OVERRIDE, approval) ?: return false
         val c = graph.settings.store.value.currency
         val detail = "${item.name}: ${MoneyFormat.format(item.unitPrice, c)} -> ${MoneyFormat.format(unitPrice, c)}"
-        putLine(st.cart.overridePrice(key, unitPrice), key) { tx, now ->
+        return putLine(st.cart.overridePrice(key, unitPrice), key) { tx, now ->
             AuditDao.log(tx, AuditAction.PRICE_OVERRIDE, actor.staffId, now, Entity.PRODUCT, item.productId, unitPrice, detail, actor.approvedBy)
         }
-        return true
     }
 
     /** Bill discount (permission or a manager's [approval], audited). Returns false when not allowed. */
@@ -263,11 +305,10 @@ class CartSession(private val graph: AppGraph) {
         val now = System.currentTimeMillis()
         val (kind, value) = discountColumns(d)
         val detail = describe(d)
-        commit(st.cart.withBillDiscount(d), st.lastKey, ids = 1L) { tx, cartId ->
+        return commit(st.cart.withBillDiscount(d), st.lastKey, ids = 1L) { tx, cartId ->
             CartDao.setBillDiscount(tx, cartId, kind, value, now)
             AuditDao.log(tx, AuditAction.BILL_DISCOUNT, actor.staffId, now, amount = amountOf(d), detail = detail, approvedBy = actor.approvedBy)
         }
-        return true
     }
 
     /** Cancels the whole bill (audited when it had lines). Returns false when not allowed. */
@@ -325,7 +366,7 @@ class CartSession(private val graph: AppGraph) {
         val promos = graph.promotions.active()
         return graph.db().read { r ->
             CartDao.held(r).map { row ->
-                val total = CartDao.load(r, row.id)?.let { toCart(it).price(inclTax, promos).total } ?: 0L
+                val total = CartDao.load(r, row.id)?.let { priceOrNull(toCart(it), inclTax, promos)?.total } ?: 0L
                 HeldBill(row.id, row.label, row.updatedAt, row.lines, total)
             }
         }
@@ -359,11 +400,29 @@ class CartSession(private val graph: AppGraph) {
         }
     }
 
-    suspend fun deleteHeld(heldId: Long) {
-        enqueue { tx -> CartDao.deleteCart(tx, heldId) }
+    /**
+     * Deletes a held bill. It is a cancelled bill like any other: the same permission (or a
+     * manager's [approval]) and the same audit entry. Returns false when not allowed.
+     */
+    suspend fun deleteHeld(heldId: Long, approval: Approval? = null): Boolean {
+        val actor = graph.permissions.actorOrNull(Perm.CANCEL_BILL, approval) ?: return false
+        flush()
+        val inclTax = graph.settings.store.value.pricesIncludeTax
+        val promos = graph.promotions.active()
+        val bill = graph.db().read { r -> CartDao.load(r, heldId)?.let(::toCart) }
+        val lines = bill?.items?.size ?: 0
+        val total = bill?.let { priceOrNull(it, inclTax, promos)?.total } ?: 0L
+        val now = System.currentTimeMillis()
+        enqueue(if (lines > 0) 1L else 0L) { tx ->
+            CartDao.deleteCart(tx, heldId)
+            if (lines > 0) {
+                AuditDao.log(tx, AuditAction.BILL_CANCEL, actor.staffId, now, amount = total, detail = "held bill, $lines lines", approvedBy = actor.approvedBy)
+            }
+        }
         flush()
         val held = graph.db().read { CartDao.heldCount(it) }
         _state.value = _state.value.copy(heldCount = held)
+        return true
     }
 
     // ------------------------------------------------------------------ checkout
@@ -397,6 +456,7 @@ class CartSession(private val graph: AppGraph) {
     fun setPaying(on: Boolean) {
         val st = _state.value
         if (st.paying != on) _state.value = st.copy(paying = on)
+        if (!on) reprice() // a promotion that changed meanwhile applies from here
     }
 
     /** Waits until every change made so far is committed. */
@@ -408,17 +468,27 @@ class CartSession(private val graph: AppGraph) {
 
     // ------------------------------------------------------------------ internals
 
-    private fun putLine(cart: Cart, key: Long, audit: ((Db.Tx, Long) -> Unit)? = null) {
-        val row = cart.item(key)?.toLine(lineNo(key)) ?: return
+    private fun putLine(cart: Cart, key: Long, audit: ((Db.Tx, Long) -> Unit)? = null): Boolean {
+        val row = try {
+            cart.item(key)?.toLine(lineNo(key))
+        } catch (e: ArithmeticException) {
+            null
+        } ?: return false
         val now = System.currentTimeMillis()
-        commit(cart, key, ids = if (audit != null) 1L else 0L) { tx, cartId ->
+        return commit(cart, key, ids = if (audit != null) 1L else 0L) { tx, cartId ->
             CartDao.putLine(tx, cartId, row, now)
             audit?.invoke(tx, now)
         }
     }
 
-    /** Publishes [cart] and queues its persistence (creating the bill's row first if needed). */
-    private fun commit(cart: Cart, lastKey: Long, ids: Long = 0L, persist: (Db.Tx, Long) -> Unit) {
+    /**
+     * Publishes [cart] and queues its persistence (creating the bill's row first if needed).
+     * The bill is priced *first*: a change whose total cannot be computed (an absurd quantity
+     * times a huge price overflows) is refused with nothing written. Written first, it crashed
+     * the till and left a bill that could never be loaded again (2026-10 review).
+     */
+    private fun commit(cart: Cart, lastKey: Long, ids: Long = 0L, persist: (Db.Tx, Long) -> Unit): Boolean {
+        val priced = price(cart) ?: return false
         val st = _state.value
         val now = System.currentTimeMillis()
         var cartId = st.cartId
@@ -432,7 +502,8 @@ class CartSession(private val graph: AppGraph) {
         }
         val id = cartId
         enqueue(ids) { tx -> persist(tx, id) }
-        _state.value = st.copy(cartId = cartId, openedAt = openedAt, cart = cart, priced = price(cart), lastKey = lastKey)
+        _state.value = st.copy(cartId = cartId, openedAt = openedAt, cart = cart, priced = priced, lastKey = lastKey)
+        return true
     }
 
     private fun enqueue(ids: Long = 0L, run: (Db.Tx) -> Unit) {
@@ -467,12 +538,31 @@ class CartSession(private val graph: AppGraph) {
         }
     }
 
-    private fun price(cart: Cart): PricedCart =
-        cart.price(graph.settings.store.value.pricesIncludeTax, graph.promotions.active())
+    /** The priced bill, or null when its amounts cannot be computed (see [commit]). */
+    private fun price(cart: Cart): PricedCart? =
+        priceOrNull(cart, graph.settings.store.value.pricesIncludeTax, graph.promotions.active())
 
-    /** Prices the open bill again (promotions changed, or started or ended today). */
+    private fun priceOrNull(cart: Cart, inclTax: Boolean, promos: List<Promotion>): PricedCart? = try {
+        for (i in cart.items) i.cost // stock quantity and cost of every line must be computable too
+        cart.price(inclTax, promos)
+    } catch (e: ArithmeticException) {
+        Log.w("The bill cannot be priced", e)
+        null
+    } catch (e: IllegalArgumentException) {
+        Log.w("The bill cannot be priced", e)
+        null
+    }
+
+    /**
+     * Prices the open bill again (promotions changed, or started or ended today). Never while it
+     * is being paid: the amount on the payment screen is the amount the sale is stored with.
+     */
     fun reprice() {
-        _state.update { st -> if (st.loaded && !st.cart.isEmpty) st.copy(priced = price(st.cart)) else st }
+        _state.update { st ->
+            if (!st.loaded || st.cart.isEmpty || st.busy || st.paying) return@update st
+            val priced = price(st.cart) ?: return@update st
+            st.copy(priced = priced)
+        }
     }
 
     private fun lineNo(key: Long): Int = lineNos[key] ?: nextLineNo.also {
@@ -488,9 +578,29 @@ class CartSession(private val graph: AppGraph) {
             if (l.lineNo >= nextLineNo) nextLineNo = l.lineNo + 1
             if (l.id >= nextLineId) nextLineId = l.id + 1L
         }
-        val cart = toCart(s)
+        var cart = toCart(s)
+        var priced = price(cart)
+        if (priced == null) {
+            // A stored bill always loads: lines that cannot be priced are dropped (and deleted).
+            var kept = Cart(billDiscount = cart.billDiscount)
+            for (item in cart.items) {
+                val next = kept.copy(items = kept.items + item)
+                if (price(next) != null) kept = next
+            }
+            val now = System.currentTimeMillis()
+            val cartId = s.id
+            for (item in cart.items) {
+                if (kept.item(item.key) == null) {
+                    val key = item.key
+                    lineNos.remove(key)
+                    enqueue { tx -> CartDao.deleteLine(tx, cartId, key, now) }
+                }
+            }
+            cart = kept
+            priced = price(kept) ?: PricedCart.EMPTY
+        }
         return base.copy(
-            cartId = s.id, openedAt = s.openedAt, cart = cart, priced = price(cart), lastKey = cart.items.lastOrNull()?.key ?: 0L,
+            cartId = s.id, openedAt = s.openedAt, cart = cart, priced = priced, lastKey = cart.items.lastOrNull()?.key ?: 0L,
             customerId = s.customerId, customerName = customerName,
         )
     }
@@ -517,6 +627,9 @@ class CartSession(private val graph: AppGraph) {
     }
 
     companion object {
+        /** The most of one line: 99,999 pieces (or kg). Far above any real sale, far below an overflow. */
+        const val MAX_QTY = 99_999_000L
+
         fun discountOf(kind: Int, value: Long): Discount = when (kind) {
             DiscountKind.AMOUNT -> if (value > 0L) Discount.Amount(value) else Discount.None
             DiscountKind.PERCENT -> if (value in 1L..10_000L) Discount.Percent(value.toInt()) else Discount.None

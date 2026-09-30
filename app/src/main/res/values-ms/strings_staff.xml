@@ -187,5 +187,8 @@
     <string name="audit_shift_open">Syif dibuka</string>
     <string name="audit_shift_close">Syif ditutup</string>
     <string name="audit_over_limit">Kredit melebihi had</string>
+    <string name="audit_product_import">Produk diimport</string>
+    <string name="audit_credit_limit">Had kredit diubah</string>
+    <string name="audit_settings">Tetapan diubah</string>
     <string name="audit_pin_reset">PIN pemilik ditetapkan semula</string>
 </resources>

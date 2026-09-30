@@ -3,7 +3,9 @@ package com.lekaspos.ui.common
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -24,6 +26,7 @@ import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,6 +53,8 @@ abstract class ScreenActivity : Activity(), DialogHost {
     /** Managers' approvals this screen holds (D-037), released when it closes. */
     private val elevations = ArrayList<Long>(2)
     private var guardPerm = 0L
+    private var guardAsked = false
+    private var destroying = false
 
     private var startedScope: CoroutineScope? = null
     protected lateinit var content: FrameLayout
@@ -96,19 +101,41 @@ abstract class ScreenActivity : Activity(), DialogHost {
 
     override fun onStart() {
         super.onStart()
-        if (graph.staff.state.value.locked) {
-            goHome()
-            return
-        }
         val s = MainScope()
         startedScope = s
-        s.launch {
-            while (true) {
-                delay(IDLE_CHECK_MS)
-                if (graph.staff.lockIfIdle()) goHome()
+        // Who is signed in and the store's settings are loaded first. After Android has killed the
+        // app in the background it restores only this screen, not the selling screen that used
+        // to load them: until they are loaded nothing here may run (2026-10 review: a restored
+        // screen ran with every permission and no lock). Immediate: no delay when already loaded.
+        s.launch(Dispatchers.Main.immediate) {
+            graph.staff.load()
+            graph.settings.load()
+            if (graph.staff.state.value.locked) {
+                goHome()
+                return@launch
             }
+            launch {
+                while (true) {
+                    delay(IDLE_CHECK_MS)
+                    if (graph.staff.lockIfIdle()) goHome()
+                }
+            }
+            enter(s)
         }
-        if (guardPerm == 0L || graph.permissions.allowed(guardPerm)) onStarted(s)
+    }
+
+    /** Runs [onStarted] when the user may use this screen; otherwise asks for a manager's approval once. */
+    private fun enter(s: CoroutineScope) {
+        if (guardPerm == 0L || graph.permissions.allowed(guardPerm)) {
+            onStarted(s)
+            return
+        }
+        if (guardAsked) return // the approval dialog is already open
+        guardAsked = true
+        ApprovalDialog.show(this, graph, scope, guardPerm, onCancel = { if (!destroying) finish() }) { approval ->
+            hold(approval)
+            startedScope?.let { onStarted(it) }
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -147,12 +174,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
      * approval at once, or closes the screen. [onStarted] runs only once access is granted.
      */
     protected fun guard(perm: Long) {
-        guardPerm = perm
-        if (graph.permissions.allowed(perm)) return
-        ApprovalDialog.show(this, graph, scope, perm, onCancel = { finish() }) { approval ->
-            hold(approval)
-            startedScope?.let { onStarted(it) }
-        }
+        guardPerm = perm // checked in onStart, once the signed-in staff member is known
     }
 
     private var pendingExport: (suspend (Appendable) -> Long)? = null
@@ -191,9 +213,32 @@ abstract class ScreenActivity : Activity(), DialogHost {
             toast(R.string.export_lost)
             return
         }
-        launchUi {
-            val n = withContext(Dispatchers.IO) { CsvFiles.writer(this@ScreenActivity, uri).use { write(it) } }
-            toast(getString(R.string.export_saved, n))
+        saveExport(uri, write)
+    }
+
+    /**
+     * Writes an export into the file the user picked. It runs on after this screen closes (a
+     * year of receipts takes a while), and a failed export deletes its unfinished file: half a
+     * receipt list must never look like a whole one (2026-10 review).
+     */
+    private fun saveExport(uri: Uri, write: suspend (Appendable) -> Long) {
+        val app = applicationContext
+        val screen = WeakReference(this)
+        graph.appScope.launch(Dispatchers.Main) {
+            val n = try {
+                withContext(Dispatchers.IO) { CsvFiles.writer(app, uri).use { write(it) } }
+            } catch (e: Exception) {
+                Log.e("Export failed", e)
+                withContext(Dispatchers.IO) { runCatching { DocumentsContract.deleteDocument(app.contentResolver, uri) } }
+                val a = screen.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+                if (a != null) {
+                    Dialogs.message(a, a.getString(R.string.error_title), a.getString(R.string.export_failed, errorText(a, e)))
+                } else {
+                    Toast.makeText(app, app.getString(R.string.export_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                }
+                return@launch
+            }
+            Toast.makeText(app, app.getString(R.string.export_saved, n), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -216,6 +261,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
 
     override fun onDestroy() {
         if (isFinishing) for (t in elevations) graph.permissions.release(t)
+        destroying = true // dialogs closed from here on were not cancelled by the user
         dialogs.dismissAll()
         scope.cancel()
         super.onDestroy()

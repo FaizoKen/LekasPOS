@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Perkakasan: pengimbas kamera, pencetak, Bluetooth. -->
+<resources>
+    <string name="camera_permission_ask">Kebenaran kamera diperlukan untuk mengimbas. Ketik di sini untuk membenarkannya.</string>
+    <string name="camera_permission_settings">Kebenaran kamera diperlukan untuk mengimbas. Ketik di sini, kemudian benarkan Kamera di bawah Kebenaran.</string>
+</resources>

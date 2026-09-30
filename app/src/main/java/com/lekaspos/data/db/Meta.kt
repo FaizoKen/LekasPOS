@@ -19,6 +19,12 @@ object Meta {
     const val SYNC_LAST_OK = "sync.last_ok"
     const val SYNC_LAST_ERROR = "sync.last_error"
 
+    /** Local copies of this till's segments up to this number are cleaned up already. */
+    const val SYNC_CLEANED_TO = "sync.cleaned_to"
+
+    /** "1": at the next start this database gets a new till identity (see Restore.renewIfAsked). */
+    const val RENEW_IDENTITY = "identity.renew"
+
     // Data safety on this phone (D-048), LOCAL.
     const val BACKUP_FOLDER = "dev.backup_folder"
     const val BACKUP_FOLDER_NAME = "dev.backup_folder_name"

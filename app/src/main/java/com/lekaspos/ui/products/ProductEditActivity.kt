@@ -52,7 +52,13 @@ class ProductEditActivity : ScreenActivity() {
 
     private var productId = 0L
     private var original: Product? = null
+
+    /** The product as the untouched form reads back (the baseline for "what the user changed"). */
+    private var shown: Product? = null
     private var originalCodes: List<Barcode> = emptyList()
+
+    /** A save is running: a second tap on Save must not create the product twice. */
+    private var saving = false
     private val codes = ArrayList<Code>()
     private var categories: List<Category> = emptyList()
     private var taxes: List<TaxRate> = emptyList()
@@ -104,6 +110,7 @@ class ProductEditActivity : ScreenActivity() {
             codes.add(Code(null, it, BarcodeKind.BARCODE, 1000L, null))
         }
         build(data.product, data.stock)
+        shown = data.product?.let { formProduct() ?: it }
     }
 
     private class Loaded(
@@ -293,7 +300,30 @@ class ProductEditActivity : ScreenActivity() {
 
     // ------------------------------------------------------------------ save / delete
 
+    /** The product the form's fields describe, or null while a money or quantity field does not parse. */
+    private fun formProduct(): Product? {
+        val pr = MoneyFormat.parse(price.text.toString(), currency) ?: return null
+        val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency) ?: return null
+        val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString()) ?: return null
+        val mode = sellMode.selectedItemPosition.coerceIn(0, 2)
+        return Product(
+            id = productId,
+            name = name.text.toString().trim(),
+            sku = sku.text.toString().trim().ifEmpty { null },
+            categoryId = categories.getOrNull(category.selectedItemPosition - 1)?.id,
+            unit = unit.text.toString().trim().ifEmpty { if (mode == SellMode.WEIGHT) "kg" else "pcs" },
+            sellMode = mode,
+            price = pr,
+            cost = c,
+            taxRateId = taxes.getOrNull(tax.selectedItemPosition - 1)?.id,
+            trackStock = trackStock.isChecked,
+            lowStock = low,
+            active = active.isChecked,
+        )
+    }
+
     private fun save(confirmedDuplicates: Boolean = false) {
+        if (saving) return
         if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
             requireAccess(Perm.MANAGE_PRODUCTS) { save(confirmedDuplicates) }
             return
@@ -313,45 +343,38 @@ class ProductEditActivity : ScreenActivity() {
             plu.text.isNotBlank() && pluText.isEmpty() -> return fieldError(plu, R.string.product_error_plu)
             openingQty == null || openingQty < 0L -> return opening?.let { fieldError(it, R.string.product_error_qty) } ?: Unit
         }
-        val mode = sellMode.selectedItemPosition.coerceIn(0, 2)
-        val p = Product(
-            id = productId,
-            name = n,
-            sku = sku.text.toString().trim().ifEmpty { null },
-            categoryId = categories.getOrNull(category.selectedItemPosition - 1)?.id,
-            unit = unit.text.toString().trim().ifEmpty { if (mode == SellMode.WEIGHT) "kg" else "pcs" },
-            sellMode = mode,
-            price = pr ?: 0L,
-            cost = c ?: 0L,
-            taxRateId = taxes.getOrNull(tax.selectedItemPosition - 1)?.id,
-            trackStock = trackStock.isChecked,
-            lowStock = low ?: 0L,
-            active = active.isChecked,
-        )
+        val p = formProduct() ?: return
         val wanted = ArrayList(codes.filter { it.kind == BarcodeKind.BARCODE })
         if (pluText.isNotEmpty()) {
             val old = codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }
             wanted.add(Code(old?.takeIf { it.code == pluText }?.id, pluText, BarcodeKind.SCALE_PLU, 1000L, null))
         }
+        saving = true
         launchUi {
-            if (!confirmedDuplicates) {
-                val dup = graph.db().read { r ->
-                    wanted.filter { it.id == null }.firstNotNullOfOrNull { w ->
-                        ProductDao.codeOwners(r, w.code, productId).firstOrNull()?.let { w.code to it.second }
+            var saved = false
+            try {
+                if (!confirmedDuplicates) {
+                    val dup = graph.db().read { r ->
+                        wanted.filter { it.id == null }.firstNotNullOfOrNull { w ->
+                            ProductDao.codeOwners(r, w.code, productId).firstOrNull()?.let { w.code to it.second }
+                        }
+                    }
+                    if (dup != null) {
+                        Dialogs.confirm(
+                            this@ProductEditActivity, getString(R.string.product_duplicate_title),
+                            getString(R.string.product_error_barcode_dup, dup.first, dup.second), getString(R.string.save),
+                        ) { save(confirmedDuplicates = true) }
+                        return@launchUi
                     }
                 }
-                if (dup != null) {
-                    Dialogs.confirm(
-                        this@ProductEditActivity, getString(R.string.product_duplicate_title),
-                        getString(R.string.product_error_barcode_dup, dup.first, dup.second), getString(R.string.save),
-                    ) { save(confirmedDuplicates = true) }
-                    return@launchUi
-                }
+                val id = persist(p, wanted, openingQty ?: 0L)
+                saved = true // stays "saving" while the screen closes: a queued tap does nothing
+                setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT_ID, id))
+                toast(R.string.product_saved)
+                finish()
+            } finally {
+                if (!saved) saving = false
             }
-            val id = persist(p, wanted, openingQty ?: 0L)
-            setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT_ID, id))
-            toast(R.string.product_saved)
-            finish()
         }
     }
 
@@ -359,6 +382,8 @@ class ProductEditActivity : ScreenActivity() {
         val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS)
         val staff = actor.staffId
         val c = currency
+        val seen = shown
+        val seenCodes = originalCodes
         return graph.db().write(reserveIds = wanted.size + 16L) { tx ->
             val now = System.currentTimeMillis()
             val before = if (p.id != 0L) ProductDao.get(tx.db, p.id) else null
@@ -369,24 +394,29 @@ class ProductEditActivity : ScreenActivity() {
                 if (openingQty > 0L) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
                 id
             } else {
-                val changed = ProductDao.update(tx, before, p, now)
+                // Only what the user changed on this screen is written, against the row as it is now:
+                // a field another till changed while the screen was open keeps that change.
+                val changed = ProductDao.update(tx, seen ?: before, p, before, now)
                 if ("price" in changed) {
+                    val label = if ("name" in changed) p.name else before.name
                     AuditDao.log(
                         tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price,
-                        "${p.name}: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}", actor.approvedBy,
+                        "$label: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}", actor.approvedBy,
                     )
                 }
                 val current = ProductDao.barcodes(tx.db, p.id)
                 val keep = wanted.mapNotNull { it.id }.toSet()
-                for (b in current) if (b.id !in keep) ProductDao.removeBarcode(tx, b.id, now)
+                val shownIds = seenCodes.map { it.id }.toSet()
+                // Removed = shown on this screen and taken off; a barcode added on another till meanwhile stays.
+                for (b in current) if (b.id in shownIds && b.id !in keep) ProductDao.removeBarcode(tx, b.id, now)
                 for (w in wanted) {
                     val id = w.id
                     if (id == null) {
                         ProductDao.addBarcode(tx, Barcode(tx.nextId(), p.id, w.code, w.kind, w.packQty, w.packPrice), now)
                     } else {
-                        val old = current.firstOrNull { it.id == id }
+                        val old = seenCodes.firstOrNull { it.id == id }
                         val next = Barcode(id, p.id, w.code, w.kind, w.packQty, w.packPrice)
-                        if (old != null && old != next) ProductDao.updateBarcode(tx, next, now)
+                        if (old != null && old != next) ProductDao.updateBarcode(tx, old, next, now)
                     }
                 }
                 p.id

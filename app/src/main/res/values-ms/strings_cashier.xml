@@ -21,4 +21,6 @@
     <string name="pay_change">Baki %1$s</string>
     <string name="result_received">Diterima %1$s · jumlah %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
+    <string name="pay_cancel_split">%1$s telah dibayar untuk bil ini. Batalkan bayaran dan kosongkannya?</string>
+    <string name="pay_cancel_yes">Batal bayaran</string>
 </resources>

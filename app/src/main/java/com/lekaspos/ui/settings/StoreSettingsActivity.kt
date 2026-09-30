@@ -76,16 +76,26 @@ class StoreSettingsActivity : ScreenActivity() {
         language = f.choice(getString(R.string.receipt_language), listOf(getString(R.string.lang_en), getString(R.string.lang_ms)), if (s.receiptLanguage == "ms") 1 else 0)
         copies = f.choice(getString(R.string.receipt_copies), listOf("1", "2", "3"), s.receiptCopies - 1)
         logo = f.switch(getString(R.string.receipt_logo), s.printLogo)
+        // The logo is on every receipt: changing it needs the same permission as Save.
         f.button(getString(R.string.receipt_logo_pick)) {
-            @Suppress("DEPRECATION")
-            startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), REQ_LOGO)
+            requireAccess(Perm.SETTINGS) {
+                @Suppress("DEPRECATION")
+                startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), REQ_LOGO)
+            }
         }
         removeLogo = f.button(getString(R.string.receipt_logo_remove)) {
-            Images.deleteLogo(this)
-            removeLogo.visible(false)
-            logo.isChecked = false
+            requireAccess(Perm.SETTINGS) {
+                launchUi {
+                    withContext(Dispatchers.IO) { Images.deleteLogo(applicationContext) }
+                    graph.printer.reconnect() // drops the cached printer logo
+                    graph.settings.recordChange("receipt logo removed")
+                    removeLogo.visible(false)
+                    logo.isChecked = false
+                }
+            }
         }
-        removeLogo.visible(Images.hasLogo(this))
+        removeLogo.visible(false)
+        launchUi { removeLogo.visible(withContext(Dispatchers.IO) { Images.hasLogo(applicationContext) }) }
         qr = f.switch(getString(R.string.einvoice_qr), s.einvoiceQr)
         qrUrl = f.text(getString(R.string.einvoice_url), s.einvoiceUrl, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
         f.info(getString(R.string.einvoice_help))
@@ -161,6 +171,7 @@ class StoreSettingsActivity : ScreenActivity() {
         launchUi {
             withContext(Dispatchers.IO) { Images.saveLogo(applicationContext, uri) }
             graph.printer.reconnect() // drops the cached printer logo
+            graph.settings.recordChange("receipt logo")
             if (::logo.isInitialized) {
                 logo.isChecked = true
                 removeLogo.visible(true)

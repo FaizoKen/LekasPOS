@@ -3,6 +3,7 @@ package com.lekaspos.app
 import android.app.Application
 import android.os.Build
 import android.os.SystemClock
+import com.lekaspos.BuildConfig
 import com.lekaspos.R
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Schema
@@ -28,6 +29,8 @@ import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
 import com.lekaspos.sync.AutoSync
 import com.lekaspos.sync.SyncEngine
+import com.lekaspos.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -44,7 +47,15 @@ import kotlinx.coroutines.launch
 class AppGraph(private val app: Application, private val dbName: String = Schema.FILE_NAME) {
 
     /** Lives as long as the process; for work that must outlive a screen (e.g. saving a sale). */
-    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val appScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default +
+            // Background work that fails (a full disk while parking a bill, say) is logged; it never
+            // takes the till down with it. Debug builds still crash, so tests see every failure.
+            CoroutineExceptionHandler { _, e ->
+                Log.e("Background work failed", e)
+                if (BuildConfig.DEBUG) throw e
+            },
+    )
 
     private val dbOpening: Deferred<Db> = appScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
         Db.open(app, dbName, seedNames()).also { db ->
@@ -94,6 +105,11 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
         val last = lastSyncSoon.get()
         if (now - last < SYNC_SOON_GAP_MS || !lastSyncSoon.compareAndSet(last, now)) return
         appScope.launch(Dispatchers.IO) { if (db().syncEnabled) Work.syncSoon(app) }
+    }
+
+    /** Everything was sent: the next change schedules the fallback job again at once. */
+    fun syncSoonDone() {
+        lastSyncSoon.set(-SYNC_SOON_GAP_MS)
     }
 
     private fun defaultLanguage(): String {

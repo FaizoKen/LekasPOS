@@ -28,12 +28,17 @@ class InventoryService(private val graph: AppGraph) {
         if (!graph.permissions.allowed(Perm.MANAGE_STOCK)) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
     }
 
-    /** Records a delivery (purchase, stock in, cost update) and clears the saved draft. */
+    /**
+     * Records a delivery (purchase, stock in, cost update) and clears the saved draft. The draft
+     * must still be stored: once it has been received (or discarded) it is gone, so a second
+     * confirmation of the same delivery (a double tap) is refused instead of adding it twice.
+     */
     suspend fun receive(d: ReceiveDraft): Long {
         allowed()
         require(!d.isEmpty) { "nothing received" }
         val staff = graph.staff.staffId
         return graph.db().write(reserveIds = d.lines.size * 2L + 16L) { tx ->
+            if (Meta.get(tx.db, DRAFT_KEY).isNullOrEmpty()) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             val id = PurchaseDao.commit(
                 tx,
                 PurchaseIn(d.supplierId, d.refNo, d.note, d.lines.map { PurchaseLineIn(it.productId, it.qty, it.unitCost, it.total) }),

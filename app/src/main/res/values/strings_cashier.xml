@@ -22,4 +22,6 @@
     <string name="pay_change">Change %1$s</string>
     <string name="result_received">Received %1$s · total %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
+    <string name="pay_cancel_split">%1$s has already been paid on this bill. Cancel the payment and clear it?</string>
+    <string name="pay_cancel_yes">Cancel payment</string>
 </resources>

@@ -14,8 +14,10 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
+import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.PinPad
+import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.util.Log
 import java.util.Locale
@@ -130,7 +132,7 @@ object ApprovalDialog {
                 .setView(col)
                 .setNegativeButton(R.string.cancel, null)
                 .create()
-            d.setOnKeyListener { _, _, e -> pinPad.onKey(e) }
+            d.keys { e -> pinPad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
             d.setOnDismissListener { if (!approved) onCancel?.invoke() }
             dialog = d
             d.show()
@@ -153,7 +155,7 @@ fun askPin(a: Activity, title: CharSequence, message: CharSequence?, onPin: (Str
     }
     col.addView(pad.view)
     d = AlertDialog.Builder(a).setTitle(title).setView(col).setNegativeButton(R.string.cancel, null).create()
-    d.setOnKeyListener { _, _, e -> pad.onKey(e) }
+    d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)
 }
@@ -183,7 +185,7 @@ fun askNewPin(a: Activity, title: CharSequence, onPin: (String) -> Unit): AlertD
     }
     col.addView(pad.view)
     d = AlertDialog.Builder(a).setTitle(title).setView(col).setNegativeButton(R.string.cancel, null).create()
-    d.setOnKeyListener { _, _, e -> pad.onKey(e) }
+    d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)
 }

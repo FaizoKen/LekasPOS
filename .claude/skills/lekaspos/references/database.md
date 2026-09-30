@@ -163,6 +163,12 @@ are plain columns without FK constraints because sync can deliver them in any or
   imported) and can be rebuilt with one `INSERT … SELECT … GROUP BY` per table.
 - Any derived value must be recomputable from EVENT + LWW rows alone, independent of the
   order in which events arrived.
+- Report rules on summaries (D-054): a void leaves zero rows behind (a rebuild has none), so
+  every list drops groups that add up to nothing; "sold" means more sold than returned in the
+  range (`HAVING SUM(qty) > 0`); category totals follow the product's *current* category (the
+  `category_id` kept in a summary row is the first sale's and is used only without a product row).
+- LWW edits write only the fields the user changed, compared with the row as stored when the
+  edit is saved (not the row the screen loaded): a field another till changed meanwhile stays.
 
 ## 8. Query rules
 
@@ -175,6 +181,10 @@ are plain columns without FK constraints because sync can deliver them in any or
 - Partial indexes are only used when the query repeats the index predicate literally
   (`AND deleted = 0`).
 - Reports read `sum_*` tables; drill-downs read detail tables by indexed ranges.
+- "After this HLC, ties broken by device" is written with a range term first:
+  `hlc >= ? AND (hlc > ? OR (id >> 41) > ?)` (`StockDao`, D-054); `QueryPlans` checks the range.
+- Product search hides switched-off products at the till; the manage and pick screens pass
+  `includeInactive = true` (their own FTS/prefix variants, registered for plan checks).
 - Joins whose order matters (FTS first, barcode index first) use `CROSS JOIN`, which SQLite
   never reorders.
 - Register every new hot query in its DAO's `HOT_QUERIES`; `QueryPlans` (perf suite and

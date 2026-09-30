@@ -1,6 +1,7 @@
 package com.lekaspos.core.escpos
 
 import com.lekaspos.core.receipt.PrintLine
+import com.lekaspos.core.text.TextWidth
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.text.Normalizer
@@ -128,26 +129,26 @@ object EscPosText {
         null
     }
 
+    // One character each: the layout gives every character one column, so "..." for "…" would push
+    // the amount off the line. € and £ have no one-character stand-in: Auto prints them as a picture.
     private val replacements = mapOf(
-        '×' to "x", '–' to "-", '—' to "-", '‘' to "'", '’' to "'", '“' to "\"", '”' to "\"",
-        '•' to "*", '…' to "...", '€' to "EUR", '£' to "GBP", '¥' to "Y", ' ' to " ", '·' to ".",
+        '×' to 'x', '–' to '-', '—' to '-', '‘' to '\'', '’' to '\'', '“' to '"', '”' to '"',
+        '•' to '*', '…' to '.', '¥' to 'Y', '\u00A0' to ' ', '·' to '.',
     )
 
+    /** Printer bytes of [s]: one byte per column, two for a Chinese character in GB18030 mode. */
     fun encode(s: String, mode: TextMode): ByteArray {
         val out = ByteArrayOutputStream(s.length + 8)
         var i = 0
         while (i < s.length) {
             val cp = s.codePointAt(i)
-            val n = Character.charCount(cp)
+            val wide = if (mode == TextMode.GB18030) doubleByte(cp) else null
             when {
                 cp in 0x20..0x7E -> out.write(cp)
-                mode == TextMode.GB18030 && cp >= 0x2E80 && gb18030 != null -> {
-                    val b = s.substring(i, i + n).toByteArray(gb18030)
-                    out.write(b, 0, b.size)
-                }
+                wide != null -> out.write(wide, 0, wide.size)
                 else -> latin(cp, out)
             }
-            i += n
+            i += Character.charCount(cp)
         }
         return out.toByteArray()
     }
@@ -159,7 +160,8 @@ object EscPosText {
             val cp = s.codePointAt(i)
             i += Character.charCount(cp)
             if (cp in 0x20..0x7E || cp < 0x20) continue
-            if (mode == TextMode.GB18030 && cp >= 0x2E80 && gb18030 != null) continue
+            if (TextWidth.of(cp) == 0) continue // combining accents, zero-width marks: dropped
+            if (mode == TextMode.GB18030 && doubleByte(cp) != null) continue
             if (cp <= 0xFFFF && replacements.containsKey(cp.toChar())) continue
             val decomposed = Normalizer.normalize(String(Character.toChars(cp)), Normalizer.Form.NFD)
             if (decomposed.none { it.code in 0x20..0x7E }) return false
@@ -167,11 +169,25 @@ object EscPosText {
         return true
     }
 
+    /**
+     * GB18030 bytes of [cp] when a Chinese printer prints it as one two-column character: only the
+     * two-byte (GBK) area. Four-byte codes (emoji, rare CJK, Korean) are garbage on GBK-only
+     * printers and would break the column count, so they are left to the picture.
+     */
+    private fun doubleByte(cp: Int): ByteArray? {
+        val cs = gb18030 ?: return null
+        if (cp < 0x2E80 || cp > 0xFFFF || TextWidth.of(cp) != 2) return null
+        val b = cp.toChar().toString().toByteArray(cs)
+        return if (b.size == 2) b else null
+    }
+
     private fun latin(cp: Int, out: ByteArrayOutputStream) {
         if (cp < 0x20) return // control characters never reach the printer
+        val width = TextWidth.of(cp)
+        if (width == 0) return // a combining accent or zero-width mark: the base letter is enough
         if (cp <= 0xFFFF) {
             replacements[cp.toChar()]?.let { r ->
-                for (c in r) out.write(c.code)
+                out.write(r.code)
                 return
             }
         }
@@ -184,7 +200,8 @@ object EscPosText {
                 wrote = true
             }
         }
-        if (!wrote) out.write('?'.code)
+        // One '?' per column, so the amounts after it stay in their place.
+        if (!wrote) repeat(width) { out.write('?'.code) }
     }
 }
 

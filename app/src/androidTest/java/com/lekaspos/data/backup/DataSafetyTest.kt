@@ -132,7 +132,7 @@ class DataSafetyTest {
     @Test
     fun aSavedBackupFileCountsAsACopyOffThePhone() = runBlocking {
         sell()
-        service.export(ByteArrayOutputStream())
+        service.export { ByteArrayOutputStream() }
         assertEquals(State.PROTECTED, service.refreshProtection().state)
     }
 

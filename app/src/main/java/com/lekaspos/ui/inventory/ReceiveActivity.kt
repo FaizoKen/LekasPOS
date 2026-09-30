@@ -38,6 +38,9 @@ class ReceiveActivity : ScreenActivity() {
 
     private var draft = ReceiveDraft()
     private var loaded = false
+
+    /** The delivery is being recorded: Save does nothing until it has finished or failed. */
+    private var saving = false
     private var nextKey = 1L
     private var suppliers: List<Supplier> = emptyList()
     private var beeper: Beeper? = null
@@ -118,7 +121,7 @@ class ReceiveActivity : ScreenActivity() {
         adapter.submit(draft.lines)
         empty.visible(draft.isEmpty)
         total.text = getString(R.string.inv_receive_total, MoneyFormat.format(draft.total, currency), draft.lines.size)
-        save.isEnabled = !draft.isEmpty
+        save.isEnabled = !draft.isEmpty && !saving
     }
 
     /** Applies an edit, shows it and saves the draft (in order, on the database writer). */
@@ -195,21 +198,27 @@ class ReceiveActivity : ScreenActivity() {
     }
 
     private fun confirmSave() {
-        if (draft.isEmpty) return
+        if (draft.isEmpty || saving) return
         val d = draft
         Dialogs.confirm(
             this, getString(R.string.inv_receive_save),
             getString(R.string.inv_receive_confirm, d.lines.size, MoneyFormat.format(d.total, currency)), getString(R.string.save),
         ) {
+            // A double tap can stack two confirm dialogs: only the first confirmation saves.
+            if (saving) return@confirm
+            saving = true
             save.isEnabled = false
             launchUi {
+                var received = false
                 try {
                     // In the app scope: leaving the screen cannot cut a delivery in half.
                     graph.appScope.async(Dispatchers.Main) { graph.inventory.receive(d) }.await()
+                    received = true // stays "saving" while the screen closes
                     toast(R.string.inv_received)
                     finish()
                 } finally {
-                    save.isEnabled = !draft.isEmpty
+                    if (!received) saving = false
+                    save.isEnabled = !saving && !draft.isEmpty
                 }
             }
         }

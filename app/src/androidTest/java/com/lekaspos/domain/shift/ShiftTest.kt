@@ -154,9 +154,15 @@ class ShiftTest {
         refused(ActionRefused.Reason.NEEDS_SHIFT) { graph.shifts.moveCash(CashMoveKind.CASH_IN, 100L, null) }
         graph.shifts.open(0L)
         refused(ActionRefused.Reason.SHIFT_OPEN) { graph.shifts.open(0L) }
-        graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CARD, PaymentKind.CARD, "Card", false, 1_000L, 1_000L, 0L)), 0L)
+        val done = graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CARD, PaymentKind.CARD, "Card", false, 1_000L, 1_000L, 0L)), 0L)
         assertTrue(graph.cart.state.value.cart.isEmpty)
         assertEquals(1L, db.read { AuditDao.countByAction(it, AuditAction.SHIFT_OPEN) })
+
+        // A void hands money back too: it waits for the next shift like a sale or a refund.
+        graph.shifts.close(0L, null)
+        refused(ActionRefused.Reason.NEEDS_SHIFT) { graph.sales.void(done.saleId, "wrong item") }
+        graph.shifts.open(0L)
+        graph.sales.void(done.saleId, "wrong item")
     }
 
     @Test

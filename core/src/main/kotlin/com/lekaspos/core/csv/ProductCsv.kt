@@ -27,6 +27,13 @@ object ProductCsv {
         STOCK("stock", "stok", "quantity", "qty", "kuantiti", "on hand"),
         LOW_STOCK("low stock", "stok rendah", "reorder level", "alert"),
         ACTIVE("active", "aktif", "for sale", "dijual"),
+
+        /**
+         * The product's own number in this store, last: an exported file edited and imported
+         * again updates the same products, also those with no barcode or SKU. Written as `#…` so
+         * a spreadsheet keeps it as text (a 19-digit number would come back rounded).
+         */
+        ID("id", "product id", "id produk"),
     }
 
     /** Export order (also the template). */
@@ -65,6 +72,8 @@ object ProductCsv {
         val stock: Long? = null,
         val lowStock: Long? = null,
         val active: Boolean? = null,
+        /** [Column.ID]: the product this row was exported from (matched first on import). */
+        val id: Long? = null,
     )
 
     sealed class Parsed {
@@ -95,7 +104,7 @@ object ProductCsv {
 
     fun parse(fields: List<String>, h: Header, currency: CurrencySpec): Parsed {
         val problems = ArrayList<Pair<Problem, Column?>>()
-        fun cell(c: Column): String? = h.index[c]?.let { fields.getOrNull(it) }?.trim()?.takeIf { it.isNotEmpty() }
+        fun cell(c: Column): String? = h.index[c]?.let { fields.getOrNull(it) }?.trim()?.let(CsvWriter::undefuse)?.takeIf { it.isNotEmpty() }
 
         val name = cell(Column.NAME)
         if (name == null) problems.add(Problem.NAME_MISSING to Column.NAME)
@@ -109,7 +118,8 @@ object ProductCsv {
         val cost = cell(Column.COST)?.let { t -> money(t, currency).also { if (it == null || it < 0L) problems.add(Problem.COST_BAD to Column.COST) } }
 
         val barcodes = cell(Column.BARCODES)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
-        if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } }) {
+        // "9.55600E+12": the spreadsheet turned the barcode into a number and lost its digits.
+        if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } || SCIENTIFIC.matches(it) }) {
             problems.add(Problem.BARCODE_BAD to Column.BARCODES)
         }
 
@@ -129,6 +139,7 @@ object ProductCsv {
                 name = name, price = price, barcodes = barcodes.distinct(), sku = cell(Column.SKU),
                 category = cell(Column.CATEGORY), unit = cell(Column.UNIT), cost = cost, tax = tax,
                 sellMode = sellMode, trackStock = track, stock = stock, lowStock = low, active = active,
+                id = cell(Column.ID)?.removePrefix("#")?.trim()?.toLongOrNull()?.takeIf { it > 0L },
             ),
         )
     }
@@ -152,6 +163,7 @@ object ProductCsv {
         r.stock?.let { MoneyFormat.formatQty(it) } ?: "",
         r.lowStock?.let { MoneyFormat.formatQty(it) } ?: "",
         if (r.active != false) "yes" else "no",
+        r.id?.let { "#$it" } ?: "",
     )
 
     fun money(text: String, currency: CurrencySpec): Long? =
@@ -181,5 +193,6 @@ object ProductCsv {
     const val MAX_NAME = 120
     const val MAX_BARCODE = 48
     private val BARCODE_SPLIT = Regex("[|;,/]+")
+    private val SCIENTIFIC = Regex("[0-9]+(?:[.,][0-9]+)?[eE][+-]?[0-9]+")
     private val PERCENT = Regex("(\\d+(?:\\.\\d{1,2})?)\\s*%?\\s*$")
 }

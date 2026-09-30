@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import com.lekaspos.R
+import com.lekaspos.app.LekasApp
 
 /**
  * On-screen number pad for money, quantities and weights (references/money.md §8: digits fill
@@ -28,6 +29,7 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
     fun clear() = set("")
 
     private fun press(key: String) {
+        LekasApp.graph(context).staff.touch() // dialogs are windows of their own: the screen does not see these taps
         val next = when (key) {
             DEL -> digits.dropLast(1)
             else -> if ((digits + key).length > maxDigits) digits else (digits + key).trimStart('0')
@@ -38,16 +40,44 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
         }
     }
 
-    /** Hardware keys: digits, Backspace, and Escape/Delete to clear. Returns true if consumed. */
+    private var lastKeyAt = 0L
+    private var burstUntil = 0L
+
+    /** The digits before the last key typed at a person's speed (restored when a scanner's burst starts). */
+    private var beforeKey = ""
+
+    /**
+     * Hardware keys: digits, Backspace, and Delete to clear. Returns true if consumed.
+     *
+     * Two protections against a barcode scanned while the dialog is open (found in the 2026-10
+     * review: the scanner's Enter pressed the focused "Exact" button and completed the sale):
+     * Enter, Tab and Space are always swallowed, so they never press whatever has keyboard focus;
+     * and digits arriving at scanner speed are dropped and undone, so a barcode never becomes the
+     * amount.
+     */
     fun onKey(event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN) return false
         val code = event.keyCode
+        if (DialogKeys.pressesFocused(code)) return true
+        val digit = when (code) {
+            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> ('0' + (code - KeyEvent.KEYCODE_0)).toString()
+            in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> ('0' + (code - KeyEvent.KEYCODE_NUMPAD_0)).toString()
+            else -> null
+        }
+        if (digit == null && code != KeyEvent.KEYCODE_DEL && code != KeyEvent.KEYCODE_FORWARD_DEL) return false
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        val t = event.eventTime
+        val gap = t - lastKeyAt
+        lastKeyAt = t
+        if (gap < DialogKeys.BURST_GAP_MS || t < burstUntil) {
+            if (t >= burstUntil) set(beforeKey) // a burst begins: undo the key that started it
+            burstUntil = t + DialogKeys.BURST_IDLE_MS
+            return true
+        }
+        beforeKey = digits
         when {
-            code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> press(('0' + (code - KeyEvent.KEYCODE_0)).toString())
-            code in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> press(('0' + (code - KeyEvent.KEYCODE_NUMPAD_0)).toString())
+            digit != null -> press(digit)
             code == KeyEvent.KEYCODE_DEL -> press(DEL)
-            code == KeyEvent.KEYCODE_FORWARD_DEL -> clear()
-            else -> return false
+            else -> clear()
         }
         return true
     }

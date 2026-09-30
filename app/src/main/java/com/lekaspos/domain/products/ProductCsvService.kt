@@ -73,6 +73,11 @@ class ProductCsvService(private val graph: AppGraph) {
 
     private val _state = MutableStateFlow<State>(State.Idle)
 
+    /** The file the running or last import was started for: its result is shown only for that file. */
+    @Volatile
+    var source: String? = null
+        private set
+
     /** The import running in the app scope (survives rotation and leaving the screen). */
     val state: StateFlow<State> = _state
 
@@ -92,7 +97,7 @@ class ProductCsvService(private val graph: AppGraph) {
                 val row = ProductCsv.Row(
                     name = p.name, price = p.price, barcodes = p.barcodes, sku = p.sku, category = p.category, unit = p.unit,
                     cost = p.cost, tax = p.tax ?: "", sellMode = p.sellMode, trackStock = p.trackStock,
-                    stock = if (p.trackStock) (p.stock ?: 0L) else null, lowStock = p.lowStock, active = p.active,
+                    stock = if (p.trackStock) (p.stock ?: 0L) else null, lowStock = p.lowStock, active = p.active, id = p.id,
                 )
                 w.row(ProductCsv.format(row, currency))
                 n++
@@ -182,17 +187,24 @@ class ProductCsvService(private val graph: AppGraph) {
         Preview(rows, created, updates, bad, issues, h.missing, h.unknown, newCategories.toList(), sample, h.has(Column.STOCK))
     }
 
+    /** May the current user change stock through an import (the file's stock column)? */
+    fun mayImportStock(): Boolean = graph.permissions.allowed(Perm.MANAGE_STOCK)
+
     /**
      * Starts the import in the app scope; progress and the result arrive in [state]. With
-     * [setStock], the stock column also sets existing products' stock (as a count).
+     * [setStock], the stock column also sets existing products' stock (as a count). The stock
+     * column is used only for someone who may manage stock: "Manage products" alone never
+     * changes stock levels.
      */
-    fun startImport(open: () -> Reader, setStock: Boolean) {
+    fun startImport(open: () -> Reader, setStock: Boolean, source: String? = null) {
         if (_state.value is State.Running) return
         val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS)
+        val stockAllowed = mayImportStock()
+        this.source = source
         _state.value = State.Running(0)
         graph.appScope.launch(Dispatchers.IO) {
             _state.value = try {
-                State.Done(import(open, setStock, actor.staffId, actor.approvedBy))
+                State.Done(import(open, setStock, actor.staffId, actor.approvedBy, stockAllowed))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -206,8 +218,8 @@ class ProductCsvService(private val graph: AppGraph) {
         if (_state.value !is State.Running) _state.value = State.Idle
     }
 
-    /** The import itself (also used directly by tests). */
-    suspend fun import(open: () -> Reader, setStock: Boolean, staffId: Long?, approvedBy: Long?): Result {
+    /** The import itself (also used directly by tests). Without [stockAllowed] the stock column is ignored. */
+    suspend fun import(open: () -> Reader, setStock: Boolean, staffId: Long?, approvedBy: Long?, stockAllowed: Boolean = true): Result {
         val currency = graph.settings.store.value.currency
         val db = graph.db()
         val ctx = db.read { r -> Context(TaxRateDao.list(r), categoryKeys(r)) }
@@ -240,11 +252,11 @@ class ProductCsvService(private val graph: AppGraph) {
                         when (val plan = plan(tx.db, fields, line, h, currency, ctx)) {
                             is Plan.Bad -> skipped++
                             is Plan.New -> {
-                                create(tx, plan, ctx, staffId, now)
+                                if (create(tx, plan, ctx, staffId, now, stockAllowed)) stockSet++
                                 created++
                             }
                             is Plan.Update -> {
-                                if (update(tx, plan, ctx, setStock, staffId, now)) stockSet++
+                                if (update(tx, plan, ctx, setStock && stockAllowed, staffId, now)) stockSet++
                                 updated++
                             }
                         }
@@ -258,7 +270,8 @@ class ProductCsvService(private val graph: AppGraph) {
         db.write(reserveIds = 1L) { tx ->
             AuditDao.log(
                 tx, AuditAction.PRODUCT_IMPORT, staffId, System.currentTimeMillis(),
-                detail = "created ${result.created}, updated ${result.updated}, skipped ${result.skipped}", approvedBy = approvedBy,
+                detail = "created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, stock set ${result.stockSet}",
+                approvedBy = approvedBy,
             )
         }
         return result
@@ -296,13 +309,18 @@ class ProductCsvService(private val graph: AppGraph) {
         val owners = row.barcodes.mapNotNull { ProductDao.ownerOf(db, it) }.toSet()
         if (owners.size > 1) issues.add(Issue(line, Problem.BARCODES_SPLIT, Column.BARCODES))
         val bySku = row.sku?.let { ProductDao.bySku(db, it) }
-        val target = owners.singleOrNull() ?: bySku
-        if (owners.size == 1 && bySku != null && bySku != owners.first()) issues.add(Issue(line, Problem.BARCODE_TAKEN, Column.BARCODES))
+        // The file's own product number first (a file exported from this store); another store's
+        // numbers match nothing here, and the row is matched by barcode or SKU as before.
+        val byId = row.id?.takeIf { ProductDao.isLive(db, it) }
+        val target = byId ?: owners.singleOrNull() ?: bySku
+        val taken = if (byId != null) owners.any { it != byId } else owners.size == 1 && bySku != null && bySku != owners.first()
+        if (taken) issues.add(Issue(line, Problem.BARCODE_TAKEN, Column.BARCODES))
         if (issues.isNotEmpty()) return Plan.Bad(issues.distinct())
         return if (target == null) Plan.New(row, taxId) else Plan.Update(target, row, taxId)
     }
 
-    private fun create(tx: Db.Tx, plan: Plan.New, ctx: Context, staffId: Long?, now: Long) {
+    /** Returns true when it posted opening stock. */
+    private fun create(tx: Db.Tx, plan: Plan.New, ctx: Context, staffId: Long?, now: Long, stockAllowed: Boolean): Boolean {
         val r = plan.row
         val id = tx.nextId()
         val p = Product(
@@ -312,9 +330,11 @@ class ProductCsvService(private val graph: AppGraph) {
         )
         ProductDao.create(tx, p, r.barcodes.map { Barcode(tx.nextId(), id, it) }, now)
         val stock = r.stock
-        if (stock != null && stock != 0L && p.trackStock) {
+        if (stockAllowed && stock != null && stock != 0L && p.trackStock) {
             StockDao.insertMovement(tx, id, MovementKind.OPENING, stock, p.cost, null, REASON, staffId, now)
+            return true
         }
+        return false
     }
 
     /** Changes only what the file says; returns true when it set the stock. */

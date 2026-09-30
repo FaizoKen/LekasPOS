@@ -119,6 +119,12 @@ object AuditAction {
     /** Products imported from a CSV file (detail: how many created and updated). */
     const val PRODUCT_IMPORT = 24
     const val PROMOTION_CHANGE = 25
+
+    /** A customer's credit limit was set or changed (amount: the new limit, 0 = no limit). */
+    const val CREDIT_LIMIT_CHANGE = 26
+
+    /** Store settings, the receipt logo or a tax rate changed (detail: what). */
+    const val SETTINGS_CHANGE = 27
 }
 
 /** Permission bits stored in `role.perms`. The owner role always has every permission. */

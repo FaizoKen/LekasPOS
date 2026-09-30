@@ -4,11 +4,14 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -24,6 +27,7 @@ import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
@@ -35,6 +39,7 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.scan.ScanBuffer
 import com.lekaspos.core.time.DateText
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
@@ -206,6 +211,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
         cartList.layoutManager = LinearLayoutManager(this)
         cartList.adapter = cartAdapter
+        // No cross-fade when a line changes: the fading copy of a row kept taking taps on its old − and +.
+        (cartList.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         categoryList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         categoryList.adapter = categoryAdapter
         val grid = GridLayoutManager(this, spanCount())
@@ -223,13 +230,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
             override fun afterTextChanged(s: Editable?) = onSearchChanged(s?.toString() ?: "")
         })
         search.setOnEditorActionListener { _, actionId, event ->
-            val enter = event != null && event.action == KeyEvent.ACTION_DOWN &&
-                (event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)
-            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE || enter) {
-                submitSearch()
-                true
-            } else {
-                false
+            val key = event?.keyCode
+            when {
+                // Both halves of Enter: a key-up left to the field would move the focus away.
+                key == KeyEvent.KEYCODE_ENTER || key == KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) submitSearch()
+                    true
+                }
+                actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE -> {
+                    submitSearch()
+                    true
+                }
+                else -> false
             }
         }
         searchClear.setOnClickListener { clearSearch() }
@@ -574,7 +586,34 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         graph.staff.touch()
-        return backKey(event) || (!search.hasFocus() && scanKey(event)) || super.dispatchKeyEvent(event)
+        val scanned = if (search.hasFocus()) scanIntoSearch(event) else scanKey(event)
+        return backKey(event) || scanned || super.dispatchKeyEvent(event)
+    }
+
+    /** What a scanner "typed" into the focused search field since the last pause (see [scanIntoSearch]). */
+    private val fieldBurst = ScanBuffer()
+
+    /**
+     * A scanner fired while the search field had focus: its digits were typed into the field
+     * ("milo9556001234567") and the item was lost. The field still gets every key; when a burst at
+     * scanner speed ends with Enter, it is taken out of the field again and handled as the scan.
+     */
+    private fun scanIntoSearch(e: KeyEvent): Boolean {
+        if (e.action != KeyEvent.ACTION_DOWN) return false
+        when (e.keyCode) {
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB -> {
+                val r = fieldBurst.onTerminator() as? ScanBuffer.Result.Scan ?: return false
+                clearSearch()
+                onScanned(r.code)
+                return true
+            }
+        }
+        val ch = e.getUnicodeChar(e.metaState)
+        if (ch > 0x1F && ch and KeyCharacterMap.COMBINING_ACCENT == 0) {
+            if (fieldBurst.isIdle(e.eventTime)) fieldBurst.clear() // a person's earlier typing is not part of a scan
+            fieldBurst.onChar(ch.toChar(), e.eventTime)
+        }
+        return false
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -595,6 +634,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     /** Every scan ends here: HID buffer, search field, SPP scanner. */
     fun onScanned(code: String) {
+        graph.staff.touch() // scanning is using the till (serial and camera scanners never touch the screen)
         priceCheck?.takeIf { it.isShowing }?.let {
             it.lookup(code) // price check open: look up, never add to the bill
             return
@@ -622,13 +662,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun askWeight(p: SellableProduct, code: String?) {
         AmountDialog(this, getString(R.string.weigh_title, p.name), AmountDialog.Kind.WEIGHT, currency, p.unit) { milli ->
-            graph.cart.addProduct(p, qty = milli, barcode = code)
+            if (graph.cart.addProduct(p, qty = milli, barcode = code) == 0L) beeper?.error()
         }.show()
     }
 
     private fun askPrice(p: SellableProduct, code: String?) {
         AmountDialog(this, getString(R.string.price_for_title, p.name), AmountDialog.Kind.MONEY, currency) { price ->
-            graph.cart.addAtPrice(p, price, code)
+            if (graph.cart.addAtPrice(p, price, code) == 0L) beeper?.error()
         }.show()
     }
 
@@ -663,7 +703,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
             if (id != 0L) graph.cart.setCustomer(id, data.getStringExtra(CustomersActivity.EXTRA_NAME))
         }
         if (requestCode == REQ_PRICE_SCAN && resultCode == RESULT_OK) {
-            data?.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { priceCheck?.lookup(it) }
+            data?.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { code ->
+                // The screen may have been rebuilt meanwhile (rotated while aiming): open the price check again.
+                if (priceCheck?.isShowing != true) showPriceCheck()
+                priceCheck?.lookup(code)
+            }
         }
     }
 
@@ -804,7 +848,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             when (p.sellMode) {
                 SellMode.WEIGHT -> askWeight(p, null)
                 SellMode.OPEN_PRICE -> askPrice(p, null)
-                else -> if (graph.cart.addProduct(p) != 0L) beeper?.ok()
+                else -> if (graph.cart.addProduct(p) != 0L) beeper?.ok() else beeper?.error()
             }
             hideKeyboard()
             search.clearFocus()
@@ -819,7 +863,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         render(graph.cart.state.value)
     }
 
-    override fun changeQty(item: CartItem, qty: Long) = graph.cart.setQty(item.key, qty)
+    override fun changeQty(item: CartItem, delta: Long) = graph.cart.changeQty(item.key, delta)
 
     override fun more(item: CartItem) {
         if (!graph.cart.state.value.canEdit) return
@@ -829,11 +873,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun enterQty(item: CartItem) {
         if (item.sellMode == SellMode.WEIGHT) {
             AmountDialog(this, getString(R.string.line_weight), AmountDialog.Kind.WEIGHT, currency, item.unit, item.qty) {
-                graph.cart.setQty(item.key, it)
+                if (!graph.cart.setQty(item.key, it)) beeper?.error()
             }.show()
         } else {
             AmountDialog(this, getString(R.string.line_qty), AmountDialog.Kind.PIECES, currency, initial = item.qty) {
-                graph.cart.setQty(item.key, it)
+                if (!graph.cart.setQty(item.key, it)) beeper?.error()
             }.show()
         }
     }
@@ -866,9 +910,19 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
+    /** A double tap opens one dialog, not two stacked ones. */
+    private var dialogTapAt = 0L
+
+    private fun firstTap(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        if (now - dialogTapAt < DOUBLE_TAP_MS) return false
+        dialogTapAt = now
+        return true
+    }
+
     private fun hold() {
         val st = graph.cart.state.value
-        if (!st.canEdit || st.cart.isEmpty) return
+        if (!st.canEdit || st.cart.isEmpty || !firstTap()) return
         Dialogs.input(this, getString(R.string.held_hold_title), getString(R.string.held_label_hint)) { label ->
             graph.appScope.launch(Dispatchers.Main) { graph.cart.hold(label) }
             true
@@ -876,12 +930,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun showHeld() {
+        if (!firstTap()) return
         scope.launch {
             val bills = graph.cart.heldBills()
             showHeldBills(
                 this@SellActivity, bills, currency,
                 onResume = { id -> graph.appScope.launch(Dispatchers.Main) { graph.cart.resume(id) } },
-                onDelete = { id -> graph.appScope.launch(Dispatchers.Main) { graph.cart.deleteHeld(id) } },
+                onDelete = { id ->
+                    // Throwing a parked bill away is cancelling a bill: same permission, same audit entry.
+                    withApproval(graph, scope, Perm.CANCEL_BILL) { approval ->
+                        graph.appScope.launch(Dispatchers.Main) { if (!graph.cart.deleteHeld(id, approval)) notAllowed() }
+                    }
+                },
             )
         }
     }
@@ -980,12 +1040,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.cart.setPaying(true)
             paymentApprovals = ArrayList()
             creditTaken = 0L
+            // Turning the phone would rebuild the screen and lose a split payment half entered.
+            val orientation = requestedOrientation
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
             val d = PaymentDialog(this@SellActivity, now.priced.total, currency, methods, authorize = { m, amount, done -> authorize(m, amount, done) }) { tenders, rounding ->
                 graph.checkout.start(tenders, rounding, paymentApprovals.toList())
             }.show()
             d.setOnDismissListener {
                 graph.cart.setPaying(false)
                 paymentDialog = null
+                requestedOrientation = orientation
             }
             paymentDialog = d
         }
@@ -1106,6 +1170,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         private const val REQ_PRICE_SCAN = 7
         private const val REQ_CUSTOMER = 2
         private const val IDLE_CHECK_MS = 15_000L
+        private const val DOUBLE_TAP_MS = 600L
         private const val PAGE = 60
         private const val SEARCH_DEBOUNCE_MS = 150L
         private const val HARDWARE_DELAY_MS = 1500L

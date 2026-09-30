@@ -27,8 +27,11 @@ object Settlement {
     /** Cash tender of [given] against [remaining] (both > 0 for sales). */
     fun cash(remaining: Long, given: Long, cashStep: Long): Result {
         if (remaining <= 0L) return Result.Rejected(Reason.NOTHING_DUE, 0L)
-        if (given <= 0L) return Result.Rejected(Reason.NOT_POSITIVE, 0L)
         val due = cashDue(remaining, cashStep)
+        // A remainder that rounds to nothing in cash (e-wallet RM50.00 of RM50.02: 2 sen left) is
+        // settled by cash of 0.00: the 2 sen are the rounding, and anything handed over comes back.
+        if (due == 0L) return Result.Settled(applied = 0L, rounding = -remaining, change = given.coerceAtLeast(0L))
+        if (given <= 0L) return Result.Rejected(Reason.NOT_POSITIVE, 0L)
         return when {
             given >= due -> Result.Settled(applied = due, rounding = due - remaining, change = given - due)
             given < remaining -> Result.Partial(applied = given, remaining = remaining - given)

@@ -18,7 +18,9 @@ import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.core.time.DateText
 import com.lekaspos.domain.sell.CartSession
+import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import java.util.TimeZone
 
@@ -58,7 +60,16 @@ class AmountDialog(
     enum class Kind { MONEY, PIECES, WEIGHT, PERCENT }
 
     private val display = activity.display()
-    private val keypad = Keypad(activity, if (kind == Kind.PERCENT) 3 else 9) { render(it) }
+    /** Digits the keypad takes: no bill line is ever 100,000 pieces or 100,000 kg (CartSession.MAX_QTY). */
+    private val keypad = Keypad(
+        activity,
+        when (kind) {
+            Kind.PERCENT -> 3
+            Kind.PIECES -> 5
+            Kind.WEIGHT -> 8
+            Kind.MONEY -> 9
+        },
+    ) { render(it) }
 
     fun value(digits: String): Long? {
         if (digits.isEmpty()) return if (allowZero) 0L else null
@@ -94,7 +105,7 @@ class AmountDialog(
             .setPositiveButton(R.string.ok, null)
             .setNegativeButton(R.string.cancel, null)
             .create()
-        d.setOnKeyListener { _, _, e -> keypad.onKey(e) }
+        d.keys { e -> keypad.onKey(e) }
         d.setOnShowListener {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val v = value(keypad.digits)
@@ -187,7 +198,7 @@ class DiscountDialog(
             .setNeutralButton(R.string.discount_none) { _, _ -> onSet(Discount.None) }
             .setNegativeButton(R.string.cancel, null)
             .create()
-        d.setOnKeyListener { _, _, e -> keypad.onKey(e) }
+        d.keys { e -> keypad.onKey(e) }
         d.setOnShowListener {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val disc = discount()
@@ -270,9 +281,12 @@ fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit): Ale
         .show()
         .trackedBy(a)
 
-/** Forwards scanner/keyboard keys of a dialog without text fields to [handler]. */
+/**
+ * Forwards scanner/keyboard keys of a dialog without text fields to [handler] (the screen's scan
+ * input); an Enter or Tab it does not take never presses a focused button of the dialog.
+ */
 fun AlertDialog.forwardKeys(handler: (KeyEvent) -> Boolean) {
-    setOnKeyListener { _, _, e -> handler(e) }
+    keys { e -> handler(e) || DialogKeys.pressesFocused(e.keyCode) }
 }
 
 internal fun View.visible(show: Boolean) {

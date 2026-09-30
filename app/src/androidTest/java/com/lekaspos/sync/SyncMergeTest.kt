@@ -39,6 +39,7 @@ import java.io.File
 import java.util.TimeZone
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -320,6 +321,132 @@ class SyncMergeTest {
         }
     }
 
+    private fun backupOf(t: AppGraph): ByteArray = runBlocking {
+        val out = ByteArrayOutputStream()
+        BackupFiles.write(t.db(), out, File(TestDb.context.cacheDir, "sync-backup-test"), "test", "manual")
+        out.toByteArray()
+    }
+
+    /** The app is closed and started again on the same database (a staged restore goes in first). */
+    private fun restart(t: AppGraph, name: String): AppGraph {
+        TestGraph.close(t)
+        tills.remove(t)
+        return TestGraph.reopen(name).also { tills.add(it) }
+    }
+
+    /** The sync screen's own advice: "turn sync off and on again to move the store to another account". */
+    @Test
+    fun movingTheStoreToAnotherFolderStartsEveryTillsFileNumbersAgain() {
+        val a = till()
+        val b = till()
+        enable(a, "Counter A")
+        val p = product(a, "Milo", 1_890L)
+        repeat(3) { sell(a, p) }
+        enable(b, "Counter B")
+        syncAll(a, b)
+        sell(b, p)
+        syncAll(a, b)
+        assertConverged(a, b)
+
+        // Both tills leave the folder and join a new, empty one.
+        runBlocking {
+            a.sync.disable()
+            b.sync.disable()
+        }
+        provider = FolderProvider(File(folder, "moved").apply { mkdirs() })
+        sell(a, p) // sold while sync was off
+        enable(a, "Counter A")
+        enable(b, "Counter B")
+        sell(b, p)
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            assertEquals(6L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            assertEquals(6L, b.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            // Every till's files in the new folder start at 1: the others read them in order from there.
+            val store = a.db().read { Meta.get(it, Meta.STORE_UUID).orEmpty() }
+            val firsts = provider.list(SyncNames.segmentPrefix(store)).mapNotNull { SyncNames.parseSegment(it.name) }
+                .groupBy { it.dev }.mapValues { e -> e.value.minOf { it.seq } }
+            assertEquals(setOf(a.db().deviceNo, b.db().deviceNo), firsts.keys)
+            assertTrue(firsts.values.all { it == 1L })
+        }
+    }
+
+    /**
+     * A backup made before Google Drive backup was first turned on is restored as "the same till"
+     * on a new phone, while Drive already holds what that till sold after the backup.
+     */
+    @Test
+    fun anOlderCopyOfATillThatPublishedSinceContinuesAsANewTill() {
+        val a = till()
+        val p = product(a, "Milo", 1_890L)
+        repeat(2) { sell(a, p) }
+        val bytes = backupOf(a)
+        enable(a, "Counter")
+        repeat(2) { sell(a, p) }
+        syncAll(a)
+        val aDev = runBlocking { a.db().deviceNo }
+
+        Restore.cancelStaged(TestDb.context)
+        Restore.stage(TestDb.context, ByteArrayInputStream(bytes), Restore.Mode.REPLACE)
+        val name = "test-${UUID.randomUUID()}.db"
+        var b = TestGraph.create(name).also { tills.add(it) }
+        runBlocking { assertEquals(aDev, b.db().deviceNo) } // nothing in the backup says this till ever synced
+        sell(b, p)
+
+        // Turning the backup on finds the till's newer files in the folder: not as this till.
+        val refused = assertFailsWith<SyncEngine.Problem> { enable(b, "Counter") }
+        assertEquals(SyncEngine.Problem.Reason.OLD_COPY, refused.reason)
+        runBlocking { assertTrue(!b.db().syncEnabled) }
+        b = restart(b, name)
+        runBlocking {
+            assertNotEquals(aDev, b.db().deviceNo)
+            assertTrue(!b.db().syncEnabled)
+        }
+        enable(b, "Counter")
+        syncAll(a, b)
+        sell(b, p)
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking { assertEquals(6L, b.db().read { it.long("SELECT COUNT(*) FROM sale") }) } // nothing lost on either side
+    }
+
+    /** An old backup restored over a till that syncs: what it published after the backup must not be numbered twice. */
+    @Test
+    fun restoringAnOldBackupOverASyncingTillMakesItANewTill() {
+        val name = "test-${UUID.randomUUID()}.db"
+        var a = TestGraph.create(name).also { tills.add(it) }
+        val p = product(a, "Milo", 1_890L)
+        sell(a, p)
+        val bytes = backupOf(a) // before this till ever synced
+        enable(a, "Counter")
+        repeat(2) { sell(a, p) }
+        syncAll(a)
+        val oldDev = runBlocking { a.db().deviceNo }
+
+        Restore.cancelStaged(TestDb.context)
+        Restore.stage(TestDb.context, ByteArrayInputStream(bytes), Restore.Mode.REPLACE)
+        try {
+            a = restart(a, name)
+            runBlocking {
+                assertNotEquals(oldDev, a.db().deviceNo)
+                assertTrue(!a.db().syncEnabled)
+                assertEquals(1L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            }
+            sell(a, p)
+            enable(a, "Counter")
+            syncAll(a)
+            runBlocking {
+                // The two sales after the backup come back from the folder; the new one has its own number.
+                assertEquals(4L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
+                assertEquals(4L, a.db().read { it.long("SELECT COUNT(DISTINCT receipt_no) FROM sale") })
+                assertEquals(4L, a.db().read { it.long("SELECT COUNT(DISTINCT id) FROM sale") })
+            }
+        } finally {
+            Restore.backupDir(TestDb.context).listFiles { f -> f.name.startsWith(Restore.REASON_REPLACED) }?.forEach { it.delete() }
+        }
+    }
+
     @Test
     fun anInterruptedFirstSyncIsCompletedByTheNextOne() {
         val a = till()
@@ -437,9 +564,9 @@ class SyncMergeTest {
         syncAll(a, b)
         val sinces = ArrayList<Long?>()
         val recording = object : SyncProvider by provider {
-            override suspend fun list(prefix: String, since: Long?): List<RemoteFile> {
+            override suspend fun list(prefix: String, since: Long?, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
                 if (prefix.startsWith("seg-")) sinces.add(since)
-                return provider.list(prefix, since)
+                return provider.list(prefix, since, keep)
             }
         }
         runBlocking { a.sync.sync(recording) }

@@ -51,7 +51,10 @@ class ScreenshotsTest {
 
     // The first-run welcome screen would open over the selling screen on a fresh emulator.
     @Before
-    fun skipFirstRunSetup() = runBlocking { LekasApp.graph(ctx).settings.markSetupDone() }
+    fun skipFirstRunSetup() = runBlocking {
+        LekasApp.graph(ctx).settings.markSetupDone()
+        LekasApp.graph(ctx).staff.load() // as the selling screen does at start: nothing is allowed before
+    }
 
     @After
     fun tearDown() = AppLanguage.set(ctx, AppLanguage.PHONE)

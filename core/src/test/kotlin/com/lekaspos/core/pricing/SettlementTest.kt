@@ -57,6 +57,16 @@ class SettlementTest {
     }
 
     @Test
+    fun aRemainderThatRoundsToNothingIsSettledByCash() {
+        val wallet = Settlement.exact(5002, 5000) as Result.Partial
+        assertEquals(Result.Settled(applied = 0, rounding = -2, change = 0), Settlement.cash(wallet.remaining, 0, 5))
+        assertEquals(Result.Settled(applied = 0, rounding = -2, change = 100), Settlement.cash(wallet.remaining, 100, 5))
+        // 3 sen rounds up to 5: cash is still needed.
+        assertEquals(Result.Settled(applied = 5, rounding = 2, change = 0), Settlement.cash(3, 5, 5))
+        assertEquals(Reason.NOT_POSITIVE, (Settlement.cash(3, 0, 5) as Result.Rejected).reason)
+    }
+
+    @Test
     fun cashRefundMirrorsRounding() {
         assertEquals(Result.Settled(applied = -1005, rounding = -2, change = 0), Settlement.cashRefund(1003, 5))
         assertEquals(Result.Settled(applied = -1000, rounding = 2, change = 0), Settlement.cashRefund(1002, 5))

@@ -60,6 +60,7 @@
     <string name="export_share">Share</string>
     <string name="export_save">Save as a file</string>
     <string name="export_saved">Saved (rows: %1$d).</string>
+    <string name="export_failed">The export did not finish (%1$s). Its unfinished file was deleted; please try again.</string>
     <string name="export_lost">The export was interrupted. Please try again.</string>
     <string name="export_summary">Summary (CSV)</string>
     <string name="export_daily">Sales per day (CSV)</string>
@@ -89,6 +90,7 @@
     <string name="import_tag_update">update</string>
     <string name="import_set_stock">Also set the stock of existing products to the file\'s quantity</string>
     <string name="import_stock_help">New products get the stock column as their opening stock. Existing products only change stock if you switch this on (recorded as a stock count).</string>
+    <string name="import_stock_no_permission">The stock column in this file is ignored: changing stock needs the “Receive, adjust and count stock” permission.</string>
     <string name="import_go">Import now · %1$d</string>
     <string name="import_running">Importing… lines done: %1$d</string>
     <string name="import_done">Import finished</string>
@@ -104,7 +106,7 @@
     <string name="problem_quantity">not a quantity (write like 3 or 1.25)</string>
     <string name="problem_sold_by">write piece, weight or open price</string>
     <string name="problem_yes_no">write yes or no</string>
-    <string name="problem_barcode">a barcode has spaces or is too long</string>
+    <string name="problem_barcode">a barcode has spaces, is too long, or was turned into a number like 9.55E+12 by the spreadsheet (format that column as text)</string>
     <string name="problem_tax">no tax rate with this name or percentage</string>
     <string name="problem_barcode_twice">this barcode is also on an earlier line</string>
     <string name="problem_barcode_taken">the barcode belongs to another product than the SKU</string>

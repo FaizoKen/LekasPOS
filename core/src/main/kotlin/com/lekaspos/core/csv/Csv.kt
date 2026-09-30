@@ -7,6 +7,9 @@ import java.io.Reader
  * RFC 4180 CSV writing (D-041): fields with the delimiter, quotes or line breaks are quoted,
  * quotes doubled; rows end with CRLF (what spreadsheet programs expect). Exports start with
  * a UTF-8 byte-order mark ([BOM]) so Excel shows Malay and Chinese text correctly.
+ *
+ * Text that a spreadsheet would run as a formula (a customer named `=HYPERLINK(…)`, say) gets
+ * a leading `'`; numbers, negative ones too, are written as they are ([defuse]).
  */
 class CsvWriter(private val out: Appendable, private val delimiter: Char = ',') {
 
@@ -24,7 +27,8 @@ class CsvWriter(private val out: Appendable, private val delimiter: Char = ',') 
 
     fun row(vararg fields: String?) = row(fields.asList())
 
-    private fun field(s: String) {
+    private fun field(text: String) {
+        val s = defuse(text)
         val quote = s.isNotEmpty() && (
             s[0] == ' ' || s[s.length - 1] == ' ' ||
                 s.any { it == delimiter || it == '"' || it == '\n' || it == '\r' }
@@ -44,6 +48,23 @@ class CsvWriter(private val out: Appendable, private val delimiter: Char = ',') 
     companion object {
         /** U+FEFF, built from its code point (a literal would put an invisible character in the source). */
         val BOM: Char = Char(0xFEFF)
+
+        private val NUMBER = Regex("[+-]?[0-9][0-9.,]*%?")
+
+        /** [s] with a `'` in front when a spreadsheet would read it as a formula. */
+        fun defuse(s: String): String {
+            if (s.isEmpty()) return s
+            val risky = when (s[0]) {
+                '=', '@', '\t', '\r' -> true
+                '+', '-' -> !NUMBER.matches(s)
+                else -> false
+            }
+            return if (risky) "'$s" else s
+        }
+
+        /** The text [defuse] was given back (a file exported here, edited and imported again). */
+        fun undefuse(s: String): String =
+            if (s.length >= 2 && s[0] == '\'' && s[1] in "=@+-\t\r" && defuse(s.substring(1)) == s) s.substring(1) else s
     }
 }
 

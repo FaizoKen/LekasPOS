@@ -127,6 +127,9 @@ class AuditLogActivity : ScreenActivity() {
         AuditAction.CREDIT_ADJUST -> R.string.credit_adjust_title
         AuditAction.CREDIT_OVER_LIMIT -> R.string.audit_over_limit
         AuditAction.OWNER_PIN_RESET -> R.string.audit_pin_reset
+        AuditAction.PRODUCT_IMPORT -> R.string.audit_product_import
+        AuditAction.CREDIT_LIMIT_CHANGE -> R.string.audit_credit_limit
+        AuditAction.SETTINGS_CHANGE -> R.string.audit_settings
         else -> R.string.audit_other
     }
 
@@ -139,11 +142,12 @@ class AuditLogActivity : ScreenActivity() {
             AuditAction.PIN_LOCKOUT, AuditAction.STAFF_CHANGE, AuditAction.ROLE_CHANGE, AuditAction.SHIFT_OPEN,
             AuditAction.SHIFT_CLOSE, AuditAction.CASH_IN, AuditAction.CASH_OUT, AuditAction.CASH_DROP,
             AuditAction.CREDIT_ADJUST, AuditAction.CREDIT_OVER_LIMIT, AuditAction.OWNER_PIN_RESET,
+            AuditAction.CREDIT_LIMIT_CHANGE, AuditAction.PRODUCT_IMPORT, AuditAction.SETTINGS_CHANGE,
         )
         private val MONEY_ACTIONS = setOf(
             AuditAction.SALE_VOID, AuditAction.REFUND, AuditAction.PRICE_OVERRIDE, AuditAction.PRODUCT_PRICE_CHANGE,
             AuditAction.BILL_CANCEL, AuditAction.SHIFT_OPEN, AuditAction.SHIFT_CLOSE, AuditAction.CASH_IN, AuditAction.CASH_OUT,
-            AuditAction.CASH_DROP, AuditAction.CREDIT_ADJUST, AuditAction.CREDIT_OVER_LIMIT,
+            AuditAction.CASH_DROP, AuditAction.CREDIT_ADJUST, AuditAction.CREDIT_OVER_LIMIT, AuditAction.CREDIT_LIMIT_CHANGE,
         )
     }
 }

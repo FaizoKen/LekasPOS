@@ -29,6 +29,7 @@
     <string name="backup_checking">Checking the backup…</string>
     <string name="backup_restart">The backup is ready. The app restarts to finish the restore.</string>
     <string name="backup_restart_now">Restart now</string>
+    <string name="backup_restore_not_done">The restore was not done: the data on this phone could not be saved first (%1$s). Nothing was changed. Free some storage and try again.</string>
     <string name="backup_delete_confirm">Delete this backup from the phone?</string>
     <string name="backup_restore_sync">This till syncs with other tills: after the restore it joins the store as a new till, and sync must be turned on again.</string>
 
@@ -85,6 +86,7 @@
     <string name="sync_turn_off_confirm">This till stops syncing. Its data stays on this phone and the other tills keep theirs. Turning sync on again sends this till\'s data again.</string>
     <string name="sync_error_connect">Could not connect to Google: %1$s</string>
     <string name="sync_error_clash">Another till in this store has the same till number. Make a backup, then restore it on this phone as a new till, and turn on sync again.</string>
+    <string name="sync_old_copy">This phone holds an older copy of this till: newer records were already backed up from it (a backup was restored since). So that nothing is lost or mixed up, this phone continues as a new till. Restart the app, then turn the backup on again: everything that was backed up comes back.</string>
     <string name="sync_other_account">You signed in as %1$s, but this till syncs with %2$s. Sign in with %2$s, or turn sync off and on again to move the store to another account.</string>
     <string name="sync_pill_sign_in">Backup: sign in</string>
     <string name="sync_pill_stale">Not backed up</string>

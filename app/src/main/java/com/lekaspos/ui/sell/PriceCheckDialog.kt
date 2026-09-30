@@ -72,8 +72,14 @@ class PriceCheckDialog(
     }
 
     private fun onEditorAction(action: Int, event: KeyEvent?): Boolean {
-        val enter = event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN
-        if (action != EditorInfo.IME_ACTION_SEARCH && !enter) return false
+        val key = event?.keyCode
+        if (key == KeyEvent.KEYCODE_ENTER || key == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+            // Both halves of a scanner's Enter are taken: the key-up moved the focus out of the
+            // field, and the next scan was typed nowhere.
+            if (event.action == KeyEvent.ACTION_DOWN) lookup(field.text.toString())
+            return true
+        }
+        if (action != EditorInfo.IME_ACTION_SEARCH) return false
         lookup(field.text.toString())
         return true
     }
@@ -91,6 +97,7 @@ class PriceCheckDialog(
             } else {
                 found.joinToString("\n\n") { describe(it) }
             }
+            field.requestFocus()
             field.selectAll() // the next scan replaces the text
         }
     }

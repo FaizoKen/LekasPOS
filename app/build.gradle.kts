@@ -30,13 +30,21 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = ciRun?.toInt() ?: 1
-        versionName = "1.1.0"
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     androidResources {
         // English (default) + Bahasa Melayu; strips other languages pulled in by libraries.
         localeFilters += listOf("en", "ms")
+    }
+
+    bundle {
+        // The app switches language itself (Settings → App language, D-046): an app bundle must
+        // ship both languages to every phone, not only the phone's own (lint AppBundleLocaleChanges).
+        language {
+            enableSplit = false
+        }
     }
 
     signingConfigs {

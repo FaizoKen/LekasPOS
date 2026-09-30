@@ -79,7 +79,17 @@ network on the main thread already throws on API 21+.
   `onStop`. Never keep an Activity/View reference in a singleton.
 - Activities declare `android:configChanges="keyboard|keyboardHidden|navigation"`: Bluetooth
   HID scanners connecting, sleeping and reconnecting must not recreate the selling screen.
-  Rotation and screen-size changes still recreate (layouts differ by orientation).
+  Only the selling screen, the lock screen, the camera scanner and Diagnostics are recreated
+  on rotation (the selling screen's layout differs by width). Every other screen also declares
+  `orientation|screenSize|screenLayout|smallestScreenSize` (D-054): a rotation kept losing typed
+  form input, half-written exports and open dialogs. Their layouts must therefore work at any
+  width without a recreate (no `-land` / `-w600dp` resources for them). The selling screen locks
+  the orientation while the payment dialog is open.
+- A back-office screen restored by Android into a new process runs nothing until the signed-in
+  staff member and the settings are loaded (`ScreenActivity.onStart`); `StaffSession.perms` is 0
+  until then — "not loaded" never means "owner with every permission" (D-054).
+- `appScope` has an exception handler: background work that fails is logged and never crashes
+  the till (debug builds still crash, so tests see it).
 
 ## 5. Platform rules (targetSdk 36)
 
@@ -117,17 +127,28 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   the same lines feed the ESC/POS text encoder, the image renderer (`hw.printer.ReceiptRenderer`,
   any script) and the share picture/PDF. Auto mode prints text unless a character cannot be
   printed (e.g. Tamil, or Chinese on a Latin printer), then prints a picture.
-- Printer: `PrinterService` owns one thread, takes `print_job` rows in order, keeps an SPP
-  connection (`hw.bt.SppLink`: secure, then insecure RFCOMM), closes it after 45 s idle,
-  reconnects with backoff (2–60 s, stops after 10 failures until woken) and marks a job done
-  only after its bytes were written. Large (image) jobs are written in paced 1 KB chunks.
-  Printing always happens after the sale commit; the queue survives restarts.
+- Printer: `PrinterService` owns one thread, takes `print_job` rows in order — drawer pulses
+  first (D-054) — keeps an SPP connection (`hw.bt.SppLink`: secure, insecure, then RFCOMM channel
+  1 by reflection for printers without an SDP record; the socket is assigned before `connect()`
+  so a stop aborts it), closes it after 45 s idle, reconnects with backoff (2–60 s, stops after
+  10 failures until woken) and marks a job done only after its bytes were written. Large (image)
+  jobs are paced in 1 KB chunks at about 500 dot rows a second (printers without flow control).
+  `reconnect()` (settings changed) keeps a live link to the same printer. Automatic sale receipts
+  still waiting after 10 min (printer off) expire (FAILED, "expired") instead of flooding out
+  later; reprints, shift reports and test pages wait. Printing always happens after the sale
+  commit; the queue survives restarts. The first receipt of a sale prints once: asked again it is
+  a copy (REPRINT permission + audit), and so is a receipt shared from the sales history.
+- Text encoding: every replacement keeps the column count of the layout ("…" → "."); characters
+  the printer cannot print (also €, £, GB18030 4-byte characters) make Auto print a picture.
 - Cash drawer: ESC/POS pulse (`ESC p`, pin 2 or 5) as its own DRAWER job, enqueued with cash
   sales/refunds and by the audited manual "open drawer"; pulses older than 2 min are dropped (D-031).
 - Scanners: keyboard-wedge (HID) scanners are read in `SellActivity.dispatchKeyEvent` through
   `:core` `ScanBuffer` (burst timing, Enter/Tab or idle), so no field needs focus; slow typing
-  goes to the search field. Dialogs without text fields forward keys to the same buffer. SPP
-  scanners (`hw.scanner.SppScanner`) run while the selling screen is visible. The key-timing logic
+  goes to the search field (a scanner burst typed into the focused search field is taken out and
+  scanned). Every dialog swallows Enter/Tab/Space so a scanner's Enter never presses a focused
+  button, and number pads drop scanner-speed digits (`DialogKeys`, D-054). SPP scanners
+  (`hw.scanner.SppScanner`) run while the selling screen is visible; a code without an Enter
+  suffix is delivered after 250 ms of silence. The key-timing logic
   lives in `ui.common.ScanInput`, shared by the selling, receiving, counting and product-picker screens. Camera scanning
   (`ui.scan.CameraScanActivity`, Camera1 + ZXing 3.3.3) either adds every item to the bill or
   returns one code. All paths end in `CartSession.scan`.

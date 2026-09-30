@@ -38,19 +38,19 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
      * Drive's `name contains` matches word prefixes, so the query uses only the first word of
      * [prefix] ("seg", "dev", "store"); the exact prefix is checked here.
      */
-    override suspend fun list(prefix: String, since: Long?): List<RemoteFile> =
+    override suspend fun list(prefix: String, since: Long?, keep: (RemoteFile) -> Boolean): List<RemoteFile> =
         query(
             "name contains '${quote(prefix.substringBefore('-'))}' and trashed = false" +
                 (since?.let { " and createdTime > '${rfc3339(it)}'" } ?: ""),
-        )
-            .filter { it.name.startsWith(prefix) }
+        ) { it.name.startsWith(prefix) && keep(it) }
             .sortedBy { it.name }
 
     /** The file called exactly [name], if any. */
     private suspend fun find(name: String): RemoteFile? =
-        query("name = '${quote(name)}' and trashed = false").firstOrNull { it.name == name }
+        query("name = '${quote(name)}' and trashed = false") { it.name == name }.firstOrNull()
 
-    private suspend fun query(q: String): List<RemoteFile> {
+    /** Every page of the listing [q]; only files [keep] accepts are kept (page by page). */
+    private suspend fun query(q: String, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
         val out = ArrayList<RemoteFile>()
         var page: String? = null
         do {
@@ -65,7 +65,8 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 val name = file["name"] as? String ?: continue
                 val props = (file["appProperties"] as? Map<String, Any?>).orEmpty().mapValues { it.value.toString() }
                 val created = (file["createdTime"] as? String)?.let { parseTime(it) } ?: 0L
-                out.add(RemoteFile(name, file["id"] as String, (file["size"] as? String)?.toLongOrNull() ?: 0L, props, created))
+                val rf = RemoteFile(name, file["id"] as String, (file["size"] as? String)?.toLongOrNull() ?: 0L, props, created)
+                if (keep(rf)) out.add(rf)
             }
             page = m["nextPageToken"] as? String
         } while (page != null)
@@ -238,26 +239,27 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         }
     }
 
-    /** One request; retried once with a fresh token after a 401. */
+    /**
+     * One request; retried once with a fresh token after a 401, and once on a new connection when
+     * a kept-open one turns out to be dead (a router or carrier dropped it while idle, D-053).
+     * Sending a file twice is harmless: the copies are identical and the reader takes either.
+     */
     private suspend fun request(method: String, url: String, prepare: (HttpURLConnection) -> Body?): ByteArray = withContext(Dispatchers.IO) {
         var refresh = false
+        var reconnected = false
         while (true) {
             val c = open(method, url, token(refresh))
-            val result = keepAlive(c) {
-                val body = prepare(c)
-                if (body != null) {
-                    c.doOutput = true
-                    c.setFixedLengthStreamingMode(body.length())
-                    c.outputStream.use { body.write(it) }
+            val result = try {
+                exchange(c, refresh, prepare)
+            } catch (e: IOException) {
+                // Not for an answer from Drive, nor when the network itself is gone or too slow.
+                if (reconnected || e is HttpError || e is java.net.SocketTimeoutException ||
+                    e is java.net.UnknownHostException || e is java.net.ConnectException
+                ) {
+                    throw e
                 }
-                val code = c.responseCode
-                if (code == 401 && !refresh) {
-                    c.errorStream?.use { it.readBytes() }
-                    null // an expired token: once more with a fresh one
-                } else {
-                    if (code !in 200..299) throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
-                    c.inputStream.use { it.readBytes() }
-                }
+                reconnected = true
+                continue
             }
             if (result != null) return@withContext result
             refresh = true
@@ -265,6 +267,25 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         @Suppress("UNREACHABLE_CODE")
         ByteArray(0)
     }
+
+    /** Sends [c]'s request; null when the token had expired (401, first try). */
+    private fun exchange(c: HttpURLConnection, refresh: Boolean, prepare: (HttpURLConnection) -> Body?): ByteArray? =
+        keepAlive(c) {
+            val body = prepare(c)
+            if (body != null) {
+                c.doOutput = true
+                c.setFixedLengthStreamingMode(body.length())
+                c.outputStream.use { body.write(it) }
+            }
+            val code = c.responseCode
+            if (code == 401 && !refresh) {
+                c.errorStream?.use { it.readBytes() }
+                null // an expired token: once more with a fresh one
+            } else {
+                if (code !in 200..299) throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
+                c.inputStream.use { it.readBytes() }
+            }
+        }
 
     private fun open(method: String, url: String, token: String): HttpURLConnection {
         val c = URL(url).openConnection() as HttpURLConnection

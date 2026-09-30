@@ -9,9 +9,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.receipt.ReceiptLayout
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.TaxRate
 import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.ui.common.Dialogs
@@ -90,10 +93,19 @@ class TaxRatesActivity : ScreenActivity() {
                 else -> {
                     val c = code.text.toString().trim().ifEmpty { null }
                     d.dismiss()
+                    val staffId = graph.staff.staffId
                     launchUi {
                         graph.db().write(reserveIds = 4L) { tx ->
                             val now = System.currentTimeMillis()
-                            if (t == null) TaxRateDao.insert(tx, n, c, bp.toInt(), now) else TaxRateDao.update(tx, t.id, n, c, bp.toInt(), now)
+                            val id = if (t == null) {
+                                TaxRateDao.insert(tx, n, c, bp.toInt(), now)
+                            } else {
+                                TaxRateDao.update(tx, t, TaxRate(t.id, n, c, bp.toInt()), now)
+                                t.id
+                            }
+                            // A tax rate changes every price that uses it: the owner sees who changed it.
+                            val was = t?.let { " (was ${it.name} ${percent(it.rateBp)})" } ?: ""
+                            AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, Entity.TAX_RATE, id, detail = "tax rate $n ${percent(bp.toInt())}$was")
                         }
                         reload()
                     }
@@ -106,10 +118,17 @@ class TaxRatesActivity : ScreenActivity() {
 
     private fun deleteNow(t: TaxRate) {
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.tax_delete_confirm, t.name), getString(R.string.delete)) {
+            val staffId = graph.staff.staffId
             launchUi {
-                graph.db().write(reserveIds = 0L) { tx -> TaxRateDao.delete(tx, t.id, System.currentTimeMillis()) }
+                graph.db().write(reserveIds = 1L) { tx ->
+                    val now = System.currentTimeMillis()
+                    TaxRateDao.delete(tx, t.id, now)
+                    AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, Entity.TAX_RATE, t.id, detail = "tax rate ${t.name} deleted")
+                }
                 reload()
             }
         }
     }
+
+    private fun percent(bp: Int): String = MoneyFormat.plain(bp.toLong(), 2).trimEnd('0').trimEnd('.') + "%"
 }

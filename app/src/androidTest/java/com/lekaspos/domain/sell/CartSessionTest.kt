@@ -6,6 +6,7 @@ import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.PaymentKind
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.pricing.Discount
@@ -23,6 +24,8 @@ import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -115,8 +118,106 @@ class CartSessionTest {
         assertEquals(1, cart.state.value.heldCount) // bill B was held in its place
         val other = cart.heldBills().single()
         assertEquals(200L, other.total)
-        cart.deleteHeld(other.id)
+        assertTrue(cart.deleteHeld(other.id))
         assertEquals(0, cart.state.value.heldCount)
+        // A parked bill thrown away is a cancelled bill: it is in the audit log with its amount.
+        val entry = graph.db().read { AuditDao.byAction(it, AuditAction.BILL_CANCEL, null) }.single()
+        assertEquals(200L, entry.amount)
+    }
+
+    @Test
+    fun aCashierNeedsAManagerToThrowAwayAHeldBill() = runBlocking {
+        graph.staff.load()
+        graph.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "2468")
+        val cashier = graph.staffAdmin.save(null, "Siti", Seed.Ids.ROLE_CASHIER, true)
+        graph.staffAdmin.setPin(cashier, "1111")
+        graph.staff.lock()
+        graph.staff.signIn(cashier, "1111")
+        cart.addProduct(TestDb.sellable(graph.db(), product("A", 100L, "111")))
+        assertTrue(cart.hold("Ali"))
+        val held = cart.heldBills().single()
+        assertFalse(cart.deleteHeld(held.id))
+        assertEquals(1, cart.state.value.heldCount)
+        val approval = assertNotNull(graph.permissions.approve(Seed.Ids.STAFF_OWNER, "2468", Perm.CANCEL_BILL).second)
+        assertTrue(cart.deleteHeld(held.id, approval))
+        assertEquals(0, cart.state.value.heldCount)
+        val entry = graph.db().read { AuditDao.byAction(it, AuditAction.BILL_CANCEL, null) }.single()
+        assertEquals(Seed.Ids.STAFF_OWNER, entry.approvedBy)
+    }
+
+    @Test
+    fun tapsOnPlusAndMinusCountFromTheQuantityTheLineHasNow() = runBlocking {
+        val key = cart.addProduct(TestDb.sellable(graph.db(), product("A", 100L, "111")))
+        // Five fast taps on + before the list has redrawn once: every one counts.
+        repeat(5) { cart.changeQty(key, 1_000L) }
+        assertEquals(6_000L, cart.state.value.cart.item(key)?.qty)
+        repeat(9) { cart.changeQty(key, -1_000L) }
+        assertEquals(1_000L, cart.state.value.cart.item(key)?.qty) // one is the least; "Remove" removes
+        assertEquals(100L, cart.state.value.priced.total)
+    }
+
+    @Test
+    fun anAbsurdQuantityIsRefusedAndNeverBreaksTheBill() = runBlocking {
+        val db = graph.db()
+        val gold = TestDb.sellable(db, product("Gold bar", 999_999_999L, "777"))
+        val roti = TestDb.sellable(db, product("Roti", 350L, "888"))
+        val g = cart.addProduct(gold)
+        val r = cart.addProduct(roti)
+        assertFalse(cart.setQty(g, CartSession.MAX_QTY + 1_000L))
+        assertTrue(cart.setQty(g, CartSession.MAX_QTY)) // 99,999 × 9,999,999.99 still has a total
+        assertTrue(cart.setQty(g, 2_000L))
+        assertEquals(0L, cart.addProduct(roti, qty = CartSession.MAX_QTY)) // would grow the line past the limit
+        assertEquals(1_000L, cart.state.value.cart.item(r)?.qty)
+        cart.flush()
+
+        // A line stored by an older version whose amount overflows: the bill still loads, without it.
+        db.write(reserveIds = 0L) { tx -> tx.update("UPDATE cart_line SET qty = ? WHERE id = ?", 9_000_000_000_000_000L, g) }
+        val restarted = TestGraph.reopen(name)
+        try {
+            restarted.cart.load()
+            val st = restarted.cart.state.value
+            assertTrue(st.loaded)
+            assertEquals(listOf("Roti"), st.cart.items.map { it.name })
+            assertEquals(350L, st.priced.total)
+            restarted.cart.flush()
+            assertEquals(1L, restarted.db().read { it.long("SELECT COUNT(*) FROM cart_line") })
+        } finally {
+            TestGraph.close(restarted)
+        }
+    }
+
+    @Test
+    fun removingTheLastLineNeverLeavesTheBillDiscountForTheNextCustomer() = runBlocking {
+        val a = TestDb.sellable(graph.db(), product("A", 1000L, "444"))
+        var key = cart.addProduct(a)
+        assertTrue(cart.setBillDiscount(Discount.Percent(1000)))
+        cart.remove(key)
+        assertTrue(cart.state.value.cart.isEmpty)
+        assertEquals(Discount.None, cart.state.value.cart.billDiscount)
+        cart.flush()
+        assertEquals(0L, graph.db().read { it.long("SELECT COUNT(*) FROM cart") }) // the bill has ended
+        assertEquals(1000L, cart.state.value.cart.let { cart.addProduct(a); cart.state.value.priced.total })
+
+        // A bill for a customer keeps the customer (it is on the screen), not the discount.
+        key = cart.state.value.cart.items.single().key
+        assertTrue(cart.setCustomer(77L, "Pak Abu"))
+        assertTrue(cart.setBillDiscount(Discount.Percent(1000)))
+        cart.remove(key)
+        assertEquals(77L, cart.state.value.customerId)
+        assertEquals(Discount.None, cart.state.value.cart.billDiscount)
+        cart.addProduct(a)
+        assertEquals(1000L, cart.state.value.priced.total)
+        cart.flush()
+
+        // … also after a restart.
+        val restarted = TestGraph.reopen(name)
+        try {
+            restarted.cart.load()
+            assertEquals(1000L, restarted.cart.state.value.priced.total)
+            assertEquals(77L, restarted.cart.state.value.customerId)
+        } finally {
+            TestGraph.close(restarted)
+        }
     }
 
     @Test
@@ -169,5 +270,17 @@ class CartSessionTest {
         assertEquals(CartSession.ScanResult.Busy, cart.scan("555"))
         cart.setPaying(false)
         assertTrue(cart.scan("555") is CartSession.ScanResult.Added)
+    }
+
+    @Test
+    fun aPromotionThatChangesDuringPaymentAppliesOnlyAfterIt() = runBlocking {
+        val a = TestDb.sellable(graph.db(), product("A", 1000L, "666"))
+        cart.addProduct(a)
+        val before = cart.state.value.priced
+        cart.setPaying(true)
+        cart.reprice()
+        assertTrue(before === cart.state.value.priced) // the amount on the payment screen stays
+        cart.setPaying(false)
+        assertEquals(1000L, cart.state.value.priced.total)
     }
 }

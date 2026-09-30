@@ -182,8 +182,8 @@ class ShiftService(private val graph: AppGraph) {
                 refundsTotal = refund.sumOf { it.total },
                 voids = t.voidCount,
                 voidsTotal = t.voidTotal,
-                discounts = t.docs.sumOf { it.discount },
-                tax = t.docs.sumOf { it.tax },
+                discounts = t.discount, // documents voided in this shift come off (D-038, D-054)
+                tax = t.tax,
                 methods = byMethod,
                 cash = cash,
                 counted = shift.countedCash,

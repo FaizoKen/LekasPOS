@@ -20,6 +20,7 @@ import java.util.TimeZone
 import java.util.concurrent.Executors
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -63,6 +64,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
     // Owned by the printer thread.
     private var link: SppLink? = null
     private var lastUsed = 0L
+    private var lastBytes = 0
     private var failures = 0
     private var logoCache: Pair<Int, MonoImage?>? = null
 
@@ -84,11 +86,15 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         wakeups.trySend(Unit)
     }
 
-    /** Drop the connection (printer or settings changed) and try again. */
+    /**
+     * Try again now (printer or settings changed, or the user asked): the backoff and the logo are
+     * reset and a link to another printer is dropped. A live link to the same printer is kept —
+     * closing it right after a job (test page, then "open drawer") cut the job off, because bytes
+     * still queued in the Bluetooth stack are thrown away on close; a dead one fails on the next
+     * write and reconnects by itself.
+     */
     fun reconnect() {
         resetRequested = true
-        logoCache = null
-        failures = 0
         wake()
     }
 
@@ -100,9 +106,14 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
             val cfg = graph.settings.device.value
             _pending.value = db.read { PrintJobDao.pendingCount(it) }.toInt()
             val address = cfg.printerAddress
-            if (resetRequested || (link != null && link?.address != address)) {
-                closeLink()
+            if (resetRequested) {
                 resetRequested = false
+                logoCache = null
+                failures = 0
+            }
+            if (link != null && link?.address != address) {
+                settle()
+                closeLink()
             }
             if (address == null) {
                 _status.value = Status.NotConfigured
@@ -115,6 +126,12 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                 if (link != null && now - lastUsed >= IDLE_CLOSE_MS) closeLink()
                 _status.value = if (link != null) Status.Ready else Status.Idle
                 waitForWake(if (link != null) IDLE_CLOSE_MS else null)
+                continue
+            }
+            val now = System.currentTimeMillis()
+            if (job.kind == PrintJobKind.RECEIPT && now - job.createdAt > RECEIPT_MAX_AGE_MS) {
+                // The printer was off: drop the backlog instead of printing old receipts between new sales.
+                db.write(reserveIds = 0) { tx -> PrintJobDao.expireReceipts(tx, now - RECEIPT_MAX_AGE_MS, now) }
                 continue
             }
             val adapter = Bluetooth.adapter(app)
@@ -149,8 +166,9 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                     link = l
                 }
                 _status.value = Status.Printing
-                write(bytes)
+                write(bytes, cfg.dots)
                 lastUsed = System.currentTimeMillis()
+                lastBytes = bytes.size
             }
             failures = 0
             db.write(reserveIds = 0) { tx -> PrintJobDao.markDone(tx, job.id, System.currentTimeMillis()) }
@@ -225,18 +243,30 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         return img
     }
 
-    /** Writes in small chunks; large (image) jobs are paced so cheap printers' buffers keep up. */
-    private fun write(bytes: ByteArray) {
+    /**
+     * Writes in small chunks. Large (image) jobs are paced to about [PACE_ROWS_PER_S] dot rows a
+     * second, the speed of a cheap 58 mm head, so printers without flow control never overflow
+     * their buffer: 1 KB per 8 ms was five times faster than such a head prints, and the dropped
+     * raster data printed as garbage.
+     */
+    private fun write(bytes: ByteArray, dots: Int) {
         val out = link?.output() ?: throw IOException("not connected")
-        val paced = bytes.size > PACE_ABOVE_BYTES
+        val paceMs = if (bytes.size > PACE_ABOVE_BYTES) CHUNK_BYTES * 1000L / ((dots / 8) * PACE_ROWS_PER_S) else 0L
         var i = 0
         while (i < bytes.size) {
             val n = minOf(CHUNK_BYTES, bytes.size - i)
             out.write(bytes, i, n)
             out.flush()
             i += n
-            if (paced) Thread.sleep(PACE_MS)
+            if (paceMs > 0L) Thread.sleep(paceMs)
         }
+    }
+
+    /** Before closing on purpose: gives the last job time to leave the phone (close drops what is still queued). */
+    private suspend fun settle() {
+        val until = lastUsed + maxOf(SETTLE_MIN_MS, lastBytes.toLong() / SETTLE_BYTES_PER_MS)
+        val wait = until - System.currentTimeMillis()
+        if (wait > 0L) delay(minOf(wait, SETTLE_MAX_MS))
     }
 
     private fun closeLink() {
@@ -252,11 +282,17 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         private const val IDLE_CLOSE_MS = 45_000L
         private const val RECHECK_MS = 10_000L
         private const val DRAWER_MAX_AGE_MS = 120_000L
+        private const val RECEIPT_MAX_AGE_MS = 10L * 60_000L
         private const val PURGE_AFTER_MS = 7L * 24 * 3600 * 1000
         private const val MAX_AUTO_RETRIES = 10
         private val BACKOFF_MS = longArrayOf(2_000L, 5_000L, 10_000L, 30_000L, 60_000L)
         private const val CHUNK_BYTES = 1024
         private const val PACE_ABOVE_BYTES = 4096
-        private const val PACE_MS = 8L
+
+        /** About 60 mm/s at 8 dots per mm: 58 mm paper ~42 ms per KB, 80 mm ~28 ms per KB. */
+        private const val PACE_ROWS_PER_S = 500
+        private const val SETTLE_MIN_MS = 500L
+        private const val SETTLE_BYTES_PER_MS = 16
+        private const val SETTLE_MAX_MS = 5_000L
     }
 }

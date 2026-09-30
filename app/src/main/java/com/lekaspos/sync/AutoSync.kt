@@ -10,6 +10,7 @@ import android.os.SystemClock
 import com.lekaspos.app.AppGraph
 import com.lekaspos.app.Work
 import com.lekaspos.util.Log
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,9 +33,21 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
     private var lastRoundAt = -MIN_GAP_MS
     private var watching = false
 
+    /** Failed automatic rounds in a row (each is tried again a little later, a few times). */
+    @Volatile
+    private var failures = 0
+    private val refreshQueued = AtomicBoolean(false)
+
     /** This till queued a change for upload (called on the database writer thread). */
     fun changed() {
-        graph.appScope.launch(Dispatchers.IO) { graph.sync.refreshStatus() } // "1 change waiting" shows at once
+        // "1 change waiting" shows at once — one refresh at a time, and none during a round (it
+        // reports for itself): the first sync's backfill commits hundreds of chunks.
+        if (!graph.sync.status.value.running && refreshQueued.compareAndSet(false, true)) {
+            graph.appScope.launch(Dispatchers.IO) {
+                refreshQueued.set(false)
+                graph.sync.refreshStatus()
+            }
+        }
         plan(CHANGE_DELAY_MS, asked = false)
     }
 
@@ -59,14 +72,21 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
             plannedAt = at
             planned = graph.appScope.launch(Dispatchers.IO) {
                 if (wait > 0L) delay(wait)
-                // From here on this round is not cancelled by later plans: they wait for it instead.
-                synchronized(lock) { if (planned === coroutineContext[Job]) planned = null }
-                round()
+                // From here on this round is not cancelled by later plans: they wait for it instead —
+                // also while it waits for a round already running. Only once it has started (it may
+                // have sealed the changes already) does a new change plan another round.
+                val me = coroutineContext[Job]
+                val release = { synchronized(lock) { if (planned === me) planned = null } }
+                try {
+                    round(release)
+                } finally {
+                    release()
+                }
             }
         }
     }
 
-    private suspend fun round() {
+    private suspend fun round(onStart: () -> Unit) {
         try {
             val provider = graph.sync.provider()
             if (provider == null) {
@@ -77,10 +97,24 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
                 graph.sync.notStarted(SyncEngine.ERROR_OFFLINE) // the network callback starts it again
                 return
             }
-            graph.sync.sync(provider)
-            Work.cancelSyncSoon(app) // sent: the fallback job is not needed any more
+            graph.sync.sync(provider, onStart)
+            failures = 0
+            // The fallback job goes only when nothing is left to send (a sale during the round is).
+            if (graph.sync.status.value.pending == 0L) {
+                Work.cancelSyncSoon(app)
+                graph.syncSoonDone()
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.w("Auto sync did not finish", e) // shown in the sync status; the next trigger retries
+            Log.w("Auto sync did not finish", e) // shown in the sync status
+            // Tried again a little later, a few times; no internet is handled by the network callback,
+            // and a sign-in needs the owner.
+            val code = SyncEngine.errorCode(e)
+            if (code != SyncEngine.ERROR_OFFLINE && code != SyncEngine.ERROR_SIGN_IN && ++failures <= MAX_RETRIES) {
+                lastRoundAt = SystemClock.elapsedRealtime()
+                plan(RETRY_DELAY_MS * failures, asked = false)
+            }
         } finally {
             lastRoundAt = SystemClock.elapsedRealtime()
         }
@@ -120,5 +154,7 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
         const val START_DELAY_MS = 5_000L
         const val NETWORK_DELAY_MS = 3_000L
         const val MIN_GAP_MS = 45_000L
+        const val RETRY_DELAY_MS = 60_000L
+        const val MAX_RETRIES = 3
     }
 }

@@ -54,7 +54,7 @@ class BackupActivity : ScreenActivity() {
                 getString(reasonLabel(e.file.name)),
                 hd?.storeName,
                 hd?.let { getString(R.string.backup_counts, it.sales, it.products) },
-                Formatter.formatShortFileSize(this, e.file.length()),
+                Formatter.formatShortFileSize(this, e.size),
             ).joinToString(" · ")
             h.set(title, sub)
         },
@@ -88,6 +88,9 @@ class BackupActivity : ScreenActivity() {
             val items = graph.backups.list()
             adapter.submit(items)
             empty.visible(items.isEmpty())
+            graph.backups.restoreFailure()?.let { why ->
+                Dialogs.message(this@BackupActivity, getString(R.string.backup_restore_title), getString(R.string.backup_restore_not_done, why))
+            }
         }
     }
 
@@ -199,7 +202,7 @@ class BackupActivity : ScreenActivity() {
                 dir.listFiles()?.forEach { it.delete() }
                 File(dir, fileName())
             }
-            withContext(Dispatchers.IO) { file.outputStream() }.use { graph.backups.export(it) }
+            graph.backups.export { file.outputStream() }
             val uri = FileProvider.getUriForFile(this@BackupActivity, "$packageName.files", file)
             val send = Intent(Intent.ACTION_SEND).setType(MIME).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             send.clipData = ClipData.newRawUri(file.name, uri)
@@ -223,7 +226,7 @@ class BackupActivity : ScreenActivity() {
             }
             REQ_SAVE -> launchUi {
                 toast(R.string.backup_working)
-                withContext(Dispatchers.IO) { contentResolver.openOutputStream(uri, "wt") }?.use { graph.backups.export(it) }
+                graph.backups.export { contentResolver.openOutputStream(uri, "wt") ?: throw IllegalStateException("cannot write the file") }
                 toast(R.string.backup_saved)
             }
             REQ_OPEN -> launchUi {

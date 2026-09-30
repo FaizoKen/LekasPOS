@@ -189,5 +189,8 @@
     <string name="audit_shift_open">Shift opened</string>
     <string name="audit_shift_close">Shift closed</string>
     <string name="audit_over_limit">Credit over limit</string>
+    <string name="audit_product_import">Products imported</string>
+    <string name="audit_credit_limit">Credit limit changed</string>
+    <string name="audit_settings">Settings changed</string>
     <string name="audit_pin_reset">Owner PIN reset</string>
 </resources>

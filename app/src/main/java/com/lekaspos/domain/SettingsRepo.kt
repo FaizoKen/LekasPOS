@@ -1,6 +1,8 @@
 package com.lekaspos.domain
 
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.model.AuditAction
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.SaleDao
@@ -46,10 +48,27 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         _store.value = StoreSettings.from(store, defaultLanguage)
     }
 
+    /** Saves the store settings; the audit log says who changed which (prices include tax, rounding …). */
     suspend fun saveStore(s: StoreSettings) {
         val db = graph.db()
-        db.write(reserveIds = 0) { tx -> SettingsDao.putChanged(tx, SettingsDao.all(tx.db), s.toMap(), System.currentTimeMillis()) }
+        val staffId = graph.staff.staffId
+        db.write(reserveIds = 1) { tx ->
+            val now = System.currentTimeMillis()
+            val before = SettingsDao.all(tx.db)
+            val after = s.toMap()
+            val changed = after.keys.filter { before[it] != after[it] }.sorted()
+            SettingsDao.putChanged(tx, before, after, now)
+            if (changed.isNotEmpty()) AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, detail = changed.joinToString(", ").take(MAX_DETAIL))
+        }
         _store.value = s
+    }
+
+    /** Records a settings change made outside [saveStore] ([what]: e.g. the receipt logo, a tax rate). */
+    suspend fun recordChange(what: String, approvedBy: Long? = null) {
+        val staffId = graph.staff.staffId
+        graph.db().write(reserveIds = 1) { tx ->
+            AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, System.currentTimeMillis(), detail = what.take(MAX_DETAIL), approvedBy = approvedBy)
+        }
     }
 
     suspend fun saveDevice(d: DeviceSettings) {
@@ -76,5 +95,6 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
 
     private companion object {
         const val SETUP_DONE = "dev.setup_done"
+        const val MAX_DETAIL = 300
     }
 }

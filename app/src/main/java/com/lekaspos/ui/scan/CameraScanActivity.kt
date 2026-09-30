@@ -1,13 +1,16 @@
 package com.lekaspos.ui.scan
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Camera
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -42,6 +45,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     private var torchOn = false
     private val decoder = BarcodeDecoder()
     private var executor: ExecutorService? = null
+    private var permissionAsked = false
 
     @Volatile
     private var decoding = false
@@ -52,10 +56,12 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sellMode = intent.getBooleanExtra(EXTRA_SELL, true)
+        permissionAsked = savedInstanceState?.getBoolean(STATE_ASKED) == true
         val v = setScreen(getString(R.string.camera_title), R.layout.activity_camera) ?: return
         surface = v.findViewById(R.id.camera_preview)
         status = v.findViewById(R.id.camera_status)
         status.setText(R.string.camera_hint)
+        status.setOnClickListener { onStatusClick() }
         surface.holder.addCallback(this)
         addAction(R.drawable.ic_flash, R.string.camera_torch) { toggleTorch() }
         beeper = Beeper.create()
@@ -63,12 +69,22 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         if (sellMode) launchUi { graph.cart.load() }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_ASKED, permissionAsked)
+    }
+
     override fun onResume() {
         super.onResume()
         if (hasPermission()) {
             open()
-        } else if (Build.VERSION.SDK_INT >= 23) {
+        } else if (Build.VERSION.SDK_INT >= 23 && !permissionAsked) {
+            // Ask once. Asking on every resume looped after "Deny": the answer resumes this screen,
+            // which asked again (at once and forever once Android stops showing the question).
+            permissionAsked = true
             requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAMERA)
+        } else {
+            showDenied()
         }
     }
 
@@ -79,6 +95,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
 
     override fun onDestroy() {
         beeper?.release()
+        beeper = null // a decode finishing after this must not beep on a released tone generator
         super.onDestroy()
     }
 
@@ -88,27 +105,52 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != REQ_CAMERA) return
-        if (hasPermission()) open() else status.setText(R.string.camera_permission)
+        if (hasPermission()) open() else showDenied()
+    }
+
+    private fun canAskAgain(): Boolean =
+        Build.VERSION.SDK_INT >= 23 && shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
+
+    /** Denied: the status line says so; tapped, it asks again (or opens the app's settings once Android won't). */
+    private fun showDenied() {
+        status.setText(if (canAskAgain()) R.string.camera_permission_ask else R.string.camera_permission_settings)
+    }
+
+    private fun onStatusClick() {
+        if (Build.VERSION.SDK_INT < 23) return
+        if (hasPermission() || !permissionAsked) return
+        if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAMERA)
+            return
+        }
+        try {
+            val app = Uri.fromParts("package", packageName, null)
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, app))
+        } catch (e: ActivityNotFoundException) {
+            status.setText(R.string.camera_permission)
+        }
     }
 
     // ------------------------------------------------------------------ camera
 
     private fun open() {
         if (camera != null) return
-        executor = Executors.newSingleThreadExecutor { r -> Thread(r, "barcode-decode") }
-        val c = try {
+        var cam: Camera? = null
+        try {
             val id = (0 until Camera.getNumberOfCameras()).firstOrNull { i ->
                 Camera.CameraInfo().also { Camera.getCameraInfo(i, it) }.facing == Camera.CameraInfo.CAMERA_FACING_BACK
             } ?: 0
-            val cam = Camera.open(id)
-            configure(cam, id)
-            cam
+            val c = Camera.open(id)
+            cam = c
+            configure(c, id)
         } catch (e: RuntimeException) {
             Log.e("Camera open failed", e)
+            cam?.release() // opened but not configurable: unreleased, it stays locked for every app
             status.setText(R.string.camera_unavailable)
             return
         }
-        camera = c
+        camera = cam
+        executor = Executors.newSingleThreadExecutor { r -> Thread(r, "barcode-decode") }
         if (surfaceReady) startPreview()
     }
 
@@ -167,6 +209,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         torchOn = false
         executor?.shutdownNow()
         executor = null
+        decoding = false // a decode still running reports to the old executor and is ignored
     }
 
     private fun toggleTorch() {
@@ -214,6 +257,8 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
                     null
                 }
                 runOnUiThread {
+                    // The camera was released meanwhile (paused, rotated, closed): drop the old frame's result.
+                    if (executor !== ex) return@runOnUiThread
                     camera?.addCallbackBuffer(data)
                     decoding = false
                     if (code != null) onCode(code)
@@ -226,17 +271,24 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
 
     private fun onCode(code: String) {
         val now = SystemClock.uptimeMillis()
-        if (code == lastCode && now - lastAt < REPEAT_MS) return // the same item still in view
+        if (code == lastCode && now - lastAt < REPEAT_MS) {
+            lastAt = now // the same item still in view: it counts again only after leaving the frame
+            return
+        }
         lastCode = code
         lastAt = now
-        beeper?.ok()
+        graph.staff.touch() // scanning is using the till, though the screen is not touched
         if (!sellMode) {
+            beeper?.ok()
             setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
             finish()
             return
         }
         scope.launch {
-            status.text = when (val r = graph.cart.scan(code)) {
+            val r = graph.cart.scan(code)
+            // As on the selling screen, the beep tells the result: "ok" only when the item was added.
+            if (r is CartSession.ScanResult.Added) beeper?.ok() else beeper?.error()
+            status.text = when (r) {
                 is CartSession.ScanResult.Added -> getString(R.string.camera_added, r.name)
                 is CartSession.ScanResult.NotFound -> getString(R.string.camera_not_found, code)
                 is CartSession.ScanResult.NeedsWeight -> getString(R.string.camera_needs_input, r.product.name)
@@ -251,6 +303,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         private const val EXTRA_SELL = "sell"
         private const val REQ_CAMERA = 31
         private const val REPEAT_MS = 1500L
+        private const val STATE_ASKED = "camera.permission_asked"
 
         fun sellIntent(ctx: Context): Intent = Intent(ctx, CameraScanActivity::class.java).putExtra(EXTRA_SELL, true)
 

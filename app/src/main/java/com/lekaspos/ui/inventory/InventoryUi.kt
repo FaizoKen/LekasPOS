@@ -21,6 +21,7 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.domain.sell.BarcodeLookup
 import com.lekaspos.domain.sell.Resolution
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.weightText
 
@@ -125,7 +126,7 @@ object InventoryUi {
         col.addView(keypad.view, lp())
         val d = AlertDialog.Builder(a).setTitle(title).setView(col)
             .setPositiveButton(R.string.ok, null).setNegativeButton(R.string.cancel, null).create()
-        d.setOnKeyListener { _, _, e -> keypad.onKey(e) }
+        d.keys { e -> keypad.onKey(e) }
         d.setOnShowListener {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val v = value(keypad.digits)
@@ -202,7 +203,7 @@ object InventoryUi {
         keypad.clear()
         val d = AlertDialog.Builder(a).setTitle(p.name).setView(android.widget.ScrollView(a).apply { addView(col) })
             .setPositiveButton(R.string.save, null).setNegativeButton(R.string.cancel, null).create()
-        d.setOnKeyListener { _, _, e -> if (note.hasFocus()) false else keypad.onKey(e) }
+        d.keys { e -> if (note.hasFocus()) false else keypad.onKey(e) }
         d.setOnShowListener {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val v = value(keypad.digits) ?: return@setOnClickListener

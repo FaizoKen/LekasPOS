@@ -60,7 +60,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     /** Why sync cannot run; shown to the user. */
     class Problem(val reason: Reason, message: String) : Exception(message) {
-        enum class Reason { NOT_ENABLED, DEVICE_CLASH, CORRUPT }
+        enum class Reason {
+            NOT_ENABLED, DEVICE_CLASH, CORRUPT,
+
+            /** This phone holds an older copy of a till that has published since: it continues as a new till after a restart. */
+            OLD_COPY,
+        }
     }
 
     /** A till's card in the sync folder: who it is and how far it has read everyone else. */
@@ -79,7 +84,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     val status: StateFlow<Status> = _status
 
     private val mutex = Mutex()
-    private val outDir get() = File(app.filesDir, "sync/out").apply { mkdirs() }
+    private val outDir = File(app.filesDir, "sync/out") // made by [seal]
     private val inDir get() = File(app.cacheDir, "sync-in").apply { mkdirs() }
 
     /** Re-reads the stored parts of the status (pending changes, last success …); a running round's progress is kept. */
@@ -156,11 +161,39 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             }
             else -> stores.first() // one store per account in practice; deterministic otherwise
         }
-        val cards = cards(provider, store)
+        val cards = cards(provider, store, strict = true)
         if (cards.any { it.dev == db.deviceNo && it.uuid != uuid }) {
             throw Problem(Problem.Reason.DEVICE_CLASH, "another till uses device number ${db.deviceNo}")
         }
+        // What this till has already published in this folder, against what this database knows of.
+        var mine = 0L
+        provider.list(SyncNames.segmentPrefix(store)) { f ->
+            val s = SyncNames.parseSegment(f.name)
+            if (s != null && s.store == store && s.dev == db.deviceNo && s.seq > mine) mine = s.seq
+            false // only counted
+        }
+        val published = maxOf(mine, cards.firstOrNull { it.dev == db.deviceNo }?.lastSeq ?: 0L)
+        val sealed = db.read { SyncDao.nextSegmentSeq(it) } - 1L
+        if (published > sealed) {
+            // An older copy of this till's data (a backup from before it published these files was
+            // restored): the IDs, receipt numbers and file numbers it would use next are already
+            // taken in the folder by other records. It continues as a new till — after a restart,
+            // because a till's number is fixed while its database is open — and then gets back
+            // what the original published.
+            db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.RENEW_IDENTITY, "1") }
+            throw Problem(Problem.Reason.OLD_COPY, "this phone holds an older copy of till ${db.deviceNo}")
+        }
+        // Nothing of this till is in the folder (another Google account, or an emptied folder), but
+        // it has numbered files from before: the numbering starts again at 1. The other tills
+        // read a till's files in order from 1; continuing at k+1 they never read this till at all.
+        val restart = published == 0L && sealed > 0L
         db.write(reserveIds = 0L) { tx ->
+            if (restart) {
+                SyncDao.restartPublishing(tx)
+                Meta.put(tx.db, BACKFILLED, null)
+                Meta.put(tx.db, UPLOAD_TRY, null)
+                Meta.put(tx.db, Meta.SYNC_CLEANED_TO, null)
+            }
             if (store != localStore) Meta.put(tx.db, Meta.STORE_UUID, store)
             val taken = cards.filter { it.dev != tx.deviceNo }.mapNotNull { it.prefix }.toSet()
             if (ReceiptNumbers.prefix(tx) in taken) Meta.put(tx.db, Meta.RECEIPT_PREFIX, freePrefix(taken))
@@ -171,6 +204,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             Meta.put(tx.db, LIST_SINCE, null) // this store's files are listed in full first
             Meta.put(tx.db, FULL_LIST_AT, null)
         }
+        // The old numbered files go once the database no longer lists them (new ones reuse the names).
+        if (restart) withContext(Dispatchers.IO) { outDir.listFiles()?.forEach { it.delete() } }
         db.syncEnabled = true // before the backfill: nothing written meanwhile can be missed
         return syncLocked(provider, progress)
     }
@@ -200,10 +235,13 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         return SyncProviders.forId(app, id, account)
     }
 
-    /** One round: seal, upload, import, publish the device card. */
-    suspend fun sync(provider: SyncProvider): Report {
+    /** One round: seal, upload, import, publish the device card. [onStart] runs once the round has the lock. */
+    suspend fun sync(provider: SyncProvider, onStart: (() -> Unit)? = null): Report {
         starting()
-        return mutex.withLock { syncLocked(provider) }
+        return mutex.withLock {
+            onStart?.invoke()
+            syncLocked(provider)
+        }
     }
 
     private suspend fun syncLocked(provider: SyncProvider, progress: (String, Long) -> Unit = { _, _ -> }): Report {
@@ -272,6 +310,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
      */
     private suspend fun seal(db: Db, store: String): Int {
         var n = 0
+        withContext(Dispatchers.IO) { outDir.mkdirs() }
         while (true) {
             val (rows, seq) = db.read { SyncDao.outboxBatch(it, MAX_EVENTS) to SyncDao.nextSegmentSeq(it) }
             if (rows.isEmpty()) return n
@@ -323,14 +362,25 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
      */
     private suspend fun import(db: Db, provider: SyncProvider, store: String, changed: MutableSet<Int>): Triple<Int, Int, Int> {
         applyDeferred(db, changed)
-        val cursors = db.read { SyncDao.cursors(it) }
+        var cursors = db.read { SyncDao.cursors(it) }
         val (since, fullAt) = db.read { Meta.getLong(it, LIST_SINCE) to Meta.getLong(it, FULL_LIST_AT) }
         val now = System.currentTimeMillis()
         var full = since == null || fullAt == null || now - fullAt > FULL_LIST_EVERY_MS || now < fullAt
-        var listing = listSegments(provider, store, db.deviceNo, if (full) null else since?.minus(LIST_SLACK_MS))
+        var listing = listSegments(provider, store, db.deviceNo, if (full) null else since?.minus(LIST_SLACK_MS), cursors)
         if (!full && hasGap(listing.others, cursors)) {
             full = true
-            listing = listSegments(provider, store, db.deviceNo, null)
+            listing = listSegments(provider, store, db.deviceNo, null, cursors)
+        }
+        if (full) {
+            // A till read further than the folder now holds started its numbers again (it moved
+            // the store to this folder, or the folder was emptied): it is read from its first file.
+            // Reading a file twice changes nothing.
+            val stale = cursors.filter { (dev, seq) -> seq > (listing.highest[dev] ?: 0L) }.keys
+            if (stale.isNotEmpty()) {
+                db.write(reserveIds = 0L) { tx -> for (dev in stale) SyncDao.dropCursor(tx, dev) }
+                cursors = cursors - stale
+                listing = listSegments(provider, store, db.deviceNo, null, cursors)
+            }
         }
         val remote = listing.others
         val byDev = remote.groupBy { it.first.dev }
@@ -357,17 +407,35 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             }
         }
         rememberListing(db, listing, cursors, plan, since, full, now)
-        return Triple(applied, events, byDev.keys.size)
+        // Every other till read at least once — not just those in this (short) listing.
+        return Triple(applied, events, db.read { SyncDao.cursors(it) }.size)
     }
 
-    /** A listing of [store]'s segments: the other tills' files, and the newest creation time of any file (this till's too). */
-    private class Listing(val others: List<Pair<SyncNames.Segment, RemoteFile>>, val newest: Long)
+    /**
+     * A listing of [store]'s segments: the other tills' files not read yet, each other till's
+     * highest file number, and the newest creation time of any file (this till's too).
+     */
+    private class Listing(val others: List<Pair<SyncNames.Segment, RemoteFile>>, val newest: Long, val highest: Map<Int, Long>)
 
-    /** [store]'s segments in the sync folder (created after [since], if given). */
-    private suspend fun listSegments(provider: SyncProvider, store: String, me: Int, since: Long?): Listing {
-        val files = provider.list(SyncNames.segmentPrefix(store), since)
-        val others = files.mapNotNull { f -> SyncNames.parseSegment(f.name)?.takeIf { it.store == store && it.dev != me }?.let { it to f } }
-        return Listing(others, files.maxOfOrNull { it.created } ?: 0L)
+    /**
+     * [store]'s segments in the sync folder (created after [since], if given). Files already read
+     * (up to [cursors]) are only counted, never kept: the whole folder is listed once a day and
+     * grows by hundreds of files a day.
+     */
+    private suspend fun listSegments(provider: SyncProvider, store: String, me: Int, since: Long?, cursors: Map<Int, Long>): Listing {
+        var newest = 0L
+        val highest = HashMap<Int, Long>()
+        val others = ArrayList<Pair<SyncNames.Segment, RemoteFile>>()
+        provider.list(SyncNames.segmentPrefix(store), since) { f ->
+            if (f.created > newest) newest = f.created
+            val s = SyncNames.parseSegment(f.name)?.takeIf { it.store == store && it.dev != me }
+            if (s != null) {
+                if (s.seq > (highest[s.dev] ?: 0L)) highest[s.dev] = s.seq
+                if (s.seq > (cursors[s.dev] ?: 0L)) others.add(s to f)
+            }
+            false // collected here instead
+        }
+        return Listing(others, newest, highest)
     }
 
     /** True when a till has files after its cursor that do not follow on from it (one is missing from the listing). */
@@ -493,23 +561,38 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         cardAt = now
     }
 
-    /** Uploaded segments are kept on the phone for [KEEP_LOCAL_MS], then deleted. */
+    /**
+     * Uploaded segments are kept on the phone for [KEEP_LOCAL_MS], then deleted — from where the
+     * last clean-up stopped, so a round never walks the whole history (and uploads go in order).
+     */
     private suspend fun cleanLocal(db: Db) {
         val cutoff = System.currentTimeMillis() - KEEP_LOCAL_MS
-        for (s in db.read { SyncDao.segments(it) }) {
-            val at = s.uploadedAt ?: continue
-            if (at < cutoff) localSegment(s.seq).delete()
+        var done = db.read { Meta.getLong(it, Meta.SYNC_CLEANED_TO) } ?: 0L
+        val start = done
+        while (true) {
+            val batch = db.read { SyncDao.segmentsAfter(it, done, CLEAN_BATCH) }
+            val old = batch.takeWhile { s -> s.uploadedAt.let { it != null && it < cutoff } }
+            withContext(Dispatchers.IO) { for (s in old) localSegment(s.seq).delete() }
+            if (old.isNotEmpty()) done = old.last().seq
+            if (old.size < CLEAN_BATCH) break
         }
+        if (done != start) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.SYNC_CLEANED_TO, done.toString()) }
     }
 
-    /** Every till's card in [store]. */
-    suspend fun cards(provider: SyncProvider, store: String): List<DeviceCard> {
+    /**
+     * Every till's card in [store]. [strict]: a card that cannot be downloaded fails the call —
+     * turning sync on checks till numbers and receipt prefixes against all of them.
+     */
+    suspend fun cards(provider: SyncProvider, store: String, strict: Boolean = false): List<DeviceCard> {
         val out = ArrayList<DeviceCard>()
         for (f in provider.list(SyncNames.devicePrefix(store))) {
-            val tmp = File(inDir, "card.tmp")
+            val tmp = File(inDir, "card-${System.nanoTime()}.tmp") // "Show tills" may read cards while a round does
             try {
                 provider.get(f, tmp)
                 parseCard(tmp.readText())?.let { out.add(it) }
+            } catch (e: java.io.IOException) {
+                if (strict) throw e
+                Log.w("Unreadable device card ${f.name}", e)
             } catch (e: Exception) {
                 Log.w("Unreadable device card ${f.name}", e)
             } finally {
@@ -534,6 +617,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         const val IMPORT_CHUNK = 200
         const val IMPORT_TX_MS = 100L
         const val KEEP_LOCAL_MS = 14L * 24L * 60L * 60L * 1000L
+        private const val CLEAN_BATCH = 200
 
         /** A short listing starts this far before the newest file seen (the folder may list new files late). */
         const val LIST_SLACK_MS = 15L * 60L * 1000L

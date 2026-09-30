@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hardware: camera scanner, printer, Bluetooth. -->
+<resources>
+    <string name="camera_permission_ask">Camera permission is needed to scan. Tap here to allow it.</string>
+    <string name="camera_permission_settings">Camera permission is needed to scan. Tap here, then allow Camera under Permissions.</string>
+</resources>

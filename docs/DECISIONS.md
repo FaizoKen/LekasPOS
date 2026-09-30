@@ -489,6 +489,80 @@ triggered it). Fixed:
 Rejected: WorkManager expedited work (quota-limited, no delay, not for every sale); a foreground
 service (a permanent notification for a background chore); parallel uploads (rounds are small
 now; order and idempotence stay simple).
+### D-054 — Bug hunt: consistency, safety and speed fixes (2026-10-01)
+The owner asked for a thorough search for bugs "to make it more consistent, fast and optimized".
+Evidence: lint, a StrictMode run, the perf report, and six read-only code reviews (back office,
+hardware, sync and backup, database, money and selling, selling screen); every finding was
+checked in the code before it was fixed, and each fix has a test where one is possible.
+Decisions that change behaviour:
+- **Permissions and audit filled in**: a customer's credit limit needs "Go over a credit limit"
+  (0 = no limit, so whoever edits a customer could lift the limit that stops their own credit
+  sales) and is audited (new action 26); CSV import sets stock only with "Receive, adjust and
+  count stock"; throwing a held bill away is a cancelled bill (same permission, same audit entry);
+  sharing a receipt from the sales history is a copy like a reprint; the receipt logo needs the
+  Settings permission; store settings, the logo and tax rates are audited (new action 27).
+- **Fail closed after Android restores a screen**: nothing is allowed until the signed-in staff
+  member is read from the database (a restored back-office screen ran with every permission).
+- **Wrong PINs are counted per person**, and only that person's right PIN clears the count (a
+  cashier's own sign-in gave fresh guesses at the manager's PIN); every wait is audited with who
+  was at the till.
+- **Voids** need an open shift when the store requires shifts (like sales and refunds), and a
+  refund worth 0.00 blocks the void of its sale like any other refund.
+- **The first receipt prints once**: asked for again (a second tap, the result shown again) it is
+  a copy (permission + audit).
+- **Selling**: a quantity above 99,999 (pieces or kg) is refused, and a change whose amounts
+  cannot be computed is refused before anything is written (it crashed the till and left a bill
+  that could never load; a stored bill now always loads). − and + count from the quantity the line
+  has now (fast taps were lost). Removing the last line drops the bill discount (a customer stays).
+  A promotion that changes during payment applies after it. A cash remainder that rounds to 0.00
+  is settled with Cash. A partial refund's own figures add up to the sen.
+- **Scanners in dialogs**: every dialog swallows Enter/Tab/Space (a scanner's Enter pressed the
+  payment dialog's focused "Exact" button and completed the sale); number pads drop
+  scanner-speed digits; a scan into the focused search field is taken out and scanned.
+- **Payment**: a touch outside, Back or Cancel never silently drops a split payment half entered
+  (Cancel asks); a double tap does not pay the rest; the screen does not rotate while paying; the
+  idle auto-lock never locks during a payment, and keypad taps in dialogs count as activity.
+- **Rotation**: every screen except the selling screen, lock screen, camera and Diagnostics
+  handles rotation itself (typed forms, running exports and open dialogs were lost).
+- **Top bar**: pills that do not fit beside the store name move to a line below (on a 360dp
+  phone four pills pushed the Menu button off the screen).
+- **Sync identity** (both found by review, neither seen in the field yet): turning sync off and
+  on into another Google account or an emptied folder restarts this till's file numbers at 1 (other
+  tills never read it again); an older copy of a till that has since published (a backup from
+  before it first synced restored as "the same till") is refused and becomes a new till after a
+  restart; "restore this till" over data of the same till that has synced gives a new identity; a
+  crash between the restore swap and its identity reset is finished at the next start; a restore
+  whose safety copy of the current data fails is not done at all.
+- **Sync speed at scale**: listings are filtered while read (a year of files is never held in
+  memory); unsent segments and local clean-up are key ranges, not full scans; one status refresh
+  at a time; a round waiting for another counts as planned; the fallback job is cancelled only
+  when nothing is left; failed automatic rounds are retried (1, 2, 3 min); one retry on a new
+  connection when a kept-open one died; every device card must download when joining.
+- **CSV**: exported text a spreadsheet would run as a formula starts with `'` (stripped again on
+  import); the product export carries each product's number (`#…`) so an edited file updates the
+  same products, also those without barcode or SKU; barcodes a spreadsheet turned into
+  "9.55E+12" are refused; a save that fails deletes its unfinished file and runs on after the
+  screen closes.
+- **Printing**: drawer pulses before waiting receipts; automatic receipts still waiting after 10
+  minutes expire (they can be printed again from the sale); RFCOMM channel 1 as a last resort;
+  image jobs paced to the head's speed; "reconnect" keeps a live link to the same printer; text
+  replacements keep the column count (€, £ and 4-byte Chinese print as a picture); the test page
+  prints as text on a Latin printer; SPP scanners without an Enter suffix work; the camera asks
+  for permission once, beeps after the result, adds an item again only after it left the view.
+- **Database**: edits write only the fields the user changed (a field another till changed
+  meanwhile stays); reports drop the zero rows voids leave behind, "sold" means more sold than
+  returned, category totals follow the product's current category; the product and pick screens
+  find switched-off products; switched-off products raise no low-stock alert; shift reports take
+  tax and discount of documents voided in the shift off it (like cash, D-038); a delivery is
+  received once even when Save is tapped twice; the customer list no longer repeats rows from
+  page 2 on; stock reads after a count use an index range (`references/database.md`).
+Not changed (for the owner): stock with cost 0 lowers the average cost when stock is received
+(a business rule); the receipt still decides "weighed" from the quantity (needs the sell mode
+stored on each sale line — a schema change, later); default receipt prefixes can repeat between
+tills 1 in 676 (a taken prefix is replaced when a till joins; not two tills joining at once).
+Rejected: counting wrong PINs per till (the reason for this change); a UNIQUE receipt number
+(existing data may already hold one pair); locking the whole app in portrait (tablets and
+landscape shops).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

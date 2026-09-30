@@ -7,6 +7,7 @@ import com.lekaspos.core.id.Ids
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.long
 import com.lekaspos.data.db.queryOne
+import com.lekaspos.data.sale.ReceiptNumbers
 import com.lekaspos.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -40,39 +41,99 @@ object Restore {
         dir(ctx).deleteRecursively()
     }
 
+    /** Written when a restore has been put in place, deleted when [afterOpen] has run for it ([finished]). */
+    private fun pending(ctx: Context) = File(ctx.filesDir, "restore-pending")
+
+    private fun failure(ctx: Context) = File(ctx.filesDir, "restore-failed")
+
     /**
      * Called before the database [name] opens: puts a staged restore in place. Returns the mode
-     * when a restore was applied (the caller then runs [afterOpen]).
+     * when a restore was applied and [afterOpen] has not run for it yet — also when the app was
+     * killed in between, so a restored till never starts with its old identity and print jobs
+     * (the caller runs [afterOpen], then [finished]).
      */
     fun applyIfStaged(ctx: Context, name: String): Mode? {
         val marker = marker(ctx)
-        if (!marker.exists()) return null
-        val mode = runCatching { Mode.valueOf(marker.readText().trim()) }.getOrDefault(Mode.REPLACE)
-        val staged = BackupFiles.unpackedDb(dir(ctx))
-        if (!staged.exists()) {
+        if (marker.exists()) {
+            val asked = runCatching { Mode.valueOf(marker.readText().trim()) }.getOrDefault(Mode.REPLACE)
+            val staged = BackupFiles.unpackedDb(dir(ctx))
+            if (staged.exists()) place(ctx, staged, ctx.getDatabasePath(name), asked)
             cancelStaged(ctx)
-            return null
         }
-        val current = ctx.getDatabasePath(name)
+        val pending = pending(ctx)
+        if (!pending.exists()) return null
+        return runCatching { Mode.valueOf(pending.readText().trim()) }.getOrDefault(Mode.REPLACE)
+    }
+
+    private fun place(ctx: Context, staged: File, current: File, asked: Mode) {
+        var mode = asked
         if (current.exists()) {
-            // Keep what is being replaced: a restore must never lose data for good.
+            mode = safeMode(current, staged, asked)
+            // Keep what is being replaced: a restore must never lose data for good. If that copy
+            // cannot be made (storage full), the restore is not done at all.
             try {
                 val backups = backupDir(ctx).apply { mkdirs() }
-                FileOutputStream(File(backups, "replaced-${System.currentTimeMillis()}${BackupFiles.EXT}")).use {
-                    BackupFiles.writeClosed(current, it, BuildConfig.VERSION_NAME, REASON_REPLACED)
+                val copy = File(backups, "replaced-${System.currentTimeMillis()}${BackupFiles.EXT}")
+                try {
+                    FileOutputStream(copy).use {
+                        BackupFiles.writeClosed(current, it, BuildConfig.VERSION_NAME, REASON_REPLACED)
+                        it.fd.sync()
+                    }
+                } catch (e: Exception) {
+                    copy.delete()
+                    throw e
                 }
             } catch (e: Exception) {
-                Log.e("Keeping the replaced database failed", e)
+                Log.e("Keeping the replaced database failed: the restore is not done", e)
+                runCatching { failure(ctx).writeText(e.message ?: e.javaClass.simpleName) }
+                return
             }
         }
+        pending(ctx).writeText(mode.name)
         for (suffix in listOf("", "-wal", "-shm", "-journal")) File(current.path + suffix).delete()
         current.parentFile?.mkdirs()
         if (!staged.renameTo(current)) {
             staged.copyTo(current, overwrite = true)
             staged.delete()
         }
-        cancelStaged(ctx)
-        return mode
+    }
+
+    /**
+     * "The same till" is safe only while the backup knows everything this till has published.
+     * When the data being replaced is this very till and it has synced, its IDs, receipt numbers
+     * and file numbers after the backup are already in the sync folder: the restored data
+     * continues as a new till (as the restore screen says), whatever the backup itself contains.
+     */
+    private fun safeMode(current: File, staged: File, asked: Mode): Mode {
+        if (asked != Mode.REPLACE) return asked
+        return try {
+            val now = identity(current)
+            val then = identity(staged)
+            if (now.first != null && now.first == then.first && now.second) Mode.NEW_DEVICE else asked
+        } catch (e: Exception) {
+            Log.w("Comparing the restored till with this one failed", e)
+            asked
+        }
+    }
+
+    /** A database file's device uuid, and whether it has published to a sync folder. */
+    private fun identity(file: File): Pair<String?, Boolean> =
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            Meta.get(db, Meta.DEVICE_UUID) to (db.long("SELECT COUNT(*) FROM sync_segment") > 0L || Meta.get(db, Meta.SYNC_ENABLED) == "1")
+        }
+
+    /** [afterOpen] has run for the restore that [applyIfStaged] reported. */
+    fun finished(ctx: Context) {
+        pending(ctx).delete()
+    }
+
+    /** Why the last restore was not done (the current data could not be kept first), once; else null. */
+    fun takeFailure(ctx: Context): String? {
+        val f = failure(ctx)
+        if (!f.exists()) return null
+        val why = runCatching { f.readText() }.getOrDefault("")
+        f.delete()
+        return why
     }
 
     /**
@@ -93,6 +154,25 @@ object Restore {
     }
 
     /**
+     * Called when the database opens. Turning the Drive backup on found that this phone holds an
+     * older copy of a till that has published since (a backup from before it first synced was
+     * restored as "the same till"): it becomes a new till here, before anything is written with
+     * the old number. Returns true when the identity changed.
+     */
+    fun renewIfAsked(db: SQLiteDatabase): Boolean {
+        if (Meta.get(db, Meta.RENEW_IDENTITY) != "1") return false
+        db.beginTransaction()
+        try {
+            newIdentity(db)
+            Meta.put(db, Meta.RENEW_IDENTITY, null)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return true
+    }
+
+    /**
      * This database becomes a different till of the same store: new device number (so its new
      * IDs and receipt numbers never collide with the original's), fresh sequences, no pending
      * sync events (they belong to the original till). Sync is off until turned on again (which
@@ -101,10 +181,13 @@ object Restore {
      */
     fun newIdentity(db: SQLiteDatabase, random: SecureRandom = SecureRandom()) {
         val old = Meta.getLong(db, Meta.DEVICE_NO)?.toInt()
+        // The new number also gives another receipt prefix than the one this data was numbered
+        // with, so the first receipts of the new till never repeat numbers already printed.
+        val oldPrefix = Meta.get(db, Meta.RECEIPT_PREFIX) ?: old?.let { ReceiptNumbers.defaultPrefix(it) }
         var no: Int
         do {
             no = Ids.randomDeviceNo(random)
-        } while (no == old)
+        } while (no == old || ReceiptNumbers.defaultPrefix(no) == oldPrefix)
         Meta.put(db, Meta.DEVICE_UUID, UUID.randomUUID().toString())
         Meta.put(db, Meta.DEVICE_NO, no.toString())
         Meta.put(db, Meta.ID_RESERVED, "0")
@@ -120,7 +203,7 @@ object Restore {
         }
         db.execSQL("DELETE FROM sync_segment")
         Meta.put(db, Meta.SYNC_ENABLED, "0")
-        for (k in listOf(Meta.SYNC_BACKFILLED, Meta.SYNC_LAST_OK, Meta.SYNC_LAST_ERROR)) Meta.put(db, k, null)
+        for (k in listOf(Meta.SYNC_BACKFILLED, Meta.SYNC_LAST_OK, Meta.SYNC_LAST_ERROR, Meta.SYNC_CLEANED_TO)) Meta.put(db, k, null)
     }
 
     fun backupDir(ctx: Context): File = File(ctx.filesDir, "backups")

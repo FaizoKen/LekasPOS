@@ -93,12 +93,31 @@ class SaleActionsTest {
         val db = graph.db()
         val a = TestDb.product(db, "A", 500L)
         val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(a to 1_000L)), tz) }
+        graph.sales.print(sale.id, copy = false) // the first receipt
+        graph.sales.print(sale.id, copy = false) // asked again (second tap, rotated screen): a copy
         graph.sales.print(sale.id, copy = true)
-        graph.sales.print(sale.id, copy = false)
         graph.sales.openDrawer()
         val jobs = db.readBlocking { r -> r.queryList("SELECT kind FROM print_job ORDER BY id") { it.getInt(0) } }
-        assertEquals(listOf(PrintJobKind.REPRINT, PrintJobKind.RECEIPT, PrintJobKind.DRAWER), jobs)
-        assertEquals(1L, db.readBlocking { AuditDao.countByAction(it, AuditAction.REPRINT) })
+        assertEquals(listOf(PrintJobKind.RECEIPT, PrintJobKind.REPRINT, PrintJobKind.REPRINT, PrintJobKind.DRAWER), jobs)
+        assertEquals(2L, db.readBlocking { AuditDao.countByAction(it, AuditAction.REPRINT) })
         assertEquals(1L, db.readBlocking { AuditDao.countByAction(it, AuditAction.DRAWER_OPEN) })
+    }
+
+    @Test
+    fun aReturnWorthNothingStillBlocksTheVoid() = runBlocking {
+        val db = graph.db()
+        val gift = TestDb.product(db, "Free gift", 0L)
+        db.writeBlocking { tx -> StockDao.insertMovement(tx, gift, MovementKind.RECEIVE, 5_000L, 0L, null, null, null, System.currentTimeMillis()) }
+        val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(gift to 2_000L)), tz) }
+        val lineId = assertNotNull(graph.sales.refundInfo(sale.id)).lines.single().id
+        val back = graph.sales.refund(sale.id, mapOf(lineId to 1_000L), restock = true, reason = "not wanted", method = cash)
+        assertEquals(0L, db.readBlocking { SaleDao.refunded(it, sale.id) })
+        assertEquals(4_000L, db.readBlocking { StockDao.level(it, gift) })
+
+        // Voiding the sale now would put all 2 back on top of the 1 already returned.
+        refused(ActionRefused.Reason.HAS_REFUNDS) { graph.sales.void(sale.id, "wrong sale") }
+        graph.sales.void(back.id, "mistake")
+        graph.sales.void(sale.id, "wrong sale")
+        assertEquals(5_000L, db.readBlocking { StockDao.level(it, gift) })
     }
 }

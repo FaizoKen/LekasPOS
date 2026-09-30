@@ -42,7 +42,7 @@ import kotlinx.coroutines.withContext
  */
 class BackupService(private val graph: AppGraph, private val app: Application) {
 
-    data class Entry(val file: File, val header: BackupFiles.Header?) {
+    data class Entry(val file: File, val header: BackupFiles.Header?, val size: Long = 0L) {
         val auto: Boolean get() = file.name.startsWith(AUTO)
     }
 
@@ -230,17 +230,26 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     suspend fun list(): List<Entry> = withContext(Dispatchers.IO) {
         (dir.listFiles { f -> f.name.endsWith(BackupFiles.EXT) } ?: emptyArray())
             .sortedByDescending { it.lastModified() }
-            .map { f -> Entry(f, runCatching { FileInputStream(f).use { BackupFiles.readHeader(it) } }.getOrNull()) }
+            .map { f -> Entry(f, runCatching { FileInputStream(f).use { BackupFiles.readHeader(it) } }.getOrNull(), f.length()) }
     }
 
-    /** Writes a fresh backup to [out] (a file the user picked, or one to share): a copy off this phone. */
-    suspend fun export(out: OutputStream) {
+    /**
+     * Writes a fresh backup to the stream [open] gives (a file the user picked, or one to share):
+     * a copy off this phone. The stream is opened, written and closed off the main thread; one
+     * backup at a time (they share a work file).
+     */
+    suspend fun export(open: () -> OutputStream) = lock.withLock {
         graph.permissions.actor(Perm.SETTINGS)
         val db = graph.db()
-        withContext(Dispatchers.IO) { BackupFiles.write(db, out, File(app.cacheDir, "backup-tmp"), BuildConfig.VERSION_NAME, "export") }
+        withContext(Dispatchers.IO) {
+            open().use { out -> BackupFiles.write(db, out, File(app.cacheDir, "backup-tmp"), BuildConfig.VERSION_NAME, "export") }
+        }
         db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.BACKUP_EXPORT_OK, System.currentTimeMillis().toString()) }
         refreshProtection()
     }
+
+    /** Why the last restore was not done, told once (see [Restore.takeFailure]). */
+    suspend fun restoreFailure(): String? = withContext(Dispatchers.IO) { Restore.takeFailure(app) }
 
     suspend fun header(open: () -> InputStream): BackupFiles.Header? = withContext(Dispatchers.IO) {
         runCatching { open().use { BackupFiles.readHeader(it) } }.getOrNull()

@@ -218,31 +218,59 @@ object ProductDao {
             "WHERE b.code >= ? AND b.code < ? AND b.deleted = 0 AND p.deleted = 0 AND p.active = 1 " +
             "ORDER BY b.code LIMIT ?"
 
+    // The same three searches with switched-off products included (product list and pickers,
+    // where the owner looks for a product to switch it back on). Same plans as above.
+    private const val SEARCH_FTS_ALL =
+        "SELECT $LIST_COLUMNS FROM (SELECT docid FROM product_fts WHERE product_fts MATCH ? LIMIT $FTS_CANDIDATES) f " +
+            "CROSS JOIN product p ON p.id = f.docid " +
+            "LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.deleted = 0 " +
+            "ORDER BY p.name_key, p.id LIMIT ?"
+
+    private const val SEARCH_PREFIX_ALL =
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.deleted = 0 AND p.name_key >= ? AND p.name_key < ? " +
+            "ORDER BY p.name_key, p.id LIMIT ?"
+
+    private const val SEARCH_BARCODE_PREFIX_ALL =
+        "SELECT $LIST_COLUMNS FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+            "LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE b.code >= ? AND b.code < ? AND b.deleted = 0 AND p.deleted = 0 " +
+            "ORDER BY b.code LIMIT ?"
+
     /**
      * Product search for the selling screen:
      *  - digits only (2+) → barcode/PLU prefix range on the barcode index, then name/SKU matches;
      *  - one Latin letter or digit → name-prefix index range;
      *  - otherwise → FTS4 prefix match on name and SKU, all tokens required.
-     * Every path is an index range or a capped FTS lookup, never a table scan.
+     * Every path is an index range or a capped FTS lookup, never a table scan. Switched-off
+     * products are left out unless [includeInactive] (product management and pickers).
      */
-    fun search(db: SQLiteDatabase, input: String, limit: Int = 50): List<ProductListItem> {
+    fun search(
+        db: SQLiteDatabase,
+        input: String,
+        limit: Int = 50,
+        includeInactive: Boolean = false,
+    ): List<ProductListItem> {
         val tokens = SearchText.tokens(input)
         if (tokens.isEmpty()) return emptyList()
         val out = LinkedHashMap<Long, ProductListItem>()
         val trimmed = input.trim()
         if (trimmed.length >= 2 && trimmed.all { it in '0'..'9' }) {
             val upper = prefixUpper(trimmed)
-            for (item in db.queryList(SEARCH_BARCODE_PREFIX, args(trimmed, upper, limit), ::listItem)) {
+            val sql = if (includeInactive) SEARCH_BARCODE_PREFIX_ALL else SEARCH_BARCODE_PREFIX
+            for (item in db.queryList(sql, args(trimmed, upper, limit), ::listItem)) {
                 if (!out.containsKey(item.id)) out[item.id] = item // (Map.putIfAbsent is API 24+)
             }
             if (out.size >= limit) return out.values.toList()
         }
         val more = if (tokens.size == 1 && tokens[0].length == 1 && !SearchText.isCjkChar(tokens[0])) {
             val p = tokens[0]
-            db.queryList(SEARCH_PREFIX, args(p, prefixUpper(p), limit), ::listItem)
+            val sql = if (includeInactive) SEARCH_PREFIX_ALL else SEARCH_PREFIX
+            db.queryList(sql, args(p, prefixUpper(p), limit), ::listItem)
         } else {
             val match = SearchText.ftsQuery(input) ?: return out.values.toList()
-            db.queryList(SEARCH_FTS, args(match, limit), ::listItem)
+            db.queryList(if (includeInactive) SEARCH_FTS_ALL else SEARCH_FTS, args(match, limit), ::listItem)
         }
         for (item in more) {
             if (out.size >= limit) break
@@ -277,6 +305,10 @@ object ProductDao {
         stockQty = c.longOrNull(6),
         active = c.bool(7),
     )
+
+    /** Is [id] a product of this store that has not been deleted? */
+    fun isLive(db: SQLiteDatabase, id: Long): Boolean =
+        db.long("SELECT COUNT(*) FROM product WHERE id = ? AND deleted = 0", id) > 0L
 
     fun get(db: SQLiteDatabase, id: Long): Product? = db.queryOne(
         "SELECT id, name, sku, category_id, unit, sell_mode, price, cost, tax_rate_id, track_stock, " +
@@ -333,14 +365,24 @@ object ProductDao {
     )
 
     /** Writes the fields that differ between [before] and [after]; returns the changed columns. */
-    fun update(tx: Db.Tx, before: Product, after: Product, now: Long): Set<String> {
-        require(before.id == after.id)
-        val old = fields(before)
+    fun update(tx: Db.Tx, before: Product, after: Product, now: Long): Set<String> =
+        update(tx, before, after, before, now)
+
+    /**
+     * Writes an edit made on a screen that showed [shown]: the fields where [edited] differs from
+     * [shown] (the user's changes) and from [current] (the row as stored now, read in this
+     * transaction). A field another till changed while the screen was open keeps that change.
+     * Returns the changed columns.
+     */
+    fun update(tx: Db.Tx, shown: Product, edited: Product, current: Product, now: Long): Set<String> {
+        require(shown.id == edited.id && current.id == edited.id)
+        val seen = fields(shown)
+        val stored = fields(current)
         val changes = LinkedHashMap<String, Any?>()
-        for ((k, v) in fields(after)) if (old[k] != v) changes[k] = v
+        for ((k, v) in fields(edited)) if (seen[k] != v && stored[k] != v) changes[k] = v
         if (changes.isEmpty()) return emptySet()
-        LwwWriter.update(tx, "product", Entity.PRODUCT, after.id, changes, now)
-        if ("name" in changes || "sku" in changes) reindex(tx, after.id)
+        LwwWriter.update(tx, "product", Entity.PRODUCT, edited.id, changes, now)
+        if ("name" in changes || "sku" in changes) reindex(tx, edited.id)
         return changes.keys
     }
 
@@ -359,11 +401,31 @@ object ProductDao {
         )
     }
 
-    fun updateBarcode(tx: Db.Tx, b: Barcode, now: Long) {
-        LwwWriter.update(
-            tx, "product_barcode", Entity.BARCODE, b.id,
-            linkedMapOf("code" to b.code, "kind" to b.kind, "pack_qty" to b.packQty, "pack_price" to b.packPrice), now,
-        )
+    private fun barcodeFields(b: Barcode): Map<String, Any?> =
+        linkedMapOf("code" to b.code, "kind" to b.kind, "pack_qty" to b.packQty, "pack_price" to b.packPrice)
+
+    fun barcode(db: SQLiteDatabase, id: Long): Barcode? = db.queryOne(
+        "SELECT id, product_id, code, kind, pack_qty, pack_price FROM product_barcode WHERE id = ?", args(id),
+    ) { c -> Barcode(c.getLong(0), c.getLong(1), c.getString(2), c.getInt(3), c.getLong(4), c.longOrNull(5)) }
+
+    /** Writes the fields of [b] that differ from the barcode as stored now. Returns false if it does not exist. */
+    fun updateBarcode(tx: Db.Tx, b: Barcode, now: Long): Boolean {
+        val current = barcode(tx.db, b.id) ?: return false
+        return updateBarcode(tx, current, b, now)
+    }
+
+    /**
+     * An edit made on a screen that showed [before]: writes only the fields the user changed that
+     * also differ from the barcode as stored now. Returns false if it does not exist.
+     */
+    fun updateBarcode(tx: Db.Tx, before: Barcode, after: Barcode, now: Long): Boolean {
+        require(before.id == after.id)
+        val current = barcode(tx.db, after.id) ?: return false
+        val seen = barcodeFields(before)
+        val stored = barcodeFields(current)
+        val changes = LinkedHashMap<String, Any?>()
+        for ((k, v) in barcodeFields(after)) if (seen[k] != v && stored[k] != v) changes[k] = v
+        return LwwWriter.update(tx, "product_barcode", Entity.BARCODE, after.id, changes, now)
     }
 
     fun removeBarcode(tx: Db.Tx, id: Long, now: Long) {
@@ -502,6 +564,9 @@ object ProductDao {
         "search_fts" to SEARCH_FTS,
         "search_prefix" to SEARCH_PREFIX,
         "search_barcode_prefix" to SEARCH_BARCODE_PREFIX,
+        "search_fts_all" to SEARCH_FTS_ALL,
+        "search_prefix_all" to SEARCH_PREFIX_ALL,
+        "search_barcode_prefix_all" to SEARCH_BARCODE_PREFIX_ALL,
         "category_page" to BY_CATEGORY,
         "product_manage_page" to MANAGE_PAGE,
         "product_sell_page" to SELL_PAGE,

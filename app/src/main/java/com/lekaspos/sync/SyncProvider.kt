@@ -24,9 +24,11 @@ interface SyncProvider {
     /**
      * Files whose names start with [prefix]; with [since], only those created after it (by the
      * folder's clock, as in [RemoteFile.created]) — a quick listing that stays short as the store
-     * grows (D-053). A provider may return more than asked, never less.
+     * grows (D-053). A provider may return more than asked, never less. [keep] sees every file as
+     * the listing is read and decides whether it is returned, so a folder of many thousands of
+     * files is never held in memory whole.
      */
-    suspend fun list(prefix: String, since: Long? = null): List<RemoteFile>
+    suspend fun list(prefix: String, since: Long? = null, keep: (RemoteFile) -> Boolean = { true }): List<RemoteFile>
 
     /**
      * Stores [file] as [name]. With [replace] an existing file of that name (this till's own
@@ -49,10 +51,11 @@ class FolderProvider(private val dir: File) : SyncProvider {
 
     override val id: String = "folder"
 
-    override suspend fun list(prefix: String, since: Long?): List<RemoteFile> {
+    override suspend fun list(prefix: String, since: Long?, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
         val files = dir.listFiles { f -> f.isFile && f.name.startsWith(prefix) && !f.name.startsWith(".") && !f.name.endsWith(TMP) }.orEmpty()
         return files.filter { since == null || it.lastModified() > since }.sortedBy { it.name }
             .map { RemoteFile(it.name, it.name, it.length(), props(it), it.lastModified()) }
+            .filter(keep)
     }
 
     override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {

@@ -109,11 +109,17 @@ Streaming read/write only (`SegmentCodec`).
 1. Seal: one write transaction per segment moves ≤ 2,000 outbox rows into
    `files/sync/out/seg-<seq>.ndjson.gz`, records it in `sync_segment`, deletes those rows.
 2. Upload every unsent segment in order (`put` with `replace = false`: an already uploaded name
-   is left alone after a crash); mark uploaded; local copies deleted after 14 days.
+   is left alone after a crash); mark uploaded; local copies deleted after 14 days (from
+   `meta sync.cleaned_to` on, never the whole history). Uploads stop at the first failure, so the
+   unsent segments are exactly those after the last uploaded one (a key range, not a scan).
 3. Import: list `seg-{store}-*`; for every other device `d` apply `cursor[d]+1, +2, …` in
    order (`Cursors.next`), each downloaded to `cacheDir/sync-in`, verified, and applied in one
    transaction together with `cursor[d] = seq`. A gap stops that device until it appears.
-   `hlc.observe(max)` afterwards.
+   `hlc.observe(max)` afterwards. The listing is filtered while it is read (`list(keep)`): only
+   files after a cursor are kept, the rest only counted (D-054). On a whole-folder listing, a
+   cursor beyond a till's highest file means that till numbered again from 1 (it moved the store
+   to this folder, or the folder was emptied): the cursor is dropped and the till read again
+   (re-applying is harmless).
 4. Publish the device card; reload settings / staff when those entities changed.
 5. `meta sync.last_ok / sync.last_error` (`"sign-in"` when the provider needs the user).
 
@@ -130,11 +136,25 @@ the creation fills; products are re-indexed for search.
 
 - Enabling sync: pick the store manifest (own store if present, else create when none, else
   adopt the first), refuse on a device-number clash (another card with our number, different
-  uuid), take a free receipt prefix if ours is used by another card, then backfill + sync.
+  uuid; every card must download — an unreadable one fails the enable), take a free receipt
+  prefix if ours is used by another card, then backfill + sync. Before that (D-054):
+  - the folder already holds **more** of this till's files (or its card a higher `lastSeq`) than
+    this database ever sealed → it is an older copy of the till (a backup from before it first
+    synced was restored as "the same till"): refused with `OLD_COPY`, `meta identity.renew = 1`,
+    and the next start gives the database a new identity (`Restore.renewIfAsked`) before
+    anything is written with the old number;
+  - the folder holds **none** of this till's files but it sealed some before (another Google
+    account, an emptied folder) → its numbering restarts at 1 (segments, local files, outbox and
+    cursors cleared; backfill again). Other tills read a till's files in order from 1:
+    continuing at k+1 they would never read it.
 - Disabling: outbox cleared, backfill flag cleared (re-enabling publishes everything again).
 - Restore (D-044): a database that published segments (or had sync on) always gets a **new
-  identity** on restore; sync is turned off; the old device's cursor is set to its last sealed
-  segment (that data is in the backup), so only what the original did afterwards is imported.
+  identity** on restore; so does "restore this till" over data of the same till that has synced
+  (whatever the backup contains, D-054); sync is turned off; the old device's cursor is set to its
+  last sealed segment (that data is in the backup), so only what the original did afterwards is
+  imported. The new device number never gives the old receipt prefix. `files/restore-pending`
+  keeps the mode from the swap until `afterOpen` has run (a crash in between still gets the
+  identity reset); a restore whose safety copy of the current data fails is not done at all.
 
 ## 8. Not built yet (deferred, D-045)
 
@@ -146,7 +166,7 @@ Snapshot bootstrap for very large stores; remote GC of segments every device has
 ```kotlin
 interface SyncProvider {
     val id: String                                    // "gdrive", "folder"
-    suspend fun list(prefix: String): List<RemoteFile>
+    suspend fun list(prefix: String, since: Long? = null, keep: (RemoteFile) -> Boolean = { true }): List<RemoteFile>
     suspend fun put(name: String, file: File, props: Map<String, String> = emptyMap(), replace: Boolean = false): RemoteFile
     suspend fun get(remote: RemoteFile, dest: File)
     suspend fun delete(remote: RemoteFile)

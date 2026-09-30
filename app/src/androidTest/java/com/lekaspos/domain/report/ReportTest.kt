@@ -5,14 +5,18 @@ import com.lekaspos.app.AppGraph
 import com.lekaspos.core.csv.CsvReader
 import com.lekaspos.core.csv.CsvWriter
 import com.lekaspos.core.model.MovementKind
+import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.report.Granularity
 import com.lekaspos.core.report.Months
 import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.time.Days
+import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.data.db.DerivedRebuild
 import com.lekaspos.data.db.Seed
 import com.lekaspos.data.db.queryList
+import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.stock.StockDao
@@ -175,6 +179,61 @@ class ReportTest {
         val stock = graph.reports.stock()
         assertEquals(2L, stock.products)
         assertEquals(9L * 300L + 1_134L, stock.value) // 9 × 3.00 + 2.52 × 4.50
+    }
+
+    @Test
+    fun categoriesFollowTheProductWhicheverSummaryTableIsRead() = runBlocking {
+        val db = graph.db()
+        val now = System.currentTimeMillis()
+        val drinks = db.writeBlocking { tx -> CategoryDao.insert(tx, "Minuman", 0, 0, now) }
+        val snacks = db.writeBlocking { tx -> CategoryDao.insert(tx, "Snek", 0, 0, now) }
+        val kopi = TestDb.product(db, "Kopi", 1_250L, categoryId = drinks)
+        val kacang = TestDb.product(db, "Kacang", 300L) // no category
+        db.writeBlocking { tx ->
+            SaleDao.commit(tx, TestDb.saleDraft(db, listOf(kopi to 1_000L, kacang to 1_000L), soldAt = at(20260110)), tz)
+        }
+        // Kopi moves to another category between two sales of the same month.
+        val p = assertNotNull(db.readBlocking { ProductDao.get(it, kopi) })
+        db.writeBlocking { tx -> ProductDao.update(tx, p, p.copy(categoryId = snacks), now) }
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(kopi to 2_000L), soldAt = at(20260120)), tz) }
+        fun cats(range: Period) = db.readBlocking { ReportDao.byCategory(it, MonthSplit.of(range)) }.associate { it.categoryId to it.qty }
+        val month = cats(Period(Days.fromYmd(20260101), Days.fromYmd(20260201))) // the month table
+        val days = cats(Period(Days.fromYmd(20260105), Days.fromYmd(20260125))) // the day table
+        assertEquals(mapOf(snacks to 3_000L, null to 1_000L), month)
+        assertEquals(month, days)
+    }
+
+    @Test
+    fun aVoidedSaleIsNotASaleInAnyList() = runBlocking {
+        val db = graph.db()
+        val kopi = TestDb.product(db, "Kopi", 1_250L, cost = 700L)
+        val teh = TestDb.product(db, "Teh", 990L, cost = 400L)
+        db.writeBlocking { tx ->
+            StockDao.insertMovement(tx, kopi, MovementKind.OPENING, 5_000L, 700L, null, null, null, 1L)
+            StockDao.insertMovement(tx, teh, MovementKind.OPENING, 5_000L, 400L, null, null, null, 1L)
+        }
+        val now = System.currentTimeMillis()
+        val today = Days.epochDay(now, tz)
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(kopi to 1_000L), soldAt = now), tz) }
+        // Teh's only sale (by card, another cashier) is voided: it leaves all-zero summary rows behind.
+        val voided = db.writeBlocking { tx ->
+            SaleDao.commit(tx, TestDb.saleDraft(db, listOf(teh to 1_000L), soldAt = now, payKind = PaymentKind.CARD, staffId = 99L), tz)
+        }
+        db.writeBlocking { tx -> SaleDao.void(tx, voided.id, "wrong", null, null, null, now) }
+        val month = Period(today - 29, today + 1)
+        val day = Period(today, today + 1)
+        suspend fun check() {
+            assertEquals(listOf(teh), graph.reports.slowMovers(month).first.map { it.productId })
+            val products = db.readBlocking { ReportDao.products(it, MonthSplit.of(day), limit = Int.MAX_VALUE) }
+            assertEquals(listOf(kopi), products.map { it.productId })
+            assertEquals(listOf(Seed.Ids.PM_CASH), db.readBlocking { ReportDao.byPayment(it, today, today + 1) }.map { it.methodId })
+            assertEquals(listOf(0L), db.readBlocking { ReportDao.byStaff(it, today, today + 1) }.map { it.staffId })
+            assertEquals(1L, graph.reports.export(ReportService.Export.PRODUCTS, day, StringBuilder(), tz))
+        }
+        check()
+        // A rebuild (which has no zero rows) gives the same answers.
+        db.writeBlocking(reserveIds = 0) { tx -> DerivedRebuild.all(tx) }
+        check()
     }
 
     @Test

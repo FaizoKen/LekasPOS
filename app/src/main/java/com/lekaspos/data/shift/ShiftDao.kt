@@ -29,7 +29,7 @@ data class Shift(
     val open: Boolean get() = closedAt == null
 }
 
-/** Sales or refunds of a shift (`kind` = SaleKind), voided ones included. */
+/** Sales or refunds of a shift (`kind` = SaleKind), voided ones included (see [ShiftTotals.tax]). */
 data class DocSum(val kind: Int, val count: Int, val total: Long, val discount: Long, val tax: Long)
 
 /** Payments of one method in a shift; [positive] = the part > 0 (money in, before refunds). */
@@ -49,7 +49,18 @@ data class ShiftTotals(
     /** CashMoveKind → sum of amounts. */
     val cashMoves: Map<Int, Long>,
     val credit: List<CreditSum>,
-)
+    /** Discounts and tax of the documents voided during this shift (whenever they were made). */
+    val voidDiscount: Long = 0L,
+    val voidTax: Long = 0L,
+) {
+    /**
+     * Discounts and tax of this shift: its documents less those voided during it. A void belongs
+     * to the shift it happens in (D-038), like the voided payments, so an earlier shift's report
+     * never changes.
+     */
+    val discount: Long get() = docs.sumOf { it.discount } - voidDiscount
+    val tax: Long get() = docs.sumOf { it.tax } - voidTax
+}
 
 /** A cash in / cash out / drop (EVENT table `cash_movement`); [amount] is positive, [kind] gives the direction. */
 data class CashMove(val id: Long, val shiftId: Long, val kind: Int, val amount: Long, val reason: String?, val staffId: Long?, val at: Long)
@@ -99,7 +110,8 @@ object ShiftDao {
     private const val DOCS =
         "SELECT kind, COUNT(*), SUM(total), SUM(discount), SUM(tax) FROM sale WHERE shift_id = ? GROUP BY kind"
     private const val VOIDS =
-        "SELECT COUNT(*), SUM(s.total) FROM sale_void v CROSS JOIN sale s ON s.id = v.sale_id WHERE v.shift_id = ?"
+        "SELECT COUNT(*), SUM(s.total), SUM(s.discount), SUM(s.tax) FROM sale_void v CROSS JOIN sale s ON s.id = v.sale_id " +
+            "WHERE v.shift_id = ?"
     private const val PAYMENTS =
         "SELECT method_id, kind, COUNT(*), SUM(amount), SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) " +
             "FROM payment WHERE shift_id = ? GROUP BY method_id, kind"
@@ -114,7 +126,9 @@ object ShiftDao {
     fun totals(db: SQLiteDatabase, shiftId: Long): ShiftTotals {
         val a = args(shiftId)
         val docs = db.queryList(DOCS, a) { DocSum(it.getInt(0), it.getInt(1), it.getLong(2), it.getLong(3), it.getLong(4)) }
-        val voids = db.queryOne(VOIDS, a) { it.getInt(0) to (it.longOrNull(1) ?: 0L) } ?: (0 to 0L)
+        val voids = db.queryOne(VOIDS, a) { c ->
+            longArrayOf(c.getLong(0), c.longOrNull(1) ?: 0L, c.longOrNull(2) ?: 0L, c.longOrNull(3) ?: 0L)
+        } ?: LongArray(4)
         val methodSum = { c: Cursor -> MethodSum(c.getLong(0), c.getInt(1), c.getInt(2), c.getLong(3), c.getLong(4)) }
         val payments = db.queryList(PAYMENTS, a, methodSum)
         val voided = db.queryList(VOIDED_PAYMENTS, a, methodSum)
@@ -123,7 +137,9 @@ object ShiftDao {
         val credit = db.queryList(CREDIT, a) {
             CreditSum(it.getInt(0), it.longOrNull(1), if (it.isNull(2)) null else it.getInt(2), it.getInt(3), it.getLong(4))
         }
-        return ShiftTotals(docs, voids.first, voids.second, payments, voided, moves, credit)
+        return ShiftTotals(
+            docs, voids[0].toInt(), voids[1], payments, voided, moves, credit, voidDiscount = voids[2], voidTax = voids[3],
+        )
     }
 
     // ------------------------------------------------------------------ cash movements

@@ -58,27 +58,34 @@ object SyncDao {
         )
     }
 
+    /**
+     * Segments not uploaded yet. Uploads go in order and stop at the first failure, so these are
+     * exactly the ones after the last uploaded: a range of the primary key, however long the
+     * history (a year is some 70,000 segments).
+     */
     fun unsent(db: SQLiteDatabase): List<SegmentRow> = db.queryList(
-        "SELECT seq, count, first_hlc, last_hlc, size, sha256, created_at, uploaded_at FROM sync_segment " +
-            "WHERE uploaded_at IS NULL ORDER BY seq",
-        null,
+        "SELECT seq, count, first_hlc, last_hlc, size, sha256, created_at, uploaded_at FROM sync_segment WHERE seq > ? ORDER BY seq",
+        args(lastUploaded(db)),
         ::segment,
     )
 
-    fun segments(db: SQLiteDatabase): List<SegmentRow> = db.queryList(
-        "SELECT seq, count, first_hlc, last_hlc, size, sha256, created_at, uploaded_at FROM sync_segment ORDER BY seq",
-        null,
+    /** Up to [limit] segments after [afterSeq], in order. */
+    fun segmentsAfter(db: SQLiteDatabase, afterSeq: Long, limit: Int): List<SegmentRow> = db.queryList(
+        "SELECT seq, count, first_hlc, last_hlc, size, sha256, created_at, uploaded_at FROM sync_segment WHERE seq > ? ORDER BY seq LIMIT ?",
+        args(afterSeq, limit),
         ::segment,
     )
 
-    fun lastUploaded(db: SQLiteDatabase): Long = db.long("SELECT COALESCE(MAX(seq), 0) FROM sync_segment WHERE uploaded_at IS NOT NULL")
+    /** The newest uploaded segment: read backwards from the newest, it stops at the first uploaded one. */
+    fun lastUploaded(db: SQLiteDatabase): Long =
+        db.long("SELECT COALESCE((SELECT seq FROM sync_segment WHERE uploaded_at IS NOT NULL ORDER BY seq DESC LIMIT 1), 0)")
 
     fun markUploaded(tx: Db.Tx, seq: Long, at: Long) {
         tx.update("UPDATE sync_segment SET uploaded_at = ? WHERE seq = ?", at, seq)
     }
 
     fun unsentEvents(db: SQLiteDatabase): Long =
-        outboxCount(db) + db.long("SELECT COALESCE(SUM(count), 0) FROM sync_segment WHERE uploaded_at IS NULL")
+        outboxCount(db) + db.long("SELECT COALESCE(SUM(count), 0) FROM sync_segment WHERE seq > ?", lastUploaded(db))
 
     fun cursors(db: SQLiteDatabase): Map<Int, Long> {
         val out = HashMap<Int, Long>()
@@ -92,6 +99,21 @@ object SyncDao {
             "UPDATE sync_cursor SET seq = ?, last_hlc = ?, updated_at = ? WHERE dev = ?", v,
             "INSERT INTO sync_cursor(seq, last_hlc, updated_at, dev) VALUES(?, ?, ?, ?)", v,
         )
+    }
+
+    fun dropCursor(tx: Db.Tx, dev: Int) {
+        tx.update("DELETE FROM sync_cursor WHERE dev = ?", dev)
+    }
+
+    /**
+     * This till publishes into a folder that has none of its files: its file numbers start again
+     * at 1, nothing is waiting from the old folder, and what it read of other tills there no
+     * longer counts. (Its data is published again in full by the backfill.)
+     */
+    fun restartPublishing(tx: Db.Tx) {
+        tx.update("DELETE FROM sync_segment")
+        tx.update("DELETE FROM sync_cursor")
+        tx.update("DELETE FROM outbox")
     }
 
     // Events of kinds this version cannot apply yet (D-047): kept, applied after an update.

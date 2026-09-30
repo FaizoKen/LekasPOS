@@ -180,11 +180,19 @@ class SyncActivity : ScreenActivity() {
         val app = application
         val screen = WeakReference(this) // the first sync may outlive this screen
         graph.appScope.launch {
+            var oldCopy = false
             val error = try {
                 if (name != null) graph.sync.enable(provider, name, account) else graph.sync.sync(provider)
                 null
             } catch (e: SyncEngine.Problem) {
-                if (e.reason == SyncEngine.Problem.Reason.DEVICE_CLASH) app.getString(R.string.sync_error_clash) else errorText(app, e)
+                when (e.reason) {
+                    SyncEngine.Problem.Reason.DEVICE_CLASH -> app.getString(R.string.sync_error_clash)
+                    SyncEngine.Problem.Reason.OLD_COPY -> {
+                        oldCopy = true
+                        app.getString(R.string.sync_old_copy)
+                    }
+                    else -> errorText(app, e)
+                }
             } catch (e: Exception) {
                 errorText(app, e)
             }
@@ -193,7 +201,17 @@ class SyncActivity : ScreenActivity() {
                 if (error == null) com.lekaspos.app.Work.schedule(app)
             }
             if (error != null) {
-                screen.get()?.let { a -> a.runOnUiThread { if (!a.isFinishing && !a.isDestroyed) Dialogs.message(a, a.getString(R.string.sync_title), error) } }
+                screen.get()?.let { a ->
+                    a.runOnUiThread {
+                        if (a.isFinishing || a.isDestroyed) return@runOnUiThread
+                        if (oldCopy) {
+                            // The new till number is taken at the next start (also without this restart).
+                            Dialogs.confirm(a, a.getString(R.string.sync_title), error, a.getString(R.string.backup_restart_now)) { graph.backups.restart(a) }
+                        } else {
+                            Dialogs.message(a, a.getString(R.string.sync_title), error)
+                        }
+                    }
+                }
             }
         }
     }

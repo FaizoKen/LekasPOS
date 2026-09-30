@@ -91,11 +91,16 @@ class ReceiptLayoutTest {
 
     @Test
     fun refundInMalay() {
-        val refund = doc(total = -1890L).copy(refund = true, refReceiptNo = "AB12-0-000041", rounding = -5L)
+        // A refund's payment is stored with a negative amount and nothing tendered.
+        val refund = doc(total = -1890L).copy(
+            refund = true, refReceiptNo = "AB12-0-000041", rounding = -5L,
+            payments = listOf(ReceiptPayment("Tunai", -1890L)), change = 0L,
+        )
         val t = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.MS, kl).layout(refund)).map { it.text }
         assertTrue(t.any { it.trim() == "BAYARAN BALIK" })
         assertTrue("Resit asal: AB12-0-000041" in t)
         assertTrue(t.any { it.startsWith("Pelarasan") && it.endsWith("-0.05") })
+        assertTrue(row("Tunai", "-18.90") in t)
         assertTrue(t.any { it.trim() == "Imbas untuk minta e-invois" })
     }
 

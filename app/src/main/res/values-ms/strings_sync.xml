@@ -29,6 +29,7 @@
     <string name="backup_checking">Menyemak sandaran…</string>
     <string name="backup_restart">Sandaran sudah sedia. Aplikasi dimulakan semula untuk selesaikan pemulihan.</string>
     <string name="backup_restart_now">Mula semula sekarang</string>
+    <string name="backup_restore_not_done">Pemulihan tidak dibuat: data pada telefon ini tidak dapat disimpan terlebih dahulu (%1$s). Tiada apa-apa yang berubah. Kosongkan sedikit storan dan cuba lagi.</string>
     <string name="backup_delete_confirm">Padam sandaran ini daripada telefon?</string>
     <string name="backup_restore_sync">Kaunter ini bersegerak dengan kaunter lain: selepas pemulihan ia menyertai kedai sebagai kaunter baharu, dan segerak perlu dihidupkan semula.</string>
 
@@ -82,6 +83,7 @@
     <string name="sync_turn_off_confirm">Kaunter ini berhenti bersegerak. Datanya kekal dalam telefon ini dan kaunter lain menyimpan data masing-masing. Menghidupkan segerak semula menghantar data kaunter ini sekali lagi.</string>
     <string name="sync_error_connect">Tidak dapat menyambung ke Google: %1$s</string>
     <string name="sync_error_clash">Kaunter lain dalam kedai ini mempunyai nombor kaunter yang sama. Buat sandaran, kemudian pulihkannya pada telefon ini sebagai kaunter baharu, dan hidupkan segerak semula.</string>
+    <string name="sync_old_copy">Telefon ini menyimpan salinan lama kaunter ini: rekod yang lebih baharu telah disandarkan daripadanya (sandaran telah dipulihkan selepas itu). Supaya tiada yang hilang atau bercampur, telefon ini diteruskan sebagai kaunter baharu. Mulakan semula aplikasi, kemudian hidupkan sandaran semula: semua yang telah disandarkan akan kembali.</string>
     <string name="sync_other_account">Anda log masuk sebagai %1$s, tetapi kaunter ini bersegerak dengan %2$s. Log masuk dengan %2$s, atau matikan dan hidupkan semula segerak untuk memindahkan kedai ke akaun lain.</string>
     <string name="sync_pill_sign_in">Sandaran: log masuk</string>
     <string name="sync_pill_stale">Tiada sandaran</string>

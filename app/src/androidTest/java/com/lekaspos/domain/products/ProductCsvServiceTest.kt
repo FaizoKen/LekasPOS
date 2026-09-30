@@ -96,6 +96,30 @@ class ProductCsvServiceTest {
         assertEquals(1L, db.read { AuditDao.countByAction(it, AuditAction.PRODUCT_IMPORT) })
     }
 
+    /** D-042: exported, edited in a spreadsheet, imported again — the same products, none twice. */
+    @Test
+    fun anExportedFileImportedAgainUpdatesTheSameProducts() = runBlocking {
+        val g = graph()
+        seedCatalog(g)
+        val db = g.db()
+        val leaves = db.write(reserveIds = 2L) { tx ->
+            tx.nextId().also { ProductDao.create(tx, Product(it, "=Daun kari", price = 100L), emptyList(), System.currentTimeMillis()) }
+        }
+        val out = StringBuilder()
+        assertEquals(4, g.productCsv.export(out))
+        assertTrue(out.contains("'=Daun kari")) // a spreadsheet does not run it as a formula
+        val edited = out.toString().split("\r\n").joinToString("\r\n") { if (it.startsWith("'=Daun kari,")) it.replace(",1.00,", ",1.20,") else it }
+        val preview = g.productCsv.preview { StringReader(edited) }
+        assertEquals(0, preview.newProducts)
+        assertEquals(4, preview.updates)
+        val result = g.productCsv.import({ StringReader(edited) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(0, result.created)
+        assertEquals(4, result.updated)
+        val p = assertNotNull(db.read { ProductDao.get(it, leaves) })
+        assertEquals("=Daun kari", p.name)
+        assertEquals(120L, p.price)
+    }
+
     @Test
     fun previewFindsProblemsAndTheImportSkipsThem() = runBlocking {
         val g = graph()

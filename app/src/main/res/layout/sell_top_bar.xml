@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Store name, who is selling, and pills that appear only when there is something to see
-     (held bills, printer, backup). Every control has a word, not just an icon (D-049). -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     (held bills, printer, backup). Every control has a word, not just an icon (D-049).
+     TopBarLayout: first child = the name, last child = Menu (always top right); pills that do
+     not fit beside the name move to a line below (small phones). -->
+<com.lekaspos.ui.sell.TopBarLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/top_bar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/brand"
-    android:gravity="center_vertical"
-    android:minHeight="56dp"
-    android:orientation="horizontal"
     android:paddingStart="16dp"
     android:paddingEnd="4dp">
 
     <TextView
         android:id="@+id/title"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:ellipsize="end"
         android:singleLine="true"
         android:text="@string/app_name"
@@ -27,12 +25,11 @@
         android:id="@+id/staff_chip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
         android:background="@drawable/pill_info_bg"
         android:ellipsize="end"
         android:gravity="center"
         android:maxWidth="120dp"
-        android:minHeight="40dp"
+        android:minHeight="48dp"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:singleLine="true"
@@ -44,10 +41,10 @@
         android:id="@+id/held_pill"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
         android:background="@drawable/pill_info_bg"
+        android:ellipsize="end"
         android:gravity="center"
-        android:minHeight="40dp"
+        android:minHeight="48dp"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:singleLine="true"
@@ -60,10 +57,10 @@
         android:id="@+id/sync_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
         android:background="@drawable/pill_bg"
+        android:ellipsize="end"
         android:gravity="center"
-        android:minHeight="40dp"
+        android:minHeight="48dp"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:singleLine="true"
@@ -75,12 +72,13 @@
         android:id="@+id/printer_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
         android:background="@drawable/pill_bg"
+        android:ellipsize="end"
         android:gravity="center"
-        android:minHeight="40dp"
+        android:minHeight="48dp"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
+        android:singleLine="true"
         android:textColor="@color/text_on_brand"
         android:textSize="13sp"
         android:visibility="gone" />
@@ -89,7 +87,6 @@
         android:id="@+id/btn_menu"
         android:layout_width="wrap_content"
         android:layout_height="56dp"
-        android:layout_marginStart="4dp"
         android:background="?android:attr/selectableItemBackground"
         android:clickable="true"
         android:contentDescription="@string/sell_menu"
@@ -102,6 +99,7 @@
 
         <ImageView
             style="@style/Widget.Lekas.ToolIcon"
+            android:contentDescription="@null"
             android:src="@drawable/ic_more"
             android:tint="@color/text_on_brand" />
 
@@ -113,4 +111,4 @@
             android:text="@string/sell_menu"
             android:textColor="@color/text_on_brand" />
     </LinearLayout>
-</LinearLayout>
+</com.lekaspos.ui.sell.TopBarLayout>

@@ -1,6 +1,7 @@
 package com.lekaspos.core.escpos
 
 import com.lekaspos.core.receipt.PrintLine
+import com.lekaspos.core.text.TextWidth
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -53,16 +54,46 @@ class EscPosTest {
     @Test
     fun latinTextLosesAccentsOnly() {
         assertEquals("Cafe x2 - Nasi Lemak", String(EscPosText.encode("Café ×2 – Nasi Lemak", TextMode.LATIN), Charsets.US_ASCII))
-        assertEquals("??", String(EscPosText.encode("牛奶", TextMode.LATIN), Charsets.US_ASCII))
+        assertEquals("????", String(EscPosText.encode("牛奶", TextMode.LATIN), Charsets.US_ASCII)) // one '?' per column
         assertEquals("ab", String(EscPosText.encode("a\nb", TextMode.LATIN), Charsets.US_ASCII))
+        assertEquals("Cafe", String(EscPosText.encode("Cafe\u0301", TextMode.LATIN), Charsets.US_ASCII)) // decomposed é
     }
 
     @Test
     fun canEncodeTellsWhenAnImageIsNeeded() {
         assertTrue(EscPosText.canEncode("Café ×2 – RM1.00", TextMode.LATIN))
+        assertTrue(EscPosText.canEncode("Cafe\u0301 a\u200Bb", TextMode.LATIN))
         assertEquals(false, EscPosText.canEncode("牛奶", TextMode.LATIN))
         assertTrue(EscPosText.canEncode("Susu 牛奶", TextMode.GB18030))
         assertEquals(false, EscPosText.canEncode("பால்", TextMode.GB18030)) // Tamil: image only
+        assertEquals(false, EscPosText.canEncode("Tiket €5", TextMode.LATIN)) // no one-column stand-in
+        assertEquals(false, EscPosText.canEncode("Tea £2", TextMode.LATIN))
+    }
+
+    @Test
+    fun textKeepsTheColumnCountOfTheLayout() {
+        // The layout measures with TextWidth; the printer must get exactly that many columns.
+        val lines = listOf(
+            "Coklat… ×2 – “Best” ‘buy’ • ¥1 · x\u00A0y", "Café crème", "Cafe\u0301 soft\u00ADhyphen", "牛奶 Susu 1L",
+            "Kuih 😀 raya",
+        )
+        for (s in lines) {
+            val latin = EscPosText.encode(s, TextMode.LATIN)
+            assertEquals(TextWidth.of(s), latin.size, "'$s' in LATIN mode")
+        }
+        val ascii = String(EscPosText.encode(lines[0], TextMode.LATIN), Charsets.US_ASCII)
+        assertEquals("Coklat. x2 - \"Best\" 'buy' * Y1 . x y", ascii)
+    }
+
+    @Test
+    fun chineseModeSendsOnlyTwoByteCharacters() {
+        // Emoji and CJK extension B are four-byte GB18030: GBK-only printers print garbage, so a picture.
+        assertEquals(false, EscPosText.canEncode("Susu 😀", TextMode.GB18030))
+        assertEquals(false, EscPosText.canEncode("\uD840\uDC00", TextMode.GB18030)) // U+20000
+        assertEquals("a?b", String(EscPosText.encode("a😀b", TextMode.GB18030), Charsets.US_ASCII))
+        assertEquals("a??b", String(EscPosText.encode("a\uD840\uDC00b", TextMode.GB18030), Charsets.US_ASCII))
+        val milk = "牛奶 Susu"
+        assertEquals(TextWidth.of(milk), EscPosText.encode(milk, TextMode.GB18030).size)
     }
 
     @Test

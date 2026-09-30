@@ -131,8 +131,8 @@ class StaffTest {
     }
 
     @Test
-    fun wrongPinsMakeTheTillWait() = runBlocking {
-        val (_, cashier) = team()
+    fun wrongPinsMakeThatPersonWait() = runBlocking {
+        val (manager, cashier) = team()
         val s = graph.staff
         s.lock()
         repeat(PinLockout.FREE_TRIES - 1) { assertIs<StaffSession.Check.WrongPin>(s.signIn(cashier, "9999")) }
@@ -141,12 +141,62 @@ class StaffTest {
         assertEquals(PinLockout.FIRST_WAIT_MS, fifth.waitMs)
         assertIs<StaffSession.Check.Wait>(s.signIn(cashier, "1111")) // even the right PIN waits
         assertEquals(1L, audits(AuditAction.PIN_LOCKOUT))
-        assertTrue(s.waitMs() > 0L)
+        assertTrue(s.waitMs(cashier) > 0L)
+        assertEquals(0L, s.waitMs(manager)) // someone else can still sign in
 
         // Time passes (the last failure moves 31 s back): the right PIN works and resets the count.
-        graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, StaffSession.KEY_LAST_FAIL, (System.currentTimeMillis() - 31_000L).toString()) }
+        graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, (System.currentTimeMillis() - 31_000L).toString())
+        }
         assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
-        assertEquals("0", graph.db().read { Meta.get(it, StaffSession.KEY_FAILS) })
+        assertNull(graph.db().read { Meta.get(it, StaffSession.KEY_FAILS + cashier) })
+    }
+
+    @Test
+    fun oneOwnPinNeverGivesFreshGuessesAtAnothersPin() = runBlocking {
+        val (manager, cashier) = team()
+        val s = graph.staff
+        val gate = graph.permissions
+        s.lock()
+        assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
+        // The cashier guesses the manager's PIN, typing her own right PIN in between.
+        repeat(PinLockout.FREE_TRIES - 1) { assertIs<StaffSession.Check.WrongPin>(gate.approve(manager, "0000", Perm.VOID).first) }
+        assertIs<StaffSession.Check.Ok>(s.check(cashier, "1111", 0L))
+        val fifth = gate.approve(manager, "0001", Perm.VOID).first
+        assertIs<StaffSession.Check.WrongPin>(fifth)
+        assertEquals(PinLockout.FIRST_WAIT_MS, fifth.waitMs)
+        assertIs<StaffSession.Check.Wait>(gate.approve(manager, "5555", Perm.VOID).first)
+        assertIs<StaffSession.Check.Ok>(s.check(cashier, "1111", 0L)) // she herself is not held up
+
+        // The owner sees who was at the till when the manager's PIN was guessed.
+        val entry = graph.db().read { r ->
+            r.queryList("SELECT staff_id, entity_id FROM audit_log WHERE action = ?", arrayOf(AuditAction.PIN_LOCKOUT.toString())) {
+                it.getLong(0) to it.getLong(1)
+            }
+        }.single()
+        assertEquals(cashier to manager, entry)
+    }
+
+    @Test
+    fun nothingIsAllowedBeforeTheSignedInStaffIsLoaded() = runBlocking {
+        val (_, cashier) = team()
+        graph.staff.lock()
+        assertIs<StaffSession.Check.Ok>(graph.staff.signIn(cashier, "1111"))
+
+        // Android killed the app in the background and restores one back-office screen: until the
+        // signed-in staff member is read from the database, nobody holds any permission.
+        TestGraph.close(graph)
+        graph = TestGraph.unloaded(name)
+        assertFalse(graph.staff.state.value.loaded)
+        assertEquals(0L, graph.staff.perms)
+        assertFalse(graph.permissions.allowed(Perm.VOID))
+        assertFalse(graph.permissions.allowed(Perm.REPRINT))
+        refused(ActionRefused.Reason.NOT_ALLOWED) { graph.staffAdmin.setPin(owner, "0000") }
+
+        graph.staff.load()
+        assertEquals(cashier, graph.staff.state.value.current?.id)
+        assertTrue(graph.permissions.allowed(Perm.REPRINT))
+        assertFalse(graph.permissions.allowed(Perm.VOID))
     }
 
     @Test

@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
@@ -66,53 +67,95 @@ object Bluetooth {
 /**
  * One RFCOMM (SPP) connection. Blocking: use it only on a dedicated background thread.
  * Tries the secure and then the insecure socket, which covers common ESC/POS printers and
- * scanners in SPP mode.
+ * scanners in SPP mode, and last RFCOMM channel 1 directly, for devices whose service lookup
+ * fails ("read failed, socket might closed"). One-shot: once [close]d (from any thread, also
+ * while [open] is still connecting) it stays closed.
  */
 class SppLink(private val adapter: BluetoothAdapter, val address: String) : Closeable {
 
+    // Set before connect(), so that close() from another thread can abort a connect in progress.
     @Volatile
     private var socket: BluetoothSocket? = null
 
-    val isOpen: Boolean get() = socket != null
+    @Volatile
+    private var connected = false
+
+    @Volatile
+    private var closed = false
+
+    val isOpen: Boolean get() = connected && !closed
 
     @SuppressLint("MissingPermission") // callers check Bluetooth.hasPermission()
     @Throws(IOException::class)
     fun open() {
-        close()
         val device = try {
             adapter.getRemoteDevice(address)
         } catch (e: IllegalArgumentException) {
             throw IOException("invalid Bluetooth address", e)
         }
         var last: IOException? = null
-        for (secure in booleanArrayOf(true, false)) {
+        for (attempt in 0 until 3) {
+            if (closed) throw IOException("closed")
             val s = try {
-                if (secure) device.createRfcommSocketToServiceRecord(Bluetooth.SPP) else device.createInsecureRfcommSocketToServiceRecord(Bluetooth.SPP)
+                when (attempt) {
+                    0 -> device.createRfcommSocketToServiceRecord(Bluetooth.SPP)
+                    1 -> device.createInsecureRfcommSocketToServiceRecord(Bluetooth.SPP)
+                    else -> channelOne(device) ?: break
+                }
             } catch (e: IOException) {
                 last = e
                 continue
             }
+            socket = s
             try {
+                if (closed) throw IOException("closed") // close() may have run before it could see s
                 s.connect()
-                socket = s
+                if (closed) throw IOException("closed")
+                connected = true
                 return
             } catch (e: IOException) {
                 last = e
+                socket = null
                 closeQuietly(s)
+            } catch (e: SecurityException) {
+                socket = null
+                closeQuietly(s)
+                throw e
             }
         }
+        if (closed) throw IOException("closed")
         throw last ?: IOException("Bluetooth connection failed")
     }
 
-    @Throws(IOException::class)
-    fun output(): OutputStream = socket?.outputStream ?: throw IOException("not connected")
+    /**
+     * RFCOMM channel 1 without the service lookup: the usual last resort for cheap printers. The
+     * method is hidden, so reflection; null where the platform does not offer it.
+     */
+    @SuppressLint("DiscouragedPrivateApi")
+    private fun channelOne(device: BluetoothDevice): BluetoothSocket? = try {
+        val create = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+        create.invoke(device, 1) as? BluetoothSocket
+    } catch (e: Exception) {
+        null
+    }
 
     @Throws(IOException::class)
-    fun input(): InputStream = socket?.inputStream ?: throw IOException("not connected")
+    fun output(): OutputStream = openSocket().outputStream
+
+    @Throws(IOException::class)
+    fun input(): InputStream = openSocket().inputStream
+
+    private fun openSocket(): BluetoothSocket {
+        val s = socket
+        if (s == null || !connected || closed) throw IOException("not connected")
+        return s
+    }
 
     override fun close() {
+        closed = true // first: an open() that has just set the socket sees it and gives up
         socket?.let { closeQuietly(it) }
         socket = null
+        connected = false
     }
 
     private fun closeQuietly(s: BluetoothSocket) {

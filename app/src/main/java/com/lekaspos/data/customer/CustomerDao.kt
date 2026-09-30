@@ -68,7 +68,8 @@ object CustomerDao {
         return if (after == null) {
             db.queryList(LIST_FIRST, args(key, upper, limit), ::item)
         } else {
-            db.queryList(LIST_NEXT, args(key, after.nameKey, after.id, upper, limit), ::item)
+            // Keyset: from the last row onwards (its name, then larger ids of the same name), not from the prefix.
+            db.queryList(LIST_NEXT, args(after.nameKey, after.nameKey, after.id, upper, limit), ::item)
         }
     }
 

@@ -2,6 +2,7 @@ package com.lekaspos.core.refund
 
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import org.junit.Test
 
 class RefundsTest {
@@ -45,6 +46,31 @@ class RefundsTest {
         assertEquals(50L, p.billDiscount)
         assertEquals(850L, p.net)
         assertEquals(48L, p.tax)
+    }
+
+    @Test
+    fun aPartAddsUpLikeTheLine() {
+        // 2 units at 2.99, promotion 1.03 off: returning one gave gross 2.99, discount 0.52, net 2.48.
+        val promo = RefundSource(1L, qty = 2000L, baseQty = 2000L, gross = 598L, discount = 103L, billDiscount = 0L, net = 495L, tax = 0L, cost = 300L)
+        val p1 = Refunds.part(promo, 1000L)
+        assertEquals(p1.net, p1.gross - p1.discount - p1.billDiscount)
+        assertEquals(299L, p1.gross)
+        assertEquals(248L, p1.net)
+        val p2 = Refunds.part(promo.copy(refunded = p1), 1000L)
+        assertEquals(p2.net, p2.gross - p2.discount - p2.billDiscount)
+        assertEquals(598L, p1.gross + p2.gross)
+        assertEquals(103L, p1.discount + p2.discount)
+        assertEquals(495L, p1.net + p2.net)
+        // With a bill discount as well, over three parts of odd sizes.
+        val line = RefundSource(2L, qty = 7000L, baseQty = 7000L, gross = 1001L, discount = 97L, billDiscount = 53L, net = 851L, tax = 48L, cost = 700L)
+        var done: RefundPart? = null
+        for (q in listOf(3000L, 2000L, 2000L)) {
+            val p = Refunds.part(line.copy(refunded = done), q)
+            assertEquals(p.net, p.gross - p.discount - p.billDiscount)
+            assertTrue(p.discount >= 0L && p.net >= 0L)
+            done = Refunds.plus(done, p)
+        }
+        assertEquals(RefundPart(2L, 7000L, 7000L, 1001L, 97L, 53L, 851L, 48L, 700L), done)
     }
 
     @Test

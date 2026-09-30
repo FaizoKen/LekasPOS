@@ -85,9 +85,14 @@ class ReportsActivity : ScreenActivity() {
         outState.putString(STATE_PRESET, preset?.name)
     }
 
-    override fun onStarted(scope: CoroutineScope) = load()
+    override fun onStarted(scope: CoroutineScope) {
+        // "Today" (or "This week" …) is today's again when the screen comes back the next morning.
+        preset?.let { period = it.period(today()) }
+        load()
+    }
 
     private fun buildChips() {
+
         chips.removeAllViews()
         val density = resources.displayMetrics.density
         val entries = PRESETS.map { (p, label) -> getString(label) to { choose(p) } } +
@@ -98,7 +103,7 @@ class ReportsActivity : ScreenActivity() {
             b.text = e.first
             b.isSelected = selected
             b.setOnClickListener { e.second() }
-            chips.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (44 * density).toInt()).apply {
+            chips.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (48 * density).toInt()).apply {
                 marginEnd = (6 * density).toInt()
             })
         }

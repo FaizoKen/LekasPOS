@@ -87,15 +87,18 @@ object ReportDao {
     private const val DAYS =
         "SELECT day, sale_count, refund_count, total, net_ex, tax, cost, discount FROM sum_day WHERE day >= ? AND day < ? ORDER BY day"
 
+    // A void subtracts its sale from the summary rows and leaves zeros behind (a rebuild has no
+    // such rows), so groups that add up to nothing are left out of every list below.
     private const val BY_PAYMENT =
         "SELECT d.method_id, m.name, d.kind, SUM(d.amount), SUM(d.count) FROM sum_day_payment d " +
             "LEFT JOIN payment_method m ON m.id = d.method_id WHERE d.day >= ? AND d.day < ? " +
-            "GROUP BY d.method_id ORDER BY 4 DESC"
+            "GROUP BY d.method_id HAVING SUM(d.count) != 0 OR SUM(d.amount) != 0 ORDER BY 4 DESC"
 
     private const val BY_STAFF =
         "SELECT d.staff_id, s.name, SUM(d.sale_count), SUM(d.total), SUM(d.net_ex) FROM sum_day_staff d " +
             "LEFT JOIN staff s ON s.id = d.staff_id WHERE d.day >= ? AND d.day < ? " +
-            "GROUP BY d.staff_id ORDER BY 4 DESC"
+            "GROUP BY d.staff_id HAVING SUM(d.sale_count) != 0 OR SUM(d.total) != 0 OR SUM(d.net_ex) != 0 " +
+            "ORDER BY 4 DESC"
 
     /** Product rows of a split range: head days, whole months, tail days (6 bind args). */
     private const val UNION =
@@ -103,29 +106,39 @@ object ReportDao {
             "UNION ALL SELECT product_id, category_id, qty, net_ex, tax, cost FROM sum_month_product WHERE month >= ? AND month < ? " +
             "UNION ALL SELECT product_id, category_id, qty, net_ex, tax, cost FROM sum_day_product WHERE day >= ? AND day < ?"
 
+    /** After `GROUP BY product_id` over [UNION]: products whose totals are not all zero. */
+    private const val NOT_ZERO = "HAVING SUM(qty) != 0 OR SUM(net_ex) != 0 OR SUM(tax) != 0 OR SUM(cost) != 0"
+
     private const val PRODUCTS_BY_NET =
         "SELECT t.product_id, p.name, t.qty, t.net_ex, t.tax, t.cost FROM " +
             "(SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost " +
-            "FROM ($UNION) GROUP BY product_id ORDER BY net_ex DESC, product_id LIMIT ?) t " +
+            "FROM ($UNION) GROUP BY product_id $NOT_ZERO ORDER BY net_ex DESC, product_id LIMIT ?) t " +
             "LEFT JOIN product p ON p.id = t.product_id ORDER BY t.net_ex DESC, t.product_id"
 
     private const val PRODUCTS_BY_QTY =
         "SELECT t.product_id, p.name, t.qty, t.net_ex, t.tax, t.cost FROM " +
             "(SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost " +
-            "FROM ($UNION) GROUP BY product_id ORDER BY qty DESC, product_id LIMIT ?) t " +
+            "FROM ($UNION) GROUP BY product_id $NOT_ZERO ORDER BY qty DESC, product_id LIMIT ?) t " +
             "LEFT JOIN product p ON p.id = t.product_id ORDER BY t.qty DESC, t.product_id"
 
+    // By the product's current category, so a range read from days, from months or from both puts
+    // a product's sales under the same category. The category kept in a summary row (the one of
+    // the first sale of that day or month) is used only when there is no product row ("other items").
     private const val BY_CATEGORY =
-        "SELECT t.category_id, c.name, t.qty, t.net_ex, t.cost FROM " +
-            "(SELECT category_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(cost) AS cost " +
-            "FROM ($UNION) GROUP BY category_id) t " +
-            "LEFT JOIN category c ON c.id = t.category_id ORDER BY t.net_ex DESC"
+        "SELECT t.cat, c.name, t.qty, t.net_ex, t.cost FROM " +
+            "(SELECT CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END AS cat, " +
+            "SUM(u.qty) AS qty, SUM(u.net_ex) AS net_ex, SUM(u.cost) AS cost FROM " +
+            "(SELECT product_id, MIN(category_id) AS category_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, " +
+            "SUM(cost) AS cost FROM ($UNION) GROUP BY product_id $NOT_ZERO) u " +
+            "LEFT JOIN product p ON p.id = u.product_id GROUP BY 1) t " +
+            "LEFT JOIN category c ON c.id = t.cat ORDER BY t.net_ex DESC"
 
-    /** Products sold in the range (ids only), for "not sold" lists. */
+    /**
+     * Products sold in the range (ids only), for "not sold" lists: more sold than returned, voids
+     * excluded. Never a NULL (old "other item" rows): `NOT IN` a list holding NULL is never true.
+     */
     private const val SOLD_IDS =
-        "SELECT product_id FROM sum_day_product WHERE day >= ? AND day < ? " +
-            "UNION SELECT product_id FROM sum_month_product WHERE month >= ? AND month < ? " +
-            "UNION SELECT product_id FROM sum_day_product WHERE day >= ? AND day < ?"
+        "SELECT product_id FROM ($UNION) WHERE product_id IS NOT NULL GROUP BY product_id HAVING SUM(qty) > 0"
 
     private const val SLOW_FROM =
         "FROM stock_level l CROSS JOIN product p ON p.id = l.product_id " +

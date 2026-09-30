@@ -8,6 +8,7 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.model.SaleKind
+import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.refund.RefundPart
 import com.lekaspos.core.refund.RefundSource
@@ -124,11 +125,16 @@ class SaleActions(private val graph: AppGraph) {
         val device = graph.settings.device.value
         graph.shifts.load()
         val shiftId = graph.shifts.currentId
+        // As for a sale or a refund: the cash handed back must belong to a shift's drawer count.
+        if (shiftId == null && graph.settings.store.value.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
         graph.db().write(reserveIds = 16L) { tx ->
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.voided) throw ActionRefused(ActionRefused.Reason.VOIDED)
             // Refunds of this sale must be voided first, or stock and totals would be reversed twice.
-            if (h.kind == SaleKind.SALE && h.refunded != 0L) throw ActionRefused(ActionRefused.Reason.HAS_REFUNDS)
+            // (Counted as documents, not by amount: a return of a free or fully discounted item is worth 0.00.)
+            if (h.kind == SaleKind.SALE && SaleQueries.refundsOf(tx.db, saleId).any { it.status != SaleStatus.VOIDED }) {
+                throw ActionRefused(ActionRefused.Reason.HAS_REFUNDS)
+            }
             val now = System.currentTimeMillis()
             SaleDao.void(tx, saleId, reason, staffId, actor.approvedBy, shiftId, now)
             AuditDao.log(tx, AuditAction.SALE_VOID, staffId, now, Entity.SALE, saleId, h.total, "${h.receiptNo}: $reason", actor.approvedBy)
@@ -148,16 +154,31 @@ class SaleActions(private val graph: AppGraph) {
         graph.printer.wake()
     }
 
-    /** Prints a sale again: a copy (audited) or, right after the sale, its first receipt. */
+    /**
+     * Prints a sale again: a copy (permission + audit) or, right after the sale, its first receipt.
+     * The first receipt prints once: asked for again (a second tap, or the result shown again after
+     * the screen was rotated) it is a copy like any other.
+     */
     suspend fun print(saleId: Long, copy: Boolean, approval: Approval? = null) {
-        val actor = if (copy) graph.permissions.actor(Perm.REPRINT, approval) else null
-        val staffId = actor?.staffId ?: graph.staff.staffId
         graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
-            PrintJobDao.enqueue(tx, if (copy) PrintJobKind.REPRINT else PrintJobKind.RECEIPT, saleId, 1, now)
-            if (copy) AuditDao.log(tx, AuditAction.REPRINT, staffId, now, Entity.SALE, saleId, approvedBy = actor?.approvedBy)
+            if (copy || PrintJobDao.hasReceipt(tx.db, saleId)) {
+                val actor = graph.permissions.actor(Perm.REPRINT, approval)
+                PrintJobDao.enqueue(tx, PrintJobKind.REPRINT, saleId, 1, now)
+                AuditDao.log(tx, AuditAction.REPRINT, actor.staffId, now, Entity.SALE, saleId, approvedBy = actor.approvedBy)
+            } else {
+                PrintJobDao.enqueue(tx, PrintJobKind.RECEIPT, saleId, 1, now)
+            }
         }
         graph.printer.wake()
+    }
+
+    /** A receipt from the sales history shared as a picture or PDF: a copy, like a reprint (permission + audit). */
+    suspend fun recordShare(saleId: Long, approval: Approval? = null) {
+        val actor = graph.permissions.actor(Perm.REPRINT, approval)
+        graph.db().write(reserveIds = 1L) { tx ->
+            AuditDao.log(tx, AuditAction.REPRINT, actor.staffId, System.currentTimeMillis(), Entity.SALE, saleId, detail = "shared", approvedBy = actor.approvedBy)
+        }
     }
 
     /** Opens the cash drawer without a sale (permission + audit). */

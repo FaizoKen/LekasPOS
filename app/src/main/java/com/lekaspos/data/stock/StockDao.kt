@@ -62,12 +62,16 @@ object StockDao {
 
     private const val LAST_COUNT =
         "SELECT qty, hlc, id FROM stock_count WHERE product_id = ? ORDER BY hlc DESC, (id >> 41) DESC LIMIT 1"
+
+    // "After (count hlc, count device)" written with an index range first: `hlc >= ?` makes it a
+    // range of (product_id, hlc), where the bare `hlc > ? OR (hlc = ? AND …)` form may read every
+    // event of the product on old SQLite (references/database.md §8; QueryPlans checks the range).
     private const val MOVES_AFTER =
-        "SELECT SUM(qty) FROM stock_movement WHERE product_id = ? AND (hlc > ? OR (hlc = ? AND (id >> 41) > ?))"
+        "SELECT SUM(qty) FROM stock_movement WHERE product_id = ? AND hlc >= ? AND (hlc > ? OR (id >> 41) > ?)"
     private const val SALES_AFTER =
         "SELECT SUM(l.stock_qty) FROM sale_line l JOIN sale s ON s.id = l.sale_id " +
-            "WHERE l.product_id = ? AND s.status = ${SaleStatus.COMPLETED} " +
-            "AND (l.hlc > ? OR (l.hlc = ? AND (l.id >> 41) > ?))"
+            "WHERE l.product_id = ? AND l.hlc >= ? AND (l.hlc > ? OR (l.id >> 41) > ?) " +
+            "AND s.status = ${SaleStatus.COMPLETED}"
 
     /** Recomputes the cached level of one product from events. */
     fun rebuild(tx: Db.Tx, productId: Long) {
@@ -89,8 +93,9 @@ object StockDao {
     // ------------------------------------------------------------------ low stock
 
     private const val LOW_COLUMNS = "p.id, p.name, p.name_key, p.low_stock, COALESCE(s.qty, 0), p.unit"
+    // Switched-off products are not reordered, so they never raise an alert.
     private const val LOW_FILTER =
-        "p.deleted = 0 AND p.low_stock > 0 AND p.track_stock = 1 AND COALESCE(s.qty, 0) <= p.low_stock"
+        "p.deleted = 0 AND p.active = 1 AND p.low_stock > 0 AND p.track_stock = 1 AND COALESCE(s.qty, 0) <= p.low_stock"
 
     private const val LOW_STOCK =
         "SELECT $LOW_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +

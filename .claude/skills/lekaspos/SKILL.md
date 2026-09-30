@@ -56,7 +56,8 @@ When a decision changes: update the reference file here **and** add an entry to
   (e.g. the current cart), so activity recreation is cheap and crash restart restores the bill.
 - One Activity per major screen, platform `Theme.Material` styles, custom dialogs.
   Activities declare `configChanges="keyboard|keyboardHidden|navigation"` so Bluetooth
-  HID scanners connecting/disconnecting never recreate the screen.
+  HID scanners connecting/disconnecting never recreate the screen; back-office screens also
+  handle rotation themselves (D-054 — see architecture.md §4).
 - Coroutines for async; every scope is tied to a lifecycle and cancelled. No `GlobalScope`.
 - Sync, backup and archive sit behind the `SyncProvider` interface; nothing outside
   `com.lekaspos.sync` knows about Google Drive.

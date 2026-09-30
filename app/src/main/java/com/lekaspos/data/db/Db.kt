@@ -199,7 +199,11 @@ class Db private constructor(
             if (restored == null) backupBeforeUpgrade(context, name)
             val helper = DbOpenHelper(context.applicationContext, name, seedNames)
             val sqlite = helper.writableDatabase
-            if (restored != null) Restore.afterOpen(sqlite, restored)
+            if (restored != null) {
+                Restore.afterOpen(sqlite, restored)
+                Restore.finished(context)
+            }
+            Restore.renewIfAsked(sqlite)
             sqlite.setMaxSqlCacheSize(SQLiteDatabase.MAX_SQL_CACHE_SIZE)
             val deviceNo = Meta.getLong(sqlite, Meta.DEVICE_NO)?.toInt()
                 ?: throw IllegalStateException("database has no device identity")

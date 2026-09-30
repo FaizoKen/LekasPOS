@@ -60,6 +60,7 @@
     <string name="export_share">Kongsi</string>
     <string name="export_save">Simpan sebagai fail</string>
     <string name="export_saved">Disimpan (baris: %1$d).</string>
+    <string name="export_failed">Eksport tidak selesai (%1$s). Fail yang belum siap telah dipadam; sila cuba lagi.</string>
     <string name="export_lost">Eksport terganggu. Sila cuba lagi.</string>
     <string name="export_summary">Ringkasan (CSV)</string>
     <string name="export_daily">Jualan harian (CSV)</string>
@@ -89,6 +90,7 @@
     <string name="import_tag_update">kemas kini</string>
     <string name="import_set_stock">Tetapkan juga stok produk sedia ada mengikut kuantiti dalam fail</string>
     <string name="import_stock_help">Produk baharu menerima lajur stok sebagai stok permulaan. Stok produk sedia ada hanya berubah jika pilihan ini dihidupkan (direkod sebagai kiraan stok).</string>
+    <string name="import_stock_no_permission">Lajur stok dalam fail ini diabaikan: menukar stok memerlukan kebenaran “Terima, laras dan kira stok”.</string>
     <string name="import_go">Import sekarang · %1$d</string>
     <string name="import_running">Mengimport… baris selesai: %1$d</string>
     <string name="import_done">Import selesai</string>
@@ -104,7 +106,7 @@
     <string name="problem_quantity">bukan kuantiti (tulis seperti 3 atau 1.25)</string>
     <string name="problem_sold_by">tulis piece, weight atau open price</string>
     <string name="problem_yes_no">tulis yes atau no</string>
-    <string name="problem_barcode">kod bar ada ruang kosong atau terlalu panjang</string>
+    <string name="problem_barcode">kod bar ada ruang kosong, terlalu panjang, atau telah ditukar oleh hamparan kepada nombor seperti 9.55E+12 (format lajur itu sebagai teks)</string>
     <string name="problem_tax">tiada kadar cukai dengan nama atau peratus ini</string>
     <string name="problem_barcode_twice">kod bar ini juga ada pada baris sebelumnya</string>
     <string name="problem_barcode_taken">kod bar milik produk lain daripada SKU</string>

@@ -48,7 +48,15 @@ class SaleDetailActivity : ScreenActivity() {
                 }
             }
         }
-        share.setOnClickListener { ReceiptShare.chooseAndShare(this, saleId) }
+        share.setOnClickListener {
+            // A receipt from the history is a copy, whether printed or shared: same permission, same audit entry.
+            withApproval(Perm.REPRINT) { approval ->
+                launchUi {
+                    graph.sales.recordShare(saleId, approval)
+                    ReceiptShare.chooseAndShare(this@SaleDetailActivity, saleId, copy = true)
+                }
+            }
+        }
         refund.setOnClickListener { startActivity(RefundActivity.newIntent(this, saleId)) }
         void.setOnClickListener { confirmVoid() }
     }

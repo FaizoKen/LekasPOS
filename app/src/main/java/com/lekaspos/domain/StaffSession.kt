@@ -60,10 +60,15 @@ class StaffSession(private val graph: AppGraph) {
     /** Who actions are recorded for: the signed-in staff member, or the owner while PIN login is off. */
     val staffId: Long get() = _state.value.current?.id ?: Seed.Ids.STAFF_OWNER
 
-    /** Permissions of [staffId]: everything while PIN login is off, nothing while locked. */
+    /**
+     * Permissions of [staffId]: everything while PIN login is off, nothing while locked — and
+     * nothing until [load] has run. "Not loaded yet" must never mean "no PIN login, so the owner":
+     * a screen Android restored into a new process ran with every permission that way.
+     */
     val perms: Long
         get() {
             val s = _state.value
+            if (!s.loaded) return 0L
             return s.current?.perms ?: if (s.loginRequired) 0L else Perm.ALL
         }
 
@@ -146,46 +151,55 @@ class StaffSession(private val graph: AppGraph) {
         lastActivity = SystemClock.elapsedRealtime()
     }
 
-    /** Locks when this device's idle time has passed; returns true if it locked. */
+    /**
+     * Locks when this device's idle time has passed; returns true if it locked. Never while a
+     * bill is being paid: locking closed the payment and lost a split payment half entered.
+     */
     fun lockIfIdle(): Boolean {
         val minutes = graph.settings.device.value.autoLockMinutes
         val s = _state.value
         if (minutes <= 0 || !s.loginRequired || s.current == null) return false
+        val bill = graph.cart.state.value
+        if (bill.paying || bill.busy) return false
         if (SystemClock.elapsedRealtime() - lastActivity < minutes * 60_000L) return false
         lock()
         return true
     }
 
-    /** Milliseconds this till must still wait before a PIN is checked (after too many wrong ones). */
-    suspend fun waitMs(): Long {
-        val (fails, last) = graph.db().read { r -> (Meta.getLong(r, KEY_FAILS) ?: 0L).toInt() to (Meta.getLong(r, KEY_LAST_FAIL) ?: 0L) }
+    /** Milliseconds before a PIN of [staffId] is checked again (after too many wrong ones). */
+    suspend fun waitMs(staffId: Long): Long {
+        val (fails, last) = graph.db().read { r -> fails(r, staffId) }
         return PinLockout.remainingMs(fails, last, System.currentTimeMillis())
     }
 
+    private fun fails(r: android.database.sqlite.SQLiteDatabase, staffId: Long): Pair<Int, Long> =
+        (Meta.getLong(r, KEY_FAILS + staffId) ?: 0L).toInt() to (Meta.getLong(r, KEY_LAST_FAIL + staffId) ?: 0L)
+
     /**
      * Checks [pin] of [staffId], who must be able to sign in and hold [perm] (0 = any). Wrong
-     * PINs count towards this till's lockout, whoever's PIN was tried (D-037).
+     * PINs are counted per staff member, and only that person's right PIN clears the count: a
+     * cashier's own sign-in must not give fresh guesses at the manager's PIN (2026-10 review).
      */
     suspend fun check(staffId: Long, pin: String, perm: Long): Check = pinLock.withLock {
         val db = graph.db()
         val now = System.currentTimeMillis()
-        val (staff, fails, last) = db.read { r ->
-            Triple(StaffDao.get(r, staffId), (Meta.getLong(r, KEY_FAILS) ?: 0L).toInt(), Meta.getLong(r, KEY_LAST_FAIL) ?: 0L)
-        }
+        val (staff, counted) = db.read { r -> StaffDao.get(r, staffId) to fails(r, staffId) }
+        val (fails, last) = counted
         val wait = PinLockout.remainingMs(fails, last, now)
         if (wait > 0L) return@withLock Check.Wait(wait)
         if (staff == null || !staff.canSignIn || !Perm.has(staff.perms, perm)) return@withLock Check.NotAllowed
         val ok = withContext(Dispatchers.Default) { PinHash.verify(pin, staff.pin) }
         if (ok) {
-            if (fails != 0) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_FAILS, "0") }
+            if (fails != 0) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_FAILS + staffId, null) }
             return@withLock Check.Ok(staff)
         }
         val n = fails + 1
         db.write(reserveIds = 1L) { tx ->
-            Meta.put(tx.db, KEY_FAILS, n.toString())
-            Meta.put(tx.db, KEY_LAST_FAIL, now.toString())
-            if (n == PinLockout.FREE_TRIES) {
-                AuditDao.log(tx, AuditAction.PIN_LOCKOUT, staffId, now, Entity.STAFF, staffId, detail = "$n wrong PINs")
+            Meta.put(tx.db, KEY_FAILS + staffId, n.toString())
+            Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString())
+            // Every wait is recorded (the 5th wrong PIN and each one after it), with who was signed in.
+            if (n >= PinLockout.FREE_TRIES) {
+                AuditDao.log(tx, AuditAction.PIN_LOCKOUT, _state.value.current?.id, now, Entity.STAFF, staffId, detail = "$n wrong PINs")
             }
         }
         Check.WrongPin(PinLockout.triesLeft(n), PinLockout.waitMs(n))
@@ -195,8 +209,9 @@ class StaffSession(private val graph: AppGraph) {
 
     companion object {
         const val KEY_STAFF = "session.staff"
-        const val KEY_FAILS = "pin.fails"
-        const val KEY_LAST_FAIL = "pin.last_fail"
+        /** Wrong PINs in a row and the time of the last one, per staff member: the staff id follows. */
+        const val KEY_FAILS = "pin.fails."
+        const val KEY_LAST_FAIL = "pin.last_fail."
     }
 }
 

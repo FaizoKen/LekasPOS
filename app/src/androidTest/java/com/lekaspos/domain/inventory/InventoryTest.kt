@@ -18,10 +18,12 @@ import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
 import com.lekaspos.data.supplier.Supplier
 import com.lekaspos.data.supplier.SupplierDao
+import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
 import java.util.TimeZone
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -87,6 +89,23 @@ class InventoryTest {
         assertTrue(graph.inventory.loadDraft().isEmpty)
         assertEquals(listOf(id), db.readBlocking { PurchaseDao.page(it, supplier, null, 10) }.map { it.id })
         assertEquals(listOf(id), db.readBlocking { PurchaseDao.page(it, null, null, 10) }.map { it.id })
+    }
+
+    @Test
+    fun aDeliveryIsReceivedOnceEvenWhenConfirmedTwice() = runBlocking {
+        val db = graph.db()
+        val milo = TestDb.product(db, "Milo", 1_890L, cost = 100L)
+        val d = ReceiveDraft().add(1L, milo, "Milo", "pcs", 6_000L, 120L).first
+        graph.inventory.saveDraft(d)
+        val id = graph.inventory.receive(d)
+        // The second confirmation (a double tap) finds the draft gone and records nothing.
+        assertEquals(ActionRefused.Reason.NOT_FOUND, assertFailsWith<ActionRefused> { graph.inventory.receive(d) }.reason)
+        assertEquals(6_000L, level(milo))
+        assertEquals(listOf(id), db.readBlocking { PurchaseDao.page(it, null, null, 10) }.map { it.id })
+        // Likewise after the draft was discarded.
+        graph.inventory.saveDraft(ReceiveDraft())
+        assertEquals(ActionRefused.Reason.NOT_FOUND, assertFailsWith<ActionRefused> { graph.inventory.receive(d) }.reason)
+        assertEquals(6_000L, level(milo))
     }
 
     @Test

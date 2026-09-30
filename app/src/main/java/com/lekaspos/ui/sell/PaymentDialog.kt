@@ -2,6 +2,8 @@ package com.lekaspos.ui.sell
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -17,7 +19,9 @@ import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.ui.colorOf
+import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 
 /**
@@ -36,6 +40,9 @@ class PaymentDialog(
 ) {
     private val tenders = ArrayList<Tender>()
     private var remaining = total
+
+    /** When the last part payment was taken: a second tap that lands right after it is not a new payment. */
+    private var partAt = 0L
     private lateinit var dialog: AlertDialog
     private lateinit var totalView: TextView
     private lateinit var remainingView: TextView
@@ -79,10 +86,30 @@ class PaymentDialog(
             .setView(root)
             .setNegativeButton(R.string.cancel, null)
             .create()
-        dialog.setOnKeyListener { _, _, e -> keypad.onKey(e) }
+        // A touch beside the dialog must not throw away payments already entered (split tender).
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.keys { e ->
+            if (e.keyCode == KeyEvent.KEYCODE_BACK && tenders.isNotEmpty()) {
+                if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) confirmCancel()
+                true
+            } else {
+                keypad.onKey(e)
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { if (tenders.isEmpty()) dialog.cancel() else confirmCancel() }
+        }
         refresh()
         dialog.show()
         return dialog.trackedBy(activity)
+    }
+
+    /** Part of the bill is already paid (card, e-wallet): cancelling clears those payments too, so ask. */
+    private fun confirmCancel() {
+        val paid = tenders.sumOf { it.applied }
+        Dialogs.confirm(activity, activity.getString(R.string.pay_title), activity.getString(R.string.pay_cancel_split, money(paid)), activity.getString(R.string.pay_cancel_yes)) {
+            dialog.cancel()
+        }
     }
 
     /** Every payment method, [PER_ROW] to a row so long names (e-wallets) never get cut off. */
@@ -111,6 +138,8 @@ class PaymentDialog(
     private fun enteredAmount(): Long? = if (keypad.digits.isEmpty()) null else MoneyFormat.keypad(keypad.digits, currency)
 
     private fun pay(m: PaymentMethod) {
+        // The second tap of a double tap would pay the whole rest with this method.
+        if (SystemClock.uptimeMillis() - partAt < DOUBLE_TAP_MS) return
         val entered = enteredAmount()
         errorView.visible(false)
         if (m.kind == PaymentKind.CASH) {
@@ -123,6 +152,7 @@ class PaymentDialog(
                 is Settlement.Result.Partial -> {
                     tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, 0L))
                     remaining = r.remaining
+                    partAt = SystemClock.uptimeMillis()
                     refresh()
                 }
                 is Settlement.Result.Rejected -> error(activity.getString(R.string.pay_error_cash, money(r.minimum)))
@@ -151,6 +181,7 @@ class PaymentDialog(
             is Settlement.Result.Partial -> {
                 tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
                 remaining = r.remaining
+                partAt = SystemClock.uptimeMillis()
                 refresh()
             }
             is Settlement.Result.Rejected -> Unit
@@ -233,5 +264,6 @@ class PaymentDialog(
 
     private companion object {
         const val PER_ROW = 3
+        const val DOUBLE_TAP_MS = 600L
     }
 }

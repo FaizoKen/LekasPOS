@@ -38,11 +38,14 @@ class ProductImportActivity : ScreenActivity() {
     override fun onStarted(scope: CoroutineScope) {
         scope.launch {
             graph.productCsv.state.collect { st ->
+                // A result left by an earlier import of another file is not this file's result.
+                val mine = graph.productCsv.source == uri.toString()
                 when (st) {
                     ProductCsvService.State.Idle -> if (preview == null) loadPreview() else showPreview()
                     is ProductCsvService.State.Running -> showMessage(getString(R.string.import_running, st.rows))
-                    is ProductCsvService.State.Done -> showDone(st.result)
-                    is ProductCsvService.State.Failed -> showMessage(getString(R.string.error_generic, st.error), done = true)
+                    is ProductCsvService.State.Done -> if (mine) showDone(st.result) else graph.productCsv.acknowledge()
+                    is ProductCsvService.State.Failed ->
+                        if (mine) showMessage(getString(R.string.error_generic, st.error), done = true) else graph.productCsv.acknowledge()
                 }
             }
         }
@@ -95,8 +98,10 @@ class ProductImportActivity : ScreenActivity() {
                 f.row("${row.name} · $tag", MoneyFormat.format(row.price, currency))
             }
         }
-        setStock = if (p.hasStock && p.updates > 0) f.switch(getString(R.string.import_set_stock), false) else null
-        if (p.hasStock) f.info(getString(R.string.import_stock_help))
+        // Stock changes need "Manage stock": without it the file's stock column is ignored.
+        val mayStock = graph.productCsv.mayImportStock()
+        setStock = if (p.hasStock && p.updates > 0 && mayStock) f.switch(getString(R.string.import_set_stock), false) else null
+        if (p.hasStock) f.info(getString(if (mayStock) R.string.import_stock_help else R.string.import_stock_no_permission))
         if (p.importable) {
             f.button(getString(R.string.import_go, p.newProducts + p.updates), primary = true) { start() }
         }
@@ -108,7 +113,8 @@ class ProductImportActivity : ScreenActivity() {
     private fun start() {
         val app = applicationContext
         val stock = setStock?.isChecked == true
-        launchUi { graph.productCsv.startImport({ CsvFiles.reader(app, uri) }, stock) }
+        val source = uri.toString()
+        launchUi { graph.productCsv.startImport({ CsvFiles.reader(app, uri) }, stock, source) }
     }
 
     private fun showDone(r: ProductCsvService.Result) {

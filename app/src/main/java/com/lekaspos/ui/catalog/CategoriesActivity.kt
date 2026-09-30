@@ -57,7 +57,7 @@ class CategoriesActivity : ScreenActivity() {
             launchUi {
                 graph.db().write(reserveIds = 4L) { tx ->
                     val now = System.currentTimeMillis()
-                    if (c == null) CategoryDao.insert(tx, name, 0, 0, now) else CategoryDao.update(tx, c.id, name, c.color, c.sort, now)
+                    if (c == null) CategoryDao.insert(tx, name, 0, 0, now) else CategoryDao.update(tx, c, c.copy(name = name), now)
                 }
                 reload()
             }

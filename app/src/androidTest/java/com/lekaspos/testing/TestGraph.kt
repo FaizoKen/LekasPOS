@@ -15,8 +15,14 @@ object TestGraph {
         return reopen(name)
     }
 
-    /** Another graph over the same file, like the app after a process restart. */
-    fun reopen(name: String): AppGraph = AppGraph(TestDb.context.applicationContext as Application, name)
+    /**
+     * Another graph over the same file, like the app after a process restart. The signed-in staff
+     * member is loaded as every screen does first: until then nothing is allowed (see [unloaded]).
+     */
+    fun reopen(name: String): AppGraph = unloaded(name).also { g -> runBlocking { g.staff.load() } }
+
+    /** A graph as Android leaves it right after restoring a screen into a new process: nothing loaded yet. */
+    fun unloaded(name: String): AppGraph = AppGraph(TestDb.context.applicationContext as Application, name)
 
     /** Closes the graph's database without deleting it. */
     fun close(graph: AppGraph) {

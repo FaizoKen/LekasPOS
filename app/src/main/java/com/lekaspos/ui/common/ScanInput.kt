@@ -17,6 +17,7 @@ class ScanInput(
     private val onTyped: (text: String, submit: Boolean) -> Unit,
 ) {
     private val buffer = ScanBuffer()
+    private var scannedAt = 0L
     private val handler = Handler(Looper.getMainLooper())
     private val idleCheck = object : Runnable {
         override fun run() {
@@ -36,7 +37,8 @@ class ScanInput(
         if (e.action != KeyEvent.ACTION_DOWN) return false
         when (e.keyCode) {
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB -> {
-                if (buffer.isEmpty) return false
+                // A scanner's second terminator (CR+LF) right after a scan must not press a focused button.
+                if (buffer.isEmpty) return SystemClock.uptimeMillis() - scannedAt < AFTER_SCAN_MS
                 handler.removeCallbacks(idleCheck)
                 deliver(buffer.onTerminator())
                 return true
@@ -59,10 +61,17 @@ class ScanInput(
         handler.postDelayed(idleCheck, ScanBuffer.IDLE_MS)
     }
 
+    private companion object {
+        const val AFTER_SCAN_MS = 300L
+    }
+
     private fun deliver(r: ScanBuffer.Result?) {
         when (r) {
             null -> Unit
-            is ScanBuffer.Result.Scan -> onScan(r.code)
+            is ScanBuffer.Result.Scan -> {
+                scannedAt = SystemClock.uptimeMillis()
+                onScan(r.code)
+            }
             is ScanBuffer.Result.Typed -> onTyped(r.text, r.submit)
         }
     }

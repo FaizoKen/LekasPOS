@@ -25,7 +25,8 @@ data class CartRow(val item: CartItem, val amount: Long, val selected: Boolean, 
 /** What a tap on a bill line and the buttons of the selected line do. */
 interface LineActions {
     fun select(item: CartItem)
-    fun changeQty(item: CartItem, qty: Long)
+    /** − or + : [delta] is added to the quantity the line has now. */
+    fun changeQty(item: CartItem, delta: Long)
     fun enterQty(item: CartItem)
     fun more(item: CartItem)
     fun remove(item: CartItem)
@@ -99,8 +100,8 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val canLower = it.qty > ONE
         h.minus.isEnabled = canLower
         h.minus.alpha = if (canLower) 1f else 0.35f
-        h.minus.setOnClickListener { _ -> actions.changeQty(it, it.qty - ONE) }
-        h.plus.setOnClickListener { _ -> actions.changeQty(it, it.qty + ONE) }
+        h.minus.setOnClickListener { _ -> actions.changeQty(it, -ONE) }
+        h.plus.setOnClickListener { _ -> actions.changeQty(it, ONE) }
         h.qty.setOnClickListener { _ -> actions.enterQty(it) }
         h.remove.setOnClickListener { _ -> actions.remove(it) }
         h.more.setOnClickListener { _ -> actions.more(it) }

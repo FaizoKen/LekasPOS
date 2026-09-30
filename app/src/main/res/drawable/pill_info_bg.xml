@@ -2,7 +2,10 @@
 <!-- Neutral information pill on the brand bar (e.g. held bills); warnings use pill_bg. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="#33FFFFFF">
-    <item>
+    <!-- Drawn 40dp high inside a 48dp touch target. -->
+    <item
+        android:bottom="4dp"
+        android:top="4dp">
         <shape android:shape="rectangle">
             <corners android:radius="16dp" />
             <solid android:color="#33FFFFFF" />

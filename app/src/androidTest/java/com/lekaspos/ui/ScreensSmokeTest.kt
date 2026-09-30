@@ -75,7 +75,10 @@ class ScreensSmokeTest {
 
     // The first-run welcome screen would open over the selling screen on a fresh emulator.
     @Before
-    fun skipFirstRunSetup() = runBlocking { LekasApp.graph(ctx).settings.markSetupDone() }
+    fun skipFirstRunSetup() = runBlocking {
+        LekasApp.graph(ctx).settings.markSetupDone()
+        LekasApp.graph(ctx).staff.load() // as the selling screen does at start: nothing is allowed before
+    }
 
     private fun open(cls: Class<out Activity>, extras: Intent.() -> Unit = {}, check: (Activity) -> Unit = {}) =
         open(Intent(ctx, cls).apply(extras), check)
@@ -110,6 +113,7 @@ class ScreensSmokeTest {
         val session = runBlocking { graph.inventory.startCount("Smoke test", null) }
         runBlocking { graph.inventory.count(session, product, 3_000L) }
         val draft = ReceiveDraft().add(1L, product, "Smoke test item", "pcs", 2_000L, 50L).first
+        runBlocking { graph.inventory.saveDraft(draft) } // a delivery is received from its saved draft
         val purchase = runBlocking { graph.inventory.receive(draft) }
         open(StockHistoryActivity.intent(ctx, product))
         open(CountActivity.intent(ctx, session))

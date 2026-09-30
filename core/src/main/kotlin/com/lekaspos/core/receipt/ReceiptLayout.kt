@@ -106,7 +106,12 @@ class ReceiptLayout(
         } else {
             twoCol(t.total, total, out, bold = true)
         }
-        for (p in doc.payments) twoCol(p.name, money(if (p.tendered > p.amount) p.tendered else p.amount), out)
+        for (p in doc.payments) {
+            // The cash handed over when it was more than the amount; a refund (negative amount, nothing
+            // tendered) prints its amount.
+            val shown = if (p.amount >= 0L && p.tendered > p.amount) p.tendered else p.amount
+            twoCol(p.name, money(shown), out)
+        }
         if (doc.change != 0L) twoCol(t.change, money(doc.change), out, bold = true)
         if (doc.pricesIncludeTax) {
             for (tax in doc.taxes) twoCol("${t.taxIncluded} ${tax.name} ${percent(tax.bp)}", money(tax.amount), out)

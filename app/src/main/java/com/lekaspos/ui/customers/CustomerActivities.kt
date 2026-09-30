@@ -344,8 +344,13 @@ private fun showCustomerForm(a: ScreenActivity, existing: Customer?, approval: c
         }
         fun t(e: EditText) = e.text.toString().trim().ifEmpty { null }
         val c = Customer(existing?.id ?: 0L, n, t(phone), t(email), t(address), t(tin), t(note), limitValue)
-        d.dismiss()
-        a.launchUi { onSaved(a.graph.customers.save(existing, c, approval)) }
+        val save = { limitApproval: com.lekaspos.domain.Approval? ->
+            d.dismiss()
+            a.launchUi { onSaved(a.graph.customers.save(existing, c, approval, limitApproval)) }
+            Unit
+        }
+        // A new or changed credit limit needs CREDIT_LIMIT: the form stays open if the manager says no.
+        if (limitValue != (existing?.creditLimit ?: 0L)) a.withApproval(Perm.CREDIT_LIMIT) { save(it) } else save(null)
     }
 }
 

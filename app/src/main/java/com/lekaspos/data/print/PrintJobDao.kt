@@ -1,6 +1,7 @@
 package com.lekaspos.data.print
 
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.model.PrintJobStatus
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
@@ -28,11 +29,32 @@ object PrintJobDao {
     fun enqueue(tx: Db.Tx, kind: Int, refId: Long?, copies: Int, now: Long): Long =
         tx.insert(INSERT, kind, refId, copies.coerceIn(1, 5), PrintJobStatus.PENDING, now, now)
 
-    /** Oldest pending job. */
+    /** Was a receipt of sale [saleId] printed or is one still waiting? (Not one that expired or was cleared unprinted.) */
+    fun hasReceipt(db: SQLiteDatabase, saleId: Long): Boolean = db.long(
+        "SELECT COUNT(*) FROM print_job WHERE ref_id = ? AND kind IN (${PrintJobKind.RECEIPT}, ${PrintJobKind.REPRINT}) AND status != ?",
+        saleId, PrintJobStatus.FAILED,
+    ) > 0L
+
+    /**
+     * The next pending job: drawer pulses first (the cashier is waiting to give change, and a pulse
+     * stuck behind a backlog of receipts would expire), then the oldest.
+     */
     fun next(db: SQLiteDatabase): PrintJob? = db.queryOne(
-        "SELECT id, kind, ref_id, copies, attempts, created_at FROM print_job WHERE status = ? ORDER BY id LIMIT 1",
-        args(PrintJobStatus.PENDING),
+        "SELECT id, kind, ref_id, copies, attempts, created_at FROM print_job WHERE status = ? " +
+            "ORDER BY CASE WHEN kind = ? THEN 0 ELSE 1 END, id LIMIT 1",
+        args(PrintJobStatus.PENDING, PrintJobKind.DRAWER),
     ) { c -> PrintJob(c.getLong(0), c.getInt(1), c.longOrNull(2), c.getInt(3), c.getInt(4), c.getLong(5)) }
+
+    /**
+     * Gives up on sale receipts still waiting since before [before] (the printer was off): printed
+     * much later they would only flood out between newer sales. They can be printed again from the
+     * sale. Reprints, shift reports and test pages were asked for on purpose and keep waiting.
+     */
+    fun expireReceipts(tx: Db.Tx, before: Long, now: Long): Int = tx.update(
+        "UPDATE print_job SET status = ?, last_error = 'expired', updated_at = ? " +
+            "WHERE status = ? AND kind = ? AND created_at < ?",
+        PrintJobStatus.FAILED, now, PrintJobStatus.PENDING, PrintJobKind.RECEIPT, before,
+    )
 
     fun pendingCount(db: SQLiteDatabase): Long =
         db.long("SELECT COUNT(*) FROM print_job WHERE status = ?", PrintJobStatus.PENDING)

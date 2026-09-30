@@ -7,6 +7,7 @@ import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PrintJobKind
+import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.customer.CreditEntry
@@ -35,22 +36,39 @@ class CustomerService(private val graph: AppGraph) {
         }
     }
 
+    /** A limit as the audit log shows it: an amount, or "none" for 0 (no limit). */
+    private fun limitText(v: Long): String = if (v == 0L) "none" else MoneyFormat.plain(v, graph.settings.store.value.currency.decimals)
+
     suspend fun get(id: Long): Pair<Customer, Long>? = graph.db().read { r ->
         CustomerDao.get(r, id)?.let { it to CustomerDao.balance(r, id) }
     }
 
-    suspend fun save(before: Customer?, after: Customer, approval: Approval? = null): Customer {
-        graph.permissions.actor(Perm.CUSTOMERS, approval)
+    /**
+     * Adds or edits a customer. Setting or changing the credit limit needs CREDIT_LIMIT (the role,
+     * or a manager's [limitApproval]) and is audited: 0 means "no limit", so whoever may edit a
+     * customer must not be able to lift the limit that stops their own credit sales.
+     */
+    suspend fun save(before: Customer?, after: Customer, approval: Approval? = null, limitApproval: Approval? = null): Customer {
+        val actor = graph.permissions.actor(Perm.CUSTOMERS, approval)
         require(after.name.isNotBlank()) { "name required" }
         require(after.creditLimit >= 0L) { "negative limit" }
-        return graph.db().write(reserveIds = 2L) { tx ->
+        val oldLimit = before?.creditLimit ?: 0L
+        val limitActor = if (after.creditLimit != oldLimit) graph.permissions.actor(Perm.CREDIT_LIMIT, limitApproval) else null
+        return graph.db().write(reserveIds = 3L) { tx ->
             val now = System.currentTimeMillis()
-            if (before == null) {
+            val saved = if (before == null) {
                 after.copy(id = CustomerDao.insert(tx, after, now))
             } else {
                 CustomerDao.update(tx, before, after, now)
                 after
             }
+            if (limitActor != null) {
+                AuditDao.log(
+                    tx, AuditAction.CREDIT_LIMIT_CHANGE, actor.staffId, now, Entity.CUSTOMER, saved.id, after.creditLimit,
+                    "${after.name}: ${limitText(oldLimit)} → ${limitText(after.creditLimit)}", limitActor.approvedBy,
+                )
+            }
+            saved
         }
     }
 

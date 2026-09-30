@@ -110,6 +110,21 @@ class ProductDaoTest {
     }
 
     @Test
+    fun switchedOffProductsAreFoundOnlyWhenAsked() {
+        TestDb.product(db, "Milo 1kg", 2_500, codes = listOf("9556001000013"))
+        TestDb.product(db, "Milo Lama", 2_000, codes = listOf("9556001000020"), active = false)
+        fun names(q: String, all: Boolean) = db.readBlocking { ProductDao.search(it, q, 50, includeInactive = all) }.map { it.name }
+        // Word search (FTS), one-letter name prefix and barcode prefix: selling never sees the
+        // switched-off product; product management and pickers do.
+        for (q in listOf("milo", "m", "9556001")) {
+            assertEquals(listOf("Milo 1kg"), names(q, all = false), q)
+            assertEquals(listOf("Milo 1kg", "Milo Lama"), names(q, all = true), q)
+        }
+        val off = db.readBlocking { ProductDao.search(it, "lama", 50, includeInactive = true) }.single()
+        assertEquals(false, off.active)
+    }
+
+    @Test
     fun oneLetterSearchIsANamePrefix() {
         TestDb.product(db, "Maggi Mee Kari", 480)
         TestDb.product(db, "Milo", 480)
