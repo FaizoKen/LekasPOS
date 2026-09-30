@@ -41,6 +41,28 @@ if [ ! -d "$shots" ]; then
   done
 fi
 
+# A leak test that failed saved a heap dump (files/leaks, internal): print who holds the leaked
+# objects with LeakCanary's shark-cli (a CI-only diagnostic, never part of the app). The dump
+# itself is large and not kept.
+leaks="$OUT/leaks-api$api"
+for f in $(adb shell run-as com.lekaspos.app.debug ls files/leaks 2>/dev/null | tr -d '\r'); do
+  mkdir -p "$leaks"
+  adb exec-out run-as com.lekaspos.app.debug cat "files/leaks/$f" > "$leaks/$f"
+done
+if ls "$leaks"/*.hprof > /dev/null 2>&1; then
+  curl -sSfL -o /tmp/shark.zip https://github.com/square/leakcanary/releases/download/v2.14/shark-cli-2.14.zip \
+    && unzip -q -o /tmp/shark.zip -d /tmp/shark
+  shark=$(find /tmp/shark -path '*/bin/shark-cli' -type f | head -1)
+  for h in "$leaks"/*.hprof; do
+    if [ -n "$shark" ]; then
+      echo "Analysing $h"
+      timeout 10m "$shark" --hprof "$h" analyze > "${h%.hprof}.txt" 2>&1 || true
+      grep -n "LEAK\|│\|├\|╰\|┬" "${h%.hprof}.txt" | head -60 || true
+    fi
+    rm -f "$h"
+  done
+fi
+
 if grep -q '^OK (' "$OUT/instrumented-api$api.txt"; then
   summary=$(grep '^OK (' "$OUT/instrumented-api$api.txt")
   echo "### Instrumented tests, API $api: $summary" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"

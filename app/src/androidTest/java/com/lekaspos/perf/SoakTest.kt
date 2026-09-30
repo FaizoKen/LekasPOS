@@ -102,8 +102,10 @@ class SoakTest {
             usedHeapAfterGc()
             var current: Activity? = null
             scenario.onActivity { current = it }
-            val alive = refs.mapNotNull { it.get() }.filter { it !== current }
-            assertEquals(0, alive.size, "old selling screens still in memory: ${alive.size}")
+            val leaked = refs.count { r -> r.get().let { it != null && it !== current } }
+            // No strong reference from this test while the heap is saved: CI shows the real chain.
+            if (leaked > 0) HeapDumps.save(app, "selling-screen")
+            assertEquals(0, leaked, "old selling screens still in memory: $leaked (heap dump analysed in CI: leaks-api*)")
         }
     }
 
