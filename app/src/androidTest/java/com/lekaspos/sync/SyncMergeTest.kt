@@ -65,6 +65,9 @@ class SyncMergeTest {
     fun setUp() {
         folder = File(TestDb.context.cacheDir, "sync-test-${UUID.randomUUID()}").apply { mkdirs() }
         provider = FolderProvider(folder)
+        // Nothing staged or half-finished by an earlier test may land on this test's databases.
+        Restore.cancelStaged(TestDb.context)
+        Restore.finished(TestDb.context)
     }
 
     @After
@@ -300,10 +303,10 @@ class SyncMergeTest {
         syncAll(a)
         // The backup is restored "as this till" on another phone: it must not reuse A's number.
         Restore.cancelStaged(TestDb.context)
-        val b = till()
         Restore.stage(TestDb.context, ByteArrayInputStream(bytes), Restore.Mode.REPLACE)
+        val b = till() // opening applies the staged restore
         runBlocking {
-            val db = b.db() // opening applies the staged restore
+            val db = b.db()
             val aDev = a.db().deviceNo
             assertNotEquals(aDev, db.deviceNo)
             assertTrue(!db.syncEnabled)

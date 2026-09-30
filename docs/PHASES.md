@@ -818,3 +818,38 @@ SHA-256 `44442439…4ffa`); the public download stays v1.0.0 until the owner's O
 4. Turn on airplane mode, make a sale, turn it off: the change is sent within a few seconds.
 5. With a second till: a price change on one shows on the other within a minute or so (the other
    till syncs when its app opens, or within 45 s of its own changes; otherwise every 30 min).
+
+## 1.2.0 — bug hunt: consistency, safety, speed (test build, waiting for the owner's check)
+
+The owner asked for a thorough search for bugs (2026-10-01). Lint, a StrictMode run, the perf
+report and six code reviews (back office, hardware, sync and backup, database, money and
+selling, selling screen) found about 70 problems; each was checked in the code and fixed, most
+with a test (D-054). 1.2.0 also carries 1.1.0's faster Drive backup and the new logo.
+
+- [x] Fixes and tests: see D-054 (permissions and audit, PIN lockout per person, scanner keys in
+      dialogs, quantity overflow, split payment, rotation, top bar on small phones, sync identity
+      after off/on and restores, CSV round trip, printing queue and Bluetooth, camera, reports)
+- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [ ] Test build published as a pre-release
+
+### Needs real-device testing (1.2.0)
+
+1. Install over 1.0.0 or 1.1.0: data, staff, settings and backup still there.
+2. Selling screen on the phone: with held bills and the printer off, the top bar still shows
+   Menu at the right; extra pills move to a second line.
+3. Tap + five times quickly on a line: the quantity goes up by five.
+4. Pay by card RM 20 and then cash for the rest: a tap outside the payment box does nothing;
+   Cancel asks before clearing the RM 20; the phone does not turn while paying.
+5. With a keyboard (HID) scanner: scan while the payment box is open — nothing is paid; scan
+   while the search box has the cursor — the item goes on the bill.
+6. As a cashier (PIN login on): change a customer's credit limit → asks for a manager; throw a
+   held bill away → asks for a manager; the audit log shows both.
+7. Wrong PIN 5 times for the manager → the manager waits; the cashier can still sign in.
+8. Settings → Products → Export, change a price in a spreadsheet, Import: no new products.
+9. Rotate the phone on a product form with typed changes, and during a report export: nothing
+   is lost.
+10. Printer (when available): test page prints as text; open the drawer right after a receipt;
+    a printer that needs "channel 1"; a big logo receipt prints cleanly.
+11. Camera scanning: deny the permission, tap the message to allow it; hold one item in view —
+    it is added once; rotate while scanning — no crash.
+12. Serial (SPP) scanner without an Enter suffix: codes still arrive.

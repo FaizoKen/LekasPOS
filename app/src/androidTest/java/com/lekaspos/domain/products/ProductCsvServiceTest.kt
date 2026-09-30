@@ -153,7 +153,7 @@ class ProductCsvServiceTest {
         assertEquals(2, r.created)
         assertEquals(2, r.updated)
         assertEquals(4, r.skipped)
-        assertEquals(1, r.stockSet) // Milo: 24 → 30 (as a count)
+        assertEquals(2, r.stockSet) // Milo: 24 → 30 (as a count); Susu: 12 opening stock
         val db = g.db()
         val milo = assertNotNull(db.read { ProductDao.get(it, ids.getValue("milo")) })
         assertEquals("Milo 1kg (baharu)", milo.name)

@@ -107,9 +107,10 @@ class SaleActionsTest {
     fun aReturnWorthNothingStillBlocksTheVoid() = runBlocking {
         val db = graph.db()
         val gift = TestDb.product(db, "Free gift", 0L)
+        val milo = TestDb.product(db, "Milo", 1_000L)
         db.writeBlocking { tx -> StockDao.insertMovement(tx, gift, MovementKind.RECEIVE, 5_000L, 0L, null, null, null, System.currentTimeMillis()) }
-        val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(gift to 2_000L)), tz) }
-        val lineId = assertNotNull(graph.sales.refundInfo(sale.id)).lines.single().id
+        val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(milo to 1_000L, gift to 2_000L)), tz) }
+        val lineId = assertNotNull(graph.sales.refundInfo(sale.id)).lines.single { it.productId == gift }.id
         val back = graph.sales.refund(sale.id, mapOf(lineId to 1_000L), restock = true, reason = "not wanted", method = cash)
         assertEquals(0L, db.readBlocking { SaleDao.refunded(it, sale.id) })
         assertEquals(4_000L, db.readBlocking { StockDao.level(it, gift) })
