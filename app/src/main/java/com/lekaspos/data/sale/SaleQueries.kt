@@ -117,7 +117,7 @@ object SaleQueries {
         "SELECT l.ref_line_id, -SUM(l.qty), -SUM(l.base_qty), -SUM(l.gross), -SUM(l.discount), -SUM(l.bill_discount), " +
             "-SUM(l.net), -SUM(l.tax), -SUM(l.cost) " +
             "FROM sale s CROSS JOIN sale_line l ON l.sale_id = s.id " +
-            "WHERE s.ref_sale_id = ? AND s.status = ${SaleStatus.COMPLETED} AND l.ref_line_id IS NOT NULL " +
+            "WHERE s.ref_sale_id = ? AND s.ref_sale_id IS NOT NULL AND s.status = ${SaleStatus.COMPLETED} AND l.ref_line_id IS NOT NULL " +
             "GROUP BY l.ref_line_id"
 
     /** What earlier, non-voided refunds returned of each line of sale [saleId] (positive values). */
@@ -134,7 +134,8 @@ object SaleQueries {
     }
 
     private const val REFUNDS_OF =
-        "SELECT id, kind, receipt_no, sold_at, total, status, line_count FROM sale WHERE ref_sale_id = ? ORDER BY sold_at"
+        "SELECT id, kind, receipt_no, sold_at, total, status, line_count FROM sale " +
+            "WHERE ref_sale_id = ? AND ref_sale_id IS NOT NULL ORDER BY sold_at"
 
     /** Refund documents that reference sale [saleId]. */
     fun refundsOf(db: SQLiteDatabase, saleId: Long): List<SaleRow> = db.queryList(REFUNDS_OF, args(saleId)) { c ->

@@ -31,6 +31,12 @@ object QueryPlans {
         "cash_movement", "product", "product_barcode", "sum_day_product", "purchase", "purchase_line", "customer", "shift",
     )
 
+    /**
+     * Lookups by key: must SEARCH. A full scan through an index ("SCAN TABLE sale USING INDEX
+     * sale_sold", SQLite 3.8 skipping a partial index) is as slow as a table scan.
+     */
+    private val KEY_LOOKUPS = setOf("refunded_total", "voids_of_sale", "refunds_of", "refunded_by_line", "receipt_lookup")
+
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */
     private val INDEX_ORDERED = setOf(
         "history_first", "history_next", "product_history", "category_page", "search_prefix", "search_barcode_prefix",
@@ -92,7 +98,7 @@ object QueryPlans {
             val m = SCAN.find(line.trim())
             if (m != null) {
                 val table = aliases[m.groupValues[1]] ?: m.groupValues[1]
-                val fullScan = table in LARGE_TABLES && !m.groupValues[2].contains("USING")
+                val fullScan = table in LARGE_TABLES && (!m.groupValues[2].contains("USING") || name in KEY_LOOKUPS)
                 if (fullScan && !maintenance) violations.add("full scan of $table: $line")
                 if (fullScan && insideCorrelated) violations.add("correlated subquery scans $table: $line")
             }

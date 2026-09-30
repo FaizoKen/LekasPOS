@@ -45,6 +45,11 @@ Every instrumented DB test must pass on the API 21 emulator image — that is th
   constant or bind parameter, and for `col IS NOT NULL` on its own.
 - **Never** used inside a correlated subquery (`r.col = outer.id` → full scan per outer row,
   i.e. O(n²)). Use an aggregate `GROUP BY` + join, or loop in Kotlin with `col = ?`.
+- Not used either in a scalar subquery of an `UPDATE` even with `col = ?` (Phase 6:
+  `UPDATE sale SET refunded = (SELECT … WHERE ref_sale_id = ?)` made each imported sale take
+  26 ms on API 21 at 250k sales, 0.3 ms on API 36).
+  Read the value with a top-level `SELECT` that repeats `col IS NOT NULL`, then update with it.
+  Key lookups are listed in `QueryPlans.KEY_LOOKUPS`, where even a scan through an index fails.
 - **Never** used when the predicate mixes `IS NOT NULL` with other terms
   (`WHERE deleted = 0 AND sku IS NOT NULL` is dead weight). Only the two forms above are allowed.
 - `QueryPlans` (perf suite, `PerfSuiteTest`, `QueryPlansTest`) catches violations — register

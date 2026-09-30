@@ -214,12 +214,16 @@ object SaleDao {
 
     /** `refunded` of sale [saleId] from its completed refunds (any arrival order, D-045). */
     fun recomputeRefunded(tx: Db.Tx, saleId: Long) {
-        tx.update(
-            "UPDATE sale SET refunded = (SELECT -COALESCE(SUM(total), 0) FROM sale WHERE ref_sale_id = ? " +
-                "AND kind = ${SaleKind.REFUND} AND status = ${SaleStatus.COMPLETED}) WHERE id = ?",
-            saleId, saleId,
-        )
+        // A top-level SELECT: SQLite 3.8 does not use the partial index sale_ref inside a subquery
+        // (as a subquery this took 26 ms per imported sale at 250k sales on API 21, 0.3 ms on 36).
+        val refunded = -(tx.db.longOrNull(REFUNDED_TOTAL, saleId) ?: 0L)
+        tx.update("UPDATE sale SET refunded = ? WHERE id = ? AND refunded != ?", refunded, saleId, refunded)
     }
+
+    internal const val REFUNDED_TOTAL =
+        "SELECT SUM(total) FROM sale WHERE ref_sale_id = ? AND ref_sale_id IS NOT NULL " +
+            "AND kind = ${SaleKind.REFUND} AND status = ${SaleStatus.COMPLETED}"
+    internal const val VOIDS_OF_SALE = "SELECT COUNT(*) FROM sale_void WHERE sale_id = ?"
 
     // ------------------------------------------------------------------ sync import (D-045)
 
@@ -270,7 +274,7 @@ object SaleDao {
         val ref = sale["ref_sale_id"] as Long?
         if (kind == SaleKind.REFUND && ref != null) recomputeRefunded(tx, ref)
         if (kind == SaleKind.SALE) recomputeRefunded(tx, id) // its refunds may have arrived first
-        if (tx.db.long("SELECT COUNT(*) FROM sale_void WHERE sale_id = ?", id) > 0L) {
+        if (tx.db.long(VOIDS_OF_SALE, id) > 0L) {
             header(tx.db, id)?.let { reverse(tx, id, it) } // the void came before the sale
         }
         return true
@@ -380,5 +384,7 @@ object SaleDao {
         "history_next" to HISTORY_NEXT,
         "receipt_lookup" to BY_RECEIPT,
         "product_history" to PRODUCT_HISTORY,
+        "refunded_total" to REFUNDED_TOTAL,
+        "voids_of_sale" to VOIDS_OF_SALE,
     )
 }

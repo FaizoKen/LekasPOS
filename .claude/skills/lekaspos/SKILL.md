@@ -123,7 +123,8 @@ streaming I/O for files (never whole files or whole tables in memory).
   expression indexes, json1, FTS5, generated columns, `IIF`, `FILTER`, `NULLS FIRST/LAST`,
   `ALTER TABLE RENAME/DROP COLUMN`, `unixepoch()`, `wal_checkpoint(TRUNCATE)`.
 - Partial index predicates: only `deleted = 0` or a lone `col IS NOT NULL`; no correlated
-  subqueries against large tables (3.8 ignores the index there → O(n²)). Register hot and
+  subqueries against large tables, and no partial-index lookups inside any subquery (3.8 ignores
+  the index there → a scan per call); repeat the predicate in the query. Register hot and
   maintenance SQL for `QueryPlans` checks.
 - Every schema change: bump `DB_VERSION`, add a `Migration`, commit the new schema snapshot
   (`app/src/androidTest/assets/schemas/<v>.sql`), keep the migration test green.
