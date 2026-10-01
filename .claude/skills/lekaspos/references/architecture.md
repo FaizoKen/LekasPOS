@@ -168,9 +168,10 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   owner with every permission (the Phase 1–3 behaviour). The first PIN must be an owner's; it
   signs that owner in and turns PIN login on. The signed-in staff id is kept in `meta`, so a
   restart returns to the same cashier; Lock / idle timeout (per device, `dev.lock.minutes`)
-  clears it. The idle time is checked when a screen starts and before a touch or key counts
-  (`StaffSession.activity()`): after the phone's screen was off the first tap used to reset it
-  (D-055). When the app goes out of sight the last activity time is stored (`session.away_at`),
+  clears it. The idle time is checked when a screen starts or resumes (many phones only pause
+  the app while their screen is off: waking calls onResume, not onStart — 1.3.1) and before a
+  touch or key counts (`StaffSession.activity()`): after the phone's screen was off the first tap
+  used to reset it (D-055). `IdleLockTest` turns the emulator's screen off and on for real. When the app goes out of sight the last activity time is stored (`session.away_at`),
   so a new process still knows how long the till was idle. Wrong PINs count per person
   (`pin.fails.<id>`), 5 free tries, then 30 s doubling to 15 min, measured by the wall clock and,
   while the phone has not restarted, by the time since boot (setting the clock cannot skip it); a

@@ -586,9 +586,12 @@ behaviour:
   its identity skips 2^30 IDs and continues receipt numbers after the highest used (same phone)
   or gets a new receipt prefix (another phone); a backup older than the sync tables counts as
   this till.
-- **Idle lock that works**: checked when a screen starts and before a touch or key counts (after
-  the phone's screen turned off, the first tap reset the idle time, so the till never locked);
-  the last activity time is stored when the app goes out of sight, so a new process honours it.
+- **Idle lock that works**: checked when a screen starts or resumes and before a touch or key
+  counts (after the phone's screen turned off, the first tap reset the idle time, so the till
+  never locked); the last activity time is stored when the app goes out of sight, so a new
+  process honours it. 1.3.1 (owner's report on 1.3.0): the check on resume too — many phones only
+  pause the app while their screen is off, so waking them never restarted the screen and the till
+  stayed signed in until the first tap.
 - **PINs**: a removed staff member cannot sign in or approve (they stayed signed in on other
   tills); only owners make owners or change an owner's role, PIN or removal (a manager whose role
   manages staff is refused there; the owner does it); wrong-PIN waits are
