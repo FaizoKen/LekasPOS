@@ -917,7 +917,7 @@ another till; refunds without restock and cost of goods; a shared backup countin
     prints in full.
 12. Camera scanning on a cheap phone: a barcode brought closer comes into focus again.
 
-## 1.3.1 — auto-lock after the phone's screen was off (owner's report on 1.3.0)
+## 1.3.1 — auto-lock after the phone's screen was off (test build, waiting for the owner's check)
 
 The owner reported that the auto-lock did not work after the phone's screen had been off
 (2026-10-01). Confirmed: many phones only *pause* the app while their screen is off, and waking
@@ -925,9 +925,18 @@ them only resumes the screen — 1.3.0 checked the idle time when a screen start
 a tap counted, so on those phones the till stayed signed in (showing the bill) until the first
 tap. 1.3.1 also checks when a screen resumes. `IdleLockTest` proves it: a screen only paused while
 the phone slept must show the sign-in by itself when it resumes — it **fails on 1.3.0's code**
-(CI on branch `idle-lock-check`: "still signed in after the screen resumed") and passes with the
+(CI run 36833978633, API 21 and 36: "still signed in after the screen resumed") and passes with the
 fix; a second test sleeps and wakes the emulator for real (Android 6+; on Android 5 the emulator's
 lock screen stays and would block the next tests).
 
 - [x] Fix and tests
-- [ ] CI green, test build published
+- [x] CI green: **201/201 on API 21 and 36**, tablet and release smoke (run 36835431618)
+- [x] Test build **v1.3.1** (pre-release; build 79, 1,271,195 bytes, SHA-256 `4054647d…cefa`,
+      `mapping-1.3.1.txt` attached); the public download stays v1.3.0 until the owner's OK
+
+### Needs real-device testing (1.3.1)
+
+1. Install over 1.3.0: data and staff still there.
+2. With a staff PIN and auto-lock 1 minute: sign in, let the phone's screen turn off (or press the
+   power button), wait 2 minutes, wake it — the sign-in shows at once, without a tap.
+3. Wake it again within the minute: still signed in (no lock before the idle time).
