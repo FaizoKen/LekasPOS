@@ -860,3 +860,19 @@ owner's OK. Left for the owner (D-054): stock with cost 0 and the average cost; 
 11. Camera scanning: deny the permission, tap the message to allow it; hold one item in view —
     it is added once; rotate while scanning — no crash.
 12. Serial (SPP) scanner without an Enter suffix: codes still arrive.
+
+## 1.3.0 — second bug hunt: data safety, security, sync consistency (in progress)
+
+The owner asked again for a thorough search for bugs, with freedom to decide what to fix
+(2026-10-01). Nine read-only reviews (money maths, selling, sales and reports, sync, backup and
+database, inventory and CSV, staff and credit, printing and camera, back-office screens) found
+about 95 candidate problems; each was checked in the code, then fixed with a test where one is
+possible (D-055). The most serious: Android's default database error handler would delete the
+shop's data on the first damaged page; a new till's first-run Setup could reset the store's
+receipt settings on every till once it joined; a restore could apply itself at a later start
+without "Restart now"; the idle lock never fired after the phone's screen had turned off; a till
+with a wrong clock silently lost its edits on the other tills.
+
+- [x] Fixes and tests: see D-055
+- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [ ] Test build published as a pre-release

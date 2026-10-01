@@ -37,12 +37,13 @@ object QueryPlans {
      */
     private val KEY_LOOKUPS = setOf(
         "refunded_total", "voids_of_sale", "refunds_of", "refunded_by_line", "receipt_lookup", "popular_ids", "products_by_ids",
+        "voids_list",
     )
 
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */
     private val INDEX_ORDERED = setOf(
         "history_first", "history_next", "product_history", "category_page", "search_prefix", "search_barcode_prefix",
-        "search_prefix_all", "search_barcode_prefix_all",
+        "search_prefix_all", "search_barcode_prefix_all", "category_page_all",
         "product_manage_page", "product_sell_page", "audit_first", "audit_next",
         "low_stock_next", "movements_first", "movements_next", "purchases_first", "purchases_next",
         "purchases_supplier_first", "purchases_supplier_next", "session_counts_first", "session_counts_next",

@@ -18,6 +18,8 @@ import com.lekaspos.util.Log
 import java.io.IOException
 import java.util.TimeZone
 import java.util.concurrent.Executors
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -68,14 +70,42 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
     private var failures = 0
     private var logoCache: Pair<Int, MonoImage?>? = null
 
+    /** The job whose bytes went out last: if recording it as done failed, it is not printed a second time. */
+    private var sentJobId = -1L
+
+    /** The bytes of the job being retried: while the printer is off a receipt is not drawn again every attempt. */
+    private var renderedId = -1L
+    private var rendered: ByteArray? = null
+
+    /** The link still connecting, so that [reconnect] to another printer can give it up. */
+    @Volatile
+    private var connecting: SppLink? = null
+
     fun start() {
         if (started) return
         started = true
         graph.appScope.launch(dispatcher) {
             try {
-                loop()
-            } catch (e: Exception) {
-                Log.e("Printer loop stopped", e)
+                while (true) {
+                    try {
+                        loop()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        // Anything else (a failed database write, an odd Bluetooth error, out of memory) ended
+                        // the loop for good: the status froze and nothing printed until the app restarted.
+                        // Start over after a pause instead (2026-10 review).
+                        Log.e("Printer loop failed, restarting", e)
+                        settle() // the last job's bytes leave the phone before the link closes
+                        closeLink()
+                        clearRendered()
+                        logoCache = null
+                        val retryAt = System.currentTimeMillis() + RESTART_MS
+                        _status.value = Status.Offline(e.javaClass.simpleName, retryAt, gaveUp = false)
+                        waitForWake(RESTART_MS) // "Retry" or new settings start over at once
+                    }
+                }
+            } finally {
                 started = false
             }
         }
@@ -95,6 +125,12 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
      */
     fun reconnect() {
         resetRequested = true
+        // A connect still trying a printer that is no longer the chosen one is given up at once instead of
+        // running through all its attempts first (2026-10 review). Closed off the main thread.
+        val c = connecting
+        if (c != null && c.address != graph.settings.device.value.printerAddress) {
+            graph.appScope.launch(Dispatchers.IO) { c.close() }
+        }
         wake()
     }
 
@@ -109,6 +145,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
             if (resetRequested) {
                 resetRequested = false
                 logoCache = null
+                clearRendered() // settings (paper, mode, logo) may have changed
                 failures = 0
             }
             if (link != null && link?.address != address) {
@@ -122,6 +159,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
             }
             val job = db.read { PrintJobDao.next(it) }
             if (job == null) {
+                clearRendered() // e.g. the queue was cleared while a job was waiting for the printer
                 val now = System.currentTimeMillis()
                 if (link != null && now - lastUsed >= IDLE_CLOSE_MS) closeLink()
                 _status.value = if (link != null) Status.Ready else Status.Idle
@@ -150,11 +188,22 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
 
     private suspend fun print(job: PrintJob, cfg: DeviceSettings, adapter: android.bluetooth.BluetoothAdapter, address: String) {
         val db = graph.db()
+        if (job.id == sentJobId) {
+            // Its bytes went out, then recording that failed and the loop restarted: never print it twice.
+            db.write(reserveIds = 0) { tx -> PrintJobDao.markDone(tx, job.id, System.currentTimeMillis()) }
+            sentJobId = -1L
+            return
+        }
         val bytes = try {
-            render(job, cfg)
+            bytesOf(job, cfg)
         } catch (e: Exception) {
-            Log.e("Print job ${job.id} cannot be rendered", e)
-            db.write(reserveIds = 0) { tx -> PrintJobDao.markFailed(tx, job.id, e.message ?: e.javaClass.simpleName, System.currentTimeMillis()) }
+            renderFailed(job, e)
+            return
+        } catch (e: OutOfMemoryError) {
+            // Too big for this phone: every retry would fail the same way and hold up every later job
+            // (2026-10 review). It can still be shared as a PDF or printed in text mode.
+            logoCache = null
+            renderFailed(job, e)
             return
         }
         try {
@@ -162,16 +211,24 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                 if (link == null) {
                     _status.value = Status.Connecting
                     val l = SppLink(adapter, address)
-                    l.open()
+                    connecting = l
+                    try {
+                        l.open()
+                    } finally {
+                        connecting = null
+                    }
                     link = l
                 }
                 _status.value = Status.Printing
                 write(bytes, cfg.dots)
+                sentJobId = job.id
                 lastUsed = System.currentTimeMillis()
                 lastBytes = bytes.size
             }
             failures = 0
+            clearRendered()
             db.write(reserveIds = 0) { tx -> PrintJobDao.markDone(tx, job.id, System.currentTimeMillis()) }
+            sentJobId = -1L // recorded: job ids are reused after old jobs are purged
         } catch (e: IOException) {
             failed(job, e)
         } catch (e: SecurityException) {
@@ -190,6 +247,33 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         _status.value = Status.Offline(msg, System.currentTimeMillis() + delay, gaveUp)
         // After many failures, wait for a new job or the user's "retry" instead of polling.
         waitForWake(if (gaveUp) null else delay)
+    }
+
+    /**
+     * [render] once per job: retries while the printer is off reuse the bytes (2026-10 review; a long
+     * picture receipt was drawn again every few seconds). Drawer pulses are not kept: they expire.
+     */
+    private suspend fun bytesOf(job: PrintJob, cfg: DeviceSettings): ByteArray? {
+        if (job.id == renderedId) return rendered
+        clearRendered() // the last job's bytes go before the next job is drawn
+        val bytes = render(job, cfg)
+        if (bytes != null && job.kind != PrintJobKind.DRAWER) {
+            renderedId = job.id
+            rendered = bytes
+        }
+        return bytes
+    }
+
+    private fun clearRendered() {
+        renderedId = -1L
+        rendered = null
+    }
+
+    private suspend fun renderFailed(job: PrintJob, e: Throwable) {
+        Log.e("Print job ${job.id} cannot be rendered", e)
+        clearRendered()
+        val msg = e.message ?: e.javaClass.simpleName
+        graph.db().write(reserveIds = 0) { tx -> PrintJobDao.markFailed(tx, job.id, msg, System.currentTimeMillis()) }
     }
 
     /** ESC/POS bytes of a job; null = nothing to send (e.g. a drawer pulse that is too old). */
@@ -281,6 +365,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
     companion object {
         private const val IDLE_CLOSE_MS = 45_000L
         private const val RECHECK_MS = 10_000L
+        private const val RESTART_MS = 10_000L
         private const val DRAWER_MAX_AGE_MS = 120_000L
         private const val RECEIPT_MAX_AGE_MS = 10L * 60_000L
         private const val PURGE_AFTER_MS = 7L * 24 * 3600 * 1000

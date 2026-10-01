@@ -1,12 +1,16 @@
 package com.lekaspos.data.sale
 
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.core.credit.CreditMath
 import com.lekaspos.core.id.Ids
+import com.lekaspos.core.model.CreditKind
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
+import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.core.time.Days
+import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.args
@@ -276,6 +280,7 @@ object SaleDao {
         if (kind == SaleKind.SALE) recomputeRefunded(tx, id) // its refunds may have arrived first
         if (tx.db.long(VOIDS_OF_SALE, id) > 0L) {
             header(tx.db, id)?.let { reverse(tx, id, it) } // the void came before the sale
+            creditOnce(tx, id)
         }
         return true
     }
@@ -285,8 +290,54 @@ object SaleDao {
         if (tx.insert(INSERT_VOID_NEW, *values(VOID_COLS, row)) == -1L) return false
         val saleId = row["sale_id"] as Long
         val h = header(tx.db, saleId) ?: return true
-        if (h[0].toInt() != SaleStatus.VOIDED) reverse(tx, saleId, h)
+        if (h[0].toInt() != SaleStatus.VOIDED) reverse(tx, saleId, h) else creditOnce(tx, saleId)
         return true
+    }
+
+    // ------------------------------------------------------------------ the same sale voided twice
+
+    /** Voids of one sale: id, hlc, shift (−1 = none), at. */
+    private const val VOIDS_LIST = "SELECT id, hlc, shift_id, at FROM sale_void WHERE sale_id = ?"
+    private const val SALE_CUSTOMER = "SELECT customer_id FROM sale WHERE id = ?"
+    private const val CREDIT_PAYMENTS =
+        "SELECT method_id, amount FROM payment WHERE sale_id = ? AND kind = ${PaymentKind.CREDIT} ORDER BY id"
+    private const val INSERT_CREDIT_ONCE =
+        "INSERT OR IGNORE INTO credit_entry(id, customer_id, kind, amount, sale_id, method_id, staff_id, " +
+            "note, at, hlc, shift_id) VALUES(?,?,?,?,?,?,NULL,?,?,?,?)"
+
+    /** Note of the charge that cancels a duplicate void's credit reversal (stored text, like "void: …"). */
+    const val DUPLICATE_VOID_NOTE = "duplicate void"
+
+    /**
+     * Two tills voided the same sale while offline: each void gave the customer's credit charges
+     * back (SaleActions.void), so the balance went down twice. The first void (by hlc, then till)
+     * counts; every later one gets a charge that cancels its reversal, with the fixed id −(void id).
+     * Every till makes the same rows whatever the arrival order (INSERT OR IGNORE, also when one
+     * arrives as a CREDIT event), so balances agree everywhere (2026-10 review). The charge is in the
+     * later void's shift, where ShiftDao also leaves that void out: it never counted there.
+     */
+    private fun creditOnce(tx: Db.Tx, saleId: Long) {
+        val db = tx.db
+        val voids = db.queryList(VOIDS_LIST, args(saleId)) { c ->
+            longArrayOf(c.getLong(0), c.getLong(1), c.longOrNull(2) ?: -1L, c.getLong(3))
+        }
+        if (voids.size < 2) return
+        val customerId = db.queryOne(SALE_CUSTOMER, args(saleId)) { it.longOrNull(0) } ?: return
+        // Exactly what each void reversed: one negative charge per credit payment that is not 0.
+        val credit = db.queryList(CREDIT_PAYMENTS, args(saleId)) { it.getLong(0) to it.getLong(1) }
+            .filter { it.second != 0L }
+        val amount = credit.sumOf { it.second }
+        if (amount == 0L) return
+        val later = voids.sortedWith(compareBy({ it[1] }, { Ids.deviceOf(it[0]) }, { it[0] })).drop(1)
+        for (v in later) {
+            val id = -v[0]
+            val shift = if (v[2] >= 0L) v[2] else null
+            val inserted = tx.insert(
+                INSERT_CREDIT_ONCE, id, customerId, CreditKind.CHARGE, amount, saleId, credit[0].first,
+                DUPLICATE_VOID_NOTE, v[3], v[1], shift,
+            ) == id
+            if (inserted) CustomerDao.applyBalance(tx, customerId, CreditMath.delta(CreditKind.CHARGE, amount))
+        }
     }
 
     /** Rows of one sale as SALE-event maps (sync backfill). */
@@ -389,5 +440,7 @@ object SaleDao {
         "product_history" to PRODUCT_HISTORY,
         "refunded_total" to REFUNDED_TOTAL,
         "voids_of_sale" to VOIDS_OF_SALE,
+        "voids_list" to VOIDS_LIST,
+        "credit_payments" to CREDIT_PAYMENTS,
     )
 }

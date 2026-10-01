@@ -62,7 +62,7 @@ class PerfDataGenerator(
 
     fun generate(progress: Progress = Progress { _, _, _ -> }, cancelled: () -> Boolean = { false }): Db {
         delete(context)
-        val db = Db.open(context, DB_NAME)
+        val db = Db.open(context, DB_NAME, storeData = false)
         try {
             val now = System.currentTimeMillis()
             val catalog = createCatalog(db, now, progress, cancelled)

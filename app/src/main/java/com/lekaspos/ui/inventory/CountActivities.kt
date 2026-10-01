@@ -25,6 +25,7 @@ import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.stock.CountRow
 import com.lekaspos.data.stock.CountSession
 import com.lekaspos.data.stock.CountSessionDao
+import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScanInput
@@ -137,7 +138,11 @@ class CountActivity : ScreenActivity() {
                 title = p.name,
                 subtitle = getString(R.string.inv_stock_now, InventoryUi.qty(stock, p.unit)),
                 value = c?.let { InventoryUi.qty(it, p.unit) },
-                tag = if (c != null) getString(R.string.inv_counted_tag) else null,
+                tag = when {
+                    c != null -> getString(R.string.inv_counted_tag)
+                    !p.active -> getString(R.string.product_hidden)
+                    else -> null
+                },
             )
         },
         onClick = { p -> countProduct(p.id) },
@@ -167,6 +172,7 @@ class CountActivity : ScreenActivity() {
         launchUi {
             val (s, c) = graph.db().read { CountSessionDao.get(it, sessionId) to CountSessionDao.countedQty(it, sessionId) }
             if (s == null) return@launchUi finish()
+            if (!s.open) return@launchUi closed() // finished on another till meanwhile
             session = s
             counted = HashMap(c)
             setScreenTitle(s.name)
@@ -200,11 +206,17 @@ class CountActivity : ScreenActivity() {
         job = scope.launch {
             if (debounce) delay(200L)
             val cat = s.categoryId
+            // Switched-off products are counted too (they can still be on the shelf), and a count of
+            // one category finds only that category's products (2026-10 review).
             val items = graph.db().read { r ->
                 when {
-                    q.isNotBlank() -> ProductDao.search(r, q, 100)
-                    cat != null -> ProductDao.byCategory(r, cat, null, PAGE)
-                    else -> ProductDao.sellPage(r, null, PAGE)
+                    // In a category count, a wider search first: the first 100 matches of the whole
+                    // shop could hold few of this category's products.
+                    q.isNotBlank() -> ProductDao.search(r, q, if (cat == null) 100 else 1000, includeInactive = true)
+                        .filter { p -> cat == null || p.categoryId == cat }
+                        .take(100)
+                    cat != null -> ProductDao.byCategory(r, cat, null, PAGE, includeInactive = true)
+                    else -> ProductDao.managePage(r, null, PAGE)
                 }
             }
             adapter.submit(items)
@@ -222,7 +234,13 @@ class CountActivity : ScreenActivity() {
         val after = adapter.items.lastOrNull() ?: return
         job = scope.launch {
             val cat = s.categoryId
-            val more = graph.db().read { r -> if (cat != null) ProductDao.byCategory(r, cat, after, PAGE) else ProductDao.sellPage(r, after, PAGE) }
+            val more = graph.db().read { r ->
+                if (cat != null) {
+                    ProductDao.byCategory(r, cat, after, PAGE, includeInactive = true)
+                } else {
+                    ProductDao.managePage(r, after, PAGE)
+                }
+            }
             adapter.append(more)
             end = more.size < PAGE
         }
@@ -246,12 +264,23 @@ class CountActivity : ScreenActivity() {
             val p = InventoryUi.product(graph, productId) ?: return@launchUi
             InventoryUi.askQty(this@CountActivity, getString(R.string.inv_count_of, p.name), p, counted[p.id] ?: 0L, allowZero = true) { qty ->
                 launchUi {
-                    graph.inventory.count(sessionId, p.id, qty)
+                    try {
+                        graph.inventory.count(sessionId, p.id, qty)
+                    } catch (e: ActionRefused) {
+                        if (e.reason != ActionRefused.Reason.NOT_FOUND) throw e
+                        return@launchUi closed() // finished on another till: the count was not recorded
+                    }
                     counted[p.id] = qty
                     reloadVisible()
                 }
             }
         }
+    }
+
+    /** The count was finished: says so and leaves (its report is in the list of counts). */
+    private fun closed() {
+        toast(R.string.inv_count_closed)
+        finish()
     }
 
     /** Refreshes stock figures of the listed products (they changed by the count). */
@@ -336,28 +365,11 @@ class CountReportActivity : ScreenActivity() {
     /** Totals over every count of the session: what was gained and lost, at cost. */
     private fun summary() {
         launchUi {
-            val all = graph.db().read { r ->
-                val out = ArrayList<CountRow>()
-                var after: CountRow? = null
-                while (true) {
-                    val page = CountSessionDao.counts(r, sessionId, after, 500)
-                    out.addAll(page)
-                    if (page.size < 500) break
-                    after = page.last()
-                }
-                out
-            }
-            var gained = 0L
-            var lost = 0L
-            for (c in all) {
-                val e = c.expected ?: continue
-                val v = CostMath.varianceValue(c.qty, e, c.unitCost ?: 0L)
-                if (v > 0L) gained += v else lost += v
-            }
+            val s = graph.db().read { CountSessionDao.summary(it, sessionId) }
             val currency = graph.settings.store.value.currency
             header.text = getString(
-                R.string.inv_count_summary, all.size, MoneyFormat.format(gained, currency), MoneyFormat.format(lost, currency),
-                MoneyFormat.format(gained + lost, currency),
+                R.string.inv_count_summary, s.counts, MoneyFormat.format(s.gained, currency), MoneyFormat.format(s.lost, currency),
+                MoneyFormat.format(s.gained + s.lost, currency),
             )
         }
     }

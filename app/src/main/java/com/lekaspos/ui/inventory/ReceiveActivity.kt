@@ -113,8 +113,9 @@ class ReceiveActivity : ScreenActivity() {
         super.onDestroy()
     }
 
+    // No scans while the delivery is being recorded: they belong to no delivery (2026-10 review).
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (loaded && !ref.hasFocus() && scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+        (loaded && !saving && !ref.hasFocus() && scanInput.onKey(event)) || super.dispatchKeyEvent(event)
 
     private fun render() {
         supplierButton.text = draft.supplierId?.let { id -> suppliers.firstOrNull { it.id == id }?.name } ?: getString(R.string.inv_no_supplier)
@@ -124,16 +125,23 @@ class ReceiveActivity : ScreenActivity() {
         save.isEnabled = !draft.isEmpty && !saving
     }
 
-    /** Applies an edit, shows it and saves the draft (in order, on the database writer). */
+    /**
+     * Applies an edit, shows it and saves the draft (in order, on the database writer). Nothing
+     * changes while the delivery is being recorded: a save queued behind it would store the
+     * received delivery again (InventoryService also drops such a save).
+     */
     private fun change(next: ReceiveDraft) {
+        if (saving) return
         draft = next
         render()
         graph.appScope.launch(Dispatchers.Main) { graph.inventory.saveDraft(next) }
     }
 
     private fun addByCode(code: String) {
+        if (saving) return
         launchUi {
             val p = InventoryUi.resolve(graph, code)
+            if (saving) return@launchUi
             if (p == null) {
                 beeper?.error()
                 Dialogs.confirm(this@ReceiveActivity, getString(R.string.sell_not_found_title), getString(R.string.sell_not_found_message, code), getString(R.string.sell_add_product)) {
@@ -237,7 +245,7 @@ class ReceiveActivity : ScreenActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_OK || data == null) return
+        if (resultCode != RESULT_OK || data == null || saving) return
         when (requestCode) {
             REQ_CAMERA -> data.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { addByCode(it) }
             REQ_PICK, REQ_NEW -> {

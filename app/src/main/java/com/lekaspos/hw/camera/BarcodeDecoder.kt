@@ -14,24 +14,29 @@ import com.google.zxing.common.HybridBinarizer
  */
 class BarcodeDecoder {
 
-    private val reader = MultiFormatReader().apply {
-        setHints(
-            mapOf(
-                DecodeHintType.POSSIBLE_FORMATS to listOf(
-                    BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
-                    BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.QR_CODE,
-                ),
-            ),
-        )
-    }
+    private val retail = listOf(
+        BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
+    )
+
+    /** Bar codes only: reads the frame row by row and allocates almost nothing per frame. */
+    private val barsReader = reader(retail)
+
+    /** Also QR, which binarizes a copy of the whole frame every time (several MB a second while scanning). */
+    private val allReader = reader(retail + BarcodeFormat.QR_CODE)
 
     private var rotated: ByteArray? = null
+
+    private fun reader(formats: List<BarcodeFormat>) = MultiFormatReader().apply {
+        setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to formats))
+    }
 
     /**
      * [y] = luminance plane of an NV21 frame ([width] × [height]). [rotate] turns it 90° first
      * (portrait screens), because 1-D readers scan rows and the camera sensor is landscape.
+     * [qr] = also look for QR codes.
      */
-    fun decode(y: ByteArray, width: Int, height: Int, rotate: Boolean): String? {
+    fun decode(y: ByteArray, width: Int, height: Int, rotate: Boolean, qr: Boolean = true): String? {
         var data = y
         var w = width
         var h = height
@@ -49,6 +54,7 @@ class BarcodeDecoder {
         val cropW = w * 9 / 10
         val cropH = h * 6 / 10
         val source = PlanarYUVLuminanceSource(data, w, h, (w - cropW) / 2, (h - cropH) / 2, cropW, cropH, false)
+        val reader = if (qr) allReader else barsReader
         return try {
             reader.decodeWithState(BinaryBitmap(HybridBinarizer(source))).text
         } catch (e: ReaderException) {

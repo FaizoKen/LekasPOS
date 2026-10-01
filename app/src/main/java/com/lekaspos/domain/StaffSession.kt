@@ -78,9 +78,24 @@ class StaffSession(private val graph: AppGraph) {
     @Volatile
     private var lastActivity = SystemClock.elapsedRealtime()
 
-    /** Bumped by every sign-in and lock, so a late "clear the signed-in staff" write never undoes a newer sign-in. */
+    /**
+     * Bumped (under [stateLock]) by every sign-in and lock, so a late "clear the signed-in staff"
+     * write never undoes a newer sign-in, and a [reload] that read the database before a lock never
+     * signs the person back in.
+     */
     @Volatile
     private var generation = 0L
+    private val stateLock = Any()
+
+    /** Screens of the app started and not stopped yet (changed on the main thread): 0 = out of sight. */
+    @Volatile
+    private var screens = 0
+
+    /** Bumped by each away-time write, so only the newest one is stored (see [screenStopped]). */
+    @Volatile
+    private var awayGeneration = 0L
+    @Volatile
+    private var awayStored = false
 
     suspend fun load() = loadLock.withLock {
         if (!_state.value.loaded) reloadLocked()
@@ -91,14 +106,58 @@ class StaffSession(private val graph: AppGraph) {
 
     private suspend fun reloadLocked() {
         val db = graph.db()
-        val (required, signed) = db.read { r ->
-            val required = StaffDao.loginRequired(r)
-            val id = _state.value.current?.id ?: Meta.getLong(r, KEY_STAFF)
-            required to id?.let { StaffDao.get(r, it) }?.takeIf { it.canSignIn }
+        val first = !_state.value.loaded
+        // The idle time of this device decides whether the stored sign-in may come back.
+        if (first) graph.settings.load()
+        while (true) {
+            val g = generation
+            val inMemory = _state.value.current?.id
+            // Only the first load (a new process) brings back the stored sign-in. Later, nobody in
+            // memory means locked: the "clear the signed-in staff" write may still be queued, and
+            // reading it back signed the person in again (2026-10 review).
+            val (required, signed, away) = db.read { r ->
+                val required = StaffDao.loginRequired(r)
+                val id = inMemory ?: if (first) Meta.getLong(r, KEY_STAFF) else null
+                val away = if (first) Meta.getLong(r, KEY_AWAY) else null
+                Triple(required, id?.let { StaffDao.get(r, it) }?.takeIf { it.canSignIn }, away)
+            }
+            var current = if (required) signed?.let(::signed) else null
+            var expired = false
+            if (current != null && inMemory == null && away != null) {
+                // A new process (Android ended the app while the phone was idle): the idle lock
+                // counts from the last activity before the app went out of sight, not from now.
+                val idle = System.currentTimeMillis() - away
+                val minutes = graph.settings.device.value.autoLockMinutes
+                if (minutes > 0 && (idle < 0L || idle >= minutes * 60_000L)) {
+                    current = null
+                    expired = true
+                } else {
+                    lastActivity = SystemClock.elapsedRealtime() - idle.coerceAtLeast(0L)
+                }
+            }
+            val applied = synchronized(stateLock) {
+                if (generation != g) {
+                    false // signed in or locked meanwhile: read again
+                } else {
+                    if (current == null && _state.value.current != null) graph.permissions.clear()
+                    if (expired) generation++ // a late write of the stored sign-in must not bring it back
+                    _state.value = State(loaded = true, loginRequired = required, current = current)
+                    true
+                }
+            }
+            if (!applied) continue
+            // The away time stays until a screen shows (screenStarted): a process started in the
+            // background (a sync job) must not use it up, or a later start would sign in again.
+            if (away != null) {
+                if (screens > 0) storeAway(null) else awayStored = true
+            }
+            if (expired) {
+                // An expired sign-in is forgotten for good.
+                val staffGen = generation
+                db.write(reserveIds = 0L) { tx -> if (generation == staffGen) Meta.put(tx.db, KEY_STAFF, null) }
+            }
+            return
         }
-        val current = if (required) signed?.let(::signed) else null
-        if (current == null && _state.value.current != null) graph.permissions.clear()
-        _state.value = State(loaded = true, loginRequired = required, current = current)
     }
 
     /** Checks [pin] of [staffId] and signs them in (audited). */
@@ -106,36 +165,89 @@ class StaffSession(private val graph: AppGraph) {
         val c = check(staffId, pin, perm = 0L)
         if (c is Check.Ok) {
             val now = System.currentTimeMillis()
-            generation++
+            synchronized(stateLock) { generation++ }
             graph.db().write(reserveIds = 2L) { tx ->
                 Meta.put(tx.db, KEY_STAFF, staffId.toString())
                 AuditDao.log(tx, AuditAction.SIGN_IN, staffId, now, Entity.STAFF, staffId)
             }
             graph.permissions.clear()
             touch()
-            _state.value = _state.value.copy(loaded = true, current = signed(c.staff))
+            synchronized(stateLock) {
+                generation++
+                _state.value = _state.value.copy(loaded = true, current = signed(c.staff))
+            }
         }
         return c
     }
 
     /** Signs [staff] in without a PIN check: right after they set their own PIN. */
     internal suspend fun adopt(staff: Staff) {
-        generation++
+        synchronized(stateLock) { generation++ }
         graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_STAFF, staff.id.toString()) }
         touch()
-        _state.value = _state.value.copy(loaded = true, current = signed(staff))
+        synchronized(stateLock) {
+            generation++
+            _state.value = _state.value.copy(loaded = true, current = signed(staff))
+        }
     }
 
     /** Locks the till: the next person must sign in. No effect while PIN login is off. */
     fun lock() {
-        val s = _state.value
-        if (!s.loginRequired || s.current == null) return
-        graph.permissions.clear()
-        _state.value = s.copy(current = null)
-        val g = ++generation
+        val g: Long
+        synchronized(stateLock) {
+            val s = _state.value
+            if (!s.loginRequired || s.current == null) return
+            graph.permissions.clear()
+            _state.value = s.copy(current = null)
+            g = ++generation
+        }
         graph.appScope.launch {
             graph.db().write(reserveIds = 0L) { tx -> if (generation == g) Meta.put(tx.db, KEY_STAFF, null) }
         }
+    }
+
+    /**
+     * A screen of the app became visible. The idle time is checked at once: when the phone's
+     * screen had turned off, the first tap after waking it counted as activity before any idle
+     * check ran, so the till never locked (2026-10 review). Returns true if it locked.
+     */
+    fun screenStarted(): Boolean {
+        if (screens++ == 0 && awayStored) {
+            awayStored = false
+            storeAway(null)
+        }
+        return lockIfIdle()
+    }
+
+    /**
+     * A screen stopped. When none is left (screen off, another app), the time of the last activity
+     * is stored: if Android ends the app meanwhile, the next start still knows how long the till
+     * was idle, instead of bringing the sign-in back with a fresh idle time.
+     */
+    fun screenStopped() {
+        screens = (screens - 1).coerceAtLeast(0)
+        if (screens > 0) return
+        val s = _state.value
+        if (!s.loginRequired || s.current == null) return
+        awayStored = true
+        storeAway(System.currentTimeMillis() - (SystemClock.elapsedRealtime() - lastActivity))
+    }
+
+    private fun storeAway(at: Long?) {
+        val g = ++awayGeneration
+        graph.appScope.launch {
+            graph.db().write(reserveIds = 0L) { tx -> if (awayGeneration == g) Meta.put(tx.db, KEY_AWAY, at?.toString()) }
+        }
+    }
+
+    /**
+     * A touch or key: locks first when the till has been idle too long (returns true: the event
+     * must be dropped, it was meant for the person signed in before), else records the activity.
+     */
+    fun activity(): Boolean {
+        if (lockIfIdle()) return true
+        touch()
+        return false
     }
 
     /** Audits a manager's approval that a screen keeps (the permission bits go in `amount`). */
@@ -168,12 +280,43 @@ class StaffSession(private val graph: AppGraph) {
 
     /** Milliseconds before a PIN of [staffId] is checked again (after too many wrong ones). */
     suspend fun waitMs(staffId: Long): Long {
-        val (fails, last) = graph.db().read { r -> fails(r, staffId) }
-        return PinLockout.remainingMs(fails, last, System.currentTimeMillis())
+        val f = graph.db().read { r -> fails(r, staffId) }
+        return remaining(f, System.currentTimeMillis())
     }
 
-    private fun fails(r: android.database.sqlite.SQLiteDatabase, staffId: Long): Pair<Int, Long> =
-        (Meta.getLong(r, KEY_FAILS + staffId) ?: 0L).toInt() to (Meta.getLong(r, KEY_LAST_FAIL + staffId) ?: 0L)
+    /** Wrong PINs in a row, the wall-clock time of the last one, and "boot:elapsedRealtime" of it. */
+    private data class Fails(val count: Int, val last: Long, val lastRt: String?)
+
+    private fun fails(r: android.database.sqlite.SQLiteDatabase, staffId: Long) = Fails(
+        (Meta.getLong(r, KEY_FAILS + staffId) ?: 0L).toInt(),
+        Meta.getLong(r, KEY_LAST_FAIL + staffId) ?: 0L,
+        Meta.get(r, KEY_LAST_FAIL_RT + staffId),
+    )
+
+    /**
+     * The wait left, by the wall clock and — when the phone has not restarted since the last wrong
+     * PIN — by the time since boot, which setting the clock cannot change: setting the clock forward
+     * ended any wait, so a 4-digit PIN could be guessed in hours (2026-10 review).
+     */
+    private fun remaining(f: Fails, now: Long): Long {
+        var wait = PinLockout.remainingMs(f.count, f.last, now)
+        val boot = graph.bootCount()
+        val at = f.lastRt?.split(':')
+        if (boot != null && at != null && at.size == 2 && at[0] == boot.toString()) {
+            val rt = at[1].toLongOrNull()
+            if (rt != null) wait = maxOf(wait, PinLockout.remainingMs(f.count, rt, SystemClock.elapsedRealtime()))
+        }
+        return wait
+    }
+
+    private fun bootStamp(): String? = graph.bootCount()?.let { "$it:${SystemClock.elapsedRealtime()}" }
+
+    /** Forgets [staffId]'s wrong PINs (a new PIN was set for them, or the owner used the recovery code). */
+    internal fun clearFails(tx: com.lekaspos.data.db.Db.Tx, staffId: Long) {
+        Meta.put(tx.db, KEY_FAILS + staffId, null)
+        Meta.put(tx.db, KEY_LAST_FAIL + staffId, null)
+        Meta.put(tx.db, KEY_LAST_FAIL_RT + staffId, null)
+    }
 
     /**
      * Checks [pin] of [staffId], who must be able to sign in and hold [perm] (0 = any). Wrong
@@ -183,20 +326,26 @@ class StaffSession(private val graph: AppGraph) {
     suspend fun check(staffId: Long, pin: String, perm: Long): Check = pinLock.withLock {
         val db = graph.db()
         val now = System.currentTimeMillis()
-        val (staff, counted) = db.read { r -> StaffDao.get(r, staffId) to fails(r, staffId) }
-        val (fails, last) = counted
-        val wait = PinLockout.remainingMs(fails, last, now)
-        if (wait > 0L) return@withLock Check.Wait(wait)
+        val (staff, f) = db.read { r -> StaffDao.get(r, staffId) to fails(r, staffId) }
+        val wait = remaining(f, now)
+        if (wait > 0L) {
+            // The clock was set back before the last wrong PIN: the wait counts from now. Left as it
+            // was, the wait lasted until the clock reached that time again — a cashier who set the
+            // date to 2099 for five wrong owner PINs blocked the owner's PIN for years.
+            if (now < f.last) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString()) }
+            return@withLock Check.Wait(wait)
+        }
         if (staff == null || !staff.canSignIn || !Perm.has(staff.perms, perm)) return@withLock Check.NotAllowed
         val ok = withContext(Dispatchers.Default) { PinHash.verify(pin, staff.pin) }
         if (ok) {
-            if (fails != 0) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_FAILS + staffId, null) }
+            if (f.count != 0) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_FAILS + staffId, null) }
             return@withLock Check.Ok(staff)
         }
-        val n = fails + 1
+        val n = f.count + 1
         db.write(reserveIds = 1L) { tx ->
             Meta.put(tx.db, KEY_FAILS + staffId, n.toString())
             Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString())
+            Meta.put(tx.db, KEY_LAST_FAIL_RT + staffId, bootStamp())
             // Every wait is recorded (the 5th wrong PIN and each one after it), with who was signed in.
             if (n >= PinLockout.FREE_TRIES) {
                 AuditDao.log(tx, AuditAction.PIN_LOCKOUT, _state.value.current?.id, now, Entity.STAFF, staffId, detail = "$n wrong PINs")
@@ -212,6 +361,10 @@ class StaffSession(private val graph: AppGraph) {
         /** Wrong PINs in a row and the time of the last one, per staff member: the staff id follows. */
         const val KEY_FAILS = "pin.fails."
         const val KEY_LAST_FAIL = "pin.last_fail."
+        const val KEY_LAST_FAIL_RT = "pin.last_fail_rt."
+
+        /** Wall-clock time of the last activity while the till was out of sight (see [screenStopped]). */
+        const val KEY_AWAY = "session.away_at"
     }
 }
 

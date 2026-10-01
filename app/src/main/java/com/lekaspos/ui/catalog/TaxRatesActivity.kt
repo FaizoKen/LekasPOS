@@ -20,6 +20,7 @@ import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.CoroutineScope
 
@@ -84,6 +85,7 @@ class TaxRatesActivity : ScreenActivity() {
             .setPositiveButton(R.string.save, null)
             .setNegativeButton(R.string.cancel, null)
             .show()
+            .trackedBy(this)
         d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val n = name.text.toString().trim()
             val bp = MoneyFormat.parsePlain(rate.text.toString(), 2)

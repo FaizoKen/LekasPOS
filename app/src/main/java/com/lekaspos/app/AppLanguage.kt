@@ -2,6 +2,8 @@ package com.lekaspos.app
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
+import android.os.LocaleList
 import android.os.StrictMode
 import java.util.Locale
 
@@ -46,12 +48,29 @@ object AppLanguage {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, language).apply()
     }
 
-    /** [base] with the chosen language, for Activity/Application.attachBaseContext. */
+    /**
+     * [base] with the chosen language, for Activity/Application.attachBaseContext.
+     *
+     * Only the language is overridden. Android lays the override over every later configuration,
+     * and a full copy kept the screen's first orientation and size once the back-office screens
+     * rotated in place: dialogs were sized for the old width (2026-10 review). Everything else in
+     * the delta stays undefined: fontScale 0 (below API 24 `Configuration()` means 1, which would
+     * undo the user's font size) and no screenLayout bits (below API 24 a delta carrying layout
+     * direction bits replaced the whole screenLayout; the locale field alone is enough there, as
+     * updateFrom derives the layout direction from it).
+     */
     fun wrap(base: Context): Context {
         val language = get(base)
         if (language == PHONE) return base
-        val config = Configuration(base.resources.configuration)
-        config.setLocale(Locale(language))
+        val locale = Locale(language)
+        val config = Configuration()
+        config.fontScale = 0f
+        if (Build.VERSION.SDK_INT >= 24) {
+            config.setLocales(LocaleList(locale))
+        } else {
+            @Suppress("DEPRECATION")
+            config.locale = locale
+        }
         return base.createConfigurationContext(config)
     }
 }

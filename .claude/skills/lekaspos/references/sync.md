@@ -35,7 +35,11 @@ Android Auto Backup is disabled for the same reason.
 counter increments when `l` did not advance. On import: `observe(remote)` advances the local
 clock past the remote HLC so later local edits order after what we have seen — unless the
 remote physical time is more than 24 h in the future (a device with a wrong clock), which is
-not adopted and is reported in sync status. Ties are broken by `device_no`.
+not adopted. Ties are broken by `device_no`. A local LWW edit is stamped above the version the
+field already holds (`Lww.stampAbove`, D-055), so a till whose clock is behind still wins with
+its later edit everywhere. Imports observe inside each applied chunk's transaction. Every Drive
+answer's `Date` header gives this phone's clock offset; more than 10 min off → `sync.clock_off`
+→ the Sync screen says the date is wrong.
 
 ## 4. Events
 
@@ -78,8 +82,15 @@ staff member are LOCAL (`meta`: `pin.*`, `session.staff`), per till.
   (lines are snapshots); the product ends with A's price.
 - Stock: level = last count (by HLC) + movements after it. A count on A and offline sales on
   B made before the count (by HLC) are subsumed by the count; sales after it are subtracted.
-- Same barcode assigned to two products concurrently → both kept; scan picks the most
-  recently changed and the product list flags the duplicate.
+- Same barcode assigned to two products concurrently → both kept; a scan (and a CSV update by
+  barcode) picks the barcode row created last (`created_at`, then id — the same on every till,
+  D-055); the product's edit screen names the other product.
+- Same sale voided on two tills offline → the first void by (hlc, till, id) counts: every later
+  void's credit reversal is cancelled by a charge with the fixed id −(void id) that every till
+  makes itself (INSERT OR IGNORE), and shift reports count the first void only (cash, card and
+  e-wallet stay in each till's own shift: each drawer paid them back) (D-055). A refund
+  of a sale voided on another till, or two tills refunding the same items, both stay (the money
+  left the drawer); not flagged yet.
 - Receipt numbers never collide: per-device prefix + per-device sequence.
 - A device offline for weeks uploads its whole backlog; nothing is lost or double-counted.
 
@@ -113,13 +124,18 @@ Streaming read/write only (`SegmentCodec`).
    `meta sync.cleaned_to` on, never the whole history). Uploads stop at the first failure, so the
    unsent segments are exactly those after the last uploaded one (a key range, not a scan).
 3. Import: list `seg-{store}-*`; for every other device `d` apply `cursor[d]+1, +2, …` in
-   order (`Cursors.next`), each downloaded to `cacheDir/sync-in`, verified, and applied in one
-   transaction together with `cursor[d] = seq`. A gap stops that device until it appears.
-   `hlc.observe(max)` afterwards. The listing is filtered while it is read (`list(keep)`): only
-   files after a cursor are kept, the rest only counted (D-054). On a whole-folder listing, a
-   cursor beyond a till's highest file means that till numbered again from 1 (it moved the store
-   to this folder, or the folder was emptied): the cursor is dropped and the till read again
-   (re-applying is harmless).
+   order (`Cursors.next`), each downloaded to `cacheDir/sync-in`, verified, and applied in
+   ~100 ms chunks (`hlc.observe` inside each chunk; the cursor moves with the last). A gap stops
+   that device until it appears. The listing is filtered while it is read (`list(keep)`): only
+   files after a cursor are kept, the rest only counted (D-054), and at most 1,000 files per till
+   per round (`Report.more` → AutoSync runs the next round 2 s later, D-055). On a whole-folder
+   listing, a cursor beyond a till's highest file means that till numbered again from 1 (it moved
+   the store to this folder, or the folder was emptied): the cursor is dropped and the till read
+   again (re-applying is harmless). Whole-folder listings also check the folder (D-055): a missing
+   store manifest is created again; when this till's own first files are gone it publishes
+   everything again under its next numbers and its card's `fullFrom` lets readers missing older
+   files jump there; a till in a store other than the lowest-id one moves to it; a receipt prefix
+   used by another card is changed by the till with the higher device number.
 4. Publish the device card; reload settings / staff when those entities changed.
 5. `meta sync.last_ok / sync.last_error` (`"sign-in"` when the provider needs the user).
 
@@ -137,7 +153,11 @@ the creation fills; products are re-indexed for search.
 - Enabling sync: pick the store manifest (own store if present, else create when none, else
   adopt the first), refuse on a device-number clash (another card with our number, different
   uuid; every card must download — an unreadable one fails the enable), take a free receipt
-  prefix if ours is used by another card, then backfill + sync. Before that (D-054):
+  prefix if ours is used by another card, publish this till's card, then backfill + sync. After
+  creating a manifest the folder is listed again: two tills that created stores at once settle
+  on the lowest id. A till joining a different existing store yields its own store settings
+  (`setting.ver_hlc = 0`), so a new till's first-run Setup never overwrites the store's receipt
+  header, BRN or tax switch (D-055). Before that (D-054):
   - the folder already holds **more** of this till's files (or its card a higher `lastSeq`) than
     this database ever sealed → it is an older copy of the till (a backup from before it first
     synced was restored as "the same till"): refused with `OLD_COPY`, `meta identity.renew = 1`,
@@ -155,6 +175,12 @@ the creation fills; products are re-indexed for search.
   imported. The new device number never gives the old receipt prefix. `files/restore-pending`
   keeps the mode from the swap until `afterOpen` has run (a crash in between still gets the
   identity reset); a restore whose safety copy of the current data fails is not done at all.
+  A backup older than the sync tables counts as this till (D-055).
+- A checked restore is applied only after "Restart now" (`Restore.prepare` + `arm`); one never
+  confirmed is deleted at the next start. After any restore nobody is signed in and the
+  wrong-PIN counts are this phone's (`Restore.Carry`). A restored till that keeps its identity
+  skips 2^30 IDs (never meets IDs it handed out after the backup); on the same phone its receipt
+  numbers continue after the highest used, on another phone it gets a new receipt prefix (D-055).
 
 ## 8. Not built yet (deferred, D-045)
 
@@ -215,7 +241,14 @@ sync screen, `forId(meta sync.provider)` for background work.
   thread after `wal_checkpoint(FULL)` (writes wait for the copy).
 - Automatic: daily (`BackupWorker`, keep 7) and before every schema upgrade (keep 3);
   "replaced-*" copies before a restore (keep 3). Manual: back up now, save via SAF, share.
-- Restore: staged into `files/restore/`, app restarts, applied in `Db.open` before opening.
+- Restore: staged into `files/restore/`, armed by "Restart now", app restarts, applied in
+  `Db.open` before opening.
+- Damage (D-055): every open uses `KeepDamagedDatabase` — Android's default handler deleted the
+  database on the first SQLITE_CORRUPT. A database too damaged to open moves to
+  `files/backups/damaged-<time>.db` and an empty store opens so a backup can be restored; for 7
+  days the status shows "Data problem" and automatic backups pause (no rotation). Backup times
+  in the future (a clock set back) count as due / not fresh; the backup just written is never
+  pruned.
 - Data safety (D-048): before each automatic backup `PRAGMA quick_check`; damage → no backup,
   no pruning, `meta dev.db_problem` → "Data problem" pill. The automatic backup is copied to
   the owner's folder (`BackupFolder`: SAF tree with persisted permission; files

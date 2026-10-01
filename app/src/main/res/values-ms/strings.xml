@@ -188,7 +188,7 @@
     <string name="product_deleted">Produk dipadam</string>
     <string name="product_delete_confirm">Padam %1$s? Jualan lalu kekal dengan barisnya.</string>
     <string name="product_duplicate_title">Kod bar sudah digunakan</string>
-    <string name="product_error_barcode_dup">Kod bar %1$s sudah digunakan oleh %2$s. Simpan juga? Imbasan akan memilih produk yang terakhir diubah.</string>
+    <string name="product_error_barcode_dup">Kod bar %1$s sudah digunakan oleh %2$s. Simpan juga? Imbasan akan memilih kod bar yang ditambah terakhir.</string>
     <string name="product_error_name">Masukkan nama.</string>
     <string name="product_error_price">Masukkan amaun yang sah.</string>
     <string name="product_error_qty">Masukkan kuantiti yang sah.</string>
@@ -513,4 +513,9 @@
     <string name="product_opening_stock">Stok permulaan</string>
     <string name="product_opening_hint">Berapa banyak di rak sekarang</string>
     <string name="result_low_stock">Hampir habis: %1$s</string>
+    <!-- Bug hunt 2 (2026-10) -->
+    <string name="share_no_memory">Memori tidak mencukupi untuk berkongsi resit ini sebagai gambar. Kongsi sebagai PDF.</string>
+    <string name="inv_count_closed">Kiraan ini sudah ditamatkan. Mulakan kiraan baharu untuk mengira lagi.</string>
+    <string name="product_barcode_shared">Kod bar %1$s juga digunakan oleh %2$s. Imbasan memilih kod bar yang ditambah terakhir.</string>
+    <string name="sync_clock_wrong">Tarikh atau masa telefon ini salah. Hidupkan tarikh dan masa automatik dalam tetapan telefon supaya jualan dan kiraan stok tersusun dengan betul.</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.lekaspos.domain.inventory
 
+import android.database.sqlite.SQLiteDatabase
 import android.util.JsonReader
 import android.util.JsonToken
 import com.lekaspos.app.AppGraph
@@ -38,16 +39,24 @@ class InventoryService(private val graph: AppGraph) {
         require(!d.isEmpty) { "nothing received" }
         val staff = graph.staff.staffId
         return graph.db().write(reserveIds = d.lines.size * 2L + 16L) { tx ->
-            if (Meta.get(tx.db, DRAFT_KEY).isNullOrEmpty()) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            if (Meta.get(tx.db, DRAFT_KEY).isNullOrEmpty() || received(tx.db, d)) {
+                throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            }
             val id = PurchaseDao.commit(
                 tx,
                 PurchaseIn(d.supplierId, d.refNo, d.note, d.lines.map { PurchaseLineIn(it.productId, it.qty, it.unitCost, it.total) }),
                 staff, System.currentTimeMillis(),
             )
             Meta.put(tx.db, DRAFT_KEY, null)
+            if (d.token != 0L) Meta.put(tx.db, RECEIVED_KEY, d.token.toString())
             id
         }
     }
+
+    /** Was [d] (by its token) received already? Tokens grow, so every older one counts too. */
+    private fun received(db: SQLiteDatabase, d: ReceiveDraft): Boolean = d.token != 0L && d.token <= lastReceived(db)
+
+    private fun lastReceived(db: SQLiteDatabase): Long = Meta.getLong(db, RECEIVED_KEY) ?: 0L
 
     /** A manual stock change: [qty] > 0 as entered; the reason decides in or out (or [removing]). */
     suspend fun adjust(productId: Long, reason: AdjustReason, qty: Long, removing: Boolean, note: String?): Long {
@@ -65,12 +74,19 @@ class InventoryService(private val graph: AppGraph) {
         return graph.db().write(reserveIds = 4L) { tx -> CountSessionDao.create(tx, name, categoryId, staff, System.currentTimeMillis()) }
     }
 
-    /** Records a counted quantity; it becomes the product's stock at once (D-035). */
+    /**
+     * Records a counted quantity; it becomes the product's stock at once (D-035). A count that
+     * was finished (here or on another till) takes no more counts (2026-10 review).
+     */
     suspend fun count(sessionId: Long, productId: Long, qty: Long) {
         allowed()
         require(qty >= 0L) { "a count cannot be negative" }
         val staff = graph.staff.staffId
-        graph.db().write(reserveIds = 4L) { tx -> StockDao.insertCount(tx, productId, qty, sessionId, staff, null, System.currentTimeMillis()) }
+        graph.db().write(reserveIds = 4L) { tx ->
+            val open = CountSessionDao.get(tx.db, sessionId)?.open == true
+            if (!open) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            StockDao.insertCount(tx, productId, qty, sessionId, staff, null, System.currentTimeMillis())
+        }
     }
 
     suspend fun finishCount(sessionId: Long) {
@@ -80,31 +96,45 @@ class InventoryService(private val graph: AppGraph) {
 
     // ------------------------------------------------------------------ receiving draft
 
-    /** The delivery being entered, kept in `meta` so a crash or call never loses it. */
+    /**
+     * The delivery being entered, kept in `meta` so a crash or call never loses it. A new one gets
+     * the next token (after the last delivery received), so its late saves can be told apart.
+     */
     suspend fun loadDraft(): ReceiveDraft = graph.db().read { r ->
         val json = Meta.get(r, DRAFT_KEY)
+        val fresh = ReceiveDraft(token = lastReceived(r) + 1L)
         if (json.isNullOrEmpty()) {
-            ReceiveDraft()
+            fresh
         } else {
             try {
-                decode(json)
+                decode(json).takeUnless { received(r, it) } ?: fresh
             } catch (e: Exception) {
                 Log.w("Discarding an unreadable delivery draft", e)
-                ReceiveDraft()
+                fresh
             }
         }
     }
 
+    /**
+     * Stores the draft (an empty one clears it). A save of a delivery that has been received
+     * meanwhile (a scan queued behind the receipt) is dropped: it would bring the delivery back.
+     */
     suspend fun saveDraft(d: ReceiveDraft) {
         val json = if (d.isEmpty && d.supplierId == null && d.refNo.isEmpty() && d.note.isEmpty()) null else encode(d)
-        graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, DRAFT_KEY, json) }
+        graph.db().write(reserveIds = 0L) { tx ->
+            if (json == null || !received(tx.db, d)) Meta.put(tx.db, DRAFT_KEY, json)
+        }
     }
 
     companion object {
         private const val DRAFT_KEY = "draft.receive"
 
+        /** Token of the last delivery received from a draft (LOCAL meta). */
+        private const val RECEIVED_KEY = "draft.receive.done"
+
         fun encode(d: ReceiveDraft): String = Outbox.json { w ->
             w.beginObject()
+            w.name("token").value(d.token)
             w.name("supplier")
             if (d.supplierId == null) w.nullValue() else w.value(d.supplierId)
             w.name("ref").value(d.refNo)
@@ -126,6 +156,7 @@ class InventoryService(private val graph: AppGraph) {
         }
 
         fun decode(json: String): ReceiveDraft {
+            var token = 0L
             var supplier: Long? = null
             var ref = ""
             var note = ""
@@ -134,6 +165,7 @@ class InventoryService(private val graph: AppGraph) {
                 r.beginObject()
                 while (r.hasNext()) {
                     when (r.nextName()) {
+                        "token" -> token = r.nextLong()
                         "supplier" -> supplier = if (r.peek() == JsonToken.NULL) r.nextNull().let { null } else r.nextLong()
                         "ref" -> ref = r.nextString()
                         "note" -> note = r.nextString()
@@ -147,7 +179,7 @@ class InventoryService(private val graph: AppGraph) {
                 }
                 r.endObject()
             }
-            return ReceiveDraft(supplier, ref, note, lines)
+            return ReceiveDraft(supplier, ref, note, lines, token)
         }
 
         private fun line(r: JsonReader): ReceiveLine {

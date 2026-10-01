@@ -2,6 +2,8 @@ package com.lekaspos.ui.sell
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
+import android.os.Build
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
@@ -10,6 +12,9 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
+import androidx.annotation.RequiresApi
 import com.lekaspos.R
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.money.Checked
@@ -34,12 +39,16 @@ class PaymentDialog(
     private val total: Long,
     private val currency: CurrencySpec,
     private val methods: List<PaymentMethod>,
+    /** Part payments already taken (the payment shown again after the screen was rebuilt). */
+    initial: List<Tender> = emptyList(),
+    /** Every part payment taken, so it can outlive this dialog (CartSession.PaymentDraft). */
+    private val onTenders: (List<Tender>) -> Unit = {},
     /** Checks a non-cash tender before it is taken (customer credit: customer, permission, limit). */
     private val authorize: (method: PaymentMethod, amount: Long, done: (Boolean) -> Unit) -> Unit = { _, _, done -> done(true) },
     private val onPaid: (tenders: List<Tender>, rounding: Long) -> Unit,
 ) {
-    private val tenders = ArrayList<Tender>()
-    private var remaining = total
+    private val tenders = ArrayList<Tender>(initial)
+    private var remaining = total - initial.sumOf { it.applied }
 
     /** When the last part payment was taken: a second tap that lands right after it is not a new payment. */
     private var partAt = 0L
@@ -89,6 +98,7 @@ class PaymentDialog(
         // A touch beside the dialog must not throw away payments already entered (split tender).
         dialog.setCanceledOnTouchOutside(false)
         dialog.keys { e ->
+            // Below Android 13 Back arrives here as a key; from 13 on, see Back33.
             if (e.keyCode == KeyEvent.KEYCODE_BACK && tenders.isNotEmpty()) {
                 if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) confirmCancel()
                 true
@@ -97,11 +107,29 @@ class PaymentDialog(
             }
         }
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { if (tenders.isEmpty()) dialog.cancel() else confirmCancel() }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { back() }
         }
         refresh()
         dialog.show()
+        // The app takes Back through OnBackInvokedCallback (manifest), so from Android 13 on the key
+        // never reaches the listener above: the dialog's own Back cancelled at once and dropped a
+        // split payment half entered without asking (2026-10 review). Registered after show(), so
+        // it comes before the dialog's own.
+        if (Build.VERSION.SDK_INT >= 33) Back33.register(dialog) { back() }
         return dialog.trackedBy(activity)
+    }
+
+    /** Cancel or Back: closes at once while nothing is paid; with part payments taken it asks first. */
+    private fun back() {
+        if (tenders.isEmpty()) dialog.cancel() else confirmCancel()
+    }
+
+    @RequiresApi(33)
+    private object Back33 {
+        fun register(d: Dialog, onBack: () -> Unit) {
+            val cb = OnBackInvokedCallback { onBack() }
+            d.onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, cb)
+        }
     }
 
     /** Part of the bill is already paid (card, e-wallet): cancelling clears those payments too, so ask. */
@@ -153,6 +181,7 @@ class PaymentDialog(
                     tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, 0L))
                     remaining = r.remaining
                     partAt = SystemClock.uptimeMillis()
+                    onTenders(ArrayList(tenders))
                     refresh()
                 }
                 is Settlement.Result.Rejected -> error(activity.getString(R.string.pay_error_cash, money(r.minimum)))
@@ -182,6 +211,7 @@ class PaymentDialog(
                 tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
                 remaining = r.remaining
                 partAt = SystemClock.uptimeMillis()
+                onTenders(ArrayList(tenders))
                 refresh()
             }
             is Settlement.Result.Rejected -> Unit

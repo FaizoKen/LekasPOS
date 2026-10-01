@@ -45,6 +45,17 @@ class LwwTest {
         assertEquals(emptyList(), Lww.winningFields(listOf("name", "price"), incoming, base, after))
     }
 
+    @Test
+    fun aLocalEditIsStampedAboveWhatTheFieldsHold() {
+        assertEquals(500L, Lww.stampAbove(500L, 400L)) // the clock is ahead: unchanged
+        assertEquals(901L, Lww.stampAbove(500L, 900L)) // a till with a clock far ahead wrote it
+        assertEquals(501L, Lww.stampAbove(500L, 500L))
+        // The stamped edit wins on every replica, whichever device wrote the held version.
+        val held = Version(900L, 9)
+        val mine = Version(Lww.stampAbove(500L, held.hlc), 1)
+        assertEquals(listOf("price"), Lww.winningFields(listOf("price"), mine, held, FieldVersions.EMPTY))
+    }
+
     /** Minimal LWW replica: field → (value, version). */
     private class Replica {
         val values = HashMap<String, Pair<String, Version>>()

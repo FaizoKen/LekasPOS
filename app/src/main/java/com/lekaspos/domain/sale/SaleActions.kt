@@ -16,6 +16,7 @@ import com.lekaspos.core.refund.Refunds
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.customer.CustomerDao
+import com.lekaspos.data.db.Db
 import com.lekaspos.data.print.PrintJobDao
 import com.lekaspos.data.sale.CommittedSale
 import com.lekaspos.data.sale.PaymentDraft
@@ -25,6 +26,7 @@ import com.lekaspos.data.sale.SaleHeader
 import com.lekaspos.data.sale.SaleLineDraft
 import com.lekaspos.data.sale.SaleLineFull
 import com.lekaspos.data.sale.SaleQueries
+import com.lekaspos.data.shift.ShiftDao
 import com.lekaspos.domain.Approval
 import java.util.TimeZone
 
@@ -45,14 +47,25 @@ class ActionRefused(val reason: Reason) : Exception(reason.name) {
  */
 class SaleActions(private val graph: AppGraph) {
 
-    /** A sale and, per line, what can still be returned. */
-    data class RefundInfo(val header: SaleHeader, val lines: List<SaleLineFull>, val sources: Map<Long, RefundSource>)
+    /**
+     * A sale and, per line, what can still be returned. [weighed]: ids of the lines whose return is
+     * entered as a weight (the product is sold by weight now, or the quantity is not whole units).
+     */
+    data class RefundInfo(
+        val header: SaleHeader,
+        val lines: List<SaleLineFull>,
+        val sources: Map<Long, RefundSource>,
+        val weighed: Set<Long> = emptySet(),
+    )
 
     suspend fun refundInfo(saleId: Long): RefundInfo? = graph.db().read { r ->
         val h = SaleQueries.header(r, saleId) ?: return@read null
         val lines = SaleQueries.lines(r, saleId)
         val done = SaleQueries.refundedByLine(r, saleId)
-        RefundInfo(h, lines, lines.associate { it.id to source(it, done[it.id]) })
+        // A whole kilo sold (1.000 kg) could only be returned in whole kilos (2026-10 review).
+        val byWeight = SaleQueries.soldByWeight(r, lines.mapNotNullTo(HashSet()) { it.productId })
+        val weighed = lines.filter { l -> l.qty % 1000L != 0L || l.productId?.let { it in byWeight } == true }
+        RefundInfo(h, lines, lines.associate { it.id to source(it, done[it.id]) }, weighed.mapTo(HashSet()) { it.id })
     }
 
     /**
@@ -71,11 +84,9 @@ class SaleActions(private val graph: AppGraph) {
         val store = graph.settings.store.value
         val device = graph.settings.device.value
         val staffId = actor.staffId
-        graph.shifts.load()
-        val shiftId = graph.shifts.currentId
-        if (shiftId == null && store.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
         val tz = TimeZone.getDefault()
         val sale = graph.db().write(reserveIds = picks.size + 16L) { tx ->
+            val shiftId = openShift(tx, store.shiftRequired)
             // Re-read inside the transaction: another refund may have been made meanwhile.
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.kind != SaleKind.SALE) throw ActionRefused(ActionRefused.Reason.NOT_A_SALE)
@@ -123,11 +134,10 @@ class SaleActions(private val graph: AppGraph) {
         val actor = graph.permissions.actor(Perm.VOID, approval)
         val staffId = actor.staffId
         val device = graph.settings.device.value
-        graph.shifts.load()
-        val shiftId = graph.shifts.currentId
-        // As for a sale or a refund: the cash handed back must belong to a shift's drawer count.
-        if (shiftId == null && graph.settings.store.value.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
+        val shiftRequired = graph.settings.store.value.shiftRequired
         graph.db().write(reserveIds = 16L) { tx ->
+            // As for a sale or a refund: the cash handed back must belong to a shift's drawer count.
+            val shiftId = openShift(tx, shiftRequired)
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.voided) throw ActionRefused(ActionRefused.Reason.VOIDED)
             // Refunds of this sale must be voided first, or stock and totals would be reversed twice.
@@ -194,6 +204,16 @@ class SaleActions(private val graph: AppGraph) {
     }
 
     companion object {
+        /**
+         * This till's open shift, read inside the write transaction: a shift closed meanwhile (on the
+         * shift screen) never tags a refund or void (2026-10 review). Refused when shifts are required.
+         */
+        private fun openShift(tx: Db.Tx, required: Boolean): Long? {
+            val id = ShiftDao.current(tx.db, tx.deviceNo)?.id
+            if (id == null && required) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
+            return id
+        }
+
         fun source(l: SaleLineFull, done: RefundPart?): RefundSource = RefundSource(
             lineId = l.id, qty = l.qty, baseQty = l.baseQty, gross = l.gross, discount = l.discount,
             billDiscount = l.billDiscount, net = l.net, tax = l.tax, cost = l.cost, refunded = done,

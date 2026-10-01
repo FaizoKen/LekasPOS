@@ -31,9 +31,23 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
 
     fun height(lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?): Int = heightOf(lines, lineH, logo, qr)
 
-    fun draw(canvas: Canvas, lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?) {
+    /** Draws the lines; with [fromY]..[toY] only those near that band of the page (the rest is clipped anyway). */
+    fun draw(
+        canvas: Canvas,
+        lines: List<PrintLine>,
+        logo: MonoImage?,
+        qr: MonoImage?,
+        fromY: Float = Float.NEGATIVE_INFINITY,
+        toY: Float = Float.POSITIVE_INFINITY,
+    ) {
         var y = PADDING.toFloat()
         for (l in lines) {
+            val adv = advance(l, lineH, logo, qr)
+            // A generous margin: glyphs (accents, descenders) may reach a little outside their line.
+            if (y > toY + lineH * 2f || y + adv < fromY - lineH * 2f) {
+                y += adv
+                continue
+            }
             when (l) {
                 is PrintLine.Text -> {
                     val scale = if (l.big) 2f else 1f
@@ -46,11 +60,11 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
                 is PrintLine.Qr -> if (qr != null) drawMono(canvas, qr, y)
                 is PrintLine.Feed -> Unit
             }
-            y += advance(l, lineH, logo, qr)
+            y += adv
         }
     }
 
-    /** White bitmap with the receipt drawn on it (ARGB for sharing, RGB_565 for printing). */
+    /** White bitmap with the receipt drawn on it (for sharing; printing uses [mono]). */
     fun bitmap(lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?, config: Bitmap.Config = Bitmap.Config.ARGB_8888): Bitmap {
         val bmp = Bitmap.createBitmap(widthPx, height(lines, logo, qr), config)
         val canvas = Canvas(bmp)
@@ -59,14 +73,49 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
         return bmp
     }
 
-    /** The receipt as printer dots (threshold: the text is black on white already). */
+    /**
+     * The receipt as printer dots (threshold: the text is black on white already). Drawn in bands of
+     * [BAND_ROWS] rows into one small bitmap (2026-10 review): the whole page as a bitmap plus a
+     * luminance array took 6 bytes per dot, tens of MB for a long receipt on a 1 GB phone.
+     */
     fun mono(lines: List<PrintLine>, logo: MonoImage?, qr: MonoImage?): MonoImage {
-        val bmp = bitmap(lines, logo, qr, Bitmap.Config.RGB_565)
+        val h = height(lines, logo, qr)
+        val bpr = (widthPx + 7) ushr 3
+        val out = ByteArray(bpr * h)
+        val bandH = minOf(BAND_ROWS, h)
+        val band = Bitmap.createBitmap(widthPx, bandH, Bitmap.Config.RGB_565)
         try {
-            return MonoImage.fromGray(Images.gray(bmp), bmp.width, bmp.height, dither = false, threshold = 150)
+            val canvas = Canvas(band)
+            val px = IntArray(widthPx * bandH)
+            var top = 0
+            while (top < h) {
+                val rows = minOf(bandH, h - top)
+                band.eraseColor(Color.WHITE)
+                canvas.save()
+                canvas.translate(0f, -top.toFloat())
+                draw(canvas, lines, logo, qr, top.toFloat(), (top + rows).toFloat())
+                canvas.restore()
+                band.getPixels(px, 0, widthPx, 0, 0, widthPx, rows)
+                for (y in 0 until rows) {
+                    val row = (top + y) * bpr
+                    val src = y * widthPx
+                    for (x in 0 until widthPx) {
+                        val c = px[src + x]
+                        if (c == Color.WHITE) continue // most of the page
+                        // Same luminance and threshold as Images.gray + MonoImage.fromGray(threshold = 150).
+                        val lum = (Color.red(c) * 299 + Color.green(c) * 587 + Color.blue(c) * 114) / 1000
+                        if (lum < MONO_THRESHOLD) {
+                            val i = row + (x ushr 3)
+                            out[i] = (out[i].toInt() or (0x80 ushr (x and 7))).toByte()
+                        }
+                    }
+                }
+                top += rows
+            }
         } finally {
-            bmp.recycle()
+            band.recycle()
         }
+        return MonoImage(widthPx, h, out)
     }
 
     private fun drawMono(canvas: Canvas, img: MonoImage, y: Float) {
@@ -79,6 +128,10 @@ class ReceiptRenderer(private val cols: Int, private val widthPx: Int) {
     companion object {
         private const val PADDING = 8
         private const val GAP = 8
+
+        /** Rows per band in [mono]: 576 dots × 256 rows is under 1 MB of bitmap and pixel buffer. */
+        const val BAND_ROWS = 256
+        const val MONO_THRESHOLD = 150
 
         /** How far [l] moves down the page; [draw] and [heightOf] share it so the page fits every line. */
         fun advance(l: PrintLine, lineH: Float, logo: MonoImage?, qr: MonoImage?): Float = when (l) {

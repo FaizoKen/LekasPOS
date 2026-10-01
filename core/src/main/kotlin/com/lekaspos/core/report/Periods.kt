@@ -142,7 +142,10 @@ object ReportMath {
     /** Gross margin in basis points of net sales (ex. tax); null when there were no net sales. */
     fun marginBp(netEx: Long, cost: Long): Int? {
         if (netEx <= 0L) return null
-        return Rounding.mulDivHalfUp(Checked.sub(netEx, cost), 10_000L, netEx).toInt()
+        val bp = Rounding.mulDivHalfUp(Checked.sub(netEx, cost), 10_000L, netEx)
+        // Held within Int (2026-10 review): 0.01 of net sales against RM3,000 of cost is
+        // −29,999,900 % and wrapped around to a large positive margin.
+        return bp.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
     }
 
     /** Change from [before] to [now] in basis points of [before]; null when [before] is not positive. */

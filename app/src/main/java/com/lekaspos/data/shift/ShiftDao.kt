@@ -4,6 +4,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
+import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.longOrNull
@@ -44,7 +45,7 @@ data class ShiftTotals(
     val voidCount: Int,
     val voidTotal: Long,
     val payments: List<MethodSum>,
-    /** Payments of documents voided during this shift (whenever they were made). */
+    /** Payments of documents voided during this shift (whenever they were made; credit: a sale's first void only). */
     val voidedPayments: List<MethodSum>,
     /** CashMoveKind → sum of amounts. */
     val cashMoves: Map<Int, Long>,
@@ -109,15 +110,24 @@ object ShiftDao {
 
     private const val DOCS =
         "SELECT kind, COUNT(*), SUM(total), SUM(discount), SUM(tax) FROM sale WHERE shift_id = ? GROUP BY kind"
+    // Only the first void of a sale counts (by hlc, then till, then id) in the void count and totals,
+    // and for customer credit: two tills that each voided the same sale while offline both took it
+    // off (2026-10 review; the later void's credit reversal is cancelled, SaleDao.creditOnce). Cash,
+    // card and e-wallet stay with every void: each till's own drawer really paid them back.
+    // sale_void_sale is a full index, so SQLite 3.8 uses it inside this correlated subquery.
+    private const val FIRST_VOID =
+        "NOT EXISTS (SELECT 1 FROM sale_void w WHERE w.sale_id = v.sale_id AND w.hlc <= v.hlc " +
+            "AND (w.hlc < v.hlc OR (w.id >> 41) < (v.id >> 41) OR ((w.id >> 41) = (v.id >> 41) AND w.id < v.id)))"
     private const val VOIDS =
         "SELECT COUNT(*), SUM(s.total), SUM(s.discount), SUM(s.tax) FROM sale_void v CROSS JOIN sale s ON s.id = v.sale_id " +
-            "WHERE v.shift_id = ?"
+            "WHERE v.shift_id = ? AND $FIRST_VOID"
     private const val PAYMENTS =
         "SELECT method_id, kind, COUNT(*), SUM(amount), SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) " +
             "FROM payment WHERE shift_id = ? GROUP BY method_id, kind"
     private const val VOIDED_PAYMENTS =
         "SELECT p.method_id, p.kind, COUNT(*), SUM(p.amount), SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END) " +
-            "FROM sale_void v CROSS JOIN payment p ON p.sale_id = v.sale_id WHERE v.shift_id = ? GROUP BY p.method_id, p.kind"
+            "FROM sale_void v CROSS JOIN payment p ON p.sale_id = v.sale_id " +
+            "WHERE v.shift_id = ? AND (p.kind <> ${PaymentKind.CREDIT} OR $FIRST_VOID) GROUP BY p.method_id, p.kind"
     private const val CASH_MOVES = "SELECT kind, SUM(amount) FROM cash_movement WHERE shift_id = ? GROUP BY kind"
     private const val CREDIT =
         "SELECT c.kind, c.method_id, m.kind, COUNT(*), SUM(c.amount) FROM credit_entry c " +

@@ -17,16 +17,23 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <TextView
-                android:id="@+id/receipt"
+            <!-- Sideways scrolling: with a large font the 32 receipt columns are wider than a
+                 phone, and wrapped lines broke the columns apart (2026-10 review). -->
+            <HorizontalScrollView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@color/surface"
-                android:fontFamily="monospace"
-                android:padding="12dp"
-                android:textColor="@color/text_primary"
-                android:textIsSelectable="true"
-                android:textSize="13sp" />
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/receipt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@color/surface"
+                    android:fontFamily="monospace"
+                    android:padding="12dp"
+                    android:textColor="@color/text_primary"
+                    android:textIsSelectable="true"
+                    android:textSize="13sp" />
+            </HorizontalScrollView>
 
             <TextView
                 android:id="@+id/refunds"

@@ -1,122 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root"
+<!-- Content of the Diagnostics screen (ScreenActivity supplies the top bar). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/top_bar"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/brand"
-        android:minHeight="56dp"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:text="@string/diag_title"
-        android:textAppearance="@android:style/TextAppearance.Material.Title"
-        android:textColor="@color/text_on_brand" />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <LinearLayout
+        <TextView
+            android:id="@+id/device"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:textAppearance="@style/Text.Lekas.Caption"
+            android:textIsSelectable="true" />
 
-            <TextView
-                android:id="@+id/device"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="@style/Text.Lekas.Caption"
-                android:textIsSelectable="true" />
+        <Button
+            android:id="@+id/run_quick"
+            style="@style/Widget.Lekas.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/diag_run_quick" />
+
+        <Button
+            android:id="@+id/run_full"
+            style="@style/Widget.Lekas.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/diag_run_full" />
+
+        <LinearLayout
+            style="?android:attr/buttonBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
 
             <Button
-                android:id="@+id/run_quick"
-                style="@style/Widget.Lekas.Button.Primary"
-                android:layout_width="match_parent"
+                android:id="@+id/cancel"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/diag_run_quick" />
-
-            <Button
-                android:id="@+id/run_full"
-                style="@style/Widget.Lekas.Button.Primary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/diag_run_full" />
-
-            <LinearLayout
-                style="?android:attr/buttonBarStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/cancel"
-                    style="?android:attr/buttonBarButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:minHeight="56dp"
-                    android:text="@string/diag_cancel" />
-
-                <Button
-                    android:id="@+id/delete"
-                    style="?android:attr/buttonBarButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:minHeight="56dp"
-                    android:text="@string/diag_delete" />
-
-                <Button
-                    android:id="@+id/share"
-                    style="?android:attr/buttonBarButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:minHeight="56dp"
-                    android:text="@string/diag_share" />
-            </LinearLayout>
-
-            <ProgressBar
-                android:id="@+id/progress"
-                style="@android:style/Widget.Material.ProgressBar.Horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_weight="1"
+                android:minHeight="56dp"
+                android:text="@string/diag_cancel"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/state"
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/delete"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/diag_idle"
-                android:textAppearance="@style/Text.Lekas.Body" />
+                android:layout_weight="1"
+                android:minHeight="56dp"
+                android:text="@string/diag_delete" />
 
-            <HorizontalScrollView
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/share"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-
-                <TextView
-                    android:id="@+id/report"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textIsSelectable="true"
-                    android:textSize="11sp"
-                    android:typeface="monospace" />
-            </HorizontalScrollView>
+                android:layout_weight="1"
+                android:minHeight="56dp"
+                android:text="@string/diag_share" />
         </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/diag_idle"
+            android:textAppearance="@style/Text.Lekas.Body" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/report"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textIsSelectable="true"
+                android:textSize="11sp"
+                android:typeface="monospace" />
+        </HorizontalScrollView>
+    </LinearLayout>
+</ScrollView>

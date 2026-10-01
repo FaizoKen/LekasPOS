@@ -2,6 +2,7 @@ package com.lekaspos.data.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.database.sqlite.SQLiteStatement
 import android.os.Looper
 import com.lekaspos.core.id.IdAllocator
@@ -191,27 +192,49 @@ class Db private constructor(
     companion object {
         const val DEFAULT_RESERVE = 1000L
 
-        /** Opens (creating/migrating if needed) the database [name]. Blocking; never on main. */
-        fun open(context: Context, name: String = Schema.FILE_NAME, seedNames: SeedNames = SeedNames()): Db {
+        /**
+         * Opens (creating/migrating if needed) the database [name]. Blocking; never on main.
+         * [storeData]: false for scratch databases (the performance test's), which must neither take
+         * a restore staged for the store nor write upgrade backups among the store's backups.
+         */
+        fun open(context: Context, name: String = Schema.FILE_NAME, seedNames: SeedNames = SeedNames(), storeData: Boolean = true): Db {
             assertNotMainThread()
+            if (storeData) KeepDamagedDatabase.storePath = context.getDatabasePath(name).path
             // A restore staged before the restart goes in first; otherwise an upgrade is backed up (D-044).
-            val restored = Restore.applyIfStaged(context, name)
-            if (restored == null) backupBeforeUpgrade(context, name)
-            val helper = DbOpenHelper(context.applicationContext, name, seedNames)
-            val sqlite = helper.writableDatabase
-            if (restored != null) {
-                Restore.afterOpen(sqlite, restored)
-                Restore.finished(context)
+            val restored = if (storeData) Restore.applyIfStaged(context, name) else null
+            if (restored == null && storeData) backupBeforeUpgrade(context, name)
+            var helper = DbOpenHelper(context.applicationContext, name, seedNames)
+            val sqlite = try {
+                helper.writableDatabase
+            } catch (e: SQLiteDatabaseCorruptException) {
+                // Too damaged to open: kept aside, and the store starts empty so a backup can be
+                // restored from the app (it failed at every start before; Android's own handler
+                // used to delete the file instead, 2026-10 review).
+                if (!storeData) throw e
+                helper.close()
+                KeepDamagedDatabase.setAside(context, name, e)
+                helper = DbOpenHelper(context.applicationContext, name, seedNames)
+                helper.writableDatabase
             }
-            Restore.renewIfAsked(sqlite)
-            sqlite.setMaxSqlCacheSize(SQLiteDatabase.MAX_SQL_CACHE_SIZE)
-            val deviceNo = Meta.getLong(sqlite, Meta.DEVICE_NO)?.toInt()
-                ?: throw IllegalStateException("database has no device identity")
-            val storeUuid = Meta.get(sqlite, Meta.STORE_UUID) ?: ""
-            Seed.ensureOwner(sqlite, seedNames, System.currentTimeMillis())
-            val hlc = Hlc(System::currentTimeMillis, Meta.getLong(sqlite, Meta.HLC_LAST) ?: 0L)
-            val ids = IdAllocator(deviceNo, MetaReservations(sqlite))
-            return Db(sqlite, helper, name, deviceNo, storeUuid, ids, hlc)
+            try {
+                if (storeData) KeepDamagedDatabase.checkSetAside(context)
+                if (restored != null) {
+                    Restore.afterOpen(sqlite, restored, Restore.carried(context))
+                    Restore.finished(context)
+                }
+                Restore.renewIfAsked(sqlite)
+                sqlite.setMaxSqlCacheSize(SQLiteDatabase.MAX_SQL_CACHE_SIZE)
+                val deviceNo = Meta.getLong(sqlite, Meta.DEVICE_NO)?.toInt()
+                    ?: throw IllegalStateException("database has no device identity")
+                val storeUuid = Meta.get(sqlite, Meta.STORE_UUID) ?: ""
+                Seed.ensureOwner(sqlite, seedNames, System.currentTimeMillis())
+                val hlc = Hlc(System::currentTimeMillis, Meta.getLong(sqlite, Meta.HLC_LAST) ?: 0L)
+                val ids = IdAllocator(deviceNo, MetaReservations(sqlite))
+                return Db(sqlite, helper, name, deviceNo, storeUuid, ids, hlc)
+            } catch (e: Throwable) {
+                helper.close() // a later try (AppGraph.db) opens it again; never two connection pools
+                throw e
+            }
         }
 
         /** Keeps a backup of a database about to be migrated to a newer schema (kept: the last 3). */
@@ -219,13 +242,25 @@ class Db private constructor(
             val file = context.getDatabasePath(name)
             if (!file.exists()) return
             try {
-                val version = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { it.version }
+                val version = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY, KeepDamagedDatabase).use { it.version }
                 if (version <= 0 || version >= Schema.VERSION) return
                 val dir = Restore.backupDir(context).apply { mkdirs() }
-                java.io.FileOutputStream(File(dir, "upgrade-v$version-${System.currentTimeMillis()}${BackupFiles.EXT}")).use {
-                    BackupFiles.writeClosed(file, it, com.lekaspos.BuildConfig.VERSION_NAME, "upgrade")
+                // Written under a temporary name and synced first: a full disk or a kill half-way
+                // left a cut-short file that counted as one of the three kept (2026-10 review).
+                val target = File(dir, "upgrade-v$version-${System.currentTimeMillis()}${BackupFiles.EXT}")
+                val part = File(dir, target.name + ".part")
+                try {
+                    java.io.FileOutputStream(part).use {
+                        BackupFiles.writeClosed(file, it, com.lekaspos.BuildConfig.VERSION_NAME, "upgrade")
+                        it.fd.sync()
+                    }
+                    if (!part.renameTo(target)) throw java.io.IOException("cannot name the upgrade backup")
+                } finally {
+                    part.delete()
                 }
-                dir.listFiles { f -> f.name.startsWith("upgrade-") }?.sortedByDescending { it.name }?.drop(3)?.forEach { it.delete() }
+                // Newest first by time written ("upgrade-v10" sorts before "upgrade-v9" by name).
+                dir.listFiles { f -> f.name.startsWith("upgrade-") && f.name.endsWith(BackupFiles.EXT) }
+                    ?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
             } catch (e: Exception) {
                 com.lekaspos.util.Log.e("Backup before upgrade failed", e) // never block opening the store
             }

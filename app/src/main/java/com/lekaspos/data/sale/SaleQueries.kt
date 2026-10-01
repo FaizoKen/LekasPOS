@@ -2,9 +2,11 @@ package com.lekaspos.data.sale
 
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.model.SaleStatus
+import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.refund.RefundPart
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.bool
+import com.lekaspos.data.db.long
 import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
@@ -146,6 +148,18 @@ object SaleQueries {
 
     fun receiptNo(db: SQLiteDatabase, saleId: Long): String? =
         db.queryOne("SELECT receipt_no FROM sale WHERE id = ?", args(saleId)) { it.getString(0) }
+
+    /**
+     * Which of [productIds] are sold by weight now: their returns are entered as a weight even when
+     * the line was a whole kilo (2026-10 review). One primary-key lookup per line of the sale.
+     */
+    fun soldByWeight(db: SQLiteDatabase, productIds: Collection<Long>): Set<Long> {
+        val out = HashSet<Long>()
+        for (id in productIds) {
+            if (db.long("SELECT sell_mode FROM product WHERE id = ?", id) == SellMode.WEIGHT.toLong()) out.add(id)
+        }
+        return out
+    }
 
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "refunded_by_line" to REFUNDED_BY_LINE,

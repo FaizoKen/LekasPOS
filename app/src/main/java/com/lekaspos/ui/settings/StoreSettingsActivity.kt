@@ -1,6 +1,7 @@
 package com.lekaspos.ui.settings
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.widget.Button
@@ -17,6 +18,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.visible
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,14 +49,41 @@ class StoreSettingsActivity : ScreenActivity() {
     private lateinit var templates: EditText
     private lateinit var shiftRequired: Switch
     private lateinit var credit: Switch
+    private var form: Form? = null
+
+    /** What was typed before Android ended the app in the background; put back once the form is built. */
+    private var typed: Bundle? = null
+
+    /** A picked logo waiting until this screen may run (see [onActivityResult]). */
+    private var pendingLogo: Uri? = null
+    private var entered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        typed = savedInstanceState?.getBundle(STATE_FORM)
         setScreen(getString(R.string.settings_store))
         launchUi {
             graph.settings.load()
             build(graph.settings.store.value)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        (form?.save() ?: typed)?.let { outState.putBundle(STATE_FORM, it) }
+    }
+
+    override fun onStarted(scope: CoroutineScope) {
+        entered = true
+        pendingLogo?.let { uri ->
+            pendingLogo = null
+            requireAccess(Perm.SETTINGS) { saveLogo(uri) }
+        }
+    }
+
+    override fun onStop() {
+        entered = false
+        super.onStop()
     }
 
     private fun build(s: StoreSettings) {
@@ -115,6 +144,9 @@ class StoreSettingsActivity : ScreenActivity() {
         f.info(getString(R.string.scale_templates_help))
 
         f.button(getString(R.string.save), primary = true) { save(s) }
+        typed?.let { f.restore(it) }
+        typed = null
+        form = f
         content.removeAllViews()
         content.addView(f.view)
     }
@@ -156,18 +188,29 @@ class StoreSettingsActivity : ScreenActivity() {
             creditEnabled = credit.isChecked,
         )
         launchUi {
-            graph.settings.saveStore(next)
+            // Only what changed on this screen is written: a field another till changed meanwhile
+            // keeps that till's value (2026-10 review).
+            graph.settings.saveStore(old, next)
             toast(R.string.saved)
             finish()
         }
     }
 
+    /**
+     * A logo picked in the gallery. When Android ended the app meanwhile, the result arrives before
+     * the signed-in staff member is known (and the till may be locked): it waits for [onStarted]
+     * (2026-10 review).
+     */
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         val uri = data?.data
         if (requestCode != REQ_LOGO || resultCode != RESULT_OK || uri == null) return
+        if (entered) requireAccess(Perm.SETTINGS) { saveLogo(uri) } else pendingLogo = uri
+    }
+
+    private fun saveLogo(uri: Uri) {
         launchUi {
             withContext(Dispatchers.IO) { Images.saveLogo(applicationContext, uri) }
             graph.printer.reconnect() // drops the cached printer logo
@@ -182,5 +225,6 @@ class StoreSettingsActivity : ScreenActivity() {
 
     companion object {
         private const val REQ_LOGO = 11
+        private const val STATE_FORM = "lekas.store.form"
     }
 }

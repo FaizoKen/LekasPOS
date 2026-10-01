@@ -27,14 +27,14 @@ object BarcodeLookup {
 
     /**
      * Exact barcode first (UPC-A/EAN-13 variants), then scale-label templates (their prefixes
-     * 20–29 are never assigned to manufacturers, so this order is safe).
+     * 20–29 are never assigned to manufacturers, so this order is safe). Every template that fits
+     * the label is tried in order until its item code is a known PLU (2026-10 review).
      */
     fun resolve(db: SQLiteDatabase, raw: String, templates: List<ScaleTemplate>): Resolution {
         val code = raw.trim()
         if (code.isEmpty()) return Resolution.NotFound(code)
         ProductDao.findByCode(db, Gtin.lookupVariants(code))?.let { return Resolution.Plain(it) }
-        val label = ScaleTemplate.parseAny(templates, code)
-        if (label != null) {
+        for (label in ScaleTemplate.parseAll(templates, code)) {
             val plu = label.itemCode
             val stripped = plu.trimStart('0').ifEmpty { "0" }
             val codes = if (stripped == plu) listOf(plu) else listOf(plu, stripped)

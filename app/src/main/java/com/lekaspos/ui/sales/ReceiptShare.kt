@@ -20,6 +20,7 @@ import com.lekaspos.core.receipt.PrintLine
 import com.lekaspos.domain.print.ReceiptBuilder
 import com.lekaspos.hw.printer.Images
 import com.lekaspos.hw.printer.ReceiptRenderer
+import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.util.Log
 import java.io.File
@@ -37,6 +38,8 @@ import kotlinx.coroutines.withContext
 object ReceiptShare {
 
     private const val COLS = 32
+    private const val MIN_PICTURE_WIDTH = COLS * 12
+    private const val MAX_PICTURE_PIXELS = 6_000_000L // 12 MB in RGB_565
 
     /** [copy]: a receipt from the sales history, marked as a copy like a reprint (the customer's own right after the sale is not). */
     fun chooseAndShare(a: Activity, saleId: Long, copy: Boolean = false) {
@@ -65,7 +68,13 @@ object ReceiptShare {
                 }
             } catch (e: Exception) {
                 Log.e("Sharing a receipt failed", e)
-                Toast.makeText(app, app.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                val t = a.takeIf { !it.isFinishing && !it.isDestroyed } ?: app // the app's language, if the screen is there
+                Toast.makeText(app, t.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+            } catch (e: OutOfMemoryError) {
+                // A very long receipt as a picture on a small phone: said, not silent (2026-10 review).
+                Log.e("Sharing a receipt failed", e)
+                val t = a.takeIf { !it.isFinishing && !it.isDestroyed } ?: app
+                Toast.makeText(app, t.getString(R.string.share_no_memory), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -78,9 +87,8 @@ object ReceiptShare {
         val doc = graph.db().read { ReceiptBuilder.build(it, saleId, copy = copy, store, tz) } ?: return null
         val logoWanted = store.printLogo && Images.hasLogo(ctx)
         val lines = ReceiptBuilder.layout(doc, COLS, store, logoWanted, tz)
-        val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() } // one shared receipt at a time
         val safe = doc.receiptNo.replace(Regex("[^A-Za-z0-9-]"), "_")
+        val f = CsvFiles.sharedFile(ctx, CsvFiles.KIND_RECEIPT, if (pdf) "receipt-$safe.pdf" else "receipt-$safe.png")
         return if (pdf) {
             val width = COLS * 7 // points: about 80 mm
             val logo = if (logoWanted) Images.logo(ctx, width) else null
@@ -92,18 +100,19 @@ object ReceiptShare {
                 val page = document.startPage(PdfDocument.PageInfo.Builder(width, height, 1).create())
                 renderer.draw(page.canvas, lines, logo, qr)
                 document.finishPage(page)
-                val f = File(dir, "receipt-$safe.pdf")
                 FileOutputStream(f).use { document.writeTo(it) }
                 f
             } finally {
                 document.close()
             }
         } else {
-            val width = COLS * 24 // pixels: sharp on phone screens
+            // RGB_565 (2 bytes a pixel), and smaller cells for long receipts, keep the picture under
+            // MAX_PICTURE_PIXELS (2026-10 review: 768 px ARGB was ~150 KB per receipt line on 1 GB phones).
+            var width = COLS * 24 // pixels: sharp on phone screens
+            while (width > MIN_PICTURE_WIDTH && pixels(lines, width) > MAX_PICTURE_PIXELS) width -= COLS * 4
             val logo = if (logoWanted) Images.logo(ctx, width) else null
-            val bmp = ReceiptRenderer(COLS, width).bitmap(lines, logo, qrFor(lines, width / 2))
+            val bmp = ReceiptRenderer(COLS, width).bitmap(lines, logo, qrFor(lines, width / 2), Bitmap.Config.RGB_565)
             try {
-                val f = File(dir, "receipt-$safe.png")
                 FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 f
             } finally {
@@ -111,6 +120,10 @@ object ReceiptShare {
             }
         }
     }
+
+    /** Pixels of the picture [width] wide, without logo and QR (each at most half the width tall). */
+    private fun pixels(lines: List<PrintLine>, width: Int): Long =
+        width.toLong() * ReceiptRenderer(COLS, width).height(lines, null, null)
 
     private fun qrFor(lines: List<PrintLine>, size: Int): MonoImage? =
         lines.firstOrNull { it is PrintLine.Qr }?.let { Images.qr((it as PrintLine.Qr).data, size) }

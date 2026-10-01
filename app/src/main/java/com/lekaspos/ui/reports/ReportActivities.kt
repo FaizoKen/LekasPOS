@@ -29,7 +29,9 @@ import com.lekaspos.domain.report.ReportService
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
@@ -124,6 +126,7 @@ class ReportsActivity : ScreenActivity() {
             d.setTitle(title)
             d.datePicker.maxDate = System.currentTimeMillis()
             d.show()
+            d.trackedBy(this) // closed with the screen, scanner keys swallowed (2026-10 review)
         }
         ask(R.string.report_from, period.from) { from ->
             ask(R.string.report_to, maxOf(from, period.to - 1)) { last ->
@@ -225,7 +228,10 @@ class ReportsActivity : ScreenActivity() {
             val c = Calendar.getInstance()
             c.clear()
             c.set(ymd / 10_000, ymd / 100 % 100 - 1, 1)
-            android.text.format.DateFormat.format("MMMM yyyy", c).toString()
+            // In the app's language (this screen's configuration), not the phone's (2026-10 review).
+            @Suppress("DEPRECATION")
+            val locale = resources.configuration.locale
+            SimpleDateFormat("MMMM yyyy", locale).format(c.time)
         }
     }
 

@@ -83,12 +83,46 @@ class ProductDaoTest {
         assertNull(find("96385074"))
     }
 
+    /** 2026-10 review: the same product on every till, whatever was imported when. */
     @Test
-    fun duplicateBarcodeResolvesToTheMostRecentlyChanged() {
-        val older = TestDb.product(db, "Older", 100, codes = listOf("9780306406157"))
-        val newer = TestDb.product(db, "Newer", 200, codes = listOf("9780306406157"))
-        db.writeBlocking { tx -> tx.update("UPDATE product_barcode SET updated_at = updated_at - 60000 WHERE product_id = ?", older) }
-        assertEquals(newer, find("9780306406157")?.product?.id)
+    fun duplicateBarcodeResolvesToTheBarcodeCreatedLastOnEveryTill() {
+        val code = "9780306406157"
+        val older = TestDb.product(db, "Older", 100, codes = listOf(code))
+        val newer = TestDb.product(db, "Newer", 200, codes = listOf(code))
+        db.writeBlocking { tx ->
+            tx.update("UPDATE product_barcode SET created_at = created_at - 60000 WHERE product_id = ?", older)
+        }
+        assertEquals(newer, find(code)?.product?.id)
+        // A change of the older barcode imported later stamps only this till's updated_at: no effect.
+        db.writeBlocking { tx -> tx.update("UPDATE product_barcode SET updated_at = ? WHERE product_id = ?", Long.MAX_VALUE, older) }
+        assertEquals(newer, find(code)?.product?.id)
+        // The CSV import matches the same product first.
+        assertEquals(listOf(newer, older), db.readBlocking { ProductDao.owners(it, listOf(code)) })
+        assertEquals(newer, db.readBlocking { ProductDao.ownerOf(it, code) })
+        // Created in the same millisecond: the higher id wins, on every till.
+        db.writeBlocking { tx -> tx.update("UPDATE product_barcode SET created_at = 1000 WHERE code = ?", code) }
+        assertEquals(maxOf(older, newer), find(code)?.product?.id)
+    }
+
+    @Test
+    fun aDeletedProductIsNotSellableFromAStaleTile() {
+        val id = TestDb.product(db, "Roti", 350)
+        assertNotNull(db.readBlocking { ProductDao.sellableById(it, id) })
+        db.writeBlocking { tx -> ProductDao.delete(tx, id, System.currentTimeMillis()) }
+        assertNull(db.readBlocking { ProductDao.sellableById(it, id) })
+    }
+
+    @Test
+    fun aStockCountPageIncludesSwitchedOffProductsOfItsCategory() {
+        TestDb.product(db, "Milo", 100, categoryId = 5L)
+        TestDb.product(db, "Milo Lama", 100, categoryId = 5L, active = false)
+        TestDb.product(db, "Roti", 100, categoryId = 6L)
+        fun names(all: Boolean) =
+            db.readBlocking { ProductDao.byCategory(it, 5L, null, 60, includeInactive = all) }.map { it.name }
+        assertEquals(listOf("Milo"), names(all = false))
+        assertEquals(listOf("Milo", "Milo Lama"), names(all = true))
+        val found = db.readBlocking { ProductDao.search(it, "milo", 50, includeInactive = true) }
+        assertEquals(listOf(5L, 5L), found.map { it.categoryId }) // the count screen keeps its category's
     }
 
     @Test

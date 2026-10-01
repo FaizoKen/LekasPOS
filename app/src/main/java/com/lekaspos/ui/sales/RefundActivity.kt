@@ -1,5 +1,6 @@
 package com.lekaspos.ui.sales
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -46,6 +47,11 @@ class RefundActivity : ScreenActivity() {
     private lateinit var submit: Button
     private val qtyViews = HashMap<Long, Button>()
 
+    // A double tap on "Refund" opened two confirm dialogs, and accepting both paid a partial
+    // refund out twice (2026-10 review): one dialog at a time, one refund per screen.
+    private var confirmDialog: AlertDialog? = null
+    private var refunding = false
+
     private val currency get() = graph.settings.store.value.currency
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,7 +91,7 @@ class RefundActivity : ScreenActivity() {
             }
             val qty = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
                 this.text = "0"
-                setOnClickListener { askQty(line.id, line.qty % 1000L != 0L, src.remainingQty) }
+                setOnClickListener { askQty(line.id, line.id in data.weighed, src.remainingQty) }
             }
             val all = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
                 this.text = getString(R.string.refund_all)
@@ -139,6 +145,7 @@ class RefundActivity : ScreenActivity() {
     }
 
     private fun confirm() {
+        if (refunding || confirmDialog?.isShowing == true) return
         val due = refundDue() ?: return
         val why = reason.text.toString().trim()
         if (why.isEmpty()) {
@@ -147,22 +154,30 @@ class RefundActivity : ScreenActivity() {
             return
         }
         val m = methods.getOrNull(method.selectedItemPosition) ?: return
-        Dialogs.confirm(
+        confirmDialog = Dialogs.confirm(
             this, getString(R.string.refund_title), getString(R.string.refund_confirm, MoneyFormat.format(due, currency), m.name),
             getString(R.string.refund_do),
         ) {
             val chosen = HashMap(picks)
             val back = restock.isChecked
             withApproval(Perm.REFUND) { approval ->
+                if (refunding) return@withApproval
+                refunding = true
                 submit.isEnabled = false
                 launchUi {
+                    var done = false
                     try {
                         // The refund itself runs in the app scope: leaving this screen cannot cut it off.
                         val sale = graph.appScope.async(Dispatchers.Main) { graph.sales.refund(saleId, chosen, back, why, m, approval) }.await()
+                        done = true
                         toast(getString(R.string.refund_done, sale.receiptNo))
                         finish()
                     } finally {
-                        submit.isEnabled = true
+                        // Made: the screen stays locked until it closes. Refused or failed: try again.
+                        if (!done) {
+                            refunding = false
+                            submit.isEnabled = true
+                        }
                     }
                 }
             }

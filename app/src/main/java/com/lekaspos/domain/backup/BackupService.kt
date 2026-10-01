@@ -14,6 +14,7 @@ import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.BackupFolder
 import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.backup.TreeBackupFolder
+import com.lekaspos.data.db.KeepDamagedDatabase
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.SaleDao
@@ -25,6 +26,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -90,7 +92,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
             } finally {
                 part.delete()
             }
-            prune()
+            prune(keep = file)
             file
         }
     }
@@ -100,11 +102,14 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
      * checked first; the new backup is then copied to the owner's folder, if one is set.
      */
     suspend fun backupIfDue(): Boolean {
-        val latest = withContext(Dispatchers.IO) { autoFiles().maxByOrNull { it.lastModified() } }
         val now = System.currentTimeMillis()
-        val made = if (latest == null || now - latest.lastModified() >= DUE_MS) {
+        // Backups dated in the future were made before the clock was set back: they do not count
+        // as recent (waiting for the clock to catch up stopped every backup for as long, 2026-10
+        // review), and they are the first to go when pruning.
+        val latest = withContext(Dispatchers.IO) { autoFiles().filter { it.lastModified() <= now + CLOCK_SLACK_MS }.maxByOrNull { it.lastModified() } }
+        val made = if (latest == null || !recent(latest.lastModified(), now, DUE_MS)) {
             val db = graph.db()
-            val check = integrityForTests ?: runCatching { db.read { BackupFiles.integrity(it) } }
+            val check = integrityForTests ?: KeepDamagedDatabase.problem ?: runCatching { db.read { BackupFiles.integrity(it) } }
                 .getOrElse { it.message ?: it.javaClass.simpleName }
             if (check != "ok") {
                 // Keep every backup as it is: rotating would replace good copies by damaged ones.
@@ -119,7 +124,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         } else {
             null
         }
-        val folderDue = folderSet() && (lastFolderCopy() ?: 0L) < now - DUE_MS
+        val folderDue = folderSet() && lastFolderCopy().let { it == null || !recent(it, now, DUE_MS) }
         val toCopy = made ?: if (folderDue) latest else null
         if (toCopy != null && folderSet()) copyToFolder(toCopy)
         refreshProtection()
@@ -178,11 +183,13 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         return try {
             withContext(Dispatchers.IO) {
                 target.write(name) { out -> FileInputStream(file).use { it.copyTo(out, 64 * 1024) } }
-                val old = target.list().sortedByDescending { it.name }.drop(KEEP_FOLDER)
+                // The copy just written always stays (named by a clock set back, it sorted last).
+                val old = target.list().filter { it.name != name }.sortedByDescending { it.name }.drop(KEEP_FOLDER - 1)
                 for (item in old) runCatching { target.delete(item) }
             }
             db.write(reserveIds = 0L) { tx ->
-                Meta.put(tx.db, Meta.BACKUP_FOLDER_OK, now.toString())
+                // As old as the backup copied (the newest may be from yesterday), not the copy time.
+                Meta.put(tx.db, Meta.BACKUP_FOLDER_OK, minOf(now, file.lastModified()).toString())
                 Meta.put(tx.db, Meta.BACKUP_FOLDER_ERROR, null)
             }
             true
@@ -204,11 +211,11 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
             val drive = if (db.syncEnabled) Meta.getLong(r, Meta.SYNC_LAST_OK) else null
             val folder = Meta.getLong(r, Meta.BACKUP_FOLDER_OK)
             val last = listOfNotNull(drive, folder, Meta.getLong(r, Meta.BACKUP_EXPORT_OK)).maxOrNull()
-            val damage = Meta.get(r, Meta.DB_PROBLEM)
+            val damage = Meta.get(r, Meta.DB_PROBLEM) ?: KeepDamagedDatabase.problem
             val state = when {
                 damage != null -> Protection.State.DAMAGED
                 !hasData -> Protection.State.NO_DATA
-                last != null && now - last < FRESH_MS -> Protection.State.PROTECTED
+                last != null && recent(last, now, FRESH_MS) -> Protection.State.PROTECTED
                 else -> Protection.State.AT_RISK
             }
             Protection(
@@ -261,12 +268,29 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
      */
     suspend fun stageRestore(open: () -> InputStream, mode: Restore.Mode): BackupFiles.Header {
         graph.permissions.actor(Perm.SETTINGS)
-        return withContext(Dispatchers.IO) { open().use { Restore.stage(app, it, mode) } }
+        return try {
+            withContext(Dispatchers.IO) { open().use { Restore.prepare(app, it, mode) } }
+        } catch (e: Exception) {
+            // Also when the screen closed while checking: nothing stays waiting to be applied.
+            withContext(NonCancellable + Dispatchers.IO) { Restore.cancelStaged(app) }
+            throw e
+        }
     }
 
-    fun cancelRestore() = Restore.cancelStaged(app)
+    /** The checked restore is not wanted (Cancel, or the question closed without "Restart now"). */
+    suspend fun cancelRestore() = withContext(Dispatchers.IO) { Restore.cancelStaged(app) }
 
-    /** Restarts the app so the staged restore is applied before the database opens. */
+    /**
+     * The user chose "Restart now" for a checked restore: it is applied at the next start, which is
+     * now. Only this makes a checked restore count (see [Restore.prepare]). False if none is checked.
+     */
+    suspend fun restartIntoRestore(activity: Activity): Boolean {
+        if (!withContext(Dispatchers.IO) { Restore.arm(app) }) return false
+        restart(activity)
+        return true
+    }
+
+    /** Restarts the app (a staged restore, or a new till identity, applies before the database opens). */
     fun restart(activity: Activity) {
         val launch = app.packageManager.getLaunchIntentForPackage(app.packageName)
         if (launch == null) {
@@ -286,11 +310,19 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     private fun autoFiles(): List<File> =
         dir.listFiles { f -> f.name.startsWith(AUTO) && f.name.endsWith(BackupFiles.EXT) }.orEmpty().toList()
 
-    private fun prune() {
-        val files = dir.listFiles { f -> f.name.endsWith(BackupFiles.EXT) } ?: return
-        files.filter { it.name.startsWith(AUTO) }.sortedByDescending { it.lastModified() }.drop(KEEP_AUTO).forEach { it.delete() }
-        files.filter { it.name.startsWith(Restore.REASON_REPLACED) }.sortedByDescending { it.lastModified() }.drop(KEEP_REPLACED).forEach { it.delete() }
+    /** Keeps the newest backups of each kind, and always [keep] (just written, whatever the clock says). */
+    private fun prune(keep: File? = null) {
+        val files = dir.listFiles { f -> f.name.endsWith(BackupFiles.EXT) && f != keep } ?: return
+        val autoLeft = if (keep?.name?.startsWith(AUTO) == true) KEEP_AUTO - 1 else KEEP_AUTO
+        val future = System.currentTimeMillis() + CLOCK_SLACK_MS
+        // Newest first; files dated in the future (made before the clock was set back) count as oldest.
+        val order = compareBy<File> { it.lastModified() > future }.thenByDescending { it.lastModified() }
+        files.filter { it.name.startsWith(AUTO) }.sortedWith(order).drop(autoLeft).forEach { it.delete() }
+        files.filter { it.name.startsWith(Restore.REASON_REPLACED) }.sortedWith(order).drop(KEEP_REPLACED).forEach { it.delete() }
     }
+
+    /** [at] is less than [window] ago — and not in the future (a clock set back since). */
+    private fun recent(at: Long, now: Long, window: Long): Boolean = at <= now + CLOCK_SLACK_MS && now - at < window
 
     companion object {
         const val AUTO = "auto-"
@@ -299,6 +331,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         const val KEEP_REPLACED = 3
         const val KEEP_FOLDER = 7
         const val DUE_MS = 20L * 60L * 60L * 1000L
+        private const val CLOCK_SLACK_MS = 5L * 60L * 1000L
 
         /** A copy off this phone counts as recent for this long (then "not backed up" shows). */
         const val FRESH_MS = 3L * 24L * 60L * 60L * 1000L

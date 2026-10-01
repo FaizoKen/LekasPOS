@@ -48,20 +48,34 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         _store.value = StoreSettings.from(store, defaultLanguage)
     }
 
-    /** Saves the store settings; the audit log says who changed which (prices include tax, rounding …). */
-    suspend fun saveStore(s: StoreSettings) {
+    /**
+     * Saves the settings the user changed from [before] (what their screen showed) to [after]; the
+     * audit log says who changed which (prices include tax, rounding …). Only those keys are
+     * written: comparing with the database wrote every key a fresh install had never stored (its
+     * defaults, with new versions, which won over the store's real header, BRN and tax switch on
+     * every till once this till joined), and every key another till changed while the screen was
+     * open (2026-10 review).
+     */
+    suspend fun saveStore(before: StoreSettings, after: StoreSettings) {
         val db = graph.db()
         val staffId = graph.staff.staffId
-        db.write(reserveIds = 1) { tx ->
-            val now = System.currentTimeMillis()
-            val before = SettingsDao.all(tx.db)
-            val after = s.toMap()
-            val changed = after.keys.filter { before[it] != after[it] }.sorted()
-            SettingsDao.putChanged(tx, before, after, now)
-            if (changed.isNotEmpty()) AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, detail = changed.joinToString(", ").take(MAX_DETAIL))
+        val old = before.toMap()
+        val wanted = after.toMap().filter { (k, v) -> old[k] != v }
+        if (wanted.isNotEmpty()) {
+            db.write(reserveIds = 1) { tx ->
+                val now = System.currentTimeMillis()
+                val current = SettingsDao.all(tx.db)
+                val changed = wanted.keys.filter { current[it] != wanted[it] }.sorted()
+                SettingsDao.putChanged(tx, current, wanted, now)
+                if (changed.isNotEmpty()) AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, detail = changed.joinToString(", ").take(MAX_DETAIL))
+            }
         }
-        _store.value = s
+        // Keys this screen did not change keep what the database has now (another till's edit).
+        reload()
     }
+
+    /** Saves the changes from the settings in memory now to [after] (one-switch changes, tests). */
+    suspend fun saveStore(after: StoreSettings) = saveStore(_store.value, after)
 
     /** Records a settings change made outside [saveStore] ([what]: e.g. the receipt logo, a tax rate). */
     suspend fun recordChange(what: String, approvedBy: Long? = null) {

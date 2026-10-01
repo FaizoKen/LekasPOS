@@ -30,12 +30,33 @@ object CsvFiles {
     /** MIME types the import picker offers (spreadsheet apps and file managers disagree on CSV). */
     val OPEN_TYPES = arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "application/vnd.ms-excel", "text/*")
 
-    /** Writes a cache file for sharing (one exported file kept at a time). */
-    fun shareFile(ctx: Context, name: String): File {
-        val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() }
-        return File(dir, name)
+    /** Writes a cache file for sharing. Blocking. */
+    fun shareFile(ctx: Context, name: String): File = sharedFile(ctx, KIND_CSV, name)
+
+    /**
+     * A file in `cache/shared/<kind>/` (FileProvider path "shared") to share [name] from. Blocking.
+     * Only files older than [SHARED_KEEP_MS] are deleted (2026-10 review): every share used to empty
+     * the whole folder, so a receipt shared now deleted the CSV or backup another app had not read
+     * yet. The shared file itself is replaced.
+     */
+    fun sharedFile(ctx: Context, kind: String, name: String): File {
+        val root = File(ctx.cacheDir, "shared")
+        val old = System.currentTimeMillis() - SHARED_KEEP_MS
+        root.listFiles()?.forEach { f ->
+            if (f.isDirectory) {
+                f.listFiles()?.forEach { if (it.lastModified() < old) it.delete() }
+            } else if (f.lastModified() < old) {
+                f.delete() // left directly in the folder by older versions
+            }
+        }
+        val dir = File(root, kind).apply { mkdirs() }
+        return File(dir, name).apply { delete() }
     }
+
+    const val KIND_CSV = "csv"
+    const val KIND_RECEIPT = "receipt"
+    const val KIND_BACKUP = "backup"
+    private const val SHARED_KEEP_MS = 15L * 60_000L
 
     fun writer(file: File): BufferedWriter = BufferedWriter(OutputStreamWriter(file.outputStream(), Charsets.UTF_8), 64 * 1024)
 

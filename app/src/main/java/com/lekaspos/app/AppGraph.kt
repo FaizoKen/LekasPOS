@@ -57,15 +57,40 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
             },
     )
 
-    private val dbOpening: Deferred<Db> = appScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+    @Volatile
+    private var dbOpening: Deferred<Db> = opening()
+
+    private fun opening(): Deferred<Db> = appScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
         Db.open(app, dbName, seedNames()).also { db ->
             // Changes queued for upload are sent soon (D-053) — only the app's own database, not test graphs.
             if (dbName == Schema.FILE_NAME) db.onOutboxCommit = { syncSoon() }
         }
     }
 
-    /** The store database, opened on first use off the main thread. */
-    suspend fun db(): Db = dbOpening.await()
+    /**
+     * The store database, opened on first use off the main thread. A failed open is tried again by
+     * the next caller: it was kept failed for the life of the process, so one full disk at start
+     * (since freed) left every screen failing until Android ended the app (2026-10 review).
+     */
+    suspend fun db(): Db {
+        val opening = dbOpening
+        return try {
+            opening.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            synchronized(this) { if (dbOpening === opening) dbOpening = opening() }
+            throw e
+        }
+    }
+
+    /** How many times this phone has started (Android 7+), or null: tells waits apart across restarts. */
+    fun bootCount(): Int? = if (Build.VERSION.SDK_INT >= 24) {
+        android.provider.Settings.Global.getInt(app.contentResolver, android.provider.Settings.Global.BOOT_COUNT, -1)
+            .takeIf { it >= 0 }
+    } else {
+        null
+    }
 
     val settings: SettingsRepo by lazy { SettingsRepo(this, defaultLanguage()) }
     val staff: StaffSession by lazy { StaffSession(this) }

@@ -3,7 +3,10 @@ package com.lekaspos.ui.common
 import android.app.Dialog
 import android.content.Context
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.Window
 import android.widget.EditText
+import com.lekaspos.app.LekasApp
 import java.util.WeakHashMap
 
 /**
@@ -62,11 +65,36 @@ fun <T : Dialog> T.keys(handler: (KeyEvent) -> Boolean): T {
 /**
  * Registers [this] with its screen if the screen is a [DialogHost]; returns it. A dialog without
  * its own key handler never lets Enter, Tab or Space press a button (text fields keep them).
+ * Taps and keys in the dialog count as activity for the idle auto-lock: a dialog is a window of
+ * its own, so the screen never saw them and the till locked under someone typing a name or
+ * reading a restore question (2026-10 review).
  */
 fun <T : Dialog> T.trackedBy(ctx: Context): T {
     (ctx as? DialogHost)?.track(this)
     if (DialogKeys.handled[this] != true) {
         setOnKeyListener { d, _, e -> DialogKeys.pressesFocused(e.keyCode) && (d as? Dialog)?.currentFocus !is EditText }
     }
+    val w = window
+    val callback = w?.callback
+    if (w != null && callback != null && callback !is ActivityCallback) {
+        val staff = LekasApp.graph(ctx).staff
+        w.callback = ActivityCallback(callback) { staff.touch() }
+    }
     return this
+}
+
+/** Passes everything to the dialog ([inner]); touches and keys also call [onUse] first. */
+private class ActivityCallback(
+    private val inner: Window.Callback,
+    private val onUse: () -> Unit,
+) : Window.Callback by inner {
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        onUse()
+        return inner.dispatchTouchEvent(event)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        onUse()
+        return inner.dispatchKeyEvent(event)
+    }
 }

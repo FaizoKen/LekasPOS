@@ -103,13 +103,25 @@ abstract class ScreenActivity : Activity(), DialogHost {
         super.onStart()
         val s = MainScope()
         startedScope = s
+        if (graph.staff.screenStarted()) {
+            // Idle too long while out of sight: the till locked; the selling screen shows the sign-in.
+            goHome()
+            return
+        }
         // Who is signed in and the store's settings are loaded first. After Android has killed the
         // app in the background it restores only this screen, not the selling screen that used
         // to load them: until they are loaded nothing here may run (2026-10 review: a restored
         // screen ran with every permission and no lock). Immediate: no delay when already loaded.
         s.launch(Dispatchers.Main.immediate) {
-            graph.staff.load()
-            graph.settings.load()
+            try {
+                whenLoaded()
+            } catch (e: Exception) {
+                // The database cannot be read (full disk, damage): the selling screen says why,
+                // instead of this screen taking the app down at every start (2026-10 review).
+                Log.e("Opening a screen failed", e)
+                goHome()
+                return@launch
+            }
             if (graph.staff.state.value.locked) {
                 goHome()
                 return@launch
@@ -139,12 +151,18 @@ abstract class ScreenActivity : Activity(), DialogHost {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        graph.staff.touch()
+        if (graph.staff.activity()) {
+            goHome() // idle too long: this touch was meant for whoever was signed in before
+            return true
+        }
         return super.dispatchTouchEvent(ev)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        graph.staff.touch()
+        if (graph.staff.activity()) {
+            goHome()
+            return true
+        }
         return super.dispatchKeyEvent(event)
     }
 
@@ -210,7 +228,11 @@ abstract class ScreenActivity : Activity(), DialogHost {
         val uri = data?.data
         if (resultCode != RESULT_OK || uri == null) return
         if (write == null) {
+            // Android ended the app while the file picker was open: the export is gone, and so
+            // must be the empty file the picker created.
             toast(R.string.export_lost)
+            val resolver = contentResolver
+            graph.appScope.launch(Dispatchers.IO) { runCatching { DocumentsContract.deleteDocument(resolver, uri) } }
             return
         }
         saveExport(uri, write)
@@ -242,6 +264,17 @@ abstract class ScreenActivity : Activity(), DialogHost {
         }
     }
 
+    /**
+     * Waits until who is signed in and the settings are loaded. Results of other screens (file and
+     * folder pickers) arrive before [onStart]'s loading has run when Android restarted the app
+     * meanwhile: a permission check then saw "nothing allowed", and a picked backup folder was
+     * lost (2026-10 review).
+     */
+    protected suspend fun whenLoaded() {
+        graph.staff.load()
+        graph.settings.load()
+    }
+
     /** A one-time approval for one action (not kept by the screen). */
     fun withApproval(perm: Long, block: (Approval?) -> Unit) = withApproval(graph, scope, perm, block)
 
@@ -253,6 +286,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
     override fun onStop() {
         startedScope?.cancel()
         startedScope = null
+        graph.staff.screenStopped()
         super.onStop()
     }
 

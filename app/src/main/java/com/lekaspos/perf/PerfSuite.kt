@@ -97,7 +97,7 @@ class PerfSuite(
 
         progress.update("db_open")
         add(measure("db_open", 300.0, warmup = 1, n = 5) {
-            Db.open(context, db.name).use { other -> other.sqlite.long("SELECT COUNT(*) FROM meta") }
+            Db.open(context, db.name, storeData = false).use { other -> other.sqlite.long("SELECT COUNT(*) FROM meta") }
         })
 
         progress.update("barcode_lookup")

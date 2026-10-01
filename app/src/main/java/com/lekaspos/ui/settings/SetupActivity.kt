@@ -6,6 +6,7 @@ import android.text.InputType
 import android.widget.EditText
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
+import com.lekaspos.data.settings.StoreSettings
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.SellActivity
@@ -23,8 +24,14 @@ class SetupActivity : ScreenActivity() {
     private lateinit var phone: EditText
     private lateinit var address: EditText
 
+    /** The settings the form shows: only what is typed over them is saved. */
+    private var shown: StoreSettings? = null
+    private var form: Form? = null
+    private var typed: Bundle? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        typed = savedInstanceState?.getBundle(STATE_FORM)
         setScreen(getString(R.string.setup_title))
         launchUi {
             graph.settings.load()
@@ -33,8 +40,14 @@ class SetupActivity : ScreenActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        (form?.save() ?: typed)?.let { outState.putBundle(STATE_FORM, it) }
+    }
+
     private fun build() {
         val s = graph.settings.store.value
+        shown = s
         val f = Form(this)
         f.info(getString(R.string.setup_intro))
 
@@ -74,26 +87,35 @@ class SetupActivity : ScreenActivity() {
         }
 
         f.button(getString(R.string.setup_start), primary = true) { start() }
+        typed?.let { f.restore(it) }
+        typed = null
+        form = f
         content.removeAllViews()
         content.addView(f.view)
     }
 
     private fun start() {
+        val s = shown ?: return
         val shop = name.text.toString().trim()
         if (shop.isEmpty()) {
             name.error = getString(R.string.setup_name_needed)
             name.requestFocus()
             return
         }
+        val contact = s.copy(
+            name = shop,
+            phone = phone.text.toString().trim(),
+            address = address.text.toString().trim(),
+        )
         launchUi {
-            val s = graph.settings.store.value
-            val contact = s.copy(
-                name = shop,
-                phone = phone.text.toString().trim(),
-                address = address.text.toString().trim(),
-            )
-            graph.settings.saveStore(contact)
+            // Only the shop's name and contact: the defaults of a fresh install written along with
+            // them won over the store's real settings once this till joined it (2026-10 review).
+            graph.settings.saveStore(s, contact)
             finish()
         }
+    }
+
+    private companion object {
+        const val STATE_FORM = "lekas.setup.form"
     }
 }

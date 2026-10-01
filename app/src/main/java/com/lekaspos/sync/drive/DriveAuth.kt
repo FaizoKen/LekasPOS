@@ -4,6 +4,7 @@ import android.accounts.Account
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.ConnectionResult
@@ -14,6 +15,7 @@ import com.google.android.gms.tasks.Tasks
 import com.lekaspos.sync.AuthNeeded
 import com.lekaspos.util.Log
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -61,7 +63,10 @@ object DriveAuth {
             }
         }
         try {
-            val r = Tasks.await(Identity.getAuthorizationClient(ctx).authorize(request(account)))
+            // Bounded (2026-10 review): a call Play services never answers would hold the sync lock
+            // for good — every later round, and turning sync off, would wait behind it.
+            val task = Identity.getAuthorizationClient(ctx).authorize(request(account))
+            val r = Tasks.await(task, AUTH_TIMEOUT_S, TimeUnit.SECONDS)
             val pending = r.pendingIntent
             val token = r.accessToken
             when {
@@ -89,4 +94,18 @@ object DriveAuth {
         is Result.NeedsUser -> throw SignInNeeded()
         is Result.Unavailable -> throw IOException(r.message)
     }
+
+    /**
+     * Drops a token Google refused from Play services' cache (2026-10 review): asked again, it
+     * would hand out the same one until it expires, and "Sign in again" could not help meanwhile.
+     */
+    suspend fun forget(ctx: Context, token: String) = withContext(Dispatchers.IO) {
+        try {
+            GoogleAuthUtil.clearToken(ctx, token)
+        } catch (e: Exception) {
+            Log.w("Clearing a refused token failed", e)
+        }
+    }
+
+    private const val AUTH_TIMEOUT_S = 30L
 }

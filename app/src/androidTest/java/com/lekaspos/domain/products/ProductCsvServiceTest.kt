@@ -15,8 +15,11 @@ import com.lekaspos.data.product.Product
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.testing.TestGraph
+import java.io.IOException
+import java.io.Reader
 import java.io.StringReader
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -174,6 +177,123 @@ class ProductCsvServiceTest {
         assertEquals("Teh \"Boh\"", teh.name)
         assertEquals(ids["sst"], teh.taxRateId) // 6% matched by percentage
         assertNull(db.read { ProductDao.ownerOf(it, "9556008888888") }) // Maggi was skipped
+    }
+
+    /** 2026-10 review: a deleted category came back as a new one, a deleted tax rate back onto products. */
+    @Test
+    fun deletedCategoriesAndTaxRatesAreNeitherExportedNorBroughtBack() = runBlocking {
+        val g = graph()
+        val ids = seedCatalog(g)
+        val db = g.db()
+        val milo = ids.getValue("milo")
+        val drinks = assertNotNull(db.read { ProductDao.get(it, milo) }?.categoryId)
+        db.write(reserveIds = 2L) { tx ->
+            CategoryDao.delete(tx, drinks, System.currentTimeMillis())
+            TaxRateDao.delete(tx, ids.getValue("sst"), System.currentTimeMillis())
+        }
+        val out = StringBuilder()
+        assertEquals(3, g.productCsv.export(out))
+        assertFalse(out.contains("Minuman"))
+        assertFalse(out.contains("Service tax"))
+        val r = g.productCsv.import({ StringReader(out.toString()) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(3, r.updated)
+        assertEquals(0, r.categoriesCreated)
+        assertEquals(emptyList(), db.read { CategoryDao.list(it) })
+        val p = assertNotNull(db.read { ProductDao.get(it, milo) })
+        assertEquals(drinks, p.categoryId) // blank cells: unchanged
+        assertEquals(ids["sst"], p.taxRateId)
+    }
+
+    /** 2026-10 review: with a barcode on two products, the file updates the one the till scans. */
+    @Test
+    fun aBarcodeOnTwoProductsUpdatesTheOneAScanPicks() = runBlocking {
+        val g = graph()
+        val ids = seedCatalog(g)
+        val db = g.db()
+        val twin = db.write(reserveIds = 4L) { tx ->
+            val id = tx.nextId()
+            ProductDao.create(tx, Product(id, "Milo (till 2)", price = 1_800L), listOf(Barcode(tx.nextId(), id, "9556001000011")), 0L)
+            tx.exec("UPDATE product_barcode SET created_at = ? WHERE product_id = ?", 0L, ids.getValue("milo"))
+            tx.exec("UPDATE product_barcode SET created_at = ? WHERE product_id = ?", 1L, id)
+            id
+        }
+        val picked = assertNotNull(db.read { ProductDao.findByCode(it, listOf("9556001000011")) }).product.id
+        assertEquals(twin, picked)
+        val csv = "name,price,barcode\r\nMilo 1kg,19.90,9556001000011\r\n"
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(1, r.updated)
+        assertEquals(1_990L, db.read { ProductDao.get(it, twin) }?.price)
+        assertEquals(1_890L, db.read { ProductDao.get(it, ids.getValue("milo")) }?.price)
+    }
+
+    /** 2026-10 review: a spreadsheet stored the barcodes as numbers and dropped their leading 0. */
+    @Test
+    fun barcodesWithoutTheirLeadingZeroFindTheirProducts() = runBlocking {
+        val g = graph()
+        val db = g.db()
+        val (coke, mints) = db.write(reserveIds = 6L) { tx ->
+            val now = System.currentTimeMillis()
+            val c = tx.nextId()
+            ProductDao.create(tx, Product(c, "Coke 330ml", price = 250L), listOf(Barcode(tx.nextId(), c, "0036000291452")), now)
+            val m = tx.nextId()
+            ProductDao.create(tx, Product(m, "Mints", price = 150L), listOf(Barcode(tx.nextId(), m, "01234565")), now)
+            c to m
+        }
+        val csv = "name,price,barcode\r\nCoke 330ml,2.60,36000291452\r\nMints,1.60,1234565\r\n"
+        assertEquals(2, g.productCsv.preview { StringReader(csv) }.updates)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(0, r.created)
+        assertEquals(2, r.updated)
+        assertEquals(260L, db.read { ProductDao.get(it, coke) }?.price)
+        assertEquals(listOf("0036000291452"), db.read { ProductDao.barcodes(it, coke) }.map { it.code }) // no second form
+        assertEquals(listOf("01234565"), db.read { ProductDao.barcodes(it, mints) }.map { it.code })
+    }
+
+    /** A product an older version stored without the leading 0 is updated, not imported twice. */
+    @Test
+    fun aBarcodeStoredWithoutItsLeadingZeroIsStillFound() = runBlocking {
+        val g = graph()
+        val db = g.db()
+        val mints = db.write(reserveIds = 3L) { tx ->
+            val m = tx.nextId()
+            ProductDao.create(tx, Product(m, "Mints", price = 150L), listOf(Barcode(tx.nextId(), m, "1234565")), System.currentTimeMillis())
+            m
+        }
+        val csv = "name,price,barcode\r\nMints,1.60,1234565\r\n"
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(0, r.created)
+        assertEquals(1, r.updated)
+        assertEquals(160L, db.read { ProductDao.get(it, mints) }?.price)
+        // The full EAN-8 is added, so a scan of the printed barcode finds it from now on.
+        assertEquals(setOf("1234565", "01234565"), db.read { ProductDao.barcodes(it, mints) }.map { it.code }.toSet())
+    }
+
+    /** 2026-10 review: an import that stops part-way logs the chunks it committed. */
+    @Test
+    fun anImportThatStopsPartWayIsLogged() = runBlocking {
+        val g = graph()
+        val csv = buildString {
+            append("name,price\r\n")
+            for (i in 1..ProductCsvService.CHUNK + 50) append("Item $i,1.00\r\n")
+        }
+        // The file can no longer be read after its last row (a card pulled out).
+        val failing = object : Reader() {
+            private val inner = StringReader(csv)
+
+            override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+                val n = inner.read(cbuf, off, len)
+                if (n < 0) throw IOException("file gone")
+                return n
+            }
+
+            override fun close() = inner.close()
+        }
+        assertFailsWith<IOException> { g.productCsv.import({ failing }, setStock = false, staffId = null, approvedBy = null) }
+        val db = g.db()
+        assertEquals(ProductCsvService.CHUNK.toLong(), db.read { ProductDao.count(it) }) // the first chunk stays
+        val log = db.read { AuditDao.byAction(it, AuditAction.PRODUCT_IMPORT, null) }.single()
+        assertTrue(log.detail.orEmpty().startsWith("created ${ProductCsvService.CHUNK}, "))
+        assertTrue(log.detail.orEmpty().endsWith("stopped early"))
     }
 
     @Test

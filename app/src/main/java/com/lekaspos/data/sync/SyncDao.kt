@@ -116,6 +116,17 @@ object SyncDao {
         tx.update("DELETE FROM outbox")
     }
 
+    /**
+     * This till joins a store that already exists: its own settings lose against the store's
+     * (2026-10 review). A new till that ran the first-run setup holds default store settings with
+     * newer versions than the store's real ones, and published them over every till's receipt
+     * header, BRN, SST number and tax switch. Base 0 puts them below every real edit; the device
+     * number keeps the order total, so the tills still agree on keys nobody else has set.
+     */
+    fun yieldSettings(tx: Db.Tx) {
+        tx.update("UPDATE setting SET ver_hlc = 0 WHERE ver_hlc > 0")
+    }
+
     // Events of kinds this version cannot apply yet (D-047): kept, applied after an update.
 
     fun defer(tx: Db.Tx, e: SyncEvent) {

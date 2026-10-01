@@ -13,14 +13,10 @@ class DbOpenHelper(
     name: String,
     private val seedNames: SeedNames,
     private val clock: () -> Long = System::currentTimeMillis,
-) : SQLiteOpenHelper(context, name, null, Schema.VERSION) {
+) : SQLiteOpenHelper(context, name, null, Schema.VERSION, KeepDamagedDatabase) {
 
     init {
         setWriteAheadLoggingEnabled(true)
-    }
-
-    override fun onConfigure(db: SQLiteDatabase) {
-        db.setForeignKeyConstraintsEnabled(true)
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -41,6 +37,10 @@ class DbOpenHelper(
     }
 
     override fun onOpen(db: SQLiteDatabase) {
+        // Foreign keys only after onCreate/onUpgrade: a migration that rebuilds a table (create new,
+        // copy, drop old) inside the upgrade transaction cannot turn them off, and dropping the old
+        // `sale` would cascade-delete every sale line (references/database.md §9).
+        db.setForeignKeyConstraintsEnabled(true)
         // These run on the primary (writing) connection, which is the one that commits.
         db.execSQL("PRAGMA synchronous=FULL")
         db.execSQL("PRAGMA cache_size=-4000")

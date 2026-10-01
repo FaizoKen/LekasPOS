@@ -192,7 +192,7 @@
     <string name="product_deleted">Product deleted</string>
     <string name="product_delete_confirm">Delete %1$s? Past sales keep their lines.</string>
     <string name="product_duplicate_title">Barcode already used</string>
-    <string name="product_error_barcode_dup">Barcode %1$s is already used by %2$s. Save anyway? Scans will pick the product changed last.</string>
+    <string name="product_error_barcode_dup">Barcode %1$s is already used by %2$s. Save anyway? Scans will pick the barcode added last.</string>
     <string name="product_error_name">Enter a name.</string>
     <string name="product_error_price">Enter a valid amount.</string>
     <string name="product_error_qty">Enter a valid quantity.</string>
@@ -519,4 +519,9 @@
     <string name="product_opening_stock">Opening stock</string>
     <string name="product_opening_hint">How many are on the shelf now</string>
     <string name="result_low_stock">Running low: %1$s</string>
+    <!-- Bug hunt 2 (2026-10) -->
+    <string name="share_no_memory">Not enough memory to share this receipt as a picture. Share it as a PDF instead.</string>
+    <string name="inv_count_closed">This count has been finished. Start a new count to count more.</string>
+    <string name="product_barcode_shared">Barcode %1$s is also used by %2$s. Scans pick the barcode added last.</string>
+    <string name="sync_clock_wrong">This phone\'s date or time is wrong. Turn on automatic date and time in the phone\'s settings so sales and stock counts are in the right order.</string>
 </resources>

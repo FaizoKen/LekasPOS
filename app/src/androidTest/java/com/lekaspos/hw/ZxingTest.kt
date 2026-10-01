@@ -4,10 +4,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.oned.EAN13Writer
+import com.google.zxing.qrcode.QRCodeWriter
 import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.hw.camera.BarcodeDecoder
 import com.lekaspos.hw.printer.Images
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -45,6 +47,18 @@ class ZxingTest {
         // Portrait phone: the sensor sees the bars vertically; the decoder turns the frame first.
         assertEquals(code, decoder.decode(frame(m, 480, 640, vertical = true), 480, 640, rotate = true))
         assertEquals(null, decoder.decode(ByteArray(640 * 480) { 0xFF.toByte() }, 640, 480, rotate = false))
+    }
+
+    @Test
+    fun readsQrOnlyWhenAskedTo() {
+        val text = "https://e.example/r/AB12-0-000001?t=10.05"
+        val m = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 200, 200)
+        val decoder = BarcodeDecoder()
+        val y = frame(m, 640, 480, vertical = false)
+        assertEquals(text, decoder.decode(y, 640, 480, rotate = false, qr = true))
+        // Selling looks for QR codes only on some frames (2026-10 review): the others read bar codes only.
+        assertNotEquals(text, decoder.decode(y, 640, 480, rotate = false, qr = false))
+        assertEquals(text, decoder.decode(y, 640, 480, rotate = false, qr = true))
     }
 
     @Test

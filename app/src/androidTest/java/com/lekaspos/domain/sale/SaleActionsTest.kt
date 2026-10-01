@@ -7,6 +7,7 @@ import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.model.SaleKind
+import com.lekaspos.core.model.SellMode
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.db.Seed
@@ -120,5 +121,20 @@ class SaleActionsTest {
         graph.sales.void(back.id, "mistake")
         graph.sales.void(sale.id, "wrong sale")
         assertEquals(5_000L, db.readBlocking { StockDao.level(it, gift) })
+    }
+
+    @Test
+    fun aWholeKiloOfAWeighedProductIsReturnedByWeight() = runBlocking {
+        val db = graph.db()
+        val ayam = TestDb.product(db, "Ayam", 1_290L)
+        val roti = TestDb.product(db, "Roti", 350L)
+        val udang = TestDb.product(db, "Udang", 4_500L)
+        db.writeBlocking { tx -> tx.update("UPDATE product SET sell_mode = ? WHERE id = ?", SellMode.WEIGHT, ayam) }
+        // 1.000 kg of chicken, 2 loaves, 0.250 kg of prawns from a product no longer sold by weight.
+        val items = listOf(ayam to 1_000L, roti to 2_000L, udang to 250L)
+        val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, items), tz) }
+        val info = assertNotNull(graph.sales.refundInfo(sale.id))
+        val line = info.lines.associateBy { it.productId }
+        assertEquals(setOf(line.getValue(ayam).id, line.getValue(udang).id), info.weighed)
     }
 }

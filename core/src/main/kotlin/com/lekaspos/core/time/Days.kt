@@ -10,15 +10,27 @@ import java.util.TimeZone
 object Days {
     const val DAY_MS = 86_400_000L
 
+    /** How far from midnight [startOfDay] looks for the offsets of a clock change. */
+    private const val NEAR_MS = 6L * 3_600_000L
+
     fun epochDay(epochMs: Long, tz: TimeZone): Long =
         Checked.floorDiv(epochMs + tz.getOffset(epochMs), DAY_MS)
 
-    /** Epoch millis of local midnight at the start of [epochDay] in [tz]. */
+    /** Epoch millis of the first instant of [epochDay] in [tz] (local midnight, if it exists). */
     fun startOfDay(epochDay: Long, tz: TimeZone): Long {
         val localMidnight = epochDay * DAY_MS
         var utc = localMidnight - tz.getOffset(localMidnight)
         utc = localMidnight - tz.getOffset(utc) // second pass settles DST transitions
-        return utc
+        // A clock change at midnight (2026-10 review): midnight may not exist (00:00 → 01:00, the
+        // day starts at the jump; this gave 23:00 of the day before) or exist twice (01:00 → 00:00,
+        // the first one counts). Midnight under each offset in force around it is a candidate;
+        // the day starts at the earliest candidate that belongs to it.
+        var first = Long.MAX_VALUE
+        for (near in longArrayOf(utc - NEAR_MS, utc, utc + NEAR_MS)) {
+            val candidate = localMidnight - tz.getOffset(near)
+            if (candidate < first && Days.epochDay(candidate, tz) == epochDay) first = candidate
+        }
+        return if (first != Long.MAX_VALUE) first else utc // a day the zone skipped (Samoa 2011)
     }
 
     /** Local calendar date of [epochDay] as yyyymmdd (e.g. 20260928). */

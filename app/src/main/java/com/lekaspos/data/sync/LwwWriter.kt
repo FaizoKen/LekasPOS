@@ -2,6 +2,7 @@ package com.lekaspos.data.sync
 
 import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.sync.FieldVersions
+import com.lekaspos.core.sync.Lww
 import com.lekaspos.core.sync.Version
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
@@ -42,11 +43,15 @@ object LwwWriter {
 
     /** Applies [changes] (column → new value) to row [id]. Returns false if the row does not exist. */
     fun update(tx: Db.Tx, table: String, entity: Int, id: Long, changes: Map<String, Any?>, now: Long): Boolean {
-        val current = tx.db.queryOne("SELECT fver FROM $table WHERE id = ?", args(id)) { Holder(it.stringOrNull(0)) }
-            ?: return false
+        val current = tx.db.queryOne("SELECT ver_hlc, ver_dev, fver FROM $table WHERE id = ?", args(id)) { c ->
+            Version(c.getLong(0), c.getInt(1)) to FieldVersions.decode(c.stringOrNull(2))
+        } ?: return false
         if (changes.isEmpty()) return true
-        val hlc = tx.hlcNow()
-        val fver = FieldVersions.decode(current.value).with(changes.keys, Version(hlc, tx.deviceNo)).encode()
+        val (base, versions) = current
+        // Above what the changed fields hold (2026-10 review): with this till's clock behind the
+        // one that wrote them, a plain hlcNow() would be kept here but rejected everywhere else.
+        val hlc = Lww.stampAbove(tx.hlcNow(), changes.keys.maxOf { versions.of(it, base).hlc })
+        val fver = versions.with(changes.keys, Version(hlc, tx.deviceNo)).encode()
         val bind = ArrayList<Any?>(changes.size + 3)
         for (v in changes.values) bind.add(sqlValue(v))
         bind.add(fver)
@@ -63,8 +68,6 @@ object LwwWriter {
     /** Tombstone: deletion is the LWW field `deleted = 1`; the row stays for history. */
     fun delete(tx: Db.Tx, table: String, entity: Int, id: Long, now: Long): Boolean =
         update(tx, table, entity, id, mapOf("deleted" to 1L), now)
-
-    private class Holder(val value: String?)
 
     private fun sqlValue(v: Any?): Any? = when (v) {
         is Boolean -> if (v) 1L else 0L

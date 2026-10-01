@@ -2,6 +2,7 @@ package com.lekaspos.domain.products
 
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.csv.CsvReader
 import com.lekaspos.core.csv.CsvWriter
 import com.lekaspos.core.csv.ProductCsv
@@ -26,6 +27,7 @@ import com.lekaspos.util.Log
 import java.io.Reader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -223,58 +225,83 @@ class ProductCsvService(private val graph: AppGraph) {
         val currency = graph.settings.store.value.currency
         val db = graph.db()
         val ctx = db.read { r -> Context(TaxRateDao.list(r), categoryKeys(r)) }
+        // Counted only once a chunk has committed: a failed chunk is rolled back as a whole.
         var created = 0
         var updated = 0
         var skipped = 0
         var stockSet = 0
-        val categoriesBefore = ctx.categories.size
-        open().use { reader ->
-            val csv = CsvReader(reader)
-            val h = ProductCsv.header(csv.next() ?: emptyList())
-            require(h.missing.isEmpty()) { "missing columns: ${h.missing}" }
-            var done = false
-            var rows = 0
-            while (!done) {
-                coroutineContext.ensureActive()
-                val chunk = ArrayList<Pair<List<String>, Int>>(CHUNK)
-                while (chunk.size < CHUNK) {
-                    val f = csv.next()
-                    if (f == null) {
-                        done = true
-                        break
+        var categories = 0
+        var finished = false
+        try {
+            open().use { reader ->
+                val csv = CsvReader(reader)
+                val h = ProductCsv.header(csv.next() ?: emptyList())
+                require(h.missing.isEmpty()) { "missing columns: ${h.missing}" }
+                var done = false
+                var rows = 0
+                while (!done) {
+                    coroutineContext.ensureActive()
+                    val chunk = ArrayList<Pair<List<String>, Int>>(CHUNK)
+                    while (chunk.size < CHUNK) {
+                        val f = csv.next()
+                        if (f == null) {
+                            done = true
+                            break
+                        }
+                        chunk.add(f to csv.recordLine)
                     }
-                    chunk.add(f to csv.recordLine)
-                }
-                if (chunk.isEmpty()) break
-                db.write(reserveIds = chunk.size * 8L + 16L) { tx ->
-                    val now = System.currentTimeMillis()
-                    for ((fields, line) in chunk) {
-                        when (val plan = plan(tx.db, fields, line, h, currency, ctx)) {
-                            is Plan.Bad -> skipped++
-                            is Plan.New -> {
-                                if (create(tx, plan, ctx, staffId, now, stockAllowed)) stockSet++
-                                created++
-                            }
-                            is Plan.Update -> {
-                                if (update(tx, plan, ctx, setStock && stockAllowed, staffId, now)) stockSet++
-                                updated++
+                    if (chunk.isEmpty()) break
+                    val categoriesBefore = ctx.categories.size
+                    val n = db.write(reserveIds = chunk.size * 8L + 16L) { tx ->
+                        val now = System.currentTimeMillis()
+                        val c = IntArray(4) // created, updated, skipped, stock set
+                        for ((fields, line) in chunk) {
+                            when (val plan = plan(tx.db, fields, line, h, currency, ctx)) {
+                                is Plan.Bad -> c[2]++
+                                is Plan.New -> {
+                                    if (create(tx, plan, ctx, staffId, now, stockAllowed)) c[3]++
+                                    c[0]++
+                                }
+                                is Plan.Update -> {
+                                    if (update(tx, plan, ctx, setStock && stockAllowed, staffId, now)) c[3]++
+                                    c[1]++
+                                }
                             }
                         }
+                        c
                     }
+                    created += n[0]
+                    updated += n[1]
+                    skipped += n[2]
+                    stockSet += n[3]
+                    categories += ctx.categories.size - categoriesBefore
+                    rows += chunk.size
+                    _state.value = State.Running(rows)
                 }
-                rows += chunk.size
-                _state.value = State.Running(rows)
+            }
+            finished = true
+        } finally {
+            // An import that stops part-way keeps the chunks it committed: those are logged too
+            // (2026-10 review), without hiding the error that stopped it.
+            if (finished || created + updated > 0) {
+                val detail = "created $created, updated $updated, skipped $skipped, stock set $stockSet" +
+                    if (finished) "" else ", stopped early"
+                try {
+                    withContext(NonCancellable) {
+                        db.write(reserveIds = 1L) { tx ->
+                            AuditDao.log(
+                                tx, AuditAction.PRODUCT_IMPORT, staffId, System.currentTimeMillis(),
+                                detail = detail, approvedBy = approvedBy,
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (finished) throw e
+                    Log.w("The stopped product import could not be logged", e)
+                }
             }
         }
-        val result = Result(created, updated, skipped, ctx.categories.size - categoriesBefore, stockSet)
-        db.write(reserveIds = 1L) { tx ->
-            AuditDao.log(
-                tx, AuditAction.PRODUCT_IMPORT, staffId, System.currentTimeMillis(),
-                detail = "created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, stock set ${result.stockSet}",
-                approvedBy = approvedBy,
-            )
-        }
-        return result
+        return Result(created, updated, skipped, categories, stockSet)
     }
 
     // ------------------------------------------------------------------ one row
@@ -306,14 +333,27 @@ class ProductCsvService(private val graph: AppGraph) {
             val first = ctx.seen.getOrPut(b) { line }
             if (first != line) issues.add(Issue(line, Problem.BARCODE_TWICE, Column.BARCODES))
         }
-        val owners = row.barcodes.mapNotNull { ProductDao.ownerOf(db, it) }.toSet()
-        if (owners.size > 1) issues.add(Issue(line, Problem.BARCODES_SPLIT, Column.BARCODES))
+        // Every product using each barcode (also in its UPC/EAN form), the one a scan picks first: a
+        // code on two products (two tills) updates the product the till sells (2026-10 review).
+        // A product an older version stored without the leading 0 is found too (else imported twice).
+        val owners = row.barcodes.map { code ->
+            ProductDao.owners(db, Gtin.lookupVariants(code)).ifEmpty {
+                Gtin.withoutLeadingZero(code)?.let { ProductDao.owners(db, listOf(it)) }.orEmpty()
+            }
+        }
+        val picks = owners.mapNotNull { it.firstOrNull() }.toSet()
         val bySku = row.sku?.let { ProductDao.bySku(db, it) }
         // The file's own product number first (a file exported from this store); another store's
         // numbers match nothing here, and the row is matched by barcode or SKU as before.
         val byId = row.id?.takeIf { ProductDao.isLive(db, it) }
-        val target = byId ?: owners.singleOrNull() ?: bySku
-        val taken = if (byId != null) owners.any { it != byId } else owners.size == 1 && bySku != null && bySku != owners.first()
+        if (byId == null && picks.size > 1) issues.add(Issue(line, Problem.BARCODES_SPLIT, Column.BARCODES))
+        val target = byId ?: picks.singleOrNull() ?: bySku
+        // With its number, a code is taken only when the product does not have it itself.
+        val taken = if (byId != null) {
+            owners.any { it.isNotEmpty() && byId !in it }
+        } else {
+            picks.size == 1 && bySku != null && bySku != picks.first()
+        }
         if (taken) issues.add(Issue(line, Problem.BARCODE_TAKEN, Column.BARCODES))
         if (issues.isNotEmpty()) return Plan.Bad(issues.distinct())
         return if (target == null) Plan.New(row, taxId) else Plan.Update(target, row, taxId)
@@ -356,7 +396,11 @@ class ProductCsvService(private val graph: AppGraph) {
         )
         ProductDao.update(tx, before, after, now)
         val have = ProductDao.barcodes(tx.db, before.id).map { it.code }.toSet()
-        for (code in r.barcodes) if (code !in have) ProductDao.addBarcode(tx, Barcode(tx.nextId(), before.id, code), now)
+        for (code in r.barcodes) {
+            // "036000291452" is the code the product has as "0036000291452": not a second barcode.
+            if (Gtin.lookupVariants(code).any { it in have }) continue
+            ProductDao.addBarcode(tx, Barcode(tx.nextId(), before.id, code), now)
+        }
         val stock = r.stock
         if (setStock && stock != null && after.trackStock && stock != StockDao.level(tx.db, before.id)) {
             StockDao.insertCount(tx, before.id, stock, null, staffId, REASON, now)

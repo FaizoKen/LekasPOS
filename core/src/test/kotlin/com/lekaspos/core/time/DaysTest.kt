@@ -73,4 +73,25 @@ class DaysTest {
             }
         }
     }
+
+    @Test
+    fun aDayWithoutMidnightStartsAtTheClockChange() {
+        // Havana, 8 March 2026: clocks jump from 00:00 to 01:00. The day starts at 01:00 local
+        // (05:00 UTC); it used to start at 23:00 of the day before (2026-10 review).
+        val havana = TimeZone.getTimeZone("America/Havana")
+        val day = Days.fromYmd(20260308)
+        assertEquals(millis(TimeZone.getTimeZone("UTC"), 2026, 3, 8, 5, 0), Days.startOfDay(day, havana))
+        // Zones whose clocks change at midnight: every day starts at its first instant.
+        val zones = listOf(
+            "America/Havana", "America/Santiago", "America/Asuncion", "Asia/Beirut", "Asia/Amman", "Africa/Cairo",
+        )
+        for (id in zones) {
+            val tz = TimeZone.getTimeZone(id)
+            for (d in Days.fromYmd(20240101) until Days.fromYmd(20280101)) {
+                val start = Days.startOfDay(d, tz)
+                assertEquals(d, Days.epochDay(start, tz), "$id $d")
+                assertEquals(d - 1, Days.epochDay(start - 1, tz), "$id $d")
+            }
+        }
+    }
 }

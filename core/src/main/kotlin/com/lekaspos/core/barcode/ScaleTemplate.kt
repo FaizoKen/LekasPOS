@@ -58,6 +58,14 @@ class ScaleTemplate(val pattern: String) {
             for (t in templates) t.parse(code)?.let { return it }
             return null
         }
+
+        /**
+         * Every template that parses [code], in order. Layouts of two scales can both fit one label
+         * (`20IIIIIWWWWWC` and `2IIIIIIPPPPPC`), so the lookup tries each one's item code until one
+         * is known (2026-10 review: only the first was tried).
+         */
+        fun parseAll(templates: List<ScaleTemplate>, code: String): List<ScaleCode> =
+            templates.mapNotNull { it.parse(code) }
     }
 }
 

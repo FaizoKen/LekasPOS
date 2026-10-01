@@ -33,19 +33,26 @@ data class Staff(
     val roleName: String?,
     val sysRole: Int,
     val rolePerms: Long,
+    /** Removed (tombstone): kept for history, never signed in. */
+    val deleted: Boolean = false,
 ) {
     val hasPin: Boolean get() = pin != null
     val perms: Long get() = Perm.effective(sysRole, rolePerms)
     val isOwner: Boolean get() = sysRole == SysRole.OWNER
 
-    /** May sign in at the till. */
-    val canSignIn: Boolean get() = active && hasPin
+    /**
+     * May sign in at the till. A removed staff member may not: removed on another till, they
+     * stayed signed in here, and their PIN still approved actions (2026-10 review).
+     */
+    val canSignIn: Boolean get() = active && hasPin && !deleted
 }
 
 /** LWW table `staff`. The PIN record is one field (`pin_hash`); `pin_salt` stays unused (D-037). */
 object StaffDao {
-    private const val COLUMNS = "s.id, s.name, s.role_id, s.active, s.pin_hash, r.name, r.sys_role, r.perms"
-    private const val FROM = "FROM staff s LEFT JOIN role r ON r.id = s.role_id"
+    private const val COLUMNS = "s.id, s.name, s.role_id, s.active, s.pin_hash, r.name, r.sys_role, r.perms, s.deleted"
+
+    // A removed role gives no permissions (a role removed on one till while another gave it to someone).
+    private const val FROM = "FROM staff s LEFT JOIN role r ON r.id = s.role_id AND r.deleted = 0"
 
     /** Few rows (a shop's staff): sorting them needs no index. */
     fun list(db: SQLiteDatabase): List<Staff> =
@@ -107,6 +114,7 @@ object StaffDao {
         roleName = c.stringOrNull(5),
         sysRole = if (c.isNull(6)) SysRole.NONE else c.getInt(6),
         rolePerms = if (c.isNull(7)) 0L else c.getLong(7),
+        deleted = c.bool(8),
     )
 }
 

@@ -2,6 +2,7 @@ package com.lekaspos.sync.drive
 
 import android.util.JsonWriter
 import com.lekaspos.data.sync.SegmentCodec
+import com.lekaspos.sync.AuthNeeded
 import com.lekaspos.sync.RemoteFile
 import com.lekaspos.sync.SyncProvider
 import java.io.ByteArrayOutputStream
@@ -34,6 +35,17 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     class HttpError(val code: Int, message: String) : IOException("Drive HTTP $code: $message")
 
+    @Volatile
+    private var offset: Long? = null
+
+    override val clockOffset: Long? get() = offset
+
+    /** Google's clock (the answer's `Date`, to the second) against this phone's. */
+    private fun noteClock(c: HttpURLConnection) {
+        val server = c.date
+        if (server > 0L) offset = server - System.currentTimeMillis()
+    }
+
     /**
      * Drive's `name contains` matches word prefixes, so the query uses only the first word of
      * [prefix] ("seg", "dev", "store"); the exact prefix is checked here.
@@ -45,9 +57,9 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         ) { it.name.startsWith(prefix) && keep(it) }
             .sortedBy { it.name }
 
-    /** The file called exactly [name], if any. */
-    private suspend fun find(name: String): RemoteFile? =
-        query("name = '${quote(name)}' and trashed = false") { it.name == name }.firstOrNull()
+    /** Every file called exactly [name] (Drive allows several). */
+    private suspend fun find(name: String): List<RemoteFile> =
+        query("name = '${quote(name)}' and trashed = false") { it.name == name }
 
     /** Every page of the listing [q]; only files [keep] accepts are kept (page by page). */
     private suspend fun query(q: String, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
@@ -89,18 +101,33 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 }
             }
         }
-        val existing = if (fresh) null else find(name)
+        val copies = if (fresh) emptyList() else find(name)
+        val existing = copies.firstOrNull()
         if (existing != null) {
             if (!replace) return existing // uploaded before a crash: never make a second copy
+            // This till's own file (its card) twice — a create whose answer was lost: one stays (2026-10 review).
+            for (extra in copies.drop(1)) delete(extra)
             patch(existing.id, file)
             knownIds[name] = existing.id
             return existing.copy(size = file.length())
         }
         val meta = metadata(name, props)
-        val id = if (file.length() <= MULTIPART_MAX) multipart(meta, file) else resumable(meta, file)
+        val id = try {
+            create(meta, file)
+        } catch (e: AnswerLost) {
+            // It may have been created (2026-10 review): looked up before it is sent once more.
+            find(name).firstOrNull()?.id ?: try {
+                create(meta, file)
+            } catch (again: AnswerLost) {
+                throw again.io
+            }
+        }
         if (replace) knownIds[name] = id
         return RemoteFile(name, id, file.length(), props)
     }
+
+    private suspend fun create(meta: ByteArray, file: File): String =
+        if (file.length() <= MULTIPART_MAX) multipart(meta, file) else resumable(meta, file)
 
     private suspend fun patch(id: String, file: File) {
         request("PATCH", "$UPLOAD/files/$id?uploadType=media") { c ->
@@ -112,13 +139,19 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
     override suspend fun get(remote: RemoteFile, dest: File) {
         withContext(Dispatchers.IO) {
             val url = "$API/files/${remote.id}?alt=media"
-            val c = open("GET", url, token(false))
-            if (keepAlive(c) { c.responseCode } == 401) {
-                c.disconnect()
-                val retry = open("GET", url, token(true))
-                keepAlive(retry) { stream(retry, dest) }
-            } else {
+            var refresh = false
+            while (true) {
+                val c = open("GET", url, token(refresh))
+                val code = keepAlive(c) { c.responseCode }
+                noteClock(c)
+                if (code == 401) {
+                    c.disconnect()
+                    if (refresh) throw DriveAuth.SignInNeeded() // a fresh token refused too (2026-10 review)
+                    refresh = true
+                    continue
+                }
                 keepAlive(c) { stream(c, dest) }
+                break
             }
         }
     }
@@ -171,15 +204,7 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     /** A resumable upload: open a session, then send the bytes; a broken transfer resumes from what Drive has. */
     private suspend fun resumable(meta: ByteArray, file: File): String = withContext(Dispatchers.IO) {
-        val start = open("POST", "$UPLOAD/files?uploadType=resumable&fields=id", token(false))
-        start.doOutput = true
-        start.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-        start.setRequestProperty("X-Upload-Content-Length", file.length().toString())
-        start.outputStream.use { it.write(meta) }
-        val code = start.responseCode
-        val session = start.getHeaderField("Location")
-        start.disconnect()
-        if (code !in 200..299 || session == null) throw HttpError(code, "cannot start an upload")
+        val session = startUpload(meta, file.length())
         var offset = 0L
         repeat(RESUME_TRIES) {
             val c = open("PUT", session, token(false))
@@ -201,6 +226,31 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
             offset = uploadedBytes(session, file.length())
         }
         throw IOException("upload of ${file.name} did not finish")
+    }
+
+    /** Opens a resumable upload session; an expired token is renewed once, like every other request. */
+    private suspend fun startUpload(meta: ByteArray, length: Long): String {
+        var refresh = false
+        while (true) {
+            val start = open("POST", "$UPLOAD/files?uploadType=resumable&fields=id", token(refresh))
+            val (code, session) = try {
+                start.doOutput = true
+                start.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                start.setRequestProperty("X-Upload-Content-Length", length.toString())
+                start.outputStream.use { it.write(meta) }
+                noteClock(start)
+                start.responseCode to start.getHeaderField("Location")
+            } finally {
+                start.disconnect()
+            }
+            if (code == 401) {
+                if (refresh) throw DriveAuth.SignInNeeded()
+                refresh = true
+                continue
+            }
+            if (code !in 200..299 || session == null) throw HttpError(code, "cannot start an upload")
+            return session
+        }
     }
 
     private suspend fun uploadedBytes(session: String, total: Long): Long {
@@ -241,8 +291,9 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     /**
      * One request; retried once with a fresh token after a 401, and once on a new connection when
-     * a kept-open one turns out to be dead (a router or carrier dropped it while idle, D-053).
-     * Sending a file twice is harmless: the copies are identical and the reader takes either.
+     * a kept-open one turns out to be dead (a router or carrier dropped it while idle, D-053) —
+     * but not a POST whose answer was lost after it went out whole ([AnswerLost], 2026-10 review):
+     * it may have created the file, and a second one would be a duplicate.
      */
     private suspend fun request(method: String, url: String, prepare: (HttpURLConnection) -> Body?): ByteArray = withContext(Dispatchers.IO) {
         var refresh = false
@@ -252,11 +303,14 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
             val result = try {
                 exchange(c, refresh, prepare)
             } catch (e: IOException) {
+                if (e is AnswerLost && method == "POST") throw e
+                val cause = (e as? AnswerLost)?.io ?: e
                 // Not for an answer from Drive, nor when the network itself is gone or too slow.
-                if (reconnected || e is HttpError || e is java.net.SocketTimeoutException ||
-                    e is java.net.UnknownHostException || e is java.net.ConnectException
+                if (reconnected || cause is HttpError || cause is AuthNeeded ||
+                    cause is java.net.SocketTimeoutException || cause is java.net.UnknownHostException ||
+                    cause is java.net.ConnectException
                 ) {
-                    throw e
+                    throw cause
                 }
                 reconnected = true
                 continue
@@ -268,6 +322,12 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         ByteArray(0)
     }
 
+    /**
+     * The request went out whole but its answer was lost: Drive may have done it (2026-10 review).
+     * A POST that creates a file is not simply sent again: [put] looks the name up first.
+     */
+    private class AnswerLost(val io: IOException) : IOException(io.message, io)
+
     /** Sends [c]'s request; null when the token had expired (401, first try). */
     private fun exchange(c: HttpURLConnection, refresh: Boolean, prepare: (HttpURLConnection) -> Body?): ByteArray? =
         keepAlive(c) {
@@ -277,15 +337,28 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 c.setFixedLengthStreamingMode(body.length())
                 c.outputStream.use { body.write(it) }
             }
-            val code = c.responseCode
-            if (code == 401 && !refresh) {
-                c.errorStream?.use { it.readBytes() }
-                null // an expired token: once more with a fresh one
-            } else {
-                if (code !in 200..299) throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
-                c.inputStream.use { it.readBytes() }
+            try {
+                answer(c, refresh)
+            } catch (e: IOException) {
+                if (body == null || e is HttpError || e is AuthNeeded) throw e
+                throw AnswerLost(e)
             }
         }
+
+    private fun answer(c: HttpURLConnection, refresh: Boolean): ByteArray? {
+        val code = c.responseCode
+        noteClock(c)
+        if (code == 401) {
+            c.errorStream?.use { it.readBytes() }
+            // A fresh token refused too: access was withdrawn, the owner must sign in (2026-10 review).
+            if (refresh) throw DriveAuth.SignInNeeded()
+            return null // an expired token: once more with a fresh one
+        }
+        if (code !in 200..299) {
+            throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
+        }
+        return c.inputStream.use { it.readBytes() }
+    }
 
     private fun open(method: String, url: String, token: String): HttpURLConnection {
         val c = URL(url).openConnection() as HttpURLConnection

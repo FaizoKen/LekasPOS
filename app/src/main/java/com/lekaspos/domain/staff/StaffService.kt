@@ -15,6 +15,7 @@ import com.lekaspos.data.staff.Role
 import com.lekaspos.data.staff.RoleDao
 import com.lekaspos.data.staff.Staff
 import com.lekaspos.data.staff.StaffDao
+import com.lekaspos.domain.Actor
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.sale.ActionRefused
@@ -40,6 +41,7 @@ class StaffService(private val graph: AppGraph) {
         val id = graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             val role = RoleDao.get(tx.db, roleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            if (role.isOwner || before?.isOwner == true) requireOwner(tx, actor)
             val id: Long
             if (before == null) {
                 id = StaffDao.insert(tx, name.trim(), roleId, active, null, now)
@@ -63,6 +65,7 @@ class StaffService(private val graph: AppGraph) {
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            if (s.isOwner) requireOwner(tx, actor)
             checkOwnerRemains(all.filter { it.id != staffId })
             StaffDao.delete(tx, staffId, now)
             AuditDao.log(tx, AuditAction.STAFF_CHANGE, actor.staffId, now, Entity.STAFF, staffId, detail = "removed: ${s.name}", approvedBy = actor.approvedBy)
@@ -87,12 +90,14 @@ class StaffService(private val graph: AppGraph) {
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            if (s.isOwner) requireOwner(tx, actor)
             val after = all.map { if (it.id == staffId) it.copy(pin = record) else it }
             if (record != null && !s.isOwner && after.none { it.isOwner && it.canSignIn }) {
                 throw ActionRefused(ActionRefused.Reason.OWNER_PIN_FIRST)
             }
             checkOwnerRemains(after)
             StaffDao.setPin(tx, staffId, record, now)
+            graph.staff.clearFails(tx, staffId) // a new PIN: wrong guesses at the old one no longer count
             AuditDao.log(
                 tx, AuditAction.STAFF_CHANGE, actor.staffId, now, Entity.STAFF, staffId,
                 detail = if (record == null) "PIN removed: ${s.name}" else "PIN set: ${s.name}", approvedBy = actor.approvedBy,
@@ -130,7 +135,11 @@ class StaffService(private val graph: AppGraph) {
         if (s.loginRequired && s.current?.isOwner != true) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
         val code = RecoveryCode.generate()
         val hash = withContext(Dispatchers.Default) { PinHash.create(RecoveryCode.normalize(code)) }
-        graph.db().write(reserveIds = 0L) { tx -> SettingsDao.put(tx, SettingKeys.OWNER_RECOVERY, hash, System.currentTimeMillis()) }
+        graph.db().write(reserveIds = 1L) { tx ->
+            val now = System.currentTimeMillis()
+            SettingsDao.put(tx, SettingKeys.OWNER_RECOVERY, hash, now)
+            AuditDao.log(tx, AuditAction.STAFF_CHANGE, graph.staff.staffId, now, detail = "new owner recovery code")
+        }
         return code
     }
 
@@ -150,6 +159,7 @@ class StaffService(private val graph: AppGraph) {
             val now = System.currentTimeMillis()
             val s = StaffDao.get(tx.db, ownerId)?.takeIf { it.isOwner && it.active } ?: throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
             StaffDao.setPin(tx, ownerId, record, now)
+            graph.staff.clearFails(tx, ownerId) // the wait of a forgotten PIN ends with the recovery code
             AuditDao.log(tx, AuditAction.OWNER_PIN_RESET, ownerId, now, Entity.STAFF, ownerId)
             s.copy(pin = record)
         }
@@ -186,6 +196,19 @@ class StaffService(private val graph: AppGraph) {
             RoleDao.delete(tx, role.id, now)
             AuditDao.log(tx, AuditAction.ROLE_CHANGE, actor.staffId, now, Entity.ROLE, role.id, detail = "removed: ${role.name}", approvedBy = actor.approvedBy)
         }
+    }
+
+    /**
+     * Owners are managed by owners only: making someone an owner, or changing an owner's role,
+     * active flag or PIN, or removing them, needs an owner doing it (or approving it for someone
+     * whose role cannot manage staff). With "Manage staff" alone a manager made themselves owner,
+     * renewed the recovery code and demoted the real owner (2026-10 review). While nobody has a PIN
+     * the till runs as the owner (D-037).
+     */
+    private fun requireOwner(tx: Db.Tx, actor: Actor) {
+        if (!graph.staff.state.value.loginRequired) return
+        val who = StaffDao.get(tx.db, actor.approvedBy ?: actor.staffId)
+        if (who == null || who.deleted || !who.isOwner) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
     }
 
     /** While anyone can sign in, an owner must be able to (else nobody could manage staff). */

@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.JsonReader
 import android.util.JsonWriter
 import com.lekaspos.data.db.Db
+import com.lekaspos.data.db.KeepDamagedDatabase
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.Schema
 import com.lekaspos.data.db.pragma
@@ -55,16 +56,18 @@ object BackupFiles {
         val dbCopy = File(temp, "copy.db")
         val walCopy = File(temp, "copy.db-wal")
         walCopy.delete()
-        // Under the writer: fold the WAL into the file, then copy it (and the WAL if readers
-        // kept part of it from being folded in). Only file copies happen while writes wait.
-        val header = db.onWriterThread { sqlite ->
-            val complete = checkpoint(sqlite)
-            copy(db.file, dbCopy)
-            val wal = File(db.file.path + "-wal")
-            if (!complete && wal.exists() && wal.length() > 0L) copy(wal, walCopy)
-            header(sqlite, System.currentTimeMillis(), appVersion, reason)
-        }
         try {
+            // Under the writer: fold the WAL into the file, then copy it (and the WAL if readers
+            // kept part of it from being folded in). Only file copies happen while writes wait.
+            // The copies go in the finally below also when copying fails: a half copy left by a
+            // full disk filled the phone, and the next sale failed (2026-10 review).
+            val header = db.onWriterThread { sqlite ->
+                val complete = checkpoint(sqlite)
+                copy(db.file, dbCopy)
+                val wal = File(db.file.path + "-wal")
+                if (!complete && wal.exists() && wal.length() > 0L) copy(wal, walCopy)
+                header(sqlite, System.currentTimeMillis(), appVersion, reason)
+            }
             zip(out, header, dbCopy, walCopy.takeIf { it.exists() })
         } finally {
             dbCopy.delete()
@@ -78,7 +81,7 @@ object BackupFiles {
     /** Backs up database files that are not open (before an upgrade or a restore replaces them). */
     fun writeClosed(dbFile: File, out: OutputStream, appVersion: String, reason: String) {
         val wal = File(dbFile.path + "-wal").takeIf { it.exists() && it.length() > 0L }
-        val header = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY).use { r ->
+        val header = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY, KeepDamagedDatabase).use { r ->
             header(r, System.currentTimeMillis(), appVersion, reason)
         }
         zip(out, header, dbFile, wal)
@@ -118,7 +121,7 @@ object BackupFiles {
         if (!file.exists()) throw Invalid("the backup has no database")
         if (h.schema > Schema.VERSION) throw Invalid("made by a newer version of the app (schema ${h.schema})")
         // Opening read-write folds the WAL into the file; closing leaves one self-contained file.
-        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { r ->
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE, KeepDamagedDatabase).use { r ->
             val check = r.pragma("PRAGMA quick_check")
             if (check != "ok") throw Invalid("the database in the backup is damaged ($check)")
             if (r.version > Schema.VERSION) throw Invalid("made by a newer version of the app")

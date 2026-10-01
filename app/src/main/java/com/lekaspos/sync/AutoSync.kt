@@ -60,9 +60,9 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
         watchNetwork()
     }
 
-    private fun plan(delayMs: Long, asked: Boolean) {
+    private fun plan(delayMs: Long, asked: Boolean, gap: Boolean = !asked) {
         val now = SystemClock.elapsedRealtime()
-        val wait = if (asked) delayMs else maxOf(delayMs, lastRoundAt + MIN_GAP_MS - now)
+        val wait = if (!gap) delayMs else maxOf(delayMs, lastRoundAt + MIN_GAP_MS - now)
         val at = now + wait
         if (asked) graph.sync.starting() // the screen shows "connecting" at once
         synchronized(lock) {
@@ -97,13 +97,16 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
                 graph.sync.notStarted(SyncEngine.ERROR_OFFLINE) // the network callback starts it again
                 return
             }
-            graph.sync.sync(provider, onStart)
+            val report = graph.sync.sync(provider, onStart)
             failures = 0
             // The fallback job goes only when nothing is left to send (a sale during the round is).
             if (graph.sync.status.value.pending == 0L) {
                 Work.cancelSyncSoon(app)
                 graph.syncSoonDone()
             }
+            // Work left (a long history read in parts, or this till publishing again): go on at once,
+            // not after the usual gap between automatic rounds (2026-10 review).
+            if (report.more) plan(CONTINUE_DELAY_MS, asked = false, gap = false)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -156,5 +159,6 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
         const val MIN_GAP_MS = 45_000L
         const val RETRY_DELAY_MS = 60_000L
         const val MAX_RETRIES = 3
+        const val CONTINUE_DELAY_MS = 2_000L
     }
 }

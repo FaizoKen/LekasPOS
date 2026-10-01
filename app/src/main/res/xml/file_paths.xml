@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- Receipts rendered for sharing (cache/shared, cleared before each share). -->
+    <!-- Files shared to other apps: cache/shared/<kind>/ (receipt, csv, backup); files older than
+         15 minutes are deleted when the next one is shared (CsvFiles.sharedFile). -->
     <cache-path
         name="shared"
         path="shared/" />

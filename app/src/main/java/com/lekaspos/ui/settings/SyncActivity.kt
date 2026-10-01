@@ -1,10 +1,14 @@
 package com.lekaspos.ui.settings
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
+import android.view.View
+import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import com.lekaspos.R
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.time.DateText
@@ -15,6 +19,7 @@ import com.lekaspos.sync.SyncProviders
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.sell.visible
 import java.lang.ref.WeakReference
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +36,21 @@ class SyncActivity : ScreenActivity() {
     private var tillName: EditText? = null
     private val tz = TimeZone.getDefault()
 
+    /** The layout the form was built for ([render]); null = not built yet. */
+    private var builtFor: String? = null
+    private var stateText: TextView? = null
+    private var turnOnButton: Button? = null
+    private var accountValue: TextView? = null
+    private var tillValue: TextView? = null
+    private var lastValue: TextView? = null
+    private var pendingValue: TextView? = null
+    private var devicesValue: TextView? = null
+    private var syncNowButton: Button? = null
+
+    /** Google's answer waiting until this screen may run (see [onActivityResult]). */
+    private var pendingAuth: Pair<Int, Intent?>? = null
+    private var entered = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setScreen(getString(R.string.sync_title))
@@ -38,24 +58,59 @@ class SyncActivity : ScreenActivity() {
     }
 
     override fun onStarted(scope: CoroutineScope) {
+        entered = true
+        pendingAuth?.let { (code, data) ->
+            pendingAuth = null
+            onAuthResult(code, data)
+        }
         scope.launch {
             graph.sync.refreshStatus()
             val s = graph.sync.status.value
             if (s.enabled && !s.running && s.pending > 0L) graph.autoSync.now() // changes waiting: send them while the owner looks
-            graph.sync.status.collect { build(it) }
+            graph.sync.status.collect { render(it) }
         }
         scope.launch {
             // "2 min ago" keeps counting while the screen is open.
             while (true) {
                 delay(AGO_REFRESH_MS)
                 val s = graph.sync.status.value
-                if (s.enabled) build(s) // not while the till name is being typed
+                if (s.enabled) render(s)
             }
         }
     }
 
-    private fun build(s: SyncEngine.Status) {
+    override fun onStop() {
+        entered = false
+        super.onStop()
+    }
+
+    /**
+     * Shows [s]. The form is built again only when its layout changes (sync turned on or off, a
+     * sign-in needed); otherwise its texts change in place. A long first sync reports progress
+     * many times a second, and building the whole screen each time lost taps on its buttons and
+     * scrolled it back to the top (2026-10 review).
+     */
+    private fun render(s: SyncEngine.Status) {
+        val layout = when {
+            !s.enabled -> LAYOUT_OFF
+            s.needsSignIn -> LAYOUT_SIGN_IN
+            else -> LAYOUT_ON
+        }
+        if (layout != builtFor) build(s, layout)
+        update(s)
+    }
+
+    private fun build(s: SyncEngine.Status, layout: String) {
         val typed = tillName?.text?.toString()
+        tillName = null
+        stateText = null
+        turnOnButton = null
+        accountValue = null
+        tillValue = null
+        lastValue = null
+        pendingValue = null
+        devicesValue = null
+        syncNowButton = null
         val f = Form(this)
         if (!s.enabled) {
             f.info(getString(R.string.sync_help))
@@ -64,29 +119,48 @@ class SyncActivity : ScreenActivity() {
             } else {
                 tillName = f.text(getString(R.string.sync_till_name), typed ?: s.deviceName ?: Build.MODEL, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
                 f.info(getString(R.string.sync_same_account))
-                if (s.running) {
-                    f.info(state(s))
-                } else {
-                    f.button(getString(R.string.sync_turn_on), primary = true) { turnOn() }
-                }
+                stateText = f.info("")
+                turnOnButton = f.button(getString(R.string.sync_turn_on), primary = true) { turnOn() }
             }
         } else {
-            tillName = null
             f.section(getString(R.string.sync_section_status))
-            f.info(state(s))
-            f.row(getString(R.string.sync_account), s.account ?: "-")
-            f.row(getString(R.string.sync_this_till), s.deviceName ?: "-")
-            f.row(getString(R.string.sync_last), s.lastSuccessAt?.let { ago(it) } ?: getString(R.string.sync_never))
-            f.row(getString(R.string.sync_pending), s.pending.toString())
-            if (s.devices > 0) f.row(getString(R.string.sync_other_tills), s.devices.toString())
+            stateText = f.info("")
+            accountValue = f.valueRow(getString(R.string.sync_account), "")
+            tillValue = f.valueRow(getString(R.string.sync_this_till), "")
+            lastValue = f.valueRow(getString(R.string.sync_last), "")
+            pendingValue = f.valueRow(getString(R.string.sync_pending), "")
+            devicesValue = f.valueRow(getString(R.string.sync_other_tills), "")
             if (s.needsSignIn) f.button(getString(R.string.sync_sign_in), primary = true) { signIn() }
-            if (!s.running) f.button(getString(R.string.sync_now), primary = !s.needsSignIn) { syncNow() }
+            syncNowButton = f.button(getString(R.string.sync_now), primary = !s.needsSignIn) { syncNow() }
             f.button(getString(R.string.sync_show_tills)) { showTills() }
             f.button(getString(R.string.sync_turn_off)) { turnOff() }
             f.info(getString(R.string.sync_help_short))
         }
+        builtFor = layout
         content.removeAllViews()
         content.addView(f.view)
+    }
+
+    private fun update(s: SyncEngine.Status) {
+        if (!s.enabled) {
+            // While turning on: what it is doing instead of the button.
+            stateText?.let {
+                it.text = if (s.running) state(s) else ""
+                it.visible(s.running)
+            }
+            turnOnButton?.visible(!s.running)
+            return
+        }
+        stateText?.text = state(s)
+        accountValue?.text = s.account ?: "-"
+        tillValue?.text = s.deviceName ?: "-"
+        lastValue?.text = s.lastSuccessAt?.let { ago(it) } ?: getString(R.string.sync_never)
+        pendingValue?.text = s.pending.toString()
+        devicesValue?.let {
+            it.text = s.devices.toString()
+            (it.parent as? View)?.visible(s.devices > 0)
+        }
+        syncNowButton?.visible(!s.running)
     }
 
     /** What sync is doing right now, step by step, so it never looks stuck (D-053). */
@@ -105,6 +179,8 @@ class SyncActivity : ScreenActivity() {
         s.lastError == SyncEngine.ERROR_OFFLINE -> getString(R.string.sync_state_offline)
         s.lastError == SyncEngine.ERROR_CORRUPT -> getString(R.string.sync_state_corrupt)
         s.lastError != null -> getString(R.string.sync_state_error, s.lastError)
+        // A wrong date puts this till's changes out of order with the others' (2026-10 review).
+        s.clockOff -> getString(R.string.sync_clock_wrong)
         s.pending > 0L -> resources.getQuantityString(R.plurals.sync_state_waiting, s.pending.toInt(), s.pending.toInt())
         s.lastSuccessAt != null -> getString(R.string.sync_state_ok)
         else -> getString(R.string.sync_state_never)
@@ -180,31 +256,24 @@ class SyncActivity : ScreenActivity() {
         val app = application
         val screen = WeakReference(this) // the first sync may outlive this screen
         graph.appScope.launch {
-            var oldCopy = false
-            val error = try {
+            val failure: Exception? = try {
                 if (name != null) graph.sync.enable(provider, name, account) else graph.sync.sync(provider)
                 null
-            } catch (e: SyncEngine.Problem) {
-                when (e.reason) {
-                    SyncEngine.Problem.Reason.DEVICE_CLASH -> app.getString(R.string.sync_error_clash)
-                    SyncEngine.Problem.Reason.OLD_COPY -> {
-                        oldCopy = true
-                        app.getString(R.string.sync_old_copy)
-                    }
-                    else -> errorText(app, e)
-                }
             } catch (e: Exception) {
-                errorText(app, e)
+                e
             }
             if (name != null) {
                 graph.sync.refreshStatus()
-                if (error == null) com.lekaspos.app.Work.schedule(app)
+                if (failure == null) com.lekaspos.app.Work.schedule(app)
             }
-            if (error != null) {
+            if (failure != null) {
                 screen.get()?.let { a ->
                     a.runOnUiThread {
                         if (a.isFinishing || a.isDestroyed) return@runOnUiThread
-                        if (oldCopy) {
+                        // Worded with the screen, in the language it shows: the app's own context keeps the
+                        // language the app started in (2026-10 review).
+                        val error = failureText(a, failure)
+                        if (failure is SyncEngine.Problem && failure.reason == SyncEngine.Problem.Reason.OLD_COPY) {
                             // The new till number is taken at the next start (also without this restart).
                             Dialogs.confirm(a, a.getString(R.string.sync_title), error, a.getString(R.string.backup_restart_now)) { graph.backups.restart(a) }
                         } else {
@@ -214,13 +283,6 @@ class SyncActivity : ScreenActivity() {
                 }
             }
         }
-    }
-
-    private fun errorText(app: android.app.Application, e: Exception): String = when (SyncEngine.errorCode(e)) {
-        SyncEngine.ERROR_OFFLINE -> app.getString(R.string.sync_state_offline)
-        SyncEngine.ERROR_CORRUPT -> app.getString(R.string.sync_state_corrupt)
-        SyncEngine.ERROR_SIGN_IN -> app.getString(R.string.sync_state_sign_in)
-        else -> app.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
     }
 
     /** At once: the status turns to "Connecting to Google…" before anything else happens. */
@@ -250,17 +312,33 @@ class SyncActivity : ScreenActivity() {
         }
     }
 
+    /**
+     * Google's consent screen answered. When Android ended the app meanwhile, the answer arrives
+     * before the signed-in staff member is loaded and before a manager approved this screen again:
+     * it waits for [onStarted] (2026-10 review).
+     */
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != REQ_AUTH) return
+        if (entered) onAuthResult(resultCode, data) else pendingAuth = resultCode to data
+    }
+
+    private fun onAuthResult(resultCode: Int, data: Intent?) {
         if (resultCode != RESULT_OK) {
             graph.sync.notStarted()
             toast(R.string.sync_not_granted)
             return
         }
-        launchUi { onConnect(SyncProviders.finish(this@SyncActivity, data)) }
+        launchUi {
+            try {
+                onConnect(SyncProviders.finish(this@SyncActivity, data))
+            } catch (e: Exception) {
+                graph.sync.notStarted()
+                throw e
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -280,5 +358,20 @@ class SyncActivity : ScreenActivity() {
         const val REQ_AUTH = 0x5359
         const val STATE_NAME = "lekas.sync.name"
         const val AGO_REFRESH_MS = 30_000L
+        const val LAYOUT_OFF = "off"
+        const val LAYOUT_ON = "on"
+        const val LAYOUT_SIGN_IN = "sign-in"
+
+        /** Here, not in the screen: the first sync's coroutine must not hold on to the screen. */
+        fun failureText(ctx: Context, e: Exception): String = when ((e as? SyncEngine.Problem)?.reason) {
+            SyncEngine.Problem.Reason.DEVICE_CLASH -> ctx.getString(R.string.sync_error_clash)
+            SyncEngine.Problem.Reason.OLD_COPY -> ctx.getString(R.string.sync_old_copy)
+            else -> when (SyncEngine.errorCode(e)) {
+                SyncEngine.ERROR_OFFLINE -> ctx.getString(R.string.sync_state_offline)
+                SyncEngine.ERROR_CORRUPT -> ctx.getString(R.string.sync_state_corrupt)
+                SyncEngine.ERROR_SIGN_IN -> ctx.getString(R.string.sync_state_sign_in)
+                else -> ctx.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
+            }
+        }
     }
 }

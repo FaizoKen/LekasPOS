@@ -22,12 +22,17 @@ data class ReceiveLine(
     }
 }
 
-/** A delivery being entered (immutable; every edit returns a new draft). */
+/**
+ * A delivery being entered (immutable; every edit returns a new draft). [token] names this
+ * delivery among the ones entered on the till (0 = none): once received, a late save of the same
+ * draft is refused instead of bringing it back for a second receipt (2026-10 review).
+ */
 data class ReceiveDraft(
     val supplierId: Long? = null,
     val refNo: String = "",
     val note: String = "",
     val lines: List<ReceiveLine> = emptyList(),
+    val token: Long = 0L,
 ) {
     val isEmpty: Boolean get() = lines.isEmpty()
 

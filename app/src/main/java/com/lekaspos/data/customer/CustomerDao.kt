@@ -81,6 +81,17 @@ object CustomerDao {
 
     fun get(db: SQLiteDatabase, id: Long): Customer? = db.queryOne("SELECT $COLUMNS FROM customer WHERE id = ?", args(id), ::row)
 
+    /**
+     * Like [get], but null for a deleted customer: new credit goes only to a customer who still
+     * exists (a debt of a deleted one could never be seen or collected, 2026-10 review).
+     */
+    fun getLive(db: SQLiteDatabase, id: Long): Customer? =
+        db.queryOne("SELECT $COLUMNS FROM customer WHERE id = ? AND deleted = 0", args(id), ::row)
+
+    /** True only for a customer that exists and was deleted (here or on another till). */
+    fun isDeleted(db: SQLiteDatabase, id: Long): Boolean =
+        db.queryOne("SELECT deleted FROM customer WHERE id = ?", args(id)) { it.getInt(0) != 0 } ?: false
+
     fun name(db: SQLiteDatabase, id: Long): String? =
         db.queryOne("SELECT name FROM customer WHERE id = ?", args(id)) { it.getString(0) }
 

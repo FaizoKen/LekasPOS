@@ -92,12 +92,17 @@ class ProductEditActivity : ScreenActivity() {
     private suspend fun load() {
         val id = productId
         val data = graph.db().read { r ->
+            val codes = if (id != 0L) ProductDao.barcodes(r, id) else emptyList()
             Loaded(
                 product = if (id != 0L) ProductDao.get(r, id) else null,
-                codes = if (id != 0L) ProductDao.barcodes(r, id) else emptyList(),
+                codes = codes,
                 categories = CategoryDao.list(r),
                 taxes = TaxRateDao.list(r),
                 stock = if (id != 0L) StockDao.level(r, id) else null,
+                // A barcode another product has too (e.g. added on two tills while offline).
+                shared = codes.filter { it.kind == BarcodeKind.BARCODE }.mapNotNull { b ->
+                    ProductDao.codeOwners(r, b.code, id).firstOrNull()?.let { b.code to it.second }
+                },
             )
         }
         original = data.product
@@ -109,7 +114,7 @@ class ProductEditActivity : ScreenActivity() {
         intent.getStringExtra(EXTRA_BARCODE)?.takeIf { it.isNotBlank() && codes.none { c -> c.code == it } }?.let {
             codes.add(Code(null, it, BarcodeKind.BARCODE, 1000L, null))
         }
-        build(data.product, data.stock)
+        build(data.product, data.stock, data.shared)
         shown = data.product?.let { formProduct() ?: it }
     }
 
@@ -119,9 +124,11 @@ class ProductEditActivity : ScreenActivity() {
         val categories: List<Category>,
         val taxes: List<TaxRate>,
         val stock: Long?,
+        /** Barcode → name of another product that uses it. */
+        val shared: List<Pair<String, String>>,
     )
 
-    private fun build(p: Product?, stock: Long?) {
+    private fun build(p: Product?, stock: Long?, shared: List<Pair<String, String>>) {
         form = Form(this)
         name = form.text(getString(R.string.product_name), p?.name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         price = form.text(getString(R.string.product_price), p?.let { MoneyFormat.format(it.price, currency, withSymbol = false) }, MONEY_INPUT)
@@ -155,6 +162,7 @@ class ProductEditActivity : ScreenActivity() {
         buttons.addView(add, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         buttons.addView(pack, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8) })
         form.add(buttons)
+        for ((code, other) in shared) form.info(getString(R.string.product_barcode_shared, code, other))
         plu = form.text(getString(R.string.product_plu), codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }?.code, InputType.TYPE_CLASS_NUMBER)
 
         form.section(getString(R.string.product_more))

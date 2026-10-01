@@ -40,6 +40,12 @@ interface SyncProvider {
     suspend fun get(remote: RemoteFile, dest: File)
 
     suspend fun delete(remote: RemoteFile)
+
+    /**
+     * The folder's clock minus this phone's (ms), from its last answer; null when unknown. A phone
+     * whose date is wrong is told so (2026-10 review): its stock counts and sales sort wrongly.
+     */
+    val clockOffset: Long? get() = null
 }
 
 /**

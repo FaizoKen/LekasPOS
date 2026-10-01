@@ -15,6 +15,7 @@ import com.lekaspos.data.customer.Customer
 import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.customer.CustomerItem
 import com.lekaspos.data.print.PrintJobDao
+import com.lekaspos.data.shift.ShiftDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.sale.ActionRefused
 
@@ -89,14 +90,13 @@ class CustomerService(private val graph: AppGraph) {
         require(amount > 0L) { "amount must be positive" }
         require(method.kind != PaymentKind.CREDIT) { "credit cannot repay credit" }
         val actor = graph.permissions.actor(Perm.CUSTOMERS, approval)
-        graph.shifts.load()
-        val shiftId = graph.shifts.currentId
-        if (shiftId == null && method.kind == PaymentKind.CASH && graph.settings.store.value.shiftRequired) {
-            throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
-        }
+        val shiftRequired = method.kind == PaymentKind.CASH && graph.settings.store.value.shiftRequired
         val device = graph.settings.device.value
         val balance = graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
+            // The shift open now (one closed meanwhile never gets cash its count did not see).
+            val shiftId = ShiftDao.current(tx.db, tx.deviceNo)?.id
+            if (shiftId == null && shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
             if (CustomerDao.get(tx.db, customerId) == null) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             CustomerDao.insertCredit(tx, customerId, CreditKind.PAYMENT, amount, null, method.id, actor.staffId, shiftId, note, now)
             if (device.hasPrinter && device.drawerEnabled && method.opensDrawer) PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)

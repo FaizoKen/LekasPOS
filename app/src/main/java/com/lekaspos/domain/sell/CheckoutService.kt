@@ -18,6 +18,7 @@ import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleLineDraft
+import com.lekaspos.data.shift.ShiftDao
 import com.lekaspos.data.stock.LowStockItem
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.domain.Actor
@@ -112,10 +113,11 @@ class CheckoutService(private val graph: AppGraph) {
         val device = graph.settings.device.value
         val staffId = graph.staff.staffId
         graph.shifts.load()
-        val shiftId = graph.shifts.currentId
-        if (shiftId == null && store.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
+        if (graph.shifts.currentId == null && store.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
         val credit = tenders.filter { it.kind == PaymentKind.CREDIT && it.applied != 0L }
-        if (credit.isNotEmpty()) {
+        val creditActor = if (credit.isEmpty()) {
+            null
+        } else {
             if (!store.creditEnabled) throw ActionRefused(ActionRefused.Reason.CREDIT_OFF)
             graph.permissions.actor(Perm.CREDIT_SALE, approvals.firstOrNull { Perm.has(it.perm, Perm.CREDIT_SALE) })
         }
@@ -124,11 +126,17 @@ class CheckoutService(private val graph: AppGraph) {
         val lines = graph.cart.state.value.cart.items.size
         val done = graph.cart.checkout(reserveIds = lines + tenders.size + 16L) { tx, st ->
             val now = System.currentTimeMillis()
+            // The shift open now, read in the sale's own transaction: one closed while the sale waited
+            // for the writer must not get a sale its closing count never saw (2026-10 review).
+            val shiftId = ShiftDao.current(tx.db, tx.deviceNo)?.id
+            if (shiftId == null && store.shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
             val draft = draft(st.cart, st.priced, tenders, rounding, staffId, st.openedAt.takeIf { it > 0L } ?: now, now, shiftId, st.customerId)
             var overLimit: Actor? = null
             var charge = 0L
             if (credit.isNotEmpty()) {
-                val customer = st.customerId?.let { CustomerDao.get(tx.db, it) } ?: throw ActionRefused(ActionRefused.Reason.NEEDS_CUSTOMER)
+                // A customer deleted meanwhile (here or on another till) gets no new debt (2026-10 review).
+                val customer = st.customerId?.let { CustomerDao.getLive(tx.db, it) }
+                    ?: throw ActionRefused(ActionRefused.Reason.NEEDS_CUSTOMER)
                 charge = credit.sumOf { it.applied }
                 if (CreditMath.overLimit(CustomerDao.balance(tx.db, customer.id), charge, customer.creditLimit)) {
                     overLimit = graph.permissions.actorOrNull(Perm.CREDIT_LIMIT, limitApproval)
@@ -144,9 +152,18 @@ class CheckoutService(private val graph: AppGraph) {
                     AuditDao.log(tx, AuditAction.CREDIT_OVER_LIMIT, staffId, now, Entity.SALE, sale.id, charge, sale.receiptNo, limitActor.approvedBy)
                 }
             }
+            // A manager's PIN that allowed this credit sale is on record with it (2026-10 review).
+            val approved = creditActor?.takeIf { it.approvedBy != null }
+            if (approved != null) {
+                AuditDao.log(
+                    tx, AuditAction.APPROVAL, approved.staffId, now, Entity.SALE, sale.id, amount = Perm.CREDIT_SALE,
+                    detail = sale.receiptNo, approvedBy = approved.approvedBy,
+                )
+            }
             var queued = false
             if (device.hasPrinter) {
-                if (device.drawerEnabled && tenders.any { it.opensDrawer && it.applied != 0L }) {
+                // Cash that only gives change back (the rest rounded to 0.00) opens the drawer too (2026-10 review).
+                if (device.drawerEnabled && tenders.any { it.opensDrawer && (it.applied != 0L || it.change != 0L) }) {
                     PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, sale.id, 1, now)
                 }
                 if (device.autoPrint) {

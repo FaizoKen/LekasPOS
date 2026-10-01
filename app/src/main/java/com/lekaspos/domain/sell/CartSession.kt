@@ -1,5 +1,6 @@
 package com.lekaspos.domain.sell
 
+import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.cart.Cart
 import com.lekaspos.core.cart.CartItem
@@ -18,6 +19,7 @@ import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.cart.CartDao
 import com.lekaspos.data.cart.CartLine
 import com.lekaspos.data.cart.StoredCart
+import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.product.ScanHit
@@ -26,6 +28,7 @@ import com.lekaspos.domain.Approval
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +36,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * The open bill (references/architecture.md §4). App-scoped, so rotating the screen or
@@ -83,11 +87,36 @@ class CartSession(private val graph: AppGraph) {
     private var nextLineNo = 1
     private val lineNos = HashMap<Long, Int>()
 
-    private class Op(val ids: Long, val run: ((Db.Tx) -> Unit)?, val done: CompletableDeferred<Unit>? = null)
+    /**
+     * The payment being entered while [State.paying]: what was already taken, and the managers'
+     * approvals for it. It outlives the selling screen, so a screen rebuilt mid-payment (a tablet
+     * turned, dark mode) shows the payment again instead of dropping a split payment half entered
+     * (2026-10 review). Main thread only; forgotten when paying ends ([setPaying]).
+     */
+    class PaymentDraft(val total: Long, val methods: List<PaymentMethod>) {
+        var tenders: List<Tender> = emptyList()
+        val approvals = ArrayList<Approval>()
+
+        /** Credit already allowed for the customer in this payment (limit checks). */
+        var creditTaken = 0L
+    }
+
+    var payment: PaymentDraft? = null
+
+    /** [repair]: a whole-bill rewrite (see [repair]); its own failure is not repaired at once again. */
+    private class Op(val ids: Long, val run: ((Db.Tx) -> Unit)?, val done: CompletableDeferred<Unit>? = null, val repair: Boolean = false)
 
     private val ops = Channel<Op>(Channel.UNLIMITED)
     private val loadLock = Mutex()
     private var writerStarted = false
+
+    /**
+     * Set by the writer when a write failed (its changes are lost): the bill is then written whole
+     * again before the next change, so one lost write (say the bill's own row) cannot make every
+     * later line write fail too (2026-10 review).
+     */
+    @Volatile
+    private var repairNeeded = false
 
     /** Restores the open bill once per process. */
     suspend fun load() = loadLock.withLock {
@@ -96,7 +125,7 @@ class CartSession(private val graph: AppGraph) {
         graph.promotions.load()
         val db = graph.db()
         val stored = db.read { r -> Triple(CartDao.loadOpen(r), CartDao.heldCount(r), CartDao.maxIds(r)) }
-        val customer = stored.first?.customerId?.let { id -> db.read { CustomerDao.name(it, id) } }
+        val customer = stored.first?.customerId?.let { id -> db.read { billCustomer(it, id) } }
         nextCartId = stored.third.first + 1L
         nextLineId = stored.third.second + 1L
         if (!writerStarted) {
@@ -251,25 +280,43 @@ class CartSession(private val graph: AppGraph) {
 
     fun remove(key: Long) {
         val st = _state.value
-        if (!st.canEdit || st.cart.item(key) == null) return
+        val item = st.cart.item(key)
+        if (!st.canEdit || item == null) return
         lineNos.remove(key)
         val now = System.currentTimeMillis()
         val left = st.cart.remove(key)
-        if (left.isEmpty && st.customerId == null) {
+        // The last line gone ends the bill as "Cancel bill" does, so it is in the audit log the same
+        // way: a bill emptied line by line is never invisible. No PIN is asked: taking a wrong item
+        // off stays one tap (2026-10 review).
+        val emptied = left.isEmpty
+        val staffId = graph.staff.staffId
+        val total = st.priced.total
+        if (emptied && st.customerId == null) {
             // The last line is gone: the bill ends here, its discount with it.
             val cartId = st.cartId
-            if (cartId != 0L) enqueue { tx -> CartDao.deleteCart(tx, cartId) }
+            if (cartId != 0L) {
+                enqueue(1L) { tx ->
+                    CartDao.deleteCart(tx, cartId)
+                    logEmptied(tx, staffId, now, total, item.name)
+                }
+            }
             resetEmpty(st.heldCount)
             return
         }
         // An empty bill keeps its customer (shown on the screen) but never a bill discount, which
         // an empty bill does not show: it would have gone to the next customer's first item.
-        val dropDiscount = left.isEmpty && left.billDiscount != Discount.None
+        val dropDiscount = emptied && left.billDiscount != Discount.None
         val next = if (dropDiscount) left.withBillDiscount(Discount.None) else left
-        commit(next, st.cart.items.lastOrNull { it.key != key }?.key ?: 0L) { tx, cartId ->
+        val lastKey = st.cart.items.lastOrNull { it.key != key }?.key ?: 0L
+        commit(next, lastKey, ids = if (emptied) 1L else 0L) { tx, cartId ->
             CartDao.deleteLine(tx, cartId, key, now)
             if (dropDiscount) CartDao.setBillDiscount(tx, cartId, DiscountKind.NONE, 0L, now)
+            if (emptied) logEmptied(tx, staffId, now, total, item.name)
         }
+    }
+
+    private fun logEmptied(tx: Db.Tx, staffId: Long, at: Long, total: Long, lastLine: String) {
+        AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, at, amount = total, detail = "last line removed: $lastLine")
     }
 
     /** Line discount (permission or a manager's [approval], audited). Returns false when not allowed. */
@@ -355,8 +402,17 @@ class CartSession(private val graph: AppGraph) {
         val cartId = st.cartId
         val now = System.currentTimeMillis()
         enqueue { tx -> CartDao.setStatus(tx, cartId, CartStatus.HELD, label?.takeIf { it.isNotBlank() }, now) }
+        // The bill leaves the screen only once it is parked: cleared first, a failed write left it
+        // nowhere — not on the screen, not among the held bills (2026-10 review).
+        _state.value = st.copy(busy = true)
+        try {
+            flush()
+        } catch (e: Throwable) {
+            _state.value = _state.value.copy(busy = false)
+            repair() // still the open bill: written as such again
+            throw e
+        }
         resetEmpty(st.heldCount + 1)
-        flush()
         return true
     }
 
@@ -390,12 +446,15 @@ class CartSession(private val graph: AppGraph) {
         try {
             flush()
             val loaded = graph.db().read { r -> CartDao.load(r, heldId) to CartDao.heldCount(r) }
-            val customer = loaded.first?.customerId?.let { id -> graph.db().read { CustomerDao.name(it, id) } }
+            val customer = loaded.first?.customerId?.let { id -> graph.db().read { billCustomer(it, id) } }
             val base = State(loaded = true, heldCount = loaded.second)
             _state.value = loaded.first?.let { fromStored(it, base, customer) } ?: base
             return loaded.first != null
         } catch (e: Exception) {
             _state.value = _state.value.copy(busy = false)
+            // The swap may be half written: the bill on the screen is written back as the open one.
+            repairNeeded = true
+            repair()
             throw e
         }
     }
@@ -448,6 +507,7 @@ class CartSession(private val graph: AppGraph) {
             return result
         } catch (e: Throwable) {
             _state.value = _state.value.copy(busy = false)
+            repair() // after a failed bill write (see repairNeeded)
             throw e
         }
     }
@@ -456,7 +516,10 @@ class CartSession(private val graph: AppGraph) {
     fun setPaying(on: Boolean) {
         val st = _state.value
         if (st.paying != on) _state.value = st.copy(paying = on)
-        if (!on) reprice() // a promotion that changed meanwhile applies from here
+        if (!on) {
+            payment = null
+            repriceNow() // a promotion that changed meanwhile applies from here
+        }
     }
 
     /** Waits until every change made so far is committed. */
@@ -507,12 +570,47 @@ class CartSession(private val graph: AppGraph) {
     }
 
     private fun enqueue(ids: Long = 0L, run: (Db.Tx) -> Unit) {
+        if (repairNeeded) repair()
         ops.trySend(Op(ids, run))
+    }
+
+    /**
+     * After a failed write (see [repairNeeded]): queues a write of the whole bill as memory has it
+     * now — which is what every change queued so far amounts to. Main thread; waits while the
+     * state is not the open bill yet (loading, resuming, paying out).
+     */
+    private fun repair() {
+        val st = _state.value
+        if (!repairNeeded || !st.loaded || st.busy) return
+        repairNeeded = false
+        val now = System.currentTimeMillis()
+        val cartId = st.cartId
+        if (cartId == 0L) {
+            // No open bill: one still marked open in the database is parked, never loaded as the bill.
+            ops.trySend(Op(0L, { tx -> CartDao.parkOpen(tx, 0L, now) }, repair = true))
+            return
+        }
+        val lines = st.cart.items.mapNotNull { item ->
+            try {
+                item.toLine(lineNo(item.key))
+            } catch (e: ArithmeticException) {
+                null
+            }
+        }
+        val (kind, value) = discountColumns(st.cart.billDiscount)
+        val staff = graph.staff.staffId
+        val openedAt = st.openedAt.takeIf { it > 0L } ?: now
+        val customerId = st.customerId
+        val rewrite: (Db.Tx) -> Unit = { tx ->
+            CartDao.rewriteOpen(tx, cartId, staff, openedAt, customerId, kind, value, lines, now)
+        }
+        ops.trySend(Op(0L, rewrite, repair = true))
     }
 
     private fun resetEmpty(heldCount: Int) {
         lineNos.clear()
         nextLineNo = 1
+        payment = null
         _state.value = State(loaded = true, heldCount = heldCount)
     }
 
@@ -530,8 +628,16 @@ class CartSession(private val graph: AppGraph) {
                     for (op in batch) op.done?.complete(Unit)
                 } catch (e: CancellationException) {
                     throw e // the app scope ends only in tests
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
+                    // Any failure (an Error too): this loop must go on, or every later flush() — the
+                    // checkout's first step — would wait forever (2026-10 review).
                     Log.e("Saving the open bill failed", e)
+                    if (batch.any { it.run != null }) {
+                        repairNeeded = true
+                        // A failed repair waits for the next change or flush: retried at once, a write
+                        // that keeps failing (a full disk) spun the writer and the main thread for good.
+                        if (batch.none { it.repair }) graph.appScope.launch(Dispatchers.Main) { repair() } // queued before any waiter resumes
+                    }
                     for (op in batch) op.done?.completeExceptionally(e)
                 }
             }
@@ -556,8 +662,12 @@ class CartSession(private val graph: AppGraph) {
     /**
      * Prices the open bill again (promotions changed, or started or ended today). Never while it
      * is being paid: the amount on the payment screen is the amount the sale is stored with.
+     * Callable from any thread (sync reloads promotions in the background): the bill itself is
+     * only changed on the main thread, like every other change of it (2026-10 review).
      */
-    fun reprice() {
+    suspend fun reprice() = withContext(Dispatchers.Main.immediate) { repriceNow() }
+
+    private fun repriceNow() {
         _state.update { st ->
             if (!st.loaded || st.cart.isEmpty || st.busy || st.paying) return@update st
             val priced = price(st.cart) ?: return@update st
@@ -570,7 +680,21 @@ class CartSession(private val graph: AppGraph) {
         nextLineNo++
     }
 
-    private fun fromStored(s: StoredCart, base: State, customerName: String?): State {
+    /** The bill's customer as stored: [name] for the screen; a [deleted] one is taken off the bill. */
+    private class BillCustomer(val name: String?, val deleted: Boolean)
+
+    private fun billCustomer(r: SQLiteDatabase, id: Long) =
+        BillCustomer(CustomerDao.name(r, id), CustomerDao.isDeleted(r, id))
+
+    private fun fromStored(s: StoredCart, base: State, customer: BillCustomer?): State {
+        // A customer deleted while the bill was parked or the app was closed (here or on another
+        // till) leaves the bill: nothing more can be charged to them (2026-10 review).
+        val dropCustomer = customer?.deleted == true
+        if (dropCustomer) {
+            val cartId = s.id
+            val now = System.currentTimeMillis()
+            enqueue { tx -> CartDao.setCustomer(tx, cartId, null, now) }
+        }
         lineNos.clear()
         nextLineNo = 1
         for (l in s.lines) {
@@ -601,7 +725,8 @@ class CartSession(private val graph: AppGraph) {
         }
         return base.copy(
             cartId = s.id, openedAt = s.openedAt, cart = cart, priced = priced, lastKey = cart.items.lastOrNull()?.key ?: 0L,
-            customerId = s.customerId, customerName = customerName,
+            customerId = if (dropCustomer) null else s.customerId,
+            customerName = if (dropCustomer) null else customer?.name,
         )
     }
 

@@ -158,7 +158,11 @@ are plain columns without FK constraints because sync can deliver them in any or
   restock: +; untracked product or refund without restock: 0).
 - `sale.status` (voided) and `sale.refunded` are derived from `sale_void` and refund
   documents; when a sale arrives after its void/refund (out-of-order sync) they are computed
-  on insert.
+  on insert; `DerivedRebuild.saleStatus` recomputes the status (D-055).
+- A sale voided twice (two tills, offline): the first void by (hlc, till, id) counts; each later
+  void gets a cancelling credit charge with id −(void id) (`SaleDao.creditOnce`, every till
+  makes the same row), and shift reports count the first void only — except cash, card and
+  e-wallet, which stay in each voiding till's shift (D-055).
 - Summary tables (`sum_*`) are updated incrementally with every sale/refund/void (local or
   imported) and can be rebuilt with one `INSERT … SELECT … GROUP BY` per table.
 - Any derived value must be recomputable from EVENT + LWW rows alone, independent of the
@@ -206,14 +210,18 @@ are plain columns without FK constraints because sync can deliver them in any or
 
 - `DB_VERSION` in `Schema.kt`; `Migrations.kt` holds `Migration(from, to)` steps; `onUpgrade`
   runs them in order inside the open-helper transaction. `onDowngrade` refuses (throws a
-  clear error; the UI offers restore from backup).
+  clear error; restore a backup). Foreign keys are turned on in `onOpen`, after
+  `onCreate`/`onUpgrade` (D-055).
 - After Phase 1 has been installed by the tester, never edit a shipped version's DDL. Change
   = new version + migration + schema snapshot `app/src/androidTest/assets/schemas/<v>.sql`.
 - `MigrationTest` (instrumented): for every stored snapshot `k`, create a DB from `k.sql`, run
   migrations to latest, and assert the normalized `sqlite_master` equals a fresh install.
   `SchemaSnapshotTest` fails if the latest snapshot file is missing or stale.
 - Column changes use the rebuild pattern (API 21 has no RENAME/DROP COLUMN). Rebuild inside
-  the migration transaction with `PRAGMA foreign_keys` handled by `DbOpenHelper`.
+  the migration transaction: foreign keys are still off there (`DbOpenHelper.onOpen` turns
+  them on afterwards), so dropping the old table cascades nothing.
+- Every open passes `KeepDamagedDatabase` as the error handler (also read-only opens of backup
+  files): Android's default handler deletes the database on SQLITE_CORRUPT (D-055).
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
 - History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`), v6 (Phase 8, D-047: `promotion`, `sale_line.promo_id` + `promo_name`, LOCAL `sync_deferred`; sync cursors cleared once).

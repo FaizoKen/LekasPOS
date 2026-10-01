@@ -97,6 +97,9 @@ class PromotionsActivity : ScreenActivity() {
 class PromotionEditActivity : ScreenActivity() {
 
     private var before: PromotionRow? = null
+
+    /** A save or delete is running: a second tap must not add the promotion twice (2026-10 review). */
+    private var saving = false
     private val productIds = ArrayList<Long>()
     private val productNames = HashMap<Long, String>()
     private var startDay: Long? = null
@@ -292,18 +295,34 @@ class PromotionEditActivity : ScreenActivity() {
             Dialogs.message(this, null, getString(R.string.promo_error_qty))
             return
         }
+        if (saving) return
+        saving = true
         launchUi {
-            graph.promotions.save(before, row)
-            toast(R.string.promo_saved)
-            finish()
+            var saved = false
+            try {
+                graph.promotions.save(before, row)
+                saved = true // stays "saving" while the screen closes
+                toast(R.string.promo_saved)
+                finish()
+            } finally {
+                if (!saved) saving = false
+            }
         }
     }
 
     private fun delete(p: PromotionRow) {
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.promo_delete_confirm, p.name), getString(R.string.delete)) {
+            if (saving) return@confirm
+            saving = true
             launchUi {
-                graph.promotions.delete(p.id)
-                finish()
+                var deleted = false
+                try {
+                    graph.promotions.delete(p.id)
+                    deleted = true
+                    finish()
+                } finally {
+                    if (!deleted) saving = false
+                }
             }
         }
     }

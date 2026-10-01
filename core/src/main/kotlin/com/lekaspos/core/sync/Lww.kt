@@ -80,4 +80,12 @@ object Lww {
         base: Version,
         current: FieldVersions,
     ): List<String> = incomingFields.filter { incoming > current.of(it, base) }
+
+    /**
+     * The HLC that stamps a local edit: the clock's [now], but always above [held], the newest
+     * version the edited fields have here (2026-10 review). A till whose clock is behind the one
+     * that wrote them (more than a day: its clock does not follow) would otherwise keep its edit
+     * while every other till rejects it as older — the tills would disagree for good.
+     */
+    fun stampAbove(now: Long, held: Long): Long = if (now > held) now else held + 1L
 }

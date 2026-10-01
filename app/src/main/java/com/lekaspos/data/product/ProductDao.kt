@@ -72,6 +72,7 @@ data class ProductListItem(
     val sellMode: Int,
     val stockQty: Long?,
     val active: Boolean = true,
+    val categoryId: Long? = null,
 )
 
 /** SQL for products, barcodes and product search. See references/database.md §8. */
@@ -140,23 +141,31 @@ object ProductDao {
         "p.id, p.name, p.unit, p.sell_mode, p.price, p.cost, p.category_id, p.tax_rate_id, " +
             "COALESCE(t.rate_bp, 0), p.track_stock, p.active"
 
+    /**
+     * Which barcode row wins when several live products share a code: the one created last.
+     * `created_at` travels with the row's creation, so every till picks the same product;
+     * `updated_at` is the local time of the last change *or import* and differed per till
+     * (2026-10 review). The id breaks ties the same way everywhere.
+     */
+    private const val CODE_WINNER = "b.created_at DESC, b.id DESC"
+
     private const val FIND_BY_CODE_1 =
         "SELECT $SELLABLE_COLUMNS, b.code, b.kind, b.pack_qty, b.pack_price " +
             "FROM product_barcode b JOIN product p ON p.id = b.product_id " +
             "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 " +
             "WHERE b.code = ? AND b.deleted = 0 AND b.kind = ? AND p.deleted = 0 " +
-            "ORDER BY b.updated_at DESC, b.id DESC LIMIT 1"
+            "ORDER BY $CODE_WINNER LIMIT 1"
 
     private const val FIND_BY_CODE_2 =
         "SELECT $SELLABLE_COLUMNS, b.code, b.kind, b.pack_qty, b.pack_price " +
             "FROM product_barcode b JOIN product p ON p.id = b.product_id " +
             "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 " +
             "WHERE b.code IN (?, ?) AND b.deleted = 0 AND b.kind = ? AND p.deleted = 0 " +
-            "ORDER BY b.updated_at DESC, b.id DESC LIMIT 1"
+            "ORDER BY $CODE_WINNER LIMIT 1"
 
     /**
      * Resolves a scanned code. [codes] are the lookup variants (see Gtin.lookupVariants), at
-     * most two. With duplicates, the most recently changed barcode wins (references/sync.md §4).
+     * most two. With duplicates, the barcode created last wins, on every till ([CODE_WINNER]).
      */
     fun findByCode(db: SQLiteDatabase, codes: List<String>, kind: Int = BarcodeKind.BARCODE): ScanHit? =
         when (codes.size) {
@@ -187,13 +196,15 @@ object ProductDao {
         packPrice = c.longOrNull(14),
     )
 
+    /** A product that may go on a bill; null once deleted (a tile shown before another till deleted it). */
     fun sellableById(db: SQLiteDatabase, id: Long): SellableProduct? = db.queryOne(
         "SELECT $SELLABLE_COLUMNS FROM product p " +
-            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 WHERE p.id = ?",
+            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 WHERE p.id = ? AND p.deleted = 0",
         args(id), ::sellable,
     )
 
-    private const val LIST_COLUMNS = "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty, p.active"
+    private const val LIST_COLUMNS =
+        "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty, p.active, p.category_id"
 
     /** Upper bound of FTS candidates joined and sorted per search: keeps common prefixes cheap. */
     const val FTS_CANDIDATES = 2000
@@ -288,11 +299,25 @@ object ProductDao {
             "AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
+    // The same page with switched-off products (a stock count counts what is on the shelf).
+    private const val BY_CATEGORY_ALL =
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "WHERE p.category_id = ? AND p.deleted = 0 " +
+            "AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
+            "ORDER BY p.name_key, p.id LIMIT ?"
+
     /** One page of a category, keyset-paginated by (name_key, id). First page: after = null. */
-    fun byCategory(db: SQLiteDatabase, categoryId: Long, after: ProductListItem?, limit: Int = 60): List<ProductListItem> {
+    fun byCategory(
+        db: SQLiteDatabase,
+        categoryId: Long,
+        after: ProductListItem?,
+        limit: Int = 60,
+        includeInactive: Boolean = false,
+    ): List<ProductListItem> {
         val key = after?.nameKey ?: ""
         val id = after?.id ?: -1L
-        return db.queryList(BY_CATEGORY, args(categoryId, key, key, id, limit), ::listItem)
+        val sql = if (includeInactive) BY_CATEGORY_ALL else BY_CATEGORY
+        return db.queryList(sql, args(categoryId, key, key, id, limit), ::listItem)
     }
 
     private fun listItem(c: Cursor) = ProductListItem(
@@ -304,6 +329,7 @@ object ProductDao {
         sellMode = c.getInt(5),
         stockQty = c.longOrNull(6),
         active = c.bool(7),
+        categoryId = c.longOrNull(8),
     )
 
     /** Is [id] a product of this store that has not been deleted? */
@@ -458,10 +484,14 @@ object ProductDao {
         val barcodes: List<String>,
     )
 
+    // A deleted category or tax rate is exported as blank (= keep on import), like the till treats it:
+    // its name brought the category back as a new one, or the rate back onto the product (2026-10 review).
     private const val EXPORT_PAGE =
         "SELECT p.id, p.name, p.sku, c.name, p.unit, p.price, p.cost, t.name, p.sell_mode, p.track_stock, l.qty, " +
-            "p.low_stock, p.active FROM product p LEFT JOIN category c ON c.id = p.category_id " +
-            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id LEFT JOIN stock_level l ON l.product_id = p.id " +
+            "p.low_stock, p.active FROM product p " +
+            "LEFT JOIN category c ON c.id = p.category_id AND c.deleted = 0 " +
+            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 " +
+            "LEFT JOIN stock_level l ON l.product_id = p.id " +
             "WHERE p.deleted = 0 AND p.id > ? ORDER BY p.id LIMIT ?"
 
     // Plain unit barcodes only: pack barcodes and scale PLUs have extra settings a CSV cell cannot hold.
@@ -486,12 +516,25 @@ object ProductDao {
         return rows.map { r -> codes[r.id]?.let { r.copy(barcodes = it) } ?: r }
     }
 
-    /** The product (not deleted) that uses [code] as a barcode, if any. */
-    fun ownerOf(db: SQLiteDatabase, code: String): Long? = db.longOrNull(
+    private const val OWNERS_1 =
         "SELECT b.product_id FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
-            "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 LIMIT 1",
-        code,
-    )
+            "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 ORDER BY $CODE_WINNER LIMIT 5"
+    private const val OWNERS_2 =
+        "SELECT b.product_id FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+            "WHERE b.code IN (?, ?) AND b.deleted = 0 AND p.deleted = 0 ORDER BY $CODE_WINNER LIMIT 5"
+
+    /**
+     * The products (not deleted) that use one of [codes] (a code and its UPC/EAN form, see
+     * Gtin.lookupVariants), the one a scan picks first ([CODE_WINNER]); each once, at most five.
+     */
+    fun owners(db: SQLiteDatabase, codes: List<String>): List<Long> = when (codes.size) {
+        0 -> emptyList()
+        1 -> db.queryList(OWNERS_1, args(codes[0])) { it.getLong(0) }
+        else -> db.queryList(OWNERS_2, args(codes[0], codes[1])) { it.getLong(0) }
+    }.distinct()
+
+    /** The product (not deleted) that uses [code] as a barcode, if any: the one a scan picks. */
+    fun ownerOf(db: SQLiteDatabase, code: String): Long? = owners(db, listOf(code)).firstOrNull()
 
     /** The product (not deleted) with SKU [sku], if exactly one has it. */
     fun bySku(db: SQLiteDatabase, sku: String): Long? {
@@ -568,10 +611,12 @@ object ProductDao {
         "search_prefix_all" to SEARCH_PREFIX_ALL,
         "search_barcode_prefix_all" to SEARCH_BARCODE_PREFIX_ALL,
         "category_page" to BY_CATEGORY,
+        "category_page_all" to BY_CATEGORY_ALL,
         "product_manage_page" to MANAGE_PAGE,
         "product_sell_page" to SELL_PAGE,
         "product_export" to EXPORT_PAGE,
         "product_export_barcodes" to EXPORT_BARCODES,
+        "barcode_owners" to OWNERS_2,
         "popular_ids" to POPULAR_IDS,
         "products_by_ids" to BY_ID_PREFIX + "(?,?,?)",
     )

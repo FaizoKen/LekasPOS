@@ -77,10 +77,25 @@ object DerivedRebuild {
         for ((saleId, amount) in totals) tx.update("UPDATE sale SET refunded = ? WHERE id = ?", amount, saleId)
     }
 
+    // `sale.status` is derived from `sale_void` too (2026-10 review). Uncorrelated IN lists: the
+    // void list is read once, then primary-key lookups (voided) or one pass over sale (not voided).
+    const val STATUS_VOIDED =
+        "UPDATE sale SET status = $VOIDED WHERE id IN (SELECT sale_id FROM sale_void) AND status != $VOIDED"
+    const val STATUS_COMPLETED =
+        "UPDATE sale SET status = $OK WHERE status = $VOIDED AND id NOT IN (SELECT sale_id FROM sale_void)"
+
+    /** Voided exactly when a void of the sale is stored. Runs before everything that reads the status. */
+    fun saleStatus(tx: Db.Tx) {
+        tx.exec(STATUS_VOIDED)
+        tx.exec(STATUS_COMPLETED)
+    }
+
     /** Maintenance statements whose plans the perf suite checks (full scans allowed, correlated scans not). */
     val MAINTENANCE_QUERIES: List<Pair<String, String>> = listOf(
         "rebuild_refunds" to REFUND_TOTALS,
         "rebuild_balances" to CustomerDao.BALANCES,
+        "rebuild_status_voided" to STATUS_VOIDED,
+        "rebuild_status_completed" to STATUS_COMPLETED,
     )
 
     fun stockLevels(tx: Db.Tx) {
@@ -104,6 +119,7 @@ object DerivedRebuild {
     }
 
     fun all(tx: Db.Tx) {
+        saleStatus(tx)
         refundedAmounts(tx)
         stockLevels(tx)
         summaries(tx)

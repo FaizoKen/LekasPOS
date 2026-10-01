@@ -108,6 +108,34 @@ object CartDao {
         tx.update("UPDATE cart SET status = ?, label = ?, updated_at = ? WHERE id = ?", status, label, now, cartId)
     }
 
+    private const val SET_OPEN =
+        "UPDATE cart SET status = ?, label = NULL, customer_id = ?, bill_disc_kind = ?, bill_disc_value = ?, " +
+            "updated_at = ? WHERE id = ?"
+    private const val PARK_OPEN = "UPDATE cart SET status = ?, updated_at = ? WHERE status = ? AND id <> ?"
+
+    /**
+     * Writes open bill [id] whole, as the cart session has it, after one of its writes failed (2026-10
+     * review): its row (created again if that write was the one lost), customer, discount and every
+     * line. Any other bill still marked open is parked, so it is neither lost nor loaded in its place.
+     */
+    fun rewriteOpen(
+        tx: Db.Tx, id: Long, staffId: Long?, openedAt: Long, customerId: Long?, discKind: Int, discValue: Long,
+        lines: List<CartLine>, now: Long,
+    ) {
+        if (tx.update(SET_OPEN, CartStatus.OPEN, customerId, discKind, discValue, now, id) == 0) {
+            insertCart(tx, id, staffId, openedAt, now)
+            tx.update(SET_OPEN, CartStatus.OPEN, customerId, discKind, discValue, now, id)
+        }
+        tx.update("DELETE FROM cart_line WHERE cart_id = ?", id)
+        for (l in lines) putLine(tx, id, l, now)
+        parkOpen(tx, id, now)
+    }
+
+    /** Parks every bill marked open except [keepId] (0: all of them). */
+    fun parkOpen(tx: Db.Tx, keepId: Long, now: Long) {
+        tx.update(PARK_OPEN, CartStatus.HELD, now, CartStatus.OPEN, keepId)
+    }
+
     /** The open bill (the most recently touched one if there are several), with lines in order. */
     fun loadOpen(db: SQLiteDatabase): StoredCart? {
         val id = db.queryOne(

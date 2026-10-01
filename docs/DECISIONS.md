@@ -563,6 +563,85 @@ tills 1 in 676 (a taken prefix is replaced when a till joins; not two tills join
 Rejected: counting wrong PINs per till (the reason for this change); a UNIQUE receipt number
 (existing data may already hold one pair); locking the whole app in portrait (tablets and
 landscape shops).
+### D-055 — Second bug hunt: data safety, security and sync consistency (2026-10-01)
+The owner asked again for a thorough search for bugs, fixing whatever is real. Nine read-only
+reviews (money maths, selling, sales and reports, sync, backup and database, inventory and CSV,
+staff and credit, printing and camera, back-office screens) found about 95 candidate problems;
+each was checked in the code before it was fixed, most with a test. Decisions that change
+behaviour:
+- **A damaged database is never deleted.** Every SQLite open passes `KeepDamagedDatabase`:
+  Android's default handler deleted `lekaspos.db` and its WAL on the first SQLITE_CORRUPT (one bad
+  page after a power cut wiped the shop, an empty store opened, and its daily backups then rotated
+  the good ones away). A database too damaged to open moves to `files/backups/damaged-*.db` and
+  an empty store opens, so a backup can be restored in the app; for 7 days "Data problem" shows
+  and automatic backups pause.
+- **Store settings: only what the user changed is written.** `saveStore(before, after)`: a fresh
+  install's first-run Setup wrote every default setting with a new version, and once that till
+  joined, its empty header, BRN, SST number and tax switch won on every till. A till joining a
+  different existing store also yields its own settings to the store's.
+- **Restore only after "Restart now".** A checked restore was armed before the question: leaving
+  the screen (Back while checking, the idle lock) applied the old backup at some later start and
+  silently replaced a day's sales. After a restore nobody is signed in (the backup brought back
+  last night's owner sign-in) and wrong-PIN counts stay this phone's. A restored till that keeps
+  its identity skips 2^30 IDs and continues receipt numbers after the highest used (same phone)
+  or gets a new receipt prefix (another phone); a backup older than the sync tables counts as
+  this till.
+- **Idle lock that works**: checked when a screen starts and before a touch or key counts (after
+  the phone's screen turned off, the first tap reset the idle time, so the till never locked);
+  the last activity time is stored when the app goes out of sight, so a new process honours it.
+- **PINs**: a removed staff member cannot sign in or approve (they stayed signed in on other
+  tills); only owners make owners or change an owner's role, PIN or removal (a manager whose role
+  manages staff is refused there; the owner does it); wrong-PIN waits are
+  also measured by the time since boot (setting the clock forward skipped them) and a clock set
+  back makes the wait count from now (it blocked the owner's PIN for years); a new PIN or the
+  recovery code clears the count.
+- **Sync**: a local edit is stamped above the field's stored version (a till with a clock days
+  behind lost every edit on the other tills, silently); a phone more than 10 min from Google's
+  clock is told to fix the date; two tills creating stores at once settle on one; a folder emptied
+  while tills keep syncing is detected and republished; at most 1,000 files per till per round
+  (a joining till held a year of listings in memory); no blind retry of a create whose answer was
+  lost (duplicate device cards); timeouts on Google Play services; a refused token asks to sign in.
+- **Same barcode on two products**: the row created last wins on every till (it was "changed or
+  imported last on this till", so two tills sold different products for one scan); CSV updates
+  by barcode pick the same one; the product's edit screen names the other product.
+- **Voided twice** on two offline tills: the first void counts; the later one's credit reversal is
+  cancelled (fixed id −(void id), the same row on every till) and shift reports count one void;
+  cash, card and e-wallet stay in each till's own shift (each drawer really paid them back).
+- **Refunds**: partial returns use cumulative rounding (a part could refund more than was left of
+  a heavily discounted line and the last return charged the customer); a double tap refunds once;
+  a whole kilo of a weighed product can be returned by weight.
+- **Selling**: Back on Android 13+ asks before dropping a split payment; a payment half entered
+  survives the screen being rebuilt; credit to a removed customer is refused; screen jobs never
+  crash the till; a bill write that failed is repaired by rewriting the whole bill; removing the
+  last line is audited like a cancel; the drawer opens when only change is given; a manager's
+  approval of a credit sale is in the audit log; sales, refunds, voids and credit repayments read
+  the open shift inside their own transaction.
+- **Printing and camera**: the printer loop restarts after any error and drops a job it cannot
+  draw for lack of memory; picture receipts are drawn in bands (under 1 MB); one decoder per camera
+  thread; periodic focus on phones without continuous focus; QR read every 4th frame while
+  selling; shared files kept per kind for 15 min (a share no longer deletes the previous one).
+- **Inventory and CSV**: a received delivery cannot come back (draft token); counts find
+  switched-off products and refuse a finished session; the count report and session list do not
+  load everything; CSV export skips deleted categories and tax rates; a barcode a spreadsheet
+  stripped of its leading zero gets it back; a failed import audits what it did.
+- **Back office**: dialogs count as activity; the app language overrides only the locale (screens
+  kept their old size after a rotation); Diagnostics needs the Settings permission; the Sync
+  screen updates in place; picker results wait for the sign-in to load; `uiMode` never recreates
+  a screen; reports and receipts exports use the stored business day.
+- **Smaller**: backups when the clock was set back, the backup just written never pruned, folder
+  copies dated by the backup they copy, temp files of a failed backup deleted, pre-upgrade backups
+  written atomically and pruned by time, foreign keys turned on after migrations, the perf test's
+  database never takes a store restore, `DerivedRebuild` recomputes sale status, day boundaries
+  where midnight does not exist, scale labels of a second scale brand, margin overflow.
+Not changed (for the owner): a customer created without a credit limit (0 = no limit) needs no
+manager, so a cashier can sell on credit without a limit to a new customer (a business rule);
+a refund of a sale voided on another till, or two tills refunding the same items, both stay (the
+money left the drawer) and are not flagged yet; a refund without restock still takes its cost off
+cost of goods; sharing a backup counts as "backed up" when the share sheet opens.
+Rejected: renumbering a till from 1 when its files vanished from the folder (tills that already
+read further would skip the new files); observing remote clocks without the 24 h limit (one bad
+till would pull every till's clock into its future); forcing a new identity for every restore on
+another phone (single-till shops keep their device number; the ID gap makes it safe).
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

@@ -130,6 +130,24 @@ class StaffTest {
         assertFalse(gate.holds(again))
     }
 
+    /** 2026-10 review: a clock set back before the last wrong PIN no longer blocks that PIN for years. */
+    @Test
+    fun aClockSetBackMakesTheWaitCountFromNow() = runBlocking {
+        val (_, cashier) = team()
+        val s = graph.staff
+        s.lock()
+        repeat(PinLockout.FREE_TRIES) { s.signIn(cashier, "9999") }
+        val future = System.currentTimeMillis() + 10L * 365L * 24L * 3_600_000L // wrong PINs typed "in 2036"
+        graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, future.toString())
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL_RT + cashier, null)
+        }
+        assertIs<StaffSession.Check.Wait>(s.signIn(cashier, "1111"))
+        val last = graph.db().read { Meta.getLong(it, StaffSession.KEY_LAST_FAIL + cashier) } ?: Long.MAX_VALUE
+        assertTrue(last <= System.currentTimeMillis()) // the wait now counts from now
+        assertTrue(s.waitMs(cashier) <= PinLockout.FIRST_WAIT_MS)
+    }
+
     @Test
     fun wrongPinsMakeThatPersonWait() = runBlocking {
         val (manager, cashier) = team()
@@ -144,9 +162,18 @@ class StaffTest {
         assertTrue(s.waitMs(cashier) > 0L)
         assertEquals(0L, s.waitMs(manager)) // someone else can still sign in
 
-        // Time passes (the last failure moves 31 s back): the right PIN works and resets the count.
+        // Setting the clock forward (only the wall-clock time moves): still a wait while the phone
+        // has not restarted, measured by the time since boot (Android 7+, 2026-10 review).
         graph.db().write(reserveIds = 0L) { tx ->
             Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, (System.currentTimeMillis() - 31_000L).toString())
+        }
+        if (graph.bootCount() != null) assertIs<StaffSession.Check.Wait>(s.signIn(cashier, "1111"))
+
+        // Time passes (the last failure moves 31 s back on both clocks): the right PIN works and resets the count.
+        val boot = graph.bootCount()
+        graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, (System.currentTimeMillis() - 31_000L).toString())
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL_RT + cashier, boot?.let { "$it:${android.os.SystemClock.elapsedRealtime() - 31_000L}" })
         }
         assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
         assertNull(graph.db().read { Meta.get(it, StaffSession.KEY_FAILS + cashier) })

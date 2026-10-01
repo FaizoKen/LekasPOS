@@ -4,6 +4,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.report.DayTotals
 import com.lekaspos.core.report.MonthSplit
+import com.lekaspos.core.time.Days
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
@@ -66,6 +67,8 @@ data class ReceiptRow(
     val customer: String?,
     val customerTin: String?,
     val payments: String?,
+    /** Business day (local epoch day stored at sale time). */
+    val day: Long = 0L,
 ) {
     /** Sales ex. tax: lines net minus the tax when prices include it. */
     val netEx: Long get() = subtotal - discount - if (pricesInclTax) tax else 0L
@@ -155,11 +158,16 @@ object ReportDao {
         "SELECT s.id, s.kind, s.receipt_no, s.sold_at, s.status, s.line_count, s.subtotal, s.discount, s.tax, s.rounding, " +
             "s.total, s.prices_incl_tax, st.name, c.name, c.tin, " +
             "(SELECT GROUP_CONCAT(COALESCE(m.name, p.kind), ' + ') FROM payment p " +
-            "LEFT JOIN payment_method m ON m.id = p.method_id WHERE p.sale_id = s.id) " +
+            "LEFT JOIN payment_method m ON m.id = p.method_id WHERE p.sale_id = s.id), s.day " +
             "FROM sale s LEFT JOIN staff st ON st.id = s.staff_id LEFT JOIN customer c ON c.id = s.customer_id "
-    private const val RECEIPTS_FIRST = RECEIPT_COLS + "WHERE s.sold_at >= ? AND s.sold_at < ? ORDER BY s.sold_at, s.id LIMIT ?"
+
+    // The index range is on sold_at; the stored business day (what every report sums) filters it,
+    // so the receipt list of a period matches its report (2026-10 review).
+    private const val RECEIPTS_FIRST = RECEIPT_COLS +
+        "WHERE s.sold_at >= ? AND s.sold_at < ? AND s.day >= ? AND s.day < ? ORDER BY s.sold_at, s.id LIMIT ?"
     private const val RECEIPTS_NEXT = RECEIPT_COLS +
-        "WHERE s.sold_at >= ? AND (s.sold_at > ? OR s.id > ?) AND s.sold_at < ? ORDER BY s.sold_at, s.id LIMIT ?"
+        "WHERE s.sold_at >= ? AND (s.sold_at > ? OR s.id > ?) AND s.sold_at < ? AND s.day >= ? AND s.day < ? " +
+        "ORDER BY s.sold_at, s.id LIMIT ?"
 
     private fun split(s: MonthSplit): Array<Any> = arrayOf(s.headFrom, s.headTo, s.fromMonth, s.toMonth, s.tailFrom, s.tailTo)
 
@@ -213,13 +221,33 @@ object ReportDao {
         StockValue(c.longOrNull(0), c.stringOrNull(1), c.getLong(2), c.getLong(3))
     }
 
-    /** Receipts (sales and refunds, voided ones included) sold in [fromMs, toMs), in time order. */
-    fun receipts(db: SQLiteDatabase, fromMs: Long, toMs: Long, after: ReceiptRow?, limit: Int = 500): List<ReceiptRow> =
+    /**
+     * Receipts (sales and refunds, voided ones included) sold in [fromMs, toMs), in time order;
+     * only those of business days [fromDay, toDay) when given.
+     */
+    fun receipts(
+        db: SQLiteDatabase,
+        fromMs: Long,
+        toMs: Long,
+        after: ReceiptRow?,
+        limit: Int = 500,
+        fromDay: Long = Long.MIN_VALUE,
+        toDay: Long = Long.MAX_VALUE,
+    ): List<ReceiptRow> =
         if (after == null) {
-            db.queryList(RECEIPTS_FIRST, args(fromMs, toMs, limit), ::receipt)
+            db.queryList(RECEIPTS_FIRST, args(fromMs, toMs, fromDay, toDay, limit), ::receipt)
         } else {
-            db.queryList(RECEIPTS_NEXT, args(after.soldAt, after.soldAt, after.id, toMs, limit), ::receipt)
+            val a = args(after.soldAt, after.soldAt, after.id, toMs, fromDay, toDay, limit)
+            db.queryList(RECEIPTS_NEXT, a, ::receipt)
         }
+
+    /**
+     * Receipts of business days [fromDay, toDay) — the stored `day` the reports sum, whatever time
+     * zone the till had. A sale's day is its local date (UTC−12 … UTC+14), so its sold_at lies
+     * within a day of that date's UTC midnight: that window is the index range.
+     */
+    fun receiptsOfDays(db: SQLiteDatabase, fromDay: Long, toDay: Long, after: ReceiptRow?, limit: Int = 500) =
+        receipts(db, (fromDay - 1L) * Days.DAY_MS, (toDay + 1L) * Days.DAY_MS, after, limit, fromDay, toDay)
 
     private fun productTotal(c: Cursor) =
         ProductTotal(c.getLong(0), c.stringOrNull(1), c.getLong(2), c.getLong(3), c.getLong(4), c.getLong(5))
@@ -228,7 +256,7 @@ object ReportDao {
         id = c.getLong(0), kind = c.getInt(1), receiptNo = c.getString(2), soldAt = c.getLong(3), status = c.getInt(4),
         lines = c.getInt(5), subtotal = c.getLong(6), discount = c.getLong(7), tax = c.getLong(8), rounding = c.getLong(9),
         total = c.getLong(10), pricesInclTax = c.getLong(11) != 0L, staff = c.stringOrNull(12), customer = c.stringOrNull(13),
-        customerTin = c.stringOrNull(14), payments = c.stringOrNull(15),
+        customerTin = c.stringOrNull(14), payments = c.stringOrNull(15), day = c.getLong(16),
     )
 
     val HOT_QUERIES: List<Pair<String, String>> = listOf(

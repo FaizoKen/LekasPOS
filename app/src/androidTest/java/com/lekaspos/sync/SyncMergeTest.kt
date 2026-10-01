@@ -11,6 +11,7 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.sync.SyncNames
+import com.lekaspos.core.time.Hlc
 import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.customer.Customer
@@ -25,7 +26,10 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.promo.PromotionDao
 import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.data.settings.SettingKeys
+import com.lekaspos.data.settings.SettingsDao
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.data.sync.Importer
 import com.lekaspos.data.sync.SegmentCodec
 import com.lekaspos.data.sync.SyncDao
 import com.lekaspos.data.sync.SyncEvent
@@ -677,6 +681,183 @@ class SyncMergeTest {
             b.settings.load()
             assertEquals("Kedai Runcit Ali", b.settings.store.value.name) // reloaded after the import
             assertTrue(b.settings.store.value.creditEnabled)
+        }
+    }
+
+    // ------------------------------------------------------------------ 2026-10 review
+
+    /** The next round of each till lists the whole folder (as once a day). */
+    private fun listWholeFolderNext(vararg ts: AppGraph) = runBlocking {
+        for (t in ts) t.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, SyncEngine.FULL_LIST_AT, null) }
+    }
+
+    /**
+     * A till whose clock is days ahead changed a price and a setting. A till with the right clock
+     * changes them again: its change must win on every till, not only on itself.
+     */
+    @Test
+    fun anEditAfterOneFromAClockFarAheadStillWinsEverywhere() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val p = product(a, "Milo", 1_890L)
+        syncAll(a, b)
+        val ahead = Hlc.pack(System.currentTimeMillis() + 3L * 86_400_000L, 0)
+        val fast = 4_000_001L
+        val price = mapOf("id" to p, "hlc" to ahead, "dev" to fast, "f" to mapOf("price" to 2_000L))
+        val name = mapOf("key" to SettingKeys.STORE_NAME, "value" to "Fast", "hlc" to ahead, "dev" to fast)
+        for (t in listOf(a, b)) {
+            runBlocking {
+                t.db().write(reserveIds = 0L) { tx ->
+                    val importer = Importer(tx.db)
+                    importer.apply(tx, SyncEvent(Entity.PRODUCT, EventOp.LWW, p, ahead, price))
+                    importer.apply(tx, SyncEvent(Entity.SETTING, EventOp.LWW, null, ahead, name))
+                }
+            }
+        }
+        editPrice(a, p, 1_950L)
+        runBlocking {
+            val now = System.currentTimeMillis()
+            a.db().writeBlocking { tx -> SettingsDao.put(tx, SettingKeys.STORE_NAME, "Kedai Ali", now) }
+        }
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            assertEquals(1_950L, b.db().read { ProductDao.get(it, p) }?.price)
+            assertEquals("Kedai Ali", b.db().read { SettingsDao.all(it)[SettingKeys.STORE_NAME] })
+        }
+    }
+
+    /** Two tills turned on at the same moment each made a store in the empty folder: they end up in one. */
+    @Test
+    fun twoTillsThatMadeTwoStoresAtOnceEndUpInOne() {
+        val a = till()
+        val b = till()
+        val milo = product(a, "Milo", 1_890L)
+        val roti = product(b, "Roti", 350L)
+        sell(b, roti)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                val store = t.db().read { Meta.get(it, Meta.STORE_UUID).orEmpty() }
+                val f = File(TestDb.context.cacheDir, "manifest-${UUID.randomUUID()}.json")
+                f.writeText("{\"store\":\"$store\"}")
+                provider.put(SyncNames.store(store), f)
+                f.delete()
+            }
+        }
+        enable(a, "Counter A")
+        enable(b, "Counter B")
+        repeat(2) { syncAll(a, b) }
+        assertConverged(a, b)
+        runBlocking {
+            val stores = listOf(a, b).map { t -> t.db().read { Meta.get(it, Meta.STORE_UUID) } }
+            assertEquals(1, stores.toSet().size)
+            assertEquals(2L, a.db().read { it.long("SELECT COUNT(*) FROM product WHERE id IN (?, ?)", milo, roti) })
+            assertEquals(1L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
+        }
+    }
+
+    /**
+     * The owner deletes the app's hidden Drive data while the tills go on: each publishes everything
+     * again, and a till joining afterwards gets the whole shop although the first files are gone.
+     */
+    @Test
+    fun aTillJoiningAfterTheFolderWasEmptiedGetsEverything() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        val p = product(a, "Milo", 1_890L)
+        sell(a, p)
+        syncAll(a, b)
+        for (f in folder.listFiles().orEmpty()) if (f.isFile) f.delete()
+        sell(a, p)
+        sell(b, p)
+        listWholeFolderNext(a, b) // a day later
+        repeat(2) { syncAll(a, b) }
+        val c = till()
+        enable(c, "Counter C")
+        syncAll(a, b, c)
+        assertConverged(a, b, c)
+        runBlocking {
+            assertEquals(3L, c.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            assertEquals(a.db().read { Meta.get(it, Meta.STORE_UUID) }, c.db().read { Meta.get(it, Meta.STORE_UUID) })
+        }
+    }
+
+    /** A till joining a store with a long history reads it over several rounds, never all at once. */
+    @Test
+    fun aJoiningTillReadsALongHistoryOverSeveralRounds() {
+        val a = till()
+        enable(a)
+        val p = product(a, "Milo", 1_890L)
+        repeat(4) {
+            sell(a, p)
+            runBlocking { a.sync.sync(provider) } // one file each
+        }
+        val b = till()
+        b.sync.filesPerTill = 2
+        assertTrue(enable(b).more, "the first round reads only part of the history")
+        var rounds = 1
+        while (runBlocking { b.sync.sync(provider) }.more) {
+            rounds++
+            assertTrue(rounds < 20, "the history never ends")
+        }
+        assertTrue(rounds >= 2)
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking { assertEquals(4L, b.db().read { it.long("SELECT COUNT(*) FROM sale") }) }
+    }
+
+    /** B turned sync on while A's card was not in the folder, with the same receipt prefix: one of them moves. */
+    @Test
+    fun aReceiptPrefixClashSeenLaterIsResolvedByOneTill() {
+        val a = till()
+        val b = till()
+        runBlocking {
+            for (t in listOf(a, b)) t.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.RECEIPT_PREFIX, "KQ-") }
+        }
+        enable(a, "Counter A")
+        val (store, aDev) = runBlocking { a.db().read { Meta.get(it, Meta.STORE_UUID).orEmpty() } to a.db().deviceNo }
+        File(folder, SyncNames.device(store, aDev)).delete()
+        enable(b, "Counter B")
+        runBlocking { assertEquals("KQ-", b.db().read { Meta.get(it, Meta.RECEIPT_PREFIX) }) }
+        sell(a, product(a, "Milo", 1_890L))
+        runBlocking { a.sync.sync(provider) } // A's card is back
+        listWholeFolderNext(a, b)
+        syncAll(a, b)
+        runBlocking {
+            val prefixes = listOf(a, b).map { t -> t.db().read { Meta.get(it, Meta.RECEIPT_PREFIX) } }
+            assertEquals(2, prefixes.toSet().size)
+            val lower = if (a.db().deviceNo < b.db().deviceNo) a else b
+            assertEquals("KQ-", lower.db().read { Meta.get(it, Meta.RECEIPT_PREFIX) }) // only the higher number moved
+        }
+    }
+
+    /** A new phone ran its first-run setup (after the store's settings were made) and then joined: the store's win. */
+    @Test
+    fun aTillJoiningAStoreTakesTheStoresSettings() {
+        val a = till()
+        runBlocking {
+            a.settings.load()
+            a.settings.saveStore(a.settings.store.value.copy(name = "Kedai Runcit Ali"))
+        }
+        enable(a, "Counter A")
+        Thread.sleep(5)
+        val b = till()
+        runBlocking {
+            b.settings.load()
+            b.settings.saveStore(b.settings.store.value.copy(name = "My Shop"))
+        }
+        enable(b, "Counter B")
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                t.settings.load()
+                assertEquals("Kedai Runcit Ali", t.settings.store.value.name)
+            }
         }
     }
 }

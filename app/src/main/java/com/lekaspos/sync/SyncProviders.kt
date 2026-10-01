@@ -60,7 +60,9 @@ object SyncProviders {
     private fun drive(ctx: Context, first: String?, account: String?): DriveProvider {
         if (first != null) Tokens.put(account, first)
         return DriveProvider { refresh ->
-            (if (refresh) null else Tokens.get(account)) ?: DriveAuth.silentToken(ctx, account).also { Tokens.put(account, it) }
+            // Google refused the token: Play services must not hand the same one out again (2026-10 review).
+            if (refresh) Tokens.take(account)?.let { DriveAuth.forget(ctx, it) }
+            Tokens.get(account) ?: DriveAuth.silentToken(ctx, account).also { Tokens.put(account, it) }
         }
     }
 
@@ -78,6 +80,9 @@ object SyncProviders {
         fun put(account: String?, token: String) {
             byAccount[account.orEmpty()] = Entry(token, android.os.SystemClock.elapsedRealtime())
         }
+
+        /** Removes and returns the cached token (expired or not). */
+        fun take(account: String?): String? = byAccount.remove(account.orEmpty())?.token
     }
 
     private const val TOKEN_TTL_MS = 45L * 60L * 1000L

@@ -23,16 +23,18 @@ import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.db.Meta
 import com.lekaspos.domain.backup.BackupService
+import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
-import java.io.File
 import java.io.InputStream
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -197,11 +199,7 @@ class BackupActivity : ScreenActivity() {
     private fun share() {
         launchUi {
             toast(R.string.backup_working)
-            val file = withContext(Dispatchers.IO) {
-                val dir = File(cacheDir, "shared").apply { mkdirs() }
-                dir.listFiles()?.forEach { it.delete() }
-                File(dir, fileName())
-            }
+            val file = withContext(Dispatchers.IO) { CsvFiles.sharedFile(this@BackupActivity, CsvFiles.KIND_BACKUP, fileName()) }
             graph.backups.export { file.outputStream() }
             val uri = FileProvider.getUriForFile(this@BackupActivity, "$packageName.files", file)
             val send = Intent(Intent.ACTION_SEND).setType(MIME).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -218,6 +216,7 @@ class BackupActivity : ScreenActivity() {
         if (resultCode != RESULT_OK) return
         when (requestCode) {
             REQ_FOLDER -> launchUi {
+                whenLoaded()
                 val name = withContext(Dispatchers.IO) { folderName(uri) }
                 graph.backups.setFolder(uri, name)
                 val copied = graph.backups.copyToFolderNow()
@@ -225,11 +224,20 @@ class BackupActivity : ScreenActivity() {
                 reload()
             }
             REQ_SAVE -> launchUi {
+                whenLoaded()
                 toast(R.string.backup_working)
-                graph.backups.export { contentResolver.openOutputStream(uri, "wt") ?: throw IllegalStateException("cannot write the file") }
+                try {
+                    graph.backups.export { contentResolver.openOutputStream(uri, "wt") ?: throw IllegalStateException("cannot write the file") }
+                } catch (e: Exception) {
+                    // Half a backup file must never look like a backup (like a failed CSV export).
+                    val resolver = contentResolver
+                    withContext(NonCancellable + Dispatchers.IO) { runCatching { DocumentsContract.deleteDocument(resolver, uri) } }
+                    throw e
+                }
                 toast(R.string.backup_saved)
             }
             REQ_OPEN -> launchUi {
+                whenLoaded()
                 val open = { contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read the file") }
                 val h = graph.backups.header(open)
                 if (h == null) {
@@ -271,14 +279,23 @@ class BackupActivity : ScreenActivity() {
         launchUi {
             toast(R.string.backup_checking)
             graph.backups.stageRestore(open, mode)
+            var restarting = false
+            val app = graph
             AlertDialog.Builder(this@BackupActivity)
                 .setTitle(R.string.backup_restore_title)
                 .setMessage(R.string.backup_restart)
                 .setCancelable(false)
-                .setPositiveButton(R.string.backup_restart_now) { _, _ -> graph.backups.restart(this@BackupActivity) }
-                .setNegativeButton(R.string.cancel) { _, _ -> graph.backups.cancelRestore() }
+                .setPositiveButton(R.string.backup_restart_now) { _, _ ->
+                    restarting = true
+                    val a = this@BackupActivity
+                    app.appScope.launch(Dispatchers.Main) { app.backups.restartIntoRestore(a) }
+                }
+                .setNegativeButton(R.string.cancel, null)
                 .show()
                 .trackedBy(this@BackupActivity)
+                // Cancel, or the question closed any other way (the idle lock, the screen closing):
+                // the checked restore is thrown away, never applied at some later start.
+                .setOnDismissListener { if (!restarting) app.appScope.launch { app.backups.cancelRestore() } }
         }
     }
 

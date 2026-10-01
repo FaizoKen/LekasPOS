@@ -14,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * App-scoped owner of a perf run so it survives rotation and leaving the Diagnostics screen.
@@ -37,7 +38,10 @@ class PerfRunner(private val context: Context, private val scope: CoroutineScope
     @Volatile
     private var cancelRequested = false
 
-    val isRunning: Boolean get() = job?.isActive == true
+    /** A run, or the deletion of its data, is in progress (main thread). */
+    val isRunning: Boolean get() = job?.isActive == true || deleting
+
+    private var deleting = false
 
     fun start(scale: PerfScale) {
         if (isRunning) return
@@ -96,11 +100,20 @@ class PerfRunner(private val context: Context, private val scope: CoroutineScope
         cancelRequested = true
     }
 
-    /** Deletes the generated test database. Must not be called while a run is active. */
-    fun deleteData(): Boolean {
+    /**
+     * Deletes the generated test database (hundreds of MB after a full run: off the main thread,
+     * 2026-10 review). Must not be called while a run is active.
+     */
+    suspend fun deleteData(): Boolean {
+        // Checked and marked here, on the main thread: a run started while the files go would lose them.
         check(!isRunning) { "test is running" }
+        deleting = true
         mutableState.value = State.Idle
-        return PerfDataGenerator.delete(context)
+        return try {
+            withContext(Dispatchers.IO) { PerfDataGenerator.delete(context) }
+        } finally {
+            deleting = false
+        }
     }
 
     private fun save(report: PerfReport): File? = try {

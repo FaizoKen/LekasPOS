@@ -13,6 +13,7 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.purchase.PurchaseDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.stock.CountSessionDao
+import com.lekaspos.data.stock.CountSummary
 import com.lekaspos.data.stock.HistoryEntry
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
@@ -106,6 +107,70 @@ class InventoryTest {
         graph.inventory.saveDraft(ReceiveDraft())
         assertEquals(ActionRefused.Reason.NOT_FOUND, assertFailsWith<ActionRefused> { graph.inventory.receive(d) }.reason)
         assertEquals(6_000L, level(milo))
+    }
+
+    /** 2026-10 review: a scan queued behind the receipt saved the delivery again (received twice). */
+    @Test
+    fun aLateDraftSaveCannotBringAReceivedDeliveryBack() = runBlocking {
+        val db = graph.db()
+        val milo = TestDb.product(db, "Milo", 1_890L, cost = 100L)
+        val roti = TestDb.product(db, "Roti", 350L, cost = 200L)
+        val fresh = graph.inventory.loadDraft()
+        assertTrue(fresh.token > 0L)
+        val d = fresh.add(1L, milo, "Milo", "pcs", 6_000L, 120L).first
+        graph.inventory.saveDraft(d)
+        graph.inventory.receive(d)
+        // The draft save of a scan that was queued behind the receipt: dropped.
+        graph.inventory.saveDraft(d.add(2L, roti, "Roti", "pcs", 1_000L, 150L).first)
+        assertTrue(graph.inventory.loadDraft().isEmpty)
+        assertEquals(ActionRefused.Reason.NOT_FOUND, assertFailsWith<ActionRefused> { graph.inventory.receive(d) }.reason)
+        assertEquals(6_000L, level(milo))
+        assertEquals(0L, level(roti))
+        // The next delivery has a newer token and is kept as usual.
+        val next = graph.inventory.loadDraft()
+        assertTrue(next.token > d.token)
+        val n = next.add(1L, roti, "Roti", "pcs", 2_000L, 150L).first
+        graph.inventory.saveDraft(n)
+        assertEquals(n, graph.inventory.loadDraft())
+        graph.inventory.receive(n)
+        assertEquals(2_000L, level(roti))
+    }
+
+    /** 2026-10 review: a count finished on one till takes no more counts from another. */
+    @Test
+    fun aFinishedCountTakesNoMoreCounts() = runBlocking {
+        val db = graph.db()
+        val p = TestDb.product(db, "Susu", 500L, cost = 300L)
+        val session = graph.inventory.startCount("Rak B", null)
+        graph.inventory.count(session, p, 5_000L)
+        graph.inventory.finishCount(session)
+        val refused = assertFailsWith<ActionRefused> { graph.inventory.count(session, p, 9_000L) }
+        assertEquals(ActionRefused.Reason.NOT_FOUND, refused.reason)
+        assertEquals(5_000L, level(p))
+        assertEquals(1, db.readBlocking { CountSessionDao.get(it, session) }?.counted)
+    }
+
+    @Test
+    fun countSummaryAndListOfCounts() = runBlocking {
+        val db = graph.db()
+        val susu = TestDb.product(db, "Susu", 500L, cost = 300L)
+        val gula = TestDb.product(db, "Gula", 300L, cost = 150L)
+        db.writeBlocking { tx -> StockDao.insertMovement(tx, susu, MovementKind.OPENING, 20_000L, 300L, null, null, null, 1L) }
+        val old = graph.inventory.startCount("Gudang", null) // left open
+        val a = graph.inventory.startCount("Rak A", null)
+        graph.inventory.count(a, susu, 18_000L) // 2 missing at 3.00
+        graph.inventory.count(a, gula, 4_000L) // 4 found at 1.50
+        graph.inventory.finishCount(a)
+        val b = graph.inventory.startCount("Rak B", null)
+        graph.inventory.finishCount(b)
+        assertEquals(CountSummary(2, 600L, -600L), db.readBlocking { CountSessionDao.summary(it, a) })
+        assertEquals(CountSummary(0, 0L, 0L), db.readBlocking { CountSessionDao.summary(it, b) })
+        // Started one after another; only the latest fits the list, the open one is still shown.
+        for ((i, id) in listOf(old, a, b).withIndex()) {
+            db.writeBlocking { tx -> tx.exec("UPDATE count_session SET started_at = ? WHERE id = ?", 1_000L + i, id) }
+        }
+        assertEquals(listOf(old, b), db.readBlocking { CountSessionDao.list(it, limit = 1) }.map { it.id })
+        assertEquals(listOf(old, b, a), db.readBlocking { CountSessionDao.list(it) }.map { it.id }) // each once
     }
 
     @Test

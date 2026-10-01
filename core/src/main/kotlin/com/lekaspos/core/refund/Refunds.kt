@@ -45,6 +45,12 @@ data class RefundPart(
  * pro rata (half-up), and returning the last remaining quantity refunds exactly what is left,
  * so all refunds of a line always add up to what was paid — allocated discounts and tax
  * included — to the sen.
+ *
+ * The rounding is cumulative (2026-10 review): once R of the line's Q have come back, the
+ * returns so far hold round(amount × R / Q) of every amount, and a part is the step from what
+ * earlier parts gave to that. A part therefore never takes more than is left of any amount.
+ * (Rounding each part on its own let a part refund more than was left of the line, and the
+ * last return then went negative: it charged the customer.)
  */
 object Refunds {
 
@@ -65,29 +71,49 @@ object Refunds {
                 cost = src.cost - (done?.cost ?: 0L),
             )
         }
-        fun share(amount: Long, already: Long): Long {
-            val v = Rounding.mulDivHalfUp(amount, qty, src.qty)
-            // never more than what is still left of the line (rounding of earlier parts)
-            val left = amount - already
-            return if (amount >= 0L) minOf(v, left) else maxOf(v, left)
+        val upTo = Checked.add(src.refundedQty, qty)
+        // What the returns so far plus this one hold of [amount]: never less than earlier parts
+        // gave ([already]), never more than the line had.
+        fun upToNow(amount: Long, already: Long): Long =
+            Rounding.mulDivHalfUp(amount, upTo, src.qty).coerceIn(minOf(already, amount), maxOf(already, amount))
+
+        val doneDiscount = done?.discount ?: 0L
+        val doneBill = done?.billDiscount ?: 0L
+        val doneNet = done?.net ?: 0L
+        // The money first, then gross, line discount and bill discount around it, so the part adds
+        // up like the line (gross − discounts = net) with every amount within what is left of it.
+        val net = upToNow(src.net, doneNet)
+        val discLo = minOf(doneDiscount, src.discount)
+        val discHi = maxOf(doneDiscount, src.discount)
+        val billLo = minOf(doneBill, src.billDiscount)
+        val billHi = maxOf(doneBill, src.billDiscount)
+        val gross = Rounding.mulDivHalfUp(src.gross, upTo, src.qty)
+            .coerceIn(net + discLo + billLo, net + discHi + billHi)
+        // The line discount (printed per line) keeps its own share; the bill discount takes the
+        // odd sen, unless that would leave its range.
+        var discount = upToNow(src.discount, doneDiscount)
+        var bill = gross - net - discount
+        if (bill < billLo) {
+            bill = billLo
+            discount = gross - net - billLo
+        } else if (bill > billHi) {
+            bill = billHi
+            discount = gross - net - billHi
         }
-        val gross = share(src.gross, done?.gross ?: 0L)
-        val billDiscount = share(src.billDiscount, done?.billDiscount ?: 0L)
-        // The line discount follows from the others, so the part adds up like the line itself
-        // (gross − discounts = net): rounding each on its own left the receipt 1 sen out.
-        val discountLeft = src.discount - (done?.discount ?: 0L)
-        val discount = (gross - billDiscount - share(src.net, done?.net ?: 0L))
-            .coerceIn(minOf(0L, discountLeft), maxOf(0L, discountLeft))
+        val partDiscount = discount - doneDiscount
+        val partBill = bill - doneBill
+        val partNet = net - doneNet
+        // Gross from its parts: the part always adds up like the line, whatever earlier parts held.
         return RefundPart(
             lineId = src.lineId,
             qty = qty,
-            baseQty = share(src.baseQty, done?.baseQty ?: 0L),
-            gross = gross,
-            discount = discount,
-            billDiscount = billDiscount,
-            net = gross - billDiscount - discount,
-            tax = share(src.tax, done?.tax ?: 0L),
-            cost = share(src.cost, done?.cost ?: 0L),
+            baseQty = upToNow(src.baseQty, done?.baseQty ?: 0L) - (done?.baseQty ?: 0L),
+            gross = partDiscount + partBill + partNet,
+            discount = partDiscount,
+            billDiscount = partBill,
+            net = partNet,
+            tax = upToNow(src.tax, done?.tax ?: 0L) - (done?.tax ?: 0L),
+            cost = upToNow(src.cost, done?.cost ?: 0L) - (done?.cost ?: 0L),
         )
     }
 

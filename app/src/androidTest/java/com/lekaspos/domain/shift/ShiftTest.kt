@@ -166,6 +166,24 @@ class ShiftTest {
     }
 
     @Test
+    fun aShiftClosedMeanwhileNeverTagsARefundOrVoid() = runBlocking {
+        val db = graph.db()
+        val milo = TestDb.product(db, "Milo", 1_000L)
+        val shift = graph.shifts.open(0L)
+        val sale = sell(milo, byCard = true)
+        // Closed in the database while this screen's shift service still holds it as open (2026-10 review).
+        db.write { tx -> ShiftDao.close(tx, shift, Seed.Ids.STAFF_OWNER, 0L, 0L, null, System.currentTimeMillis()) }
+        assertEquals(shift.id, graph.shifts.current.value?.id)
+        val line = graph.sales.refundInfo(sale.saleId)!!.lines.single().id
+        val refund = graph.sales.refund(sale.saleId, mapOf(line to 1_000L), true, "damaged", cash)
+        assertNull(shiftOf(refund.id))
+
+        graph.settings.load()
+        graph.settings.saveStore(graph.settings.store.value.copy(shiftRequired = true))
+        refused(ActionRefused.Reason.NEEDS_SHIFT) { graph.sales.void(refund.id, "mistake") }
+    }
+
+    @Test
     fun cashMovementsNeedPermissionOrAManager() = runBlocking {
         graph.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "2468")
         val manager = graph.staffAdmin.save(null, "Ah Kow", Seed.Ids.ROLE_MANAGER, true)

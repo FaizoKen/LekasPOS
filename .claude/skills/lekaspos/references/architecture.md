@@ -102,9 +102,11 @@ network on the main thread already throws on API 21+.
 - **Large screens** (sw ≥ 600dp) ignore orientation locks on Android 16 — every screen must
   work in both orientations and when resized.
 - **Bluetooth permissions**: API 31+ `BLUETOOTH_CONNECT` (+ `BLUETOOTH_SCAN` with
-  `neverForLocation` only for discovery). API ≤ 30: `BLUETOOTH`, `BLUETOOTH_ADMIN`
-  (`maxSdkVersion=30`) and `ACCESS_FINE_LOCATION` (`maxSdkVersion=30`) only for discovery.
-  Bonded-device selection needs no location permission.
+  `neverForLocation` only for discovery). API ≤ 30: `BLUETOOTH` (`maxSdkVersion=30`);
+  `BLUETOOTH_ADMIN` and `ACCESS_FINE_LOCATION` only if discovery is ever added (there is none:
+  paired devices only, D-027). Bonded-device selection needs no location permission.
+- **uiMode** is in every activity's `configChanges` (no night resources): a night-mode switch
+  never recreates a screen, so a payment or a typed form is never lost to it (D-055).
 - **Auto Backup is disabled** (`allowBackup=false`, empty data-extraction rules): restoring a
   copied DB onto another phone would clone the device identity and corrupt multi-device sync.
 - No cleartext HTTP (`usesCleartextTraffic=false`). File sharing only through `FileProvider`.
@@ -136,7 +138,10 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   `reconnect()` (settings changed) keeps a live link to the same printer. Automatic sale receipts
   still waiting after 10 min (printer off) expire (FAILED, "expired") instead of flooding out
   later; reprints, shift reports and test pages wait. Printing always happens after the sale
-  commit; the queue survives restarts. The first receipt of a sale prints once: asked again it is
+  commit; the queue survives restarts. The loop restarts itself 10 s after any error (an out of
+  memory while drawing a job fails that job), keeps a job's drawn bytes across retries, and a
+  job whose bytes went out is only marked done after a restart (D-055). Picture receipts are
+  drawn in 256-row bands into one reused bitmap (memory under 1 MB). The first receipt of a sale prints once: asked again it is
   a copy (REPRINT permission + audit), and so is a receipt shared from the sales history.
 - Text encoding: every replacement keeps the column count of the layout ("…" → "."); characters
   the printer cannot print (also €, £, GB18030 4-byte characters) make Auto print a picture.
@@ -163,7 +168,14 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   owner with every permission (the Phase 1–3 behaviour). The first PIN must be an owner's; it
   signs that owner in and turns PIN login on. The signed-in staff id is kept in `meta`, so a
   restart returns to the same cashier; Lock / idle timeout (per device, `dev.lock.minutes`)
-  clears it. Wrong PINs count per till (`pin.fails`), 5 free tries, then 30 s doubling to 15 min.
+  clears it. The idle time is checked when a screen starts and before a touch or key counts
+  (`StaffSession.activity()`): after the phone's screen was off the first tap used to reset it
+  (D-055). When the app goes out of sight the last activity time is stored (`session.away_at`),
+  so a new process still knows how long the till was idle. Wrong PINs count per person
+  (`pin.fails.<id>`), 5 free tries, then 30 s doubling to 15 min, measured by the wall clock and,
+  while the phone has not restarted, by the time since boot (setting the clock cannot skip it); a
+  clock set back makes the wait count from now. A removed staff member cannot sign in or approve;
+  only owners manage owners (D-055).
 - `LockActivity` covers the selling screen whenever `state.locked`; secondary screens that find
   the till locked jump back home (`ScreenActivity.onStart`). Back on the lock screen leaves the app.
 - `PermissionGate`: every sensitive service call takes an optional `Approval` and resolves an

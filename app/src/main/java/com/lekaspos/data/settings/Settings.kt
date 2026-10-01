@@ -163,7 +163,10 @@ object SettingsDao {
     }
 
     fun put(tx: Db.Tx, key: String, value: String?, now: Long) {
-        val hlc = tx.hlcNow()
+        // Above the version the key holds (2026-10 review): a till whose clock is behind the one that
+        // wrote it would otherwise keep its change while every other till rejects it as older.
+        val held = tx.db.queryList("SELECT ver_hlc FROM setting WHERE key = ?", args(key)) { it.getLong(0) }
+        val hlc = com.lekaspos.core.sync.Lww.stampAbove(tx.hlcNow(), held.firstOrNull() ?: 0L)
         tx.updateOrInsert(UPDATE, arrayOf<Any?>(value, now, hlc, tx.deviceNo, key), INSERT, arrayOf<Any?>(key, value, now, hlc, tx.deviceNo))
         if (tx.syncEnabled) {
             val payload = Outbox.json { w ->

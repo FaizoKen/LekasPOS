@@ -92,6 +92,9 @@ class PeriodsTest {
         assertEquals(3_333, ReportMath.marginBp(3_000L, 2_000L))
         assertEquals(-500, ReportMath.marginBp(10_000L, 10_500L))
         assertNull(ReportMath.marginBp(0L, 100L))
+        // 0.01 of net sales against RM3,000 of cost: −2,999,990,000 bp is held at the Int limit
+        // instead of wrapping around to +1,294,977,296 (2026-10 review).
+        assertEquals(Int.MIN_VALUE, ReportMath.marginBp(1L, 300_000L))
         assertEquals(2_500L, ReportMath.changeBp(12_500L, 10_000L))
         assertEquals(-5_000L, ReportMath.changeBp(5_000L, 10_000L))
         assertNull(ReportMath.changeBp(5_000L, 0L))

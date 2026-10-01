@@ -168,6 +168,19 @@ class CsvTest {
     }
 
     @Test
+    fun aBarcodeASpreadsheetStrippedOfItsLeadingZeroGetsItBack() {
+        val h = ProductCsv.header(listOf("name", "price", "barcodes"))
+        // EAN-8 01234565 and UPC-A 036000291452 stored as numbers; 1234567 is no GTIN with a 0 in
+        // front (a shop's own code) and stays; 12 and 13 digits are GTINs as they are.
+        val codes = "1234565 | 36000291452 | 1234567 | 036000291452 | 9556001234567"
+        val ok = ProductCsv.parse(listOf("Milo", "18.90", codes), h, myr)
+        assertEquals(
+            listOf("01234565", "036000291452", "1234567", "9556001234567"),
+            (ok as ProductCsv.Parsed.Ok).row.barcodes,
+        )
+    }
+
+    @Test
     fun wordsForSellModesYesNoAndPercentages() {
         assertEquals(SellMode.WEIGHT, ProductCsv.sellMode("Timbang"))
         assertEquals(SellMode.WEIGHT, ProductCsv.sellMode("kg"))

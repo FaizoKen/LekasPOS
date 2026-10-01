@@ -1,8 +1,6 @@
 package com.lekaspos.ui.diag
 
-import android.app.Activity
 import android.app.AlertDialog
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -10,33 +8,35 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import com.lekaspos.R
-import com.lekaspos.app.AppLanguage
-import com.lekaspos.app.LekasApp
+import com.lekaspos.core.model.Perm
 import com.lekaspos.perf.PerfRunner
 import com.lekaspos.perf.PerfScale
 import com.lekaspos.perf.PerfSuite
-import com.lekaspos.ui.Insets
 import com.lekaspos.ui.colorOf
+import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
  * Diagnostics and the in-app performance test (references/performance.md §2), so testers can
  * measure real low-end devices with the release build. Test data lives in its own database.
  *
+ * Needs the Settings permission like the other back-office screens, and follows the lock: a full
+ * run fills the phone's storage with test data and keeps the till busy for a long time, and any
+ * cashier could start it from the menu (2026-10 review).
+ *
  * Scripted runs: `adb shell am start -n <pkg>/com.lekaspos.ui.diag.DiagnosticsActivity --es autorun QUICK`
- * (the activity is exported only to holders of android.permission.DUMP, i.e. adb shell).
+ * (the activity is exported only to holders of android.permission.DUMP, i.e. adb shell). The run
+ * starts once the screen may run: on a till with staff PINs, after a manager's approval.
  */
-class DiagnosticsActivity : Activity() {
+class DiagnosticsActivity : ScreenActivity() {
 
-    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
+    private val runner: PerfRunner by lazy { graph.perfRunner }
 
-    private val runner: PerfRunner by lazy { LekasApp.graph(this).perfRunner }
-    private var startedScope: CoroutineScope? = null
+    /** A scripted run asked for by the intent, started in [onStarted] (once). */
+    private var autorun: String? = null
 
     private lateinit var progress: ProgressBar
     private lateinit var state: TextView
@@ -49,19 +49,20 @@ class DiagnosticsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_diagnostics)
-        Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
-        progress = findViewById(R.id.progress)
-        state = findViewById(R.id.state)
-        report = findViewById(R.id.report)
-        runQuick = findViewById(R.id.run_quick)
-        runFull = findViewById(R.id.run_full)
-        cancel = findViewById(R.id.cancel)
-        delete = findViewById(R.id.delete)
-        share = findViewById(R.id.share)
+        val v = setScreen(getString(R.string.diag_title), R.layout.activity_diagnostics) ?: return
+        progress = v.findViewById(R.id.progress)
+        state = v.findViewById(R.id.state)
+        report = v.findViewById(R.id.report)
+        runQuick = v.findViewById(R.id.run_quick)
+        runFull = v.findViewById(R.id.run_full)
+        cancel = v.findViewById(R.id.cancel)
+        delete = v.findViewById(R.id.delete)
+        share = v.findViewById(R.id.share)
+        // Nothing works before the permission is checked ([render] enables what fits the state).
+        for (b in listOf(runQuick, runFull, delete, share)) b.isEnabled = false
 
         val info = PerfSuite.deviceInfo(this, "-")
-        findViewById<TextView>(R.id.device).text = getString(
+        v.findViewById<TextView>(R.id.device).text = getString(
             R.string.diag_device_info, info.manufacturer, info.model, info.release, info.sdkInt, info.totalRamMb,
             info.memoryClassMb, info.appVersion,
         )
@@ -74,12 +75,15 @@ class DiagnosticsActivity : Activity() {
                 .setPositiveButton(R.string.diag_start) { _, _ -> runner.start(PerfScale.FULL) }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
+                .trackedBy(this)
         }
         cancel.setOnClickListener { runner.cancel() }
         delete.setOnClickListener {
             if (!runner.isRunning) {
-                runner.deleteData()
-                Toast.makeText(this, R.string.diag_deleted, Toast.LENGTH_SHORT).show()
+                launchUi {
+                    runner.deleteData() // a large file: deleted off the main thread
+                    toast(R.string.diag_deleted)
+                }
             }
         }
         share.setOnClickListener {
@@ -91,24 +95,16 @@ class DiagnosticsActivity : Activity() {
             startActivity(Intent.createChooser(send, getString(R.string.diag_share)))
         }
 
-        if (savedInstanceState == null) {
-            intent.getStringExtra(EXTRA_AUTORUN)?.let { name ->
-                PerfScale.values().firstOrNull { it.name == name }?.let { runner.start(it) }
-            }
+        if (savedInstanceState == null) autorun = intent.getStringExtra(EXTRA_AUTORUN)
+        guard(Perm.SETTINGS)
+    }
+
+    override fun onStarted(scope: CoroutineScope) {
+        autorun?.let { name ->
+            autorun = null
+            PerfScale.values().firstOrNull { it.name == name }?.let { runner.start(it) }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        val scope = MainScope()
-        startedScope = scope
         scope.launch { runner.state.collect { render(it) } }
-    }
-
-    override fun onStop() {
-        startedScope?.cancel()
-        startedScope = null
-        super.onStop()
     }
 
     private fun render(s: PerfRunner.State) {

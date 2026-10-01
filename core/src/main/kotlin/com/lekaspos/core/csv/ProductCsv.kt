@@ -1,5 +1,6 @@
 package com.lekaspos.core.csv
 
+import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
@@ -117,7 +118,8 @@ object ProductCsv {
 
         val cost = cell(Column.COST)?.let { t -> money(t, currency).also { if (it == null || it < 0L) problems.add(Problem.COST_BAD to Column.COST) } }
 
-        val barcodes = cell(Column.BARCODES)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        val barcodes = cell(Column.BARCODES)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?.map(Gtin::restoreLeadingZero).orEmpty() // "1234565" (a number in a spreadsheet) → "01234565"
         // "9.55600E+12": the spreadsheet turned the barcode into a number and lost its digits.
         if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } || SCIENTIFIC.matches(it) }) {
             problems.add(Problem.BARCODE_BAD to Column.BARCODES)

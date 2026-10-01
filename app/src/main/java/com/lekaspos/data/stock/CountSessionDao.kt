@@ -2,8 +2,10 @@ package com.lekaspos.data.stock
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.core.inventory.CostMath
 import com.lekaspos.core.model.CountSessionStatus
 import com.lekaspos.core.model.Entity
+import com.lekaspos.core.money.Checked
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.longOrNull
@@ -39,6 +41,9 @@ data class CountRow(
     val hlc: Long,
 )
 
+/** A session's totals: how many counts, value gained (≥ 0) and lost (≤ 0), minor units. */
+data class CountSummary(val counts: Int, val gained: Long, val lost: Long)
+
 /**
  * Stock counts (stock takes): LWW table `count_session` groups EVENT rows of `stock_count`.
  * Each count applies the moment it is entered (D-035), so selling can go on while counting.
@@ -49,8 +54,19 @@ object CountSessionDao {
             "(SELECT COUNT(*) FROM stock_count c WHERE c.session_id = s.id)"
     private const val LIST =
         "SELECT $SESSION_COLS FROM count_session s WHERE s.deleted = 0 ORDER BY s.started_at DESC LIMIT ?"
+    private const val OPEN =
+        "SELECT $SESSION_COLS FROM count_session s WHERE s.deleted = 0 AND s.status = ${CountSessionStatus.OPEN} " +
+            "ORDER BY s.started_at DESC"
 
-    fun list(db: SQLiteDatabase, limit: Int = 100): List<CountSession> = db.queryList(LIST, args(limit), ::session)
+    /**
+     * Every open count, then the latest [limit] counts: an open count older than those is still
+     * listed, so it can be finished (2026-10 review). A shop has few counts open at a time.
+     */
+    fun list(db: SQLiteDatabase, limit: Int = 100): List<CountSession> {
+        val open = db.queryList(OPEN, null, ::session)
+        val ids = open.mapTo(HashSet()) { it.id }
+        return open + db.queryList(LIST, args(limit), ::session).filter { it.id !in ids }
+    }
 
     fun get(db: SQLiteDatabase, id: Long): CountSession? =
         db.queryOne("SELECT $SESSION_COLS FROM count_session s WHERE s.id = ?", args(id), ::session)
@@ -90,6 +106,27 @@ object CountSessionDao {
             db.queryList(COUNTS_NEXT, args(sessionId, after.hlc, after.hlc, after.id, limit), ::countRow)
         }
 
+    private const val SUMMARY = "SELECT qty, expected, unit_cost FROM stock_count WHERE session_id = ?"
+
+    /**
+     * Counts of a session and the value they gained and lost (variance at each count's cost), read
+     * row by row: a whole-shop count never sits in memory at once (2026-10 review).
+     */
+    fun summary(db: SQLiteDatabase, sessionId: Long): CountSummary {
+        var counts = 0
+        var gained = 0L
+        var lost = 0L
+        db.rawQuery(SUMMARY, args(sessionId)).use { c ->
+            while (c.moveToNext()) {
+                counts++
+                val expected = c.longOrNull(1) ?: continue // a count from before schema v2
+                val v = CostMath.varianceValue(c.getLong(0), expected, c.longOrNull(2) ?: 0L)
+                if (v > 0L) gained = Checked.add(gained, v) else lost = Checked.add(lost, v)
+            }
+        }
+        return CountSummary(counts, gained, lost)
+    }
+
     /** Latest counted quantity per product in the session (the counting screen's ticks). */
     fun countedQty(db: SQLiteDatabase, sessionId: Long): Map<Long, Long> {
         val out = HashMap<Long, Long>()
@@ -111,6 +148,8 @@ object CountSessionDao {
 
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "count_sessions" to LIST,
+        "count_sessions_open" to OPEN,
+        "session_summary" to SUMMARY,
         "session_counts_first" to COUNTS_FIRST,
         "session_counts_next" to COUNTS_NEXT,
     )

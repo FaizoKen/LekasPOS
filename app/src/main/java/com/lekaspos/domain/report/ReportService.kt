@@ -15,7 +15,6 @@ import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.report.ReportMath
 import com.lekaspos.core.time.DateText
-import com.lekaspos.core.time.Days
 import com.lekaspos.data.report.CategoryTotal
 import com.lekaspos.data.report.PaymentTotal
 import com.lekaspos.data.report.ProductTotal
@@ -94,12 +93,11 @@ class ReportService(private val graph: AppGraph) {
                     "receipt_no", "date", "time", "type", "status", "cashier", "customer", "customer_tin", "items",
                     "subtotal", "discount", "net_ex_tax", "tax", "rounding", "total", "payments",
                 )
-                val fromMs = Days.startOfDay(p.from, tz)
-                val toMs = Days.startOfDay(p.to, tz)
+                // The stored business day, like the report itself (not sold_at in this phone's zone).
                 var after: ReceiptRow? = null
                 while (true) {
                     coroutineContext.ensureActive()
-                    val page = db.read { r -> ReportDao.receipts(r, fromMs, toMs, after, PAGE) }
+                    val page = db.read { r -> ReportDao.receiptsOfDays(r, p.from, p.to, after, PAGE) }
                     for (s in page) receiptCsv(w, s, currency, tz)
                     if (page.size < PAGE) break
                     after = page.last()
@@ -175,9 +173,8 @@ class ReportService(private val graph: AppGraph) {
         }
 
         private fun receiptCsv(w: CsvWriter, s: ReceiptRow, c: CurrencySpec, tz: TimeZone) {
-            val day = Days.epochDay(s.soldAt, tz)
             w.row(
-                s.receiptNo, date(day), DateText.time(s.soldAt, tz), if (s.kind == SaleKind.REFUND) "refund" else "sale",
+                s.receiptNo, date(s.day), DateText.time(s.soldAt, tz), if (s.kind == SaleKind.REFUND) "refund" else "sale",
                 if (s.status == SaleStatus.VOIDED) "voided" else "completed", s.staff, s.customer, s.customerTin, s.lines.toString(),
                 m(s.subtotal, c), m(s.discount, c), m(s.netEx, c), m(s.tax, c), m(s.rounding, c), m(s.total, c), s.payments,
             )

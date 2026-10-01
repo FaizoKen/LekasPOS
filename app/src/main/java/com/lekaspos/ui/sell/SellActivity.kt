@@ -48,7 +48,6 @@ import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
-import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sale.ActionRefused
@@ -60,10 +59,12 @@ import com.lekaspos.ui.Insets
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.DialogHost
+import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.customers.pickCustomer
@@ -88,6 +89,8 @@ import com.lekaspos.ui.staff.changeOwnPin
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
 import java.util.TimeZone
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -98,6 +101,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 
 /**
  * The selling screen: launcher and home (references/architecture.md §4). Scanners work without
@@ -109,8 +113,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLanguage.wrap(newBase))
 
     private val graph get() = LekasApp.graph(this)
-    private val scope = MainScope()
+
+    /**
+     * A job of this screen that fails (a database read, say) is logged and shown; it never takes
+     * the till down. Without it a database that could not open crashed the app at every start,
+     * before the message saying so could show (2026-10 review).
+     */
+    private val failures = CoroutineExceptionHandler { _, e -> runOnUiThread { showFailure(e) } }
+    private val scope = MainScope() + failures
     private var started: CoroutineScope? = null
+    private var failureDialog: AlertDialog? = null
     private var reportedDrawn = false
 
     private lateinit var titleView: TextView
@@ -141,10 +153,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var staffChip: TextView
     private lateinit var customerChip: TextView
     private var lockShown = false
-
-    /** Managers' approvals given while the payment dialog is open (credit sales). */
-    private var paymentApprovals = ArrayList<Approval>()
-    private var creditTaken = 0L
     private var twoPane = false
     private var catalogOpen = false
 
@@ -266,18 +274,21 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun onStart() {
         super.onStart()
-        val s = MainScope()
+        val s = MainScope() + failures
         started = s
         lockShown = false
+        graph.staff.screenStarted() // idle too long while out of sight: locks now, before the first tap counts as activity
         s.launch {
             try {
                 graph.cart.load()
                 graph.staff.load()
                 graph.shifts.load()
+            } catch (e: CancellationException) {
+                throw e // the screen stopped meanwhile
             } catch (e: Exception) {
-                Log.e("Loading the bill failed", e)
-                Dialogs.message(this@SellActivity, getString(R.string.error_title), getString(R.string.error_generic, e.message ?: e.javaClass.simpleName))
+                showFailure(e)
             }
+            resumePayment()
             if (!reportedDrawn) {
                 reportedDrawn = true
                 reportFullyDrawn()
@@ -332,12 +343,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun onStop() {
         started?.cancel()
         started = null
+        graph.staff.screenStopped()
         graph.sppScanner.stop()
         scanInput.clear()
         super.onStop()
     }
 
     override fun onDestroy() {
+        // Rebuilt mid-payment (a tablet turned: Android 16 ignores the orientation lock on large
+        // screens): the payment stays open with what was already taken, and the new screen shows
+        // it again (resumePayment). Otherwise closing it ends the payment (2026-10 review).
+        if (isChangingConfigurations) paymentDialog?.setOnDismissListener(null)
         paymentDialog?.dismiss()
         // Keep the outcome: after a rotation the new screen shows the same result again.
         outcomeDialog?.setOnDismissListener(null)
@@ -349,6 +365,33 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     override fun track(d: android.app.Dialog) = dialogs.track(d)
+
+    private fun showFailure(e: Throwable) {
+        Log.e("Selling screen job failed", e)
+        if (isFinishing || isDestroyed || failureDialog?.isShowing == true) return // one message is enough
+        val text = if (e is Exception) {
+            ScreenActivity.errorText(this, e)
+        } else {
+            getString(R.string.error_generic, e.javaClass.simpleName)
+        }
+        failureDialog = Dialogs.message(this, getString(R.string.error_title), text)
+    }
+
+    /**
+     * Bill work started here that must finish even if the screen closes (app scope); a failure is
+     * shown if the screen is still there, and never crashes the till.
+     */
+    private fun billJob(block: suspend () -> Unit) {
+        graph.appScope.launch(Dispatchers.Main) {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                showFailure(e)
+            }
+        }
+    }
 
     // ------------------------------------------------------------------ rendering
 
@@ -456,12 +499,30 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun printLastSale() {
         val done = graph.checkout.last.value ?: return
-        withApproval(graph, scope, Perm.REPRINT) { approval ->
-            scope.launch {
-                try {
-                    graph.sales.print(done.saleId, copy = true, approval = approval)
-                } catch (e: Exception) {
-                    notAllowed()
+        printReceipt(done.saleId)
+    }
+
+    /**
+     * Prints a receipt of [saleId]. SaleActions.print tells the first one from a copy by the print
+     * queue: the first prints as is; a copy needs REPRINT, else a manager's PIN is asked for. (Asked
+     * for every time, a first receipt — automatic printing off — was a "copy" needing a manager,
+     * 2026-10 review.)
+     */
+    private fun printReceipt(saleId: Long, onQueued: () -> Unit = {}) {
+        scope.launch {
+            try {
+                graph.sales.print(saleId, copy = false)
+                onQueued()
+            } catch (copyNeedsPermission: ActionRefused) {
+                withApproval(graph, scope, Perm.REPRINT) { approval ->
+                    scope.launch {
+                        try {
+                            graph.sales.print(saleId, copy = true, approval = approval)
+                            onQueued()
+                        } catch (e: Exception) {
+                            notAllowed()
+                        }
+                    }
                 }
             }
         }
@@ -585,7 +646,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     // ------------------------------------------------------------------ scanning
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        graph.staff.touch()
+        if (graph.staff.activity()) return true // idle too long: locked; this key was meant for whoever was signed in
         val scanned = if (search.hasFocus()) scanIntoSearch(event) else scanKey(event)
         return backKey(event) || scanned || super.dispatchKeyEvent(event)
     }
@@ -617,7 +678,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        graph.staff.touch()
+        if (graph.staff.activity()) return true // idle too long: locked (the sign-in shows)
         return super.dispatchTouchEvent(ev)
     }
 
@@ -634,7 +695,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     /** Every scan ends here: HID buffer, search field, SPP scanner. */
     fun onScanned(code: String) {
-        graph.staff.touch() // scanning is using the till (serial and camera scanners never touch the screen)
+        if (graph.staff.activity()) return // scanning is using the till (serial and camera scanners never touch the screen)
         priceCheck?.takeIf { it.isShowing }?.let {
             it.lookup(code) // price check open: look up, never add to the bill
             return
@@ -700,7 +761,15 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         if (requestCode == REQ_CUSTOMER && resultCode == RESULT_OK && data != null) {
             val id = data.getLongExtra(CustomersActivity.EXTRA_ID, 0L)
-            if (id != 0L) graph.cart.setCustomer(id, data.getStringExtra(CustomersActivity.EXTRA_NAME))
+            val name = data.getStringExtra(CustomersActivity.EXTRA_NAME)
+            // Android may have ended the app meanwhile: the result comes before the bill is loaded
+            // again, and was dropped (2026-10 review). Load first (at once when it is loaded).
+            if (id != 0L) {
+                scope.launch {
+                    graph.cart.load()
+                    graph.cart.setCustomer(id, name)
+                }
+            }
         }
         if (requestCode == REQ_PRICE_SCAN && resultCode == RESULT_OK) {
             data?.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { code ->
@@ -844,6 +913,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun addProductById(id: Long) {
         scope.launch {
+            graph.cart.load() // a product just added, after Android ended the app meanwhile (see onActivityResult)
             val p = graph.db().read { ProductDao.sellableById(it, id) } ?: return@launch
             when (p.sellMode) {
                 SellMode.WEIGHT -> askWeight(p, null)
@@ -924,7 +994,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty || !firstTap()) return
         Dialogs.input(this, getString(R.string.held_hold_title), getString(R.string.held_label_hint)) { label ->
-            graph.appScope.launch(Dispatchers.Main) { graph.cart.hold(label) }
+            billJob { graph.cart.hold(label) } // a failed write keeps the bill on the screen and says so
             true
         }
     }
@@ -935,11 +1005,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val bills = graph.cart.heldBills()
             showHeldBills(
                 this@SellActivity, bills, currency,
-                onResume = { id -> graph.appScope.launch(Dispatchers.Main) { graph.cart.resume(id) } },
+                onResume = { id -> billJob { graph.cart.resume(id) } },
                 onDelete = { id ->
                     // Throwing a parked bill away is cancelling a bill: same permission, same audit entry.
                     withApproval(graph, scope, Perm.CANCEL_BILL) { approval ->
-                        graph.appScope.launch(Dispatchers.Main) { if (!graph.cart.deleteHeld(id, approval)) notAllowed() }
+                        billJob { if (!graph.cart.deleteHeld(id, approval) && !isDestroyed) notAllowed() }
                     }
                 },
             )
@@ -1038,28 +1108,51 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val now = graph.cart.state.value
             if (!now.canEdit || now.cart.isEmpty) return@launch
             graph.cart.setPaying(true)
-            paymentApprovals = ArrayList()
-            creditTaken = 0L
-            // Turning the phone would rebuild the screen and lose a split payment half entered.
-            val orientation = requestedOrientation
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
-            val d = PaymentDialog(this@SellActivity, now.priced.total, currency, methods, authorize = { m, amount, done -> authorize(m, amount, done) }) { tenders, rounding ->
-                graph.checkout.start(tenders, rounding, paymentApprovals.toList())
-            }.show()
-            d.setOnDismissListener {
-                graph.cart.setPaying(false)
-                paymentDialog = null
-                requestedOrientation = orientation
-            }
-            paymentDialog = d
+            val draft = CartSession.PaymentDraft(now.priced.total, methods)
+            graph.cart.payment = draft
+            showPayment(draft)
         }
+    }
+
+    /**
+     * The payment dialog for [draft]. What it takes is kept in the draft (app-scoped), so a screen
+     * rebuilt mid-payment shows the same payment again ([resumePayment], 2026-10 review).
+     */
+    private fun showPayment(draft: CartSession.PaymentDraft) {
+        // Turning the phone would rebuild the screen (a large screen on Android 16 turns anyway).
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
+        val d = PaymentDialog(
+            this, draft.total, currency, draft.methods, draft.tenders,
+            onTenders = { draft.tenders = it },
+            authorize = { m, amount, done -> authorize(draft, m, amount, done) },
+        ) { tenders, rounding ->
+            graph.checkout.start(tenders, rounding, draft.approvals.toList())
+        }.show()
+        d.setOnDismissListener {
+            graph.cart.setPaying(false) // also forgets the draft
+            paymentDialog = null
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        paymentDialog = d
+    }
+
+    /** The screen came back while a payment was open: the payment shows again where it was. */
+    private fun resumePayment() {
+        val st = graph.cart.state.value
+        if (!st.paying || paymentDialog != null || st.busy) return
+        val draft = graph.cart.payment
+        if (draft == null || draft.total != st.priced.total) {
+            graph.cart.setPaying(false) // nothing to show again: unfreeze the bill
+            return
+        }
+        showPayment(draft)
     }
 
     /**
      * A credit tender needs the bill's customer, the CREDIT_SALE permission (or a manager) and,
      * over the customer's limit, a manager's CREDIT_LIMIT approval (D-039).
      */
-    private fun authorize(m: PaymentMethod, amount: Long, done: (Boolean) -> Unit) {
+    private fun authorize(draft: CartSession.PaymentDraft, m: PaymentMethod, amount: Long, done: (Boolean) -> Unit) {
         if (m.kind != PaymentKind.CREDIT) return done(true)
         val customerId = graph.cart.state.value.customerId
         if (customerId == null) {
@@ -1067,20 +1160,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
             return done(false)
         }
         withApproval(graph, scope, Perm.CREDIT_SALE) { saleApproval ->
-            saleApproval?.let { paymentApprovals.add(it) }
+            saleApproval?.let { draft.approvals.add(it) }
             scope.launch {
                 val loaded = graph.customers.get(customerId) ?: return@launch done(false)
                 val (c, balance) = loaded
-                if (!CreditMath.overLimit(balance, creditTaken + amount, c.creditLimit)) {
-                    creditTaken += amount
+                if (!CreditMath.overLimit(balance, draft.creditTaken + amount, c.creditLimit)) {
+                    draft.creditTaken += amount
                     done(true)
                     return@launch
                 }
                 val msg = getString(R.string.credit_over_limit, c.name, money(balance), money(c.creditLimit), money(amount))
                 Dialogs.confirm(this@SellActivity, getString(R.string.credit_over_limit_title), msg, getString(R.string.credit_allow)) {
                     withApproval(graph, scope, Perm.CREDIT_LIMIT) { limitApproval ->
-                        limitApproval?.let { paymentApprovals.add(it) }
-                        creditTaken += amount
+                        limitApproval?.let { draft.approvals.add(it) }
+                        draft.creditTaken += amount
                         done(true)
                     }
                 }
@@ -1106,6 +1199,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
                     .setMessage(getString(R.string.pay_failed, o.error))
                     .setPositiveButton(R.string.ok, null)
                     .create()
+                // A scanner's Enter must not press OK: the message would be gone unread (2026-10 review).
+                d.keys { e -> DialogKeys.pressesFocused(e.keyCode) }
                 d.setOnDismissListener { graph.checkout.acknowledge() }
                 d.show()
                 outcomeDialog = d
@@ -1142,21 +1237,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val print = v.findViewById<Button>(R.id.result_print)
         print.visible(device.hasPrinter)
         print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
-        print.setOnClickListener {
-            val copy = done.receiptQueued
-            val go = { approval: Approval? ->
-                scope.launch {
-                    try {
-                        graph.sales.print(done.saleId, copy = copy, approval = approval)
-                        print.isEnabled = false
-                    } catch (e: Exception) {
-                        notAllowed()
-                    }
-                }
-                Unit
-            }
-            if (copy) withApproval(graph, scope, Perm.REPRINT) { go(it) } else go(null)
-        }
+        print.setOnClickListener { printReceipt(done.saleId) { print.isEnabled = false } }
         v.findViewById<View>(R.id.result_share).setOnClickListener { ReceiptShare.chooseAndShare(this, done.saleId) }
         v.findViewById<View>(R.id.result_new).setOnClickListener { d.dismiss() }
         d.setOnDismissListener { graph.checkout.acknowledge() }

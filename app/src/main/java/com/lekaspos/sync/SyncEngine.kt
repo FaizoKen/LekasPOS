@@ -19,6 +19,7 @@ import com.lekaspos.data.sync.SyncDao
 import com.lekaspos.data.sync.SyncEvent
 import com.lekaspos.util.Log
 import java.io.File
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,9 +55,22 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val needsSignIn: Boolean = false,
         val account: String? = null,
         val deviceName: String? = null,
+        /**
+         * This phone's date or time is more than [CLOCK_WARN_MS] away from Google's (2026-10 review):
+         * its sales and stock counts sort wrongly against the other tills'. The screens say so.
+         */
+        val clockOff: Boolean = false,
     )
 
-    data class Report(val sealed: Int, val uploaded: Int, val applied: Int, val events: Int, val devices: Int)
+    /** [more]: work is left (more files than one round reads, or this till publishes again): sync again soon. */
+    data class Report(
+        val sealed: Int,
+        val uploaded: Int,
+        val applied: Int,
+        val events: Int,
+        val devices: Int,
+        val more: Boolean = false,
+    )
 
     /** Why sync cannot run; shown to the user. */
     class Problem(val reason: Reason, message: String) : Exception(message) {
@@ -78,6 +92,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val lastSeq: Long,
         val prefix: String?,
         val cursors: Map<Int, Long>,
+        /**
+         * The till published everything again from this file on (its earlier files are gone from
+         * the folder, 2026-10 review): a reader missing the next file it needs before this one
+         * goes on from here. 0 = from file 1, as usual.
+         */
+        val fullFrom: Long = 0L,
     )
 
     private val _status = MutableStateFlow(Status())
@@ -92,17 +112,28 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val db = graph.db()
         val enabled = db.syncEnabled
         val stored = db.read { r ->
-            Stored(SyncDao.unsentEvents(r), Meta.getLong(r, LAST_OK), Meta.get(r, LAST_ERROR), Meta.get(r, ACCOUNT), Meta.get(r, DEVICE_NAME))
+            Stored(
+                SyncDao.unsentEvents(r), Meta.getLong(r, LAST_OK), Meta.get(r, LAST_ERROR), Meta.get(r, ACCOUNT),
+                Meta.get(r, DEVICE_NAME), Meta.get(r, CLOCK_OFF) != null,
+            )
         }
         _status.update { s ->
             s.copy(
                 enabled = enabled, pending = stored.pending, lastSuccessAt = stored.lastOk, lastError = stored.lastError,
                 account = stored.account, deviceName = stored.deviceName, needsSignIn = enabled && stored.lastError == ERROR_SIGN_IN,
+                clockOff = enabled && stored.clockOff,
             )
         }
     }
 
-    private class Stored(val pending: Long, val lastOk: Long?, val lastError: String?, val account: String?, val deviceName: String?)
+    private class Stored(
+        val pending: Long,
+        val lastOk: Long?,
+        val lastError: String?,
+        val account: String?,
+        val deviceName: String?,
+        val clockOff: Boolean,
+    )
 
     /**
      * Shows "connecting" at once when a sync is asked for (D-053): the round itself may first wait
@@ -146,18 +177,15 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     private suspend fun enableLocked(provider: SyncProvider, deviceName: String, account: String?, progress: (String, Long) -> Unit): Report {
         val db = graph.db()
         val (localStore, uuid) = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() to Meta.get(it, Meta.DEVICE_UUID).orEmpty() }
-        val stores = provider.list(SyncNames.STORE_PREFIX).mapNotNull { SyncNames.parseStore(it.name) }.sorted()
+        val stores = stores(provider)
         val store = when {
             localStore in stores -> localStore
             stores.isEmpty() -> {
-                putJson(provider, SyncNames.store(localStore), replace = false) { w ->
-                    w.beginObject()
-                    w.name("store").value(localStore)
-                    w.name("createdAt").value(System.currentTimeMillis())
-                    w.name("createdBy").value(db.deviceNo.toLong())
-                    w.endObject()
-                }
-                localStore
+                putManifest(provider, db, localStore)
+                // Another till may have made its store at the same moment (2026-10 review): every
+                // till settles on the first, so two tills turned on together end up in one store.
+                // (Missed here when both look before either store shows: the daily check joins them.)
+                (stores(provider) + localStore).minOrNull() ?: localStore
             }
             else -> stores.first() // one store per account in practice; deterministic otherwise
         }
@@ -188,13 +216,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         // read a till's files in order from 1; continuing at k+1 they never read this till at all.
         val restart = published == 0L && sealed > 0L
         db.write(reserveIds = 0L) { tx ->
-            if (restart) {
-                SyncDao.restartPublishing(tx)
-                Meta.put(tx.db, BACKFILLED, null)
-                Meta.put(tx.db, UPLOAD_TRY, null)
-                Meta.put(tx.db, Meta.SYNC_CLEANED_TO, null)
+            if (restart) forgetPublishing(tx)
+            if (store != localStore) {
+                Meta.put(tx.db, Meta.STORE_UUID, store)
+                SyncDao.yieldSettings(tx) // the store's own settings win over this till's defaults (2026-10 review)
             }
-            if (store != localStore) Meta.put(tx.db, Meta.STORE_UUID, store)
             val taken = cards.filter { it.dev != tx.deviceNo }.mapNotNull { it.prefix }.toSet()
             if (ReceiptNumbers.prefix(tx) in taken) Meta.put(tx.db, Meta.RECEIPT_PREFIX, freePrefix(taken))
             Meta.put(tx.db, Meta.SYNC_ENABLED, "1")
@@ -207,7 +233,53 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         // The old numbered files go once the database no longer lists them (new ones reuse the names).
         if (restart) withContext(Dispatchers.IO) { outDir.listFiles()?.forEach { it.delete() } }
         db.syncEnabled = true // before the backfill: nothing written meanwhile can be missed
+        // The card goes up before the long first round (2026-10 review): a till turned on meanwhile
+        // sees this till's number and receipt prefix.
+        cardKey = null
+        putCard(db, provider, store)
         return syncLocked(provider, progress)
+    }
+
+    /** The stores whose manifests are in the folder, in order (the first is the one every till settles on). */
+    private suspend fun stores(provider: SyncProvider): List<String> =
+        provider.list(SyncNames.STORE_PREFIX).mapNotNull { SyncNames.parseStore(it.name) }.distinct().sorted()
+
+    private suspend fun putManifest(provider: SyncProvider, db: Db, store: String) {
+        putJson(provider, SyncNames.store(store), replace = false) { w ->
+            w.beginObject()
+            w.name("store").value(store)
+            w.name("createdAt").value(System.currentTimeMillis())
+            w.name("createdBy").value(db.deviceNo.toLong())
+            w.endObject()
+        }
+    }
+
+    /** Forgets what this till published and read: it numbers its files from 1 again, after a backfill. */
+    private fun forgetPublishing(tx: Db.Tx) {
+        SyncDao.restartPublishing(tx)
+        for (k in listOf(BACKFILLED, UPLOAD_TRY, Meta.SYNC_CLEANED_TO, LIST_SINCE, FULL_LIST_AT, FULL_FROM)) {
+            Meta.put(tx.db, k, null)
+        }
+    }
+
+    /** [FULL_FROM] of till [dev] (0 = none): a value left by another identity of this database does not count. */
+    private fun fullFrom(r: android.database.sqlite.SQLiteDatabase, dev: Int): Long {
+        val v = Meta.get(r, FULL_FROM)?.split(':') ?: return 0L
+        return if (v.size == 2 && v[0] == dev.toString()) v[1].toLongOrNull() ?: 0L else 0L
+    }
+
+    /**
+     * This till moves to [newStore] during a round and publishes into it from file 1: the next
+     * round does the backfill. Its old local files go; the new ones reuse the names.
+     */
+    private suspend fun restartPublishing(db: Db, newStore: String) {
+        db.write(reserveIds = 0L) { tx ->
+            forgetPublishing(tx)
+            Meta.put(tx.db, Meta.STORE_UUID, newStore)
+            SyncDao.yieldSettings(tx) // the store's own settings win, as when joining it
+        }
+        withContext(Dispatchers.IO) { outDir.listFiles()?.forEach { it.delete() } }
+        cardKey = null
     }
 
     /** Stops syncing (the data stays). Enabling again publishes everything again. */
@@ -221,6 +293,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             Meta.put(tx.db, LAST_ERROR, null)
             Meta.put(tx.db, LIST_SINCE, null)
             Meta.put(tx.db, FULL_LIST_AT, null)
+            Meta.put(tx.db, CLOCK_OFF, null)
             tx.update("DELETE FROM outbox")
         }
         cardKey = null
@@ -268,24 +341,43 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 }
                 db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, BACKFILLED, store) }
             }
+            val uploadedBefore = db.read { SyncDao.lastUploaded(it) } // sent in earlier rounds
             val sealed = seal(db, store)
             val uploaded = upload(db, provider, store)
             val changed = HashSet<Int>()
-            val (applied, events, devices) = import(db, provider, store, changed)
+            val got = import(db, provider, store, changed)
+            var more = got.more
+            val tillCards = got.cards
+            if (tillCards != null) { // the whole folder was listed: once a day, and on the first round
+                if (checkFolder(db, provider, store, got.ownLowest, uploadedBefore)) {
+                    more = true // the next round publishes everything again
+                } else {
+                    checkPrefix(db, tillCards)
+                }
+            }
             step(PHASE_FINISH, 0L, 0L)
-            putCard(db, provider, store)
+            putCard(db, provider, db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }) // moved by checkFolder?
             cleanLocal(db)
             if (Entity.SETTING in changed) graph.settings.reload()
             if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
             if (Entity.PROMOTION in changed) graph.promotions.load()
+            val offset = provider.clockOffset
+            val clockOff = offset != null && abs(offset) > CLOCK_WARN_MS
+            if (clockOff) Log.w("This phone's clock is ${offset}ms away from the sync folder's")
             val now = System.currentTimeMillis()
             db.write(reserveIds = 0L) { tx ->
                 Meta.put(tx.db, LAST_OK, now.toString())
                 Meta.put(tx.db, LAST_ERROR, null)
+                Meta.put(tx.db, CLOCK_OFF, if (clockOff) offset.toString() else null)
             }
-            _status.update { it.copy(running = false, phase = null, done = 0L, total = 0L, devices = devices, lastSuccessAt = now, lastError = null, needsSignIn = false) }
+            _status.update {
+                it.copy(
+                    running = false, phase = null, done = 0L, total = 0L, devices = got.devices, lastSuccessAt = now,
+                    lastError = null, needsSignIn = false, clockOff = clockOff,
+                )
+            }
             refreshStatus()
-            return Report(sealed, uploaded, applied, events, devices)
+            return Report(sealed, uploaded, got.applied, got.events, got.devices, more)
         } catch (e: kotlinx.coroutines.CancellationException) {
             _status.update { it.copy(running = false, phase = null) }
             throw e
@@ -360,7 +452,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
      * grows. The whole folder is listed on the first round, once every [FULL_LIST_EVERY_MS], and
      * whenever the short listing shows a gap in a till's numbers (a file it did not return).
      */
-    private suspend fun import(db: Db, provider: SyncProvider, store: String, changed: MutableSet<Int>): Triple<Int, Int, Int> {
+    private suspend fun import(db: Db, provider: SyncProvider, store: String, changed: MutableSet<Int>): Imported {
         applyDeferred(db, changed)
         var cursors = db.read { SyncDao.cursors(it) }
         val (since, fullAt) = db.read { Meta.getLong(it, LIST_SINCE) to Meta.getLong(it, FULL_LIST_AT) }
@@ -371,6 +463,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             full = true
             listing = listSegments(provider, store, db.deviceNo, null, cursors)
         }
+        var tillCards: List<DeviceCard>? = null
         if (full) {
             // A till read further than the folder now holds started its numbers again (it moved
             // the store to this folder, or the folder was emptied): it is read from its first file.
@@ -379,6 +472,13 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             if (stale.isNotEmpty()) {
                 db.write(reserveIds = 0L) { tx -> for (dev in stale) SyncDao.dropCursor(tx, dev) }
                 cursors = cursors - stale
+                listing = listSegments(provider, store, db.deviceNo, null, cursors)
+            }
+            val read = cards(provider, store)
+            tillCards = read
+            val moved = skipToFull(db, listing, cursors, read)
+            if (moved.isNotEmpty()) {
+                cursors = cursors + moved
                 listing = listSegments(provider, store, db.deviceNo, null, cursors)
             }
         }
@@ -408,34 +508,73 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
         rememberListing(db, listing, cursors, plan, since, full, now)
         // Every other till read at least once — not just those in this (short) listing.
-        return Triple(applied, events, db.read { SyncDao.cursors(it) }.size)
+        val devices = db.read { SyncDao.cursors(it) }.size
+        // "More" only while files are read: a till stuck at a gap must not make rounds run back to back.
+        return Imported(applied, events, devices, tillCards, listing.ownLowest, listing.skipped && applied > 0)
     }
 
     /**
-     * A listing of [store]'s segments: the other tills' files not read yet, each other till's
-     * highest file number, and the newest creation time of any file (this till's too).
+     * What [import] did. [cards]: the tills' cards, read when the whole folder was listed (else
+     * null); [ownLowest]: this till's lowest file in that listing (0 = none); [more]: files are left
+     * for the next round.
      */
-    private class Listing(val others: List<Pair<SyncNames.Segment, RemoteFile>>, val newest: Long, val highest: Map<Int, Long>)
+    private class Imported(
+        val applied: Int,
+        val events: Int,
+        val devices: Int,
+        val cards: List<DeviceCard>?,
+        val ownLowest: Long,
+        val more: Boolean,
+    )
+
+    /**
+     * A listing of [store]'s segments: the other tills' files to read in this round, each other
+     * till's highest file number, the newest creation time of any file (this till's too), and this
+     * till's lowest file number. [skipped]: files left for a later round, the oldest of them
+     * created at [skippedOldest] (0 = a time unknown: the whole folder is listed next time).
+     */
+    private class Listing(
+        val others: List<Pair<SyncNames.Segment, RemoteFile>>,
+        val newest: Long,
+        val highest: Map<Int, Long>,
+        val ownLowest: Long,
+        val skipped: Boolean,
+        val skippedOldest: Long,
+    )
 
     /**
      * [store]'s segments in the sync folder (created after [since], if given). Files already read
      * (up to [cursors]) are only counted, never kept: the whole folder is listed once a day and
-     * grows by hundreds of files a day.
+     * grows by hundreds of files a day. At most [filesPerTill] files of each till are kept for one
+     * round (2026-10 review): a till joining a store with a year of history (100,000+ files) would
+     * otherwise hold them all in memory; the rest is read by the next rounds.
      */
     private suspend fun listSegments(provider: SyncProvider, store: String, me: Int, since: Long?, cursors: Map<Int, Long>): Listing {
         var newest = 0L
+        var ownLowest = 0L
+        var skipped = false
+        var skippedOldest = Long.MAX_VALUE
         val highest = HashMap<Int, Long>()
         val others = ArrayList<Pair<SyncNames.Segment, RemoteFile>>()
+        val perTill = filesPerTill
         provider.list(SyncNames.segmentPrefix(store), since) { f ->
             if (f.created > newest) newest = f.created
-            val s = SyncNames.parseSegment(f.name)?.takeIf { it.store == store && it.dev != me }
-            if (s != null) {
+            val s = SyncNames.parseSegment(f.name)?.takeIf { it.store == store }
+            if (s != null && s.dev == me) {
+                if (ownLowest == 0L || s.seq < ownLowest) ownLowest = s.seq
+            } else if (s != null) {
                 if (s.seq > (highest[s.dev] ?: 0L)) highest[s.dev] = s.seq
-                if (s.seq > (cursors[s.dev] ?: 0L)) others.add(s to f)
+                val cursor = cursors[s.dev] ?: 0L
+                if (s.seq > cursor + perTill) {
+                    skipped = true
+                    skippedOldest = minOf(skippedOldest, if (f.created > 0L) f.created else 0L)
+                } else if (s.seq > cursor) {
+                    others.add(s to f)
+                }
             }
             false // collected here instead
         }
-        return Listing(others, newest, highest)
+        return Listing(others, newest, highest, ownLowest, skipped, if (skipped) skippedOldest else 0L)
     }
 
     /** True when a till has files after its cursor that do not follow on from it (one is missing from the listing). */
@@ -467,9 +606,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val oldestWaiting = waiting.minOfOrNull { it.second.created }
         var next = maxOf(since ?: 0L, listing.newest)
         if (oldestWaiting != null && oldestWaiting > 0L) next = minOf(next, oldestWaiting - 1L)
+        // Files left for the next round are listed again from the oldest of them on.
+        if (listing.skippedOldest > 0L) next = minOf(next, listing.skippedOldest - 1L)
+        val relist = listing.skipped && listing.skippedOldest <= 0L
         db.write(reserveIds = 0L) { tx ->
             if (next > 0L) Meta.put(tx.db, LIST_SINCE, next.toString())
-            if (full) Meta.put(tx.db, FULL_LIST_AT, now.toString())
+            if (relist) Meta.put(tx.db, FULL_LIST_AT, null) else if (full) Meta.put(tx.db, FULL_LIST_AT, now.toString())
         }
     }
 
@@ -481,6 +623,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             val importer = Importer(tx.db)
             for ((seq, e) in waiting) {
                 if (!importer.knows(e.entity)) continue
+                db.hlc.observe(e.hlc) // like any applied event (2026-10 review)
                 if (importer.apply(tx, e)) changed.add(e.entity)
                 SyncDao.dropDeferred(tx, seq)
             }
@@ -498,6 +641,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             val batch = ArrayList<SyncEvent>(IMPORT_CHUNK)
             var max = 0L
             var count = 0
+            var farAhead = false
             fun flush() {
                 var i = 0
                 while (i < batch.size) {
@@ -506,6 +650,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                         val start = System.nanoTime()
                         while (i < batch.size) {
                             val e = batch[i++]
+                            // Inside the transaction that applies it (2026-10 review): a local edit
+                            // committed after it is stamped later, and the clock is stored with it.
+                            if (!db.hlc.observe(e.hlc)) farAhead = true
                             if (!importer.knows(e.entity)) {
                                 SyncDao.defer(tx, e) // from a newer version: applied after this till is updated
                             } else if (importer.apply(tx, e)) {
@@ -516,7 +663,6 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                     }
                 }
                 batch.clear()
-                if (!db.hlc.observe(max)) Log.w("Till $dev has a clock far in the future")
             }
             SegmentCodec.read(file, { h ->
                 if (h.store != store || h.dev != dev || h.seq != seq) throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq has a wrong header")
@@ -528,6 +674,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             }
             flush()
             db.writeBlocking(reserveIds = 0L) { tx -> SyncDao.setCursor(tx, dev, seq, max, System.currentTimeMillis()) }
+            // Not adopted (that till's own sync status says its clock is wrong); local edits still win.
+            if (farAhead) Log.w("Till $dev has a clock far in the future")
             count
         }
 
@@ -536,11 +684,16 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     private var cardKey: String? = null
     private var cardAt = 0L
 
+    /** Files of each other till read in one round at most ([FILES_PER_TILL]; tests make it small). */
+    @Volatile
+    internal var filesPerTill: Int = FILES_PER_TILL
+
     private suspend fun putCard(db: Db, provider: SyncProvider, store: String) {
         val (uuid, name, prefix) = db.read { r -> Triple(Meta.get(r, Meta.DEVICE_UUID).orEmpty(), Meta.get(r, DEVICE_NAME).orEmpty(), Meta.get(r, Meta.RECEIPT_PREFIX)) }
         val lastSeq = db.read { SyncDao.lastUploaded(it) }
         val cursors = db.read { SyncDao.cursors(it) }
-        val key = listOf(store, uuid, name, prefix, BuildConfig.VERSION_NAME, lastSeq, cursors).joinToString("|")
+        val from = db.read { fullFrom(it, db.deviceNo) }
+        val key = listOf(store, uuid, name, prefix, BuildConfig.VERSION_NAME, lastSeq, cursors, from).joinToString("|")
         val now = SystemClock.elapsedRealtime()
         if (key == cardKey && now - cardAt < CARD_EVERY_MS) return // nothing new to tell the other tills
         putJson(provider, SyncNames.device(store, db.deviceNo), replace = true) { w ->
@@ -555,6 +708,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             w.name("cursors").beginObject()
             for ((d, s) in cursors) w.name(d.toString()).value(s)
             w.endObject()
+            if (from > 0L) w.name("fullFrom").value(from)
             w.endObject()
         }
         cardKey = key
@@ -577,6 +731,96 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             if (old.size < CLEAN_BATCH) break
         }
         if (done != start) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.SYNC_CLEANED_TO, done.toString()) }
+    }
+
+    /**
+     * On the whole-folder listing (2026-10 review): the folder must still hold this store and this
+     * till's files, or the other tills cannot read it.
+     *  - Two stores in one folder (two tills turned on at the same moment, or a store made again
+     *    after the folder was emptied) become one: every till settles on the first, publishing
+     *    everything into it from file 1 (like turning sync on into another folder, D-054).
+     *  - A missing store manifest (the owner deleted the app's hidden Drive data) is made again, or
+     *    a till joining later would start a store of its own.
+     *  - When this till's first file is gone too, it publishes everything again — under its next
+     *    file numbers, so the tills reading on from where they were miss nothing — and its card
+     *    says from which file ([DeviceCard.fullFrom]): a till that cannot find its first file goes
+     *    on from there. (Numbering again from 1 would make those reading on skip the new files.)
+     * Returns true when this till publishes again (the next round does it).
+     */
+    private suspend fun checkFolder(
+        db: Db,
+        provider: SyncProvider,
+        store: String,
+        ownLowest: Long,
+        uploadedBefore: Long,
+    ): Boolean {
+        val stores = stores(provider)
+        val first = (stores + store).minOrNull() ?: store
+        if (first != store) {
+            Log.w("The sync folder holds two stores: this till moves to the first")
+            restartPublishing(db, first)
+            return true
+        }
+        if (store !in stores) putManifest(provider, db, store)
+        // The file readers start from was sent in an earlier round (one sent just now may be listed
+        // late) and the listing lacks it: asked once more before anything is done. Remote clean-up,
+        // once built, must keep that file (or change this check).
+        val need = db.read { fullFrom(it, db.deviceNo) }.takeIf { it > 0L } ?: 1L
+        if (uploadedBefore < need || ownLowest in 1L..need) return false
+        var lowest = 0L
+        provider.list(SyncNames.segmentPrefix(store) + "${db.deviceNo}-") { f ->
+            val s = SyncNames.parseSegment(f.name)
+            if (s != null && s.store == store && (lowest == 0L || s.seq < lowest)) lowest = s.seq
+            false
+        }
+        if (lowest in 1L..need) return false
+        Log.w("This till's first files are gone from the sync folder: it publishes everything again")
+        db.write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, BACKFILLED, null)
+            Meta.put(tx.db, FULL_FROM, "${tx.deviceNo}:${SyncDao.nextSegmentSeq(tx.db)}")
+        }
+        return true
+    }
+
+    /**
+     * A till whose first files are gone from the folder published everything again from file
+     * [DeviceCard.fullFrom] on (see [checkFolder]): a reader that cannot find its next file of that
+     * till before there goes on from there (2026-10 review). Returns the cursors moved.
+     */
+    private suspend fun skipToFull(
+        db: Db,
+        listing: Listing,
+        cursors: Map<Int, Long>,
+        cards: List<DeviceCard>,
+    ): Map<Int, Long> {
+        val moved = HashMap<Int, Long>()
+        for (c in cards) {
+            if (c.dev == db.deviceNo || c.fullFrom <= 1L) continue
+            val cursor = cursors[c.dev] ?: 0L
+            if (cursor >= c.fullFrom - 1L) continue
+            val stuck = listing.others.none { (s, _) -> s.dev == c.dev && s.seq == cursor + 1L }
+            if (stuck) moved[c.dev] = c.fullFrom - 1L
+        }
+        if (moved.isNotEmpty()) {
+            val now = System.currentTimeMillis()
+            db.write(reserveIds = 0L) { tx -> for ((dev, seq) in moved) SyncDao.setCursor(tx, dev, seq, 0L, now) }
+        }
+        return moved
+    }
+
+    /**
+     * Another till uses this till's receipt prefix (it turned sync on before this till's card was
+     * in the folder, 2026-10 review): the till with the higher number takes a free prefix, so only
+     * one of the two changes. Receipts already printed keep their numbers.
+     */
+    private suspend fun checkPrefix(db: Db, cards: List<DeviceCard>) {
+        val mine = db.read { Meta.get(it, Meta.RECEIPT_PREFIX) } ?: return
+        val others = cards.filter { it.dev != db.deviceNo }
+        if (others.none { it.prefix == mine && it.dev < db.deviceNo }) return
+        val taken = others.mapNotNull { it.prefix }.toSet()
+        db.write(reserveIds = 0L) { tx ->
+            if (Meta.get(tx.db, Meta.RECEIPT_PREFIX) == mine) Meta.put(tx.db, Meta.RECEIPT_PREFIX, freePrefix(taken))
+        }
     }
 
     /**
@@ -627,6 +871,18 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
         /** An unchanged device card is published at least this often (its "last seen" for the other tills). */
         const val CARD_EVERY_MS = 15L * 60L * 1000L
+
+        /** Other tills' files read in one round, per till: the rest waits for the next round (2026-10 review). */
+        const val FILES_PER_TILL = 1_000
+
+        /** This phone's clock this far from Google's is shown as wrong ([Status.clockOff]). */
+        const val CLOCK_WARN_MS = 10L * 60L * 1000L
+
+        /** The last clock difference found ([CLOCK_WARN_MS] or more), or null: kept for [refreshStatus]. */
+        const val CLOCK_OFF = "sync.clock_off"
+
+        /** "device:seq" — this till published everything again from file seq on ([DeviceCard.fullFrom]). */
+        const val FULL_FROM = "sync.full_from"
         const val LIST_SINCE = "sync.list_since"
         const val FULL_LIST_AT = "sync.full_list_at"
         const val UPLOAD_TRY = "sync.upload_try"
@@ -665,6 +921,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             return DeviceCard(
                 dev, m["uuid"] as? String ?: "", m["name"] as? String ?: "", m["app"] as? String ?: "",
                 m["lastSeen"] as? Long ?: 0L, m["lastSeq"] as? Long ?: 0L, m["prefix"] as? String, cursors,
+                m["fullFrom"] as? Long ?: 0L,
             )
         }
 

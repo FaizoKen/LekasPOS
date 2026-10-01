@@ -1,6 +1,7 @@
 package com.lekaspos.ui.common
 
 import android.content.Context
+import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +33,43 @@ class Form(private val ctx: Context) {
         addView(column)
     }
 
+    /** Text fields, and switches and choices without a change handler, in the order they were added. */
+    private val inputs = ArrayList<View>()
+
     private fun dp(v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
+
+    /**
+     * What was typed, switched and picked, for onSaveInstanceState. The fields are built in code
+     * without ids, so Android does not keep them, and a form rebuilt after the app was ended in the
+     * background (copying a number from another app) came back empty (2026-10 review).
+     */
+    fun save(): Bundle = Bundle().also { b ->
+        for ((i, v) in inputs.withIndex()) {
+            when (v) {
+                is EditText -> b.putString(key(i), v.text.toString())
+                is Switch -> b.putBoolean(key(i), v.isChecked)
+                is Spinner -> b.putInt(key(i), v.selectedItemPosition)
+            }
+        }
+    }
+
+    /** Puts back what [save] kept, into the same form built again (same fields in the same order). */
+    fun restore(b: Bundle) {
+        for ((i, v) in inputs.withIndex()) {
+            val k = key(i)
+            if (!b.containsKey(k)) continue
+            when (v) {
+                is EditText -> b.getString(k)?.let {
+                    v.setText(it)
+                    v.setSelection(it.length)
+                }
+                is Switch -> v.isChecked = b.getBoolean(k)
+                is Spinner -> if (v.count > 0) v.setSelection(b.getInt(k).coerceIn(0, v.count - 1))
+            }
+        }
+    }
+
+    private fun key(i: Int) = "form.$i"
 
     fun section(title: CharSequence): TextView = TextView(ctx, null, 0, R.style.Text_Lekas_Section).also {
         it.text = title
@@ -64,6 +101,7 @@ class Form(private val ctx: Context) {
             }
             it.minHeight = dp(48)
             column.addView(it, lp())
+            inputs.add(it)
         }
     }
 
@@ -72,7 +110,7 @@ class Form(private val ctx: Context) {
         it.isChecked = checked
         it.minHeight = dp(48)
         it.textSize = 16f
-        if (onChange != null) it.setOnCheckedChangeListener { _, v -> onChange(v) }
+        if (onChange != null) it.setOnCheckedChangeListener { _, v -> onChange(v) } else inputs.add(it)
         column.addView(it, lp().apply { topMargin = dp(8) })
     }
 
@@ -89,6 +127,8 @@ class Form(private val ctx: Context) {
                     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = onChange(position)
                     override fun onNothingSelected(parent: AdapterView<*>?) = Unit
                 }
+            } else {
+                inputs.add(it)
             }
             column.addView(it, lp())
         }
@@ -103,7 +143,12 @@ class Form(private val ctx: Context) {
     }
 
     /** A label on the left and a value on the right (reports). */
-    fun row(label: CharSequence, value: CharSequence, bold: Boolean = false): View {
+    fun row(label: CharSequence, value: CharSequence, bold: Boolean = false): View = addRow(label, value, bold).first
+
+    /** A [row] whose value is changed in place later (a live status); its line is the value's parent. */
+    fun valueRow(label: CharSequence, value: CharSequence): TextView = addRow(label, value, false).second
+
+    private fun addRow(label: CharSequence, value: CharSequence, bold: Boolean): Pair<View, TextView> {
         val line = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             minimumHeight = dp(32)
@@ -121,7 +166,7 @@ class Form(private val ctx: Context) {
         line.addView(l, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         line.addView(v, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
         column.addView(line, lp())
-        return line
+        return line to v
     }
 
     /** Adds any view (e.g. a list of barcodes) to the column. */
