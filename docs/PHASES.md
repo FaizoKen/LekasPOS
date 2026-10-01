@@ -874,5 +874,34 @@ without "Restart now"; the idle lock never fired after the phone's screen had tu
 with a wrong clock silently lost its edits on the other tills.
 
 - [x] Fixes and tests: see D-055
+- [x] Local: 184 `:core` + 29 `:app` JVM tests pass, lint 0 errors, release APK 1,271,037 bytes
+  (R8, local debug key; 1.2.0 was 1,209,645)
 - [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
 - [ ] Test build published as a pre-release
+
+### Needs real-device testing (1.3.0)
+
+1. Install over 1.2.0 (or 1.0.0): data, staff, settings and backup still there.
+2. Staff → auto-lock 1 minute, sign in as a cashier, let the phone's screen turn off for 2 minutes,
+   wake it: the sign-in shows at once, and the first tap does nothing on the bill.
+3. Settings → Backup → restore a backup, press Back while "Checking…": close and open the app —
+   nothing was restored. Restore again → "Restart now": the backup's data is back and someone must
+   sign in (when PINs are on).
+4. Android 13 or newer: pay RM 5 by card, then press Back (or swipe back): it asks before clearing
+   the RM 5. On a tablet, rotate (or switch dark mode) while paying: the RM 5 is still there.
+5. Wrong PIN 5 times, then set the phone's clock 1 hour forward: still waits. Set the date back a
+   year: the wait is at most 30 s, not a year.
+6. With Drive backup on, set the phone's date one day wrong and tap Sync now: the backup screen
+   says the date or time is wrong.
+7. Second till (if available): fresh install, first-run setup with any shop name, then turn on
+   Drive backup with the store's account: the first till's receipt header, BRN and tax settings do
+   not change.
+8. A manager whose role has "Manage staff": making themselves owner or changing the owner's PIN is
+   refused.
+9. Return a discounted line one item at a time: every return is a positive amount and they add up
+   to the line; a double tap on Refund makes one refund.
+10. Products → Export, open in a spreadsheet, save, Import: no new products, also for 8-digit
+    barcodes starting with 0.
+11. Printer (when available): switch it off and on while receipts wait; a long picture receipt
+    prints in full.
+12. Camera scanning on a cheap phone: a barcode brought closer comes into focus again.
