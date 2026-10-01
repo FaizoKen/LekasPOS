@@ -263,6 +263,12 @@ class StaffSession(private val graph: AppGraph) {
         lastActivity = SystemClock.elapsedRealtime()
     }
 
+    /** Tests: as if the last touch or key was [ms] ago. */
+    @androidx.annotation.VisibleForTesting
+    internal fun idleFor(ms: Long) {
+        lastActivity = SystemClock.elapsedRealtime() - ms
+    }
+
     /**
      * Locks when this device's idle time has passed; returns true if it locked. Never while a
      * bill is being paid: locking closed the payment and lost a split payment half entered.
