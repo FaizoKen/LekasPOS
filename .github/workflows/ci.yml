@@ -81,6 +81,14 @@ jobs:
           path: apks/
           retention-days: 14
 
+      # R8's name map of this release APK, to read crash traces from testers and users; a public
+      # release attaches it as mapping-<version>.txt (docs/BUILD.md, release checklist).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mapping
+          path: app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -125,7 +133,7 @@ jobs:
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          PREV_APK_URL: https://github.com/FaizoKen/LekasPOS/releases/download/v1.0.0/LekasPOS-1.0.0.apk
+          PREV_APK_URL: https://github.com/FaizoKen/LekasPOS/releases/download/v1.3.0/LekasPOS-1.3.0.apk
         with:
           api-level: ${{ matrix.api }}
           target: default

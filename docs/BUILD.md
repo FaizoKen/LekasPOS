@@ -138,6 +138,7 @@ the existing Android OAuth client keeps working.
    assets `LekasPOS.apk` (the website's "Download" link always takes the latest release's file of
    that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes.
 5. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
-6. Keep the CI build's `mapping.txt` (build-reports artifact) for crash de-obfuscation.
+6. Attach the CI build's `mapping.txt` (artifact `mapping`, kept 90 days) to the release as
+   `mapping-<version>.txt`, for reading crash traces (`retrace`).
 7. Google sign-in: the Android OAuth client in project `lekaspos` matches `com.lekaspos.app` +
    the release key's SHA-1 (see README); the consent screen is "In production" (D-051).
