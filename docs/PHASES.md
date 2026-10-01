@@ -18,7 +18,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 9 | Data safety: protected by default, visible when not, folder backups, integrity check | **done** — tested on the phone (2026-09-30, build v0.9.0-phase9) |
 | 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **done** — tested on the phone (2026-09-30, build v0.10.0-phase10-fix1) |
 | — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
-| — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 — latest download |
+| — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
+| — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 — latest download |
 
 ## Open questions for the user
 
@@ -917,7 +918,7 @@ another till; refunds without restock and cost of goods; a shared backup countin
     prints in full.
 12. Camera scanning on a cheap phone: a barcode brought closer comes into focus again.
 
-## 1.3.1 — auto-lock after the phone's screen was off (test build, waiting for the owner's check)
+## 1.3.1 — auto-lock after the phone's screen was off (released 2026-10-01)
 
 The owner reported that the auto-lock did not work after the phone's screen had been off
 (2026-10-01). Confirmed: many phones only *pause* the app while their screen is off, and waking
@@ -932,7 +933,9 @@ lock screen stays and would block the next tests).
 - [x] Fix and tests
 - [x] CI green: **201/201 on API 21 and 36**, tablet and release smoke (run 36835431618)
 - [x] Test build **v1.3.1** (pre-release; build 79, 1,271,195 bytes, SHA-256 `4054647d…cefa`,
-      `mapping-1.3.1.txt` attached); the public download stays v1.3.0 until the owner's OK
+      `mapping-1.3.1.txt` attached)
+- [x] The owner asked to release it (2026-10-01): **v1.3.1 is the latest release** (the website's
+      Download link serves it, SHA-256 checked); smoke baseline v1.3.1
 
 ### Needs real-device testing (1.3.1)
 
