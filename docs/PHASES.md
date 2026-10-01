@@ -861,7 +861,7 @@ owner's OK. Left for the owner (D-054): stock with cost 0 and the average cost; 
     it is added once; rotate while scanning — no crash.
 12. Serial (SPP) scanner without an Enter suffix: codes still arrive.
 
-## 1.3.0 — second bug hunt: data safety, security, sync consistency (in progress)
+## 1.3.0 — second bug hunt: data safety, security, sync consistency (test build, waiting for the owner's check)
 
 The owner asked again for a thorough search for bugs, with freedom to decide what to fix
 (2026-10-01). Nine read-only reviews (money maths, selling, sales and reports, sync, backup and
@@ -876,8 +876,16 @@ with a wrong clock silently lost its edits on the other tills.
 - [x] Fixes and tests: see D-055
 - [x] Local: 184 `:core` + 29 `:app` JVM tests pass, lint 0 errors, release APK 1,271,037 bytes
   (R8, local debug key; 1.2.0 was 1,209,645)
-- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
-- [ ] Test build published as a pre-release
+- [x] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [x] Test build published as a pre-release
+
+Results (2026-10-01): CI **199/199 on API 21 and 36** (38 new tests), lint, tablet and release
+smoke green; perf FULL **PASS** on both (80/80 plans; cold start API 21 531–619 ms; report_year
+1.2 s p50 on API 21, budget 3 s; sale commit 10 ms p95). Every data-layer SQL statement also
+prepared against the v6 schema offline. Test build **v1.3.0** (pre-release; build 70, 1,241 KB —
+1,271,103 bytes, SHA-256 `068b077a…9a28`); the public download stays v1.0.0 until the owner's
+OK. Left for the owner (D-055): a new customer without a credit limit; refunds of a sale voided on
+another till; refunds without restock and cost of goods; a shared backup counting as "backed up".
 
 ### Needs real-device testing (1.3.0)
 
