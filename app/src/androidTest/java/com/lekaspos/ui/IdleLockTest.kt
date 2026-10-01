@@ -1,7 +1,10 @@
 package com.lekaspos.ui
 
 import android.app.Activity
+import android.os.Build
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.view.KeyEvent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -41,12 +44,11 @@ class IdleLockTest {
             assertTrue(graph.staff.state.value.current != null)
             ActivityScenario.launch(SellActivity::class.java).use {
                 instrumentation.waitForIdleSync()
-                shell("input keyevent KEYCODE_SLEEP")
+                key(KeyEvent.KEYCODE_SLEEP)
                 SystemClock.sleep(2_000L) // the phone's screen is off
                 graph.staff.idleFor(2 * 60_000L) // ... for longer than the idle time
-                shell("input keyevent KEYCODE_WAKEUP")
-                shell("wm dismiss-keyguard") // Android 6+; below, the menu key dismisses a swipe lock
-                shell("input keyevent KEYCODE_MENU")
+                key(KeyEvent.KEYCODE_WAKEUP)
+                dismissKeyguard()
                 // No tap: the sign-in shows by itself as the phone wakes.
                 val deadline = SystemClock.uptimeMillis() + 5_000L
                 while (!graph.staff.state.value.locked && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(50L)
@@ -59,7 +61,8 @@ class IdleLockTest {
                 assertTrue(lockShown, "the sign-in screen did not show")
             }
         } finally {
-            shell("input keyevent KEYCODE_WAKEUP")
+            key(KeyEvent.KEYCODE_WAKEUP)
+            dismissKeyguard()
             // PIN login off again: the other screen tests share this database.
             runBlocking {
                 if (graph.staff.state.value.locked) graph.staff.signIn(owner, "2468")
@@ -74,9 +77,26 @@ class IdleLockTest {
     private fun resumed(): Collection<Activity> =
         ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
 
-    /** Runs [cmd] in the device shell and waits for it to finish. */
-    private fun shell(cmd: String) {
-        val out = instrumentation.uiAutomation.executeShellCommand(cmd)
-        android.os.ParcelFileDescriptor.AutoCloseInputStream(out).use { it.readBytes() }
+    /** A key press as the phone's own keys send it (sleep, wake), through the test's UiAutomation. */
+    private fun key(code: Int) {
+        val ua = instrumentation.uiAutomation
+        val now = SystemClock.uptimeMillis()
+        ua.injectInputEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0), true)
+        ua.injectInputEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0), true)
+        SystemClock.sleep(300L)
+    }
+
+    /**
+     * The emulator's swipe lock screen goes away. Android 6+: `wm dismiss-keyguard`. Below, the menu
+     * key does it (reading a shell command there hung this test on the Android 5 emulator).
+     */
+    private fun dismissKeyguard() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            val out = instrumentation.uiAutomation.executeShellCommand("wm dismiss-keyguard")
+            ParcelFileDescriptor.AutoCloseInputStream(out).use { it.readBytes() }
+        } else {
+            key(KeyEvent.KEYCODE_MENU)
+        }
+        SystemClock.sleep(500L)
     }
 }
