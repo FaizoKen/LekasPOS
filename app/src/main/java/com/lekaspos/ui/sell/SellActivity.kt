@@ -340,6 +340,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
         loadCategories()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Many phones only pause the app while their screen is off: waking them calls onResume,
+        // not onStart, and the till stayed signed in until the first tap (reported on 1.3.0).
+        graph.staff.lockIfIdle()
+    }
+
     override fun onStop() {
         started?.cancel()
         started = null

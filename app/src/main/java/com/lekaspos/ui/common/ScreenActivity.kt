@@ -283,6 +283,12 @@ abstract class ScreenActivity : Activity(), DialogHost {
         graph.appScope.launch { graph.staff.recordApproval(approval) }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // A phone that only paused this screen while it was off wakes it with onResume alone.
+        if (graph.staff.lockIfIdle()) goHome()
+    }
+
     override fun onStop() {
         startedScope?.cancel()
         startedScope = null
