@@ -20,7 +20,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 — latest download |
-| — | **1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **in progress** — CI, then a test build for the owner |
+| — | **1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **test build published** 2026-10-02 (pre-release v1.4.0, build 84) — waiting for the owner's phone tests |
 
 ## Open questions for the user
 
@@ -945,7 +945,7 @@ lock screen stays and would block the next tests).
    power button), wait 2 minutes, wake it — the sign-in shows at once, without a tap.
 3. Wake it again within the minute: still signed in (no lock before the idle time).
 
-## 1.4.0 — third bug hunt: cross-cutting reviews, weak features (in progress)
+## 1.4.0 — third bug hunt: cross-cutting reviews, weak features (test build published)
 
 The owner asked for a third, free-hand search for bugs and weak features (2026-10-02). Twelve
 read-only reviews took angles the earlier hunts had not (concurrency, money end to end, clocks,
@@ -959,9 +959,21 @@ made the other tills' sales and recounts "earlier" than its stock count; CSV fil
 shared a placeholder SKU into one product and imported "Nescaf�" from Excel files.
 
 - [x] Fixes and tests: see D-056
-- [x] Local: `:core` and `:app` JVM tests pass (196 + 37)
-- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
-- [ ] Test build published as a pre-release
+- [x] Local: `:core` and `:app` JVM tests pass (197 + 37), lint 0 errors
+- [x] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [x] Test build published as a pre-release
+
+Results (2026-10-02): CI **216/216 on API 21 and 36** (15 new tests), lint, tablet and release smoke
+green (run 36958602980); perf FULL **PASS** on both (83/83 plans; cold start API 21 545–609 ms,
+API 36 587–653 ms; sale commit 9.6 ms p95; report_year 1.2 s on API 21, budget 3 s; database
+356 MB) — run on 8a0e1eb, the fixes after it touch no hot SQL. The first CI run found a real bug
+(the sign-in stored no idle heartbeat until the first tap) and two test mistakes; a read-only review
+of the whole change found four more (the store's first PIN closed the Staff screen before the
+recovery code showed; a long payment took the change off the screen; a delivery order's barcode
+scanned into Receive's reference field; dashed barcodes from older versions on import) — all fixed
+with tests (D-056). Test build **v1.4.0** (pre-release; build 84, 1,260 KB — 1,290,312 bytes, same
+release key as 1.3.1, SHA-256 `75f2a10f…5050`, `mapping-1.4.0.txt` attached); the public download
+stays v1.3.1 until the owner's OK.
 
 ### Needs real-device testing (1.4.0)
 
