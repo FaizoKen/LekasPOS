@@ -824,6 +824,12 @@ SQLite 3.22 shell from sqlite.org) before changing anything; every change gives 
   best sellers from one reading (`ReportDao.summary`). Rolling year: 425,000 → 152,000 rows in one
   pass instead of two (1.08 s → 0.27 s on SQLite 3.22); 30 days: 70,000 → 41,000 rows (0.22 s →
   0.07 s); this year: 293,000 → 51,000 rows. Slow movers: one reading for the list, count and value.
+- **Cursor windows.** The one reading returns every product's totals (~50,000 rows for a year),
+  more than Android's 2 MB cursor window: the platform runs the query again for every further
+  window (the first FULL run on CI made the API 21 month report slower, 307 → 430 ms). API 28+
+  gives the cursor a 16 MB window (`CursorWindow(name, bytes)`), so the query runs once; API 21–27
+  read the period twice with small results (the best sellers, and the categories straight from the
+  rows), still 1.4–2.7× faster than before. Exports use the big window too.
 - **Popular tab** (on the selling screen): its ranking reads a month of sales, ~0.3 s at FULL on the
   tablet even after the above. The tab now shows the ranking kept in this till's `meta`
   (`dev.popular`) at once and makes a fresh one in the background when it is older than 10 minutes;
