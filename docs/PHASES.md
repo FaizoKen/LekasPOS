@@ -20,8 +20,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
-| — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 — latest download (phone tests passed) |
-| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **test build** v1.5.0 published 2026-10-02 (pre-release, build 90) — waiting for the owner's phone tests; the relay is live |
+| — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
+| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — latest download (phone tests passed); the relay is live |
 
 ## Open questions for the user
 
@@ -1014,7 +1014,7 @@ release after the owner's phone tests.
 15. Printer and drawer (when available): clear the queue while the printer is off, switch it on —
     nothing cleared prints.
 
-## 1.5.0 — error reports to the developer (D-057)
+## 1.5.0 — error reports to the developer, D-057 (released 2026-10-02)
 
 The owner asked that errors, crashes and failed checks on shops' phones reach the developer by
 themselves, so bugs are known and fixed quickly. Design chosen with the owner: the shop is asked
@@ -1050,6 +1050,9 @@ once; reports go through a small relay to a **private** GitHub repository, one i
 - [x] Test build **v1.5.0** (pre-release; build 90, 1,351 KB — 1,383,754 bytes, release key,
       SHA-256 `20d52e0d…8675`, `mapping-1.5.0.txt` attached); the public download stays v1.4.0 until
       the owner's phone tests
+- [x] The owner tested it on the phone: all 5 checks below passed (2026-10-02), and asked to release
+      it: **v1.5.0 is the latest release** (the website's Download link serves it, SHA-256 and version
+      checked); smoke baseline v1.5.0
 
 ### Needs real-device testing (1.5.0)
 

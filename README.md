@@ -8,7 +8,7 @@ A lightweight, offline-first point-of-sale app for small grocery stores and mini
 and tablets with 1–2 GB RAM. No backend: all data lives on the device; Google Drive is used
 only for background sync and backup between the devices of one store.
 
-**Download:** version 1.4.0 — [faizoken.github.io/LekasPOS](https://faizoken.github.io/LekasPOS/#download)
+**Download:** version 1.5.0 — [faizoken.github.io/LekasPOS](https://faizoken.github.io/LekasPOS/#download)
 (install and update steps), or the latest [release](https://github.com/FaizoKen/LekasPOS/releases/latest).
 Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
 [faizoken.github.io/LekasPOS/privacy.html](https://faizoken.github.io/LekasPOS/privacy.html).
