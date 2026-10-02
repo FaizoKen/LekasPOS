@@ -21,7 +21,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 — latest download (phone tests passed) |
-| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **in progress** — app and relay code done; the relay goes live once the owner renames the Cloudflare subdomain and adds two tokens |
+| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **test build** v1.5.0 published 2026-10-02 (pre-release, build 90) — waiting for the owner's phone tests; the relay is live |
 
 ## Open questions for the user
 
@@ -1030,15 +1030,26 @@ once; reports go through a small relay to a **private** GitHub repository, one i
       contact); English + Bahasa Melayu
 - [x] Refusals (`ActionRefused`) are warnings, not error reports
 - [x] R8 keeps the app's own class names (stable fingerprints): +67 KB
-- [x] Relay `relay/` (Cloudflare Worker) + 9 unit tests + `relay.yml`; private repository
+- [x] Relay `relay/` (Cloudflare Worker) + 10 unit tests + `relay.yml`; private repository
       `FaizoKen/LekasPOS-reports` with labels and the "Readable trace" workflow
 - [x] Privacy policy (EN + MS), `docs/PLAY.md` data safety, D-057, architecture.md §9
-- [ ] The owner renames the workers.dev subdomain to `faizoken` and adds the two tokens
-      (Cloudflare, GitHub) → the relay is deployed and answers
+- [x] The owner renamed the workers.dev subdomain to `faizoken` and added the two tokens; the relay
+      is deployed (relay.yml) and answers. End-to-end test from this machine: four reports of one
+      bug became one issue (after the duplicate fix), the readable trace was commented; the test
+      issues are closed (`not-a-bug`, `duplicate`)
 - [x] CI green on 646cf2b (run 36980633138): **220/220 on API 21 and 36**, tablet, release smoke,
       lint; release APK **1,378,310 bytes** (1,346 KB; 1.4.0 was 1,290,312 — +67 KB readable names,
       +21 KB the feature). The relay test was skipped (its address does not resolve before the rename)
-- [ ] After the rename and tokens: re-run CI so Android 5 reaches the relay over HTTPS; test build
+- [x] Android 5 could not reach the relay ("Trust anchor for certification path not found"):
+      `RelayTrust` bundles the four public roots Cloudflare issues from. CI on 2ece049 (run 90):
+      **220/220 on API 21 and 36** — the relay answered 204 on both (Android 5 through the bundled
+      roots, Android 16 through its own store); tablet, release smoke, lint green
+- [x] Perf FULL (run 36985370602, ea5e8dd — the TLS change after it touches no hot path): **PASS** on
+      API 21 and 36; cold start median 629 ms (API 21) / 681 ms (API 36); sale commit p95 11.1 ms (API
+      21); report_year 1.2 s on API 21 (budget 3 s)
+- [x] Test build **v1.5.0** (pre-release; build 90, 1,351 KB — 1,383,754 bytes, release key,
+      SHA-256 `20d52e0d…8675`, `mapping-1.5.0.txt` attached); the public download stays v1.4.0 until
+      the owner's phone tests
 
 ### Needs real-device testing (1.5.0)
 
