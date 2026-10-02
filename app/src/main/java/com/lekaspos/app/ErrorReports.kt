@@ -161,7 +161,7 @@ object ErrorReports {
         val ctx = app ?: return
         guarded {
             val at = System.currentTimeMillis()
-            queue(ctx, build(ctx, ErrorReport.CHECK, CrashText.ofName(ErrorReport.CHECK, name), at, message = name, trace = details))
+            queue(ctx, build(ctx, ErrorReport.CHECK, CrashText.ofName(ErrorReport.CHECK, name), at, message = name, trace = details, scrub = false))
             trigger(ctx)
         }
     }
@@ -306,7 +306,10 @@ object ErrorReports {
         }
     }
 
-    /** A report with this phone's facts. Free text is cleaned here. */
+    /**
+     * A report with this phone's facts. Free text is cleaned here, unless [scrub] is false: text the
+     * app made itself (a performance report holds no shop data, and its numbers matter).
+     */
     private fun build(
         ctx: Context,
         kind: String,
@@ -316,6 +319,7 @@ object ErrorReports {
         message: String = "",
         trace: String = "",
         log: String = "",
+        scrub: Boolean = true,
     ): ErrorReport = ErrorReport(
         kind = kind,
         fingerprint = key.fingerprint,
@@ -336,9 +340,9 @@ object ErrorReports {
         dbMb = quietly(0L) { ctx.getDatabasePath(Schema.FILE_NAME).length() / MB },
         lang = quietly("") { AppLanguage.get(ctx).ifEmpty { Locale.getDefault().language } },
         thread = thread,
-        message = CrashText.scrub(message),
-        trace = CrashText.scrub(trace),
-        log = CrashText.scrub(log),
+        message = if (scrub) CrashText.scrub(message) else message,
+        trace = if (scrub) CrashText.scrub(trace) else trace,
+        log = if (scrub) CrashText.scrub(log) else log,
     ).clipped()
 
     // ---- the queue -----------------------------------------------------------------------------

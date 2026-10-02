@@ -34,9 +34,10 @@ suite measures directly; "user" budgets include UI work and are checked on devic
 | `low_stock_page` | first 50 low-stock products | 50k products | ≤ 300 ms |
 | `report_day` | the whole report screen (`ReportService.build`): totals + period before, buckets, payments, cashiers, categories, top 20 | 1M lines | ≤ 300 ms |
 | `report_month` | same for 30 days | 1M lines | ≤ 1000 ms |
-| `report_year` / `report_calendar_year` | same for 365 days / a calendar year (whole months from `sum_month_product`, D-043) | 1M lines | ≤ 3000 ms |
-| `slow_movers` / `stock_value` | products with stock not sold in 30 days; stock at cost by category | 50k products | ≤ 1000 / 500 ms |
-| `popular_items` | the catalogue's Popular tab: best sellers of 30 days from `sum_day_product` + their tiles (D-049) | 1M lines | ≤ 300 ms |
+| `report_year` / `report_calendar_year` | same for 365 days / a calendar year (whole years, months less days and loose days, `RangePlan`, D-043, D-058) | 1M lines | ≤ 3000 ms |
+| `slow_movers` / `stock_value` | products with stock not sold in 30 days (list, count and value in one reading); stock at cost by category | 50k products | ≤ 1000 / 500 ms |
+| `popular_ranking` | best sellers of 30 days (D-049), made in the background: the tab shows the kept ranking (D-058) | 1M lines | ≤ 1000 ms |
+| `popular_items` | the Popular tab's tiles for the kept ranking: what the tab waits for | 50k products | ≤ 50 ms |
 | `export_receipts_month` / `export_products` | a month of receipts (~20k) / every product as CSV, streamed | FULL | ≤ 10 s / 20 s (n = 1) |
 | `import_chunk_200` | one import transaction: 200 CSV rows parsed, checked, created | FULL | ≤ 3000 ms |
 | `sync_import_200_sales` / `sync_import_200_edits` | another till's 200 sales / 200 price edits applied by the importer in one transaction (real imports split into ~100 ms transactions, D-045) | FULL | ≤ 3000 / 1500 ms |
@@ -100,6 +101,14 @@ Emulator notes (API 21 image, observed 2026-09-28):
 Scaling note: before Phase 5 `report_year` read ≈550k `sum_day_product` rows (2.38 s on a
 mid-range phone). Since D-043 whole months come from `sum_month_product` (≈12 rows per product
 and year) and only the loose days at both ends from the per-day table.
+
+**Real hardware (D-058).** The CI emulators run on fast x86 servers; the store's low-end ARM tablet
+(Android 10, SQLite 3.22, 2.8 GB) ran FULL 4–6× slower and missed five budgets (report_year 6.6 s)
+plus one plan check its older planner failed (`shift_current`). Reports now read whole years
+(`sum_year_product`), a month less a few days instead of 28 days, and categories and best sellers
+from one reading; on SQLite 3.22 the rolling year went from 1.08 s to 0.27 s and 30 days from
+0.22 s to 0.07 s for the same rows (laptop). Check plans and timings on SQLite 3.22 too: the
+`sqlite-tools-win32-x86-3220000` shell from sqlite.org runs the app's SQL as the tablet does.
 
 ## 3. Cold start
 

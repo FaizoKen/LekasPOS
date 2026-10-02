@@ -9,7 +9,6 @@ import com.lekaspos.core.csv.CsvWriter
 import com.lekaspos.core.csv.ProductCsv
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
-import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.escpos.PrinterProfile
 import com.lekaspos.core.id.Ids
@@ -267,18 +266,17 @@ class PerfSuite(
         add(measure("report_calendar_year", 3000.0, warmup = 1, n = 3) { ReportService.build(r, lastYear, 20) })
 
         progress.update("stock reports")
-        val month = MonthSplit.of(Period(today - 29, today + 1))
-        add(measure("slow_movers", 1000.0, warmup = 1, n = 5) {
-            ReportDao.slowMovers(r, month, 100)
-            ReportDao.slowTotal(r, month)
-        })
+        val month = Period(today - 29, today + 1)
+        // The list and the count and value of all of them, in one reading (D-058).
+        add(measure("slow_movers", 1000.0, warmup = 1, n = 5) { ReportDao.slowMovers(r, month, 100) })
         add(measure("stock_value", 500.0, warmup = 1, n = 5) { ReportDao.stockValue(r) })
 
-        // The catalogue's "Popular" tab (D-049): the ranking (kept 10 minutes), then the tiles.
+        // The catalogue's "Popular" tab (D-049): the tab shows the ranking kept from last time at once;
+        // the ranking itself (a month of sales) is made in the background (D-058).
         progress.update("popular_items")
-        add(measure("popular_items", 300.0, warmup = 1, n = 10) {
-            ProductDao.listByIds(r, ProductDao.popularIds(r, today - 29, today, 50))
-        })
+        var ranking = emptyList<Long>()
+        add(measure("popular_ranking", 1000.0, warmup = 1, n = 10) { ranking = ProductDao.popularIds(r, today - 29, today, 50) })
+        add(measure("popular_items", 50.0, warmup = 1, n = 10) { ProductDao.listByIds(r, ranking) })
 
         progress.update("exports")
         val sink = CountingSink()

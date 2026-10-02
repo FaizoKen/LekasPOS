@@ -28,7 +28,8 @@ object QueryPlans {
     /** Tables that grow with sales volume or catalogue size. */
     val LARGE_TABLES = setOf(
         "sale", "sale_line", "payment", "sale_void", "stock_movement", "stock_count", "audit_log", "credit_entry",
-        "cash_movement", "product", "product_barcode", "sum_day_product", "purchase", "purchase_line", "customer", "shift",
+        "cash_movement", "product", "product_barcode", "sum_day_product", "sum_month_product", "sum_year_product",
+        "purchase", "purchase_line", "customer", "shift",
     )
 
     /**
@@ -37,7 +38,7 @@ object QueryPlans {
      */
     private val KEY_LOOKUPS = setOf(
         "refunded_total", "voids_of_sale", "refunds_of", "refunded_by_line", "receipt_lookup", "popular_ids", "products_by_ids",
-        "voids_list",
+        "voids_list", "report_product_names",
     )
 
     /** Paged lists: must come out of an index in order (no temp B-tree sort). */

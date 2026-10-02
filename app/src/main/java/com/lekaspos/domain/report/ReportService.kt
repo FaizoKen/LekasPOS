@@ -11,7 +11,6 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.report.Bucket
 import com.lekaspos.core.report.Buckets
 import com.lekaspos.core.report.Granularity
-import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.report.ReportMath
 import com.lekaspos.core.time.DateText
@@ -63,8 +62,7 @@ class ReportService(private val graph: AppGraph) {
 
     suspend fun slowMovers(p: Period, limit: Int = 200): Pair<List<SlowMover>, Pair<Long, Long>> {
         graph.permissions.actor(Perm.REPORTS)
-        val s = MonthSplit.of(p)
-        return graph.db().read { r -> ReportDao.slowMovers(r, s, limit) to ReportDao.slowTotal(r, s) }
+        return graph.db().read { r -> ReportDao.slowMovers(r, p, limit).let { it.items to (it.count to it.valueMilli) } }
     }
 
     suspend fun stock(): Stock {
@@ -84,7 +82,7 @@ class ReportService(private val graph: AppGraph) {
             Export.DAILY -> db.read { r -> dailyCsv(w, Buckets.of(ReportDao.days(r, p.from, p.to), p, Granularity.DAY), currency) }
             Export.PRODUCTS -> db.read { r ->
                 w.row("product", "qty", "net_sales_ex_tax", "tax", "cost", "gross_profit")
-                ReportDao.eachProduct(r, MonthSplit.of(p)) { t ->
+                ReportDao.eachProduct(r, p) { t ->
                     w.row(t.name ?: OTHER, qty(t.qty), m(t.netEx, currency), m(t.tax, currency), m(t.cost, currency), m(t.grossProfit, currency))
                 }
             }
@@ -112,8 +110,8 @@ class ReportService(private val graph: AppGraph) {
         private const val OTHER = "(other items)"
 
         fun build(r: SQLiteDatabase, p: Period, topN: Int): Report {
-            val split = MonthSplit.of(p)
             val g = Granularity.forPeriod(p)
+            val products = ReportDao.summary(r, p, topN) // categories and best sellers in one reading (D-058)
             return Report(
                 period = p,
                 totals = ReportDao.totals(r, p.from, p.to),
@@ -122,8 +120,8 @@ class ReportService(private val graph: AppGraph) {
                 buckets = Buckets.of(ReportDao.days(r, p.from, p.to), p, g),
                 payments = ReportDao.byPayment(r, p.from, p.to),
                 staff = ReportDao.byStaff(r, p.from, p.to),
-                categories = ReportDao.byCategory(r, split),
-                topProducts = ReportDao.products(r, split, limit = topN),
+                categories = products.categories,
+                topProducts = products.top,
             )
         }
 

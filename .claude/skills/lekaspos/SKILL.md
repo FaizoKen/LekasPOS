@@ -99,7 +99,8 @@ When a decision changes: update the reference file here **and** add an entry to
 | Memory | steady heap ≤ 48 MB, no growth over a 1,000-sale soak |
 
 Rules that keep these true: indexed access paths only (verify with `EXPLAIN QUERY PLAN` in the
-perf suite), keyset pagination (never OFFSET on big tables), reports read summary tables,
+perf suite), keyset pagination (never OFFSET on big tables), reports read summary tables (whole years,
+months and loose days through `SummaryRange` / `RangePlan`, D-058),
 streaming I/O for files (never whole files or whole tables in memory).
 
 ## 5. Money rules (summary — details in `references/money.md`)

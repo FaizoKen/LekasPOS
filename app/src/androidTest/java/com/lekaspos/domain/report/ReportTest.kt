@@ -9,7 +9,6 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.report.Granularity
 import com.lekaspos.core.report.Months
-import com.lekaspos.core.report.MonthSplit
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.catalog.CategoryDao
@@ -103,7 +102,7 @@ class ReportTest {
             Period(Days.fromYmd(20240101), Days.fromYmd(20270101)),
             Period(Days.fromYmd(20260114), Days.fromYmd(20260116)),
         )) {
-            val split = db.readBlocking { ReportDao.products(it, MonthSplit.of(p), limit = 100) }.associate { it.productId to (it.qty to it.netEx) }
+            val split = db.readBlocking { ReportDao.products(it, p, limit = 100) }.associate { it.productId to (it.qty to it.netEx) }
             val days = db.readBlocking { r ->
                 r.queryList(
                     "SELECT product_id, SUM(qty), SUM(net_ex) FROM sum_day_product WHERE day >= ? AND day < ? GROUP BY product_id",
@@ -111,14 +110,72 @@ class ReportTest {
                 ) { it.getLong(0) to (it.getLong(1) to it.getLong(2)) }
             }.toMap()
             assertEquals(days, split, "products of $p")
-            val cats = db.readBlocking { ReportDao.byCategory(it, MonthSplit.of(p)) }
+            val cats = db.readBlocking { ReportDao.byCategory(it, p) }
             assertEquals(days.values.sumOf { it.second }, cats.sumOf { it.netEx })
             // The limit keeps the best sellers: by net sales, or by quantity.
             val bestByNet = days.maxByOrNull { it.value.second }?.key
-            assertEquals(bestByNet, db.readBlocking { ReportDao.products(it, MonthSplit.of(p), limit = 1) }.singleOrNull()?.productId)
+            assertEquals(bestByNet, db.readBlocking { ReportDao.products(it, p, limit = 1) }.singleOrNull()?.productId)
             val bestByQty = days.maxByOrNull { it.value.first }?.key
-            assertEquals(bestByQty, db.readBlocking { ReportDao.products(it, MonthSplit.of(p), byQty = true, limit = 1) }.singleOrNull()?.productId)
+            assertEquals(bestByQty, db.readBlocking { ReportDao.products(it, p, byQty = true, limit = 1) }.singleOrNull()?.productId)
         }
+    }
+
+    /**
+     * D-058: whole years, months less a few days, months and years whose rest had no sales — every
+     * period gives the answer of its days, for the product list, categories, slow movers and the
+     * popular items.
+     */
+    @Test
+    fun yearsAndMonthsLessDaysGiveTheSameAnswerAsDays() = runBlocking {
+        val db = graph.db()
+        val products = (1..6).map { TestDb.product(db, "P$it", 100L * it + 7L) }
+        db.writeBlocking { tx -> for (p in products) StockDao.insertMovement(tx, p, MovementKind.OPENING, 1_000_000L, 50L, null, null, null, 1L) }
+        val rnd = kotlin.random.Random(58)
+        val first = Days.fromYmd(20240901)
+        repeat(160) {
+            val day = first + rnd.nextInt(800)
+            val item = products[rnd.nextInt(products.size)] to 1_000L * (1 + rnd.nextInt(3))
+            db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(item), soldAt = at(Days.toYmd(day))), tz) }
+        }
+        fun byDays(p: Period) = db.readBlocking { r ->
+            r.queryList(
+                "SELECT product_id, SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) FROM sum_day_product WHERE day >= ? AND day < ? " +
+                    "GROUP BY product_id HAVING SUM(qty) != 0 OR SUM(net_ex) != 0 OR SUM(tax) != 0 OR SUM(cost) != 0",
+                arrayOf(p.from.toString(), p.to.toString()),
+            ) { it.getLong(0) to listOf(it.getLong(1), it.getLong(2), it.getLong(3), it.getLong(4)) }
+        }.toMap()
+        val periods = List(60) {
+            val from = first - 30 + rnd.nextInt(860)
+            Period(from, from + 1 + rnd.nextInt(500))
+        } + listOf(
+            Period(Days.fromYmd(20250101), Days.fromYmd(20260101)), // a whole year
+            Period(Days.fromYmd(20250201), Days.fromYmd(20260101)), // the year less January
+            Period(Days.fromYmd(20250903), Days.fromYmd(20251003)), // September less two days, two days of October
+            Period(first - 400, first + 900), // years without sales on both sides
+        )
+        for (p in periods) {
+            val days = byDays(p)
+            val got = db.readBlocking { ReportDao.products(it, p, limit = Int.MAX_VALUE) }
+                .associate { it.productId to listOf(it.qty, it.netEx, it.tax, it.cost) }
+            assertEquals(days, got, "products of $p")
+            assertEquals(days.values.sumOf { it[1] }, db.readBlocking { ReportDao.byCategory(it, p) }.sumOf { it.netEx }, "categories of $p")
+            val sold = days.filterValues { it[0] > 0 }.keys
+            val slow = db.readBlocking { ReportDao.slowMovers(it, p, 100) }
+            assertEquals(products.filter { it !in sold }.toSet(), slow.items.map { it.productId }.toSet(), "slow movers of $p")
+            assertEquals(slow.items.size.toLong(), slow.count)
+            val popular = db.readBlocking { ProductDao.popularIds(it, p.from, p.to - 1, 3) }
+            val expected = days.filterValues { it[0] > 0 }.entries.sortedWith(compareBy({ -it.value[0] }, { it.key })).take(3).map { it.key }
+            assertEquals(expected, popular, "popular items of $p")
+        }
+        // The per-year table is the sum of the months.
+        val years = db.readBlocking { r -> r.queryList("SELECT year, product_id, qty, net_ex FROM sum_year_product WHERE qty != 0 OR net_ex != 0 ORDER BY 1, 2") { "${it.getInt(0)}|${it.getLong(1)}|${it.getLong(2)}|${it.getLong(3)}" } }
+        val fromMonths = db.readBlocking { r ->
+            r.queryList(
+                "SELECT month / 100, product_id, SUM(qty), SUM(net_ex) FROM sum_month_product GROUP BY 1, 2 " +
+                    "HAVING SUM(qty) != 0 OR SUM(net_ex) != 0 ORDER BY 1, 2",
+            ) { "${it.getInt(0)}|${it.getLong(1)}|${it.getLong(2)}|${it.getLong(3)}" }
+        }
+        assertEquals(fromMonths, years)
     }
 
     @Test
@@ -196,7 +253,7 @@ class ReportTest {
         val p = assertNotNull(db.readBlocking { ProductDao.get(it, kopi) })
         db.writeBlocking { tx -> ProductDao.update(tx, p, p.copy(categoryId = snacks), now) }
         db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(kopi to 2_000L), soldAt = at(20260120)), tz) }
-        fun cats(range: Period) = db.readBlocking { ReportDao.byCategory(it, MonthSplit.of(range)) }.associate { it.categoryId to it.qty }
+        fun cats(range: Period) = db.readBlocking { ReportDao.byCategory(it, range) }.associate { it.categoryId to it.qty }
         val month = cats(Period(Days.fromYmd(20260101), Days.fromYmd(20260201))) // the month table
         val days = cats(Period(Days.fromYmd(20260105), Days.fromYmd(20260125))) // the day table
         assertEquals(mapOf(snacks to 3_000L, null to 1_000L), month)
@@ -224,7 +281,7 @@ class ReportTest {
         val day = Period(today, today + 1)
         suspend fun check() {
             assertEquals(listOf(teh), graph.reports.slowMovers(month).first.map { it.productId })
-            val products = db.readBlocking { ReportDao.products(it, MonthSplit.of(day), limit = Int.MAX_VALUE) }
+            val products = db.readBlocking { ReportDao.products(it, day, limit = Int.MAX_VALUE) }
             assertEquals(listOf(kopi), products.map { it.productId })
             assertEquals(listOf(Seed.Ids.PM_CASH), db.readBlocking { ReportDao.byPayment(it, today, today + 1) }.map { it.methodId })
             assertEquals(listOf(0L), db.readBlocking { ReportDao.byStaff(it, today, today + 1) }.map { it.staffId })

@@ -5,7 +5,8 @@ import com.lekaspos.core.report.Months
 import com.lekaspos.data.db.Db
 
 /**
- * Incremental maintenance of the per-day summary tables (DERIVED, references/database.md §7).
+ * Incremental maintenance of the summary tables — per day, and per month and year of products
+ * (DERIVED, references/database.md §7).
  * Called with sign = +1 when a sale/refund is stored and −1 when it is voided.
  */
 object Summaries {
@@ -49,6 +50,12 @@ object Summaries {
     private const val MONTH_INSERT =
         "INSERT INTO sum_month_product(qty, net_ex, tax, cost, month, product_id, category_id) VALUES(?,?,?,?,?,?,?)"
 
+    private const val YEAR_UPDATE =
+        "UPDATE sum_year_product SET qty = qty + ?, net_ex = net_ex + ?, tax = tax + ?, cost = cost + ? " +
+            "WHERE year = ? AND product_id = ?"
+    private const val YEAR_INSERT =
+        "INSERT INTO sum_year_product(qty, net_ex, tax, cost, year, product_id, category_id) VALUES(?,?,?,?,?,?,?)"
+
     /**
      * Rebuilds the per-month table from the per-day one (D-043). An epoch day times 86,400 read as
      * UTC seconds is that local date, so strftime gives the same yyyymm as :core `Months.key`.
@@ -57,6 +64,12 @@ object Summaries {
         "INSERT INTO sum_month_product(month, product_id, category_id, qty, net_ex, tax, cost) " +
             "SELECT CAST(strftime('%Y%m', day * 86400, 'unixepoch') AS INTEGER), product_id, MIN(category_id), " +
             "SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) FROM sum_day_product GROUP BY 1, product_id"
+
+    /** Rebuilds the per-year table from the per-month one (D-058): year = month / 100. */
+    const val YEARS_FROM_MONTHS =
+        "INSERT INTO sum_year_product(year, product_id, category_id, qty, net_ex, tax, cost) " +
+            "SELECT month / 100, product_id, MIN(category_id), SUM(qty), SUM(net_ex), SUM(tax), SUM(cost) " +
+            "FROM sum_month_product GROUP BY 1, product_id"
 
     private const val PAYMENT_UPDATE =
         "UPDATE sum_day_payment SET amount = amount + ?, count = count + ? WHERE day = ? AND method_id = ?"
@@ -103,6 +116,7 @@ object Summaries {
             if (!categories.containsKey(pid)) categories[pid] = l.categoryId
         }
         val month = Months.key(s.day)
+        val year = month / 100
         for ((pid, a) in byProduct) {
             tx.updateOrInsert(
                 PRODUCT_UPDATE, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, s.day, pid),
@@ -111,6 +125,10 @@ object Summaries {
             tx.updateOrInsert(
                 MONTH_UPDATE, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, month, pid),
                 MONTH_INSERT, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, month, pid, categories[pid]),
+            )
+            tx.updateOrInsert(
+                YEAR_UPDATE, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, year, pid),
+                YEAR_INSERT, arrayOf<Any?>(a[0] * k, a[1] * k, a[2] * k, a[3] * k, year, pid, categories[pid]),
             )
         }
 

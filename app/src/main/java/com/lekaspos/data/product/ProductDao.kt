@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.Entity
+import com.lekaspos.core.report.Period
 import com.lekaspos.core.text.SearchText
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
@@ -14,6 +15,7 @@ import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
+import com.lekaspos.data.report.SummaryRange
 import com.lekaspos.data.sync.LwwWriter
 
 data class Product(
@@ -213,13 +215,17 @@ object ProductDao {
     const val FTS_CANDIDATES = 2000
 
     // The capped FTS subquery is the outer loop (CROSS JOIN pins the order), so the cost is
-    // bounded by FTS_CANDIDATES even when a short prefix matches most of the catalogue.
+    // bounded by FTS_CANDIDATES even when a short prefix matches most of the catalogue. Only the
+    // id and sort key of the candidates are sorted; the columns and the stock level are read for
+    // the page alone (all of them for 2,000 candidates made common two-word searches slow on a
+    // store's tablet, D-058).
+    private const val FTS_PAGE =
+        "SELECT p.id AS id, p.name_key AS k FROM (SELECT docid FROM product_fts WHERE product_fts MATCH ? LIMIT $FTS_CANDIDATES) f " +
+            "CROSS JOIN product p ON p.id = f.docid WHERE p.deleted = 0"
+    private const val FTS_COLUMNS =
+        ") t CROSS JOIN product p ON p.id = t.id LEFT JOIN stock_level s ON s.product_id = p.id ORDER BY t.k, t.id"
     private const val SEARCH_FTS =
-        "SELECT $LIST_COLUMNS FROM (SELECT docid FROM product_fts WHERE product_fts MATCH ? LIMIT $FTS_CANDIDATES) f " +
-            "CROSS JOIN product p ON p.id = f.docid " +
-            "LEFT JOIN stock_level s ON s.product_id = p.id " +
-            "WHERE p.deleted = 0 AND p.active = 1 " +
-            "ORDER BY p.name_key, p.id LIMIT ?"
+        "SELECT $LIST_COLUMNS FROM ($FTS_PAGE AND p.active = 1 ORDER BY p.name_key, p.id LIMIT ?$FTS_COLUMNS"
 
     private const val SEARCH_PREFIX =
         "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
@@ -235,11 +241,7 @@ object ProductDao {
     // The same three searches with switched-off products included (product list and pickers,
     // where the owner looks for a product to switch it back on). Same plans as above.
     private const val SEARCH_FTS_ALL =
-        "SELECT $LIST_COLUMNS FROM (SELECT docid FROM product_fts WHERE product_fts MATCH ? LIMIT $FTS_CANDIDATES) f " +
-            "CROSS JOIN product p ON p.id = f.docid " +
-            "LEFT JOIN stock_level s ON s.product_id = p.id " +
-            "WHERE p.deleted = 0 " +
-            "ORDER BY p.name_key, p.id LIMIT ?"
+        "SELECT $LIST_COLUMNS FROM ($FTS_PAGE ORDER BY p.name_key, p.id LIMIT ?$FTS_COLUMNS"
 
     private const val SEARCH_PREFIX_ALL =
         "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
@@ -585,13 +587,16 @@ object ProductDao {
 
     // Best sellers by quantity over a range of days, from the daily summary (a range of its
     // primary key, never the sales themselves). Both bounds keep the range narrow on SQLite 3.8.
-    private const val POPULAR_IDS =
-        "SELECT product_id FROM sum_day_product WHERE day >= ? AND day <= ? " +
-            "GROUP BY product_id HAVING SUM(qty) > 0 ORDER BY SUM(qty) DESC, product_id LIMIT ?"
+    // The period's product rows as whole months less a few days where it pays (SummaryRange,
+    // D-058): 30 days of a big store were ~70,000 per-day rows, now ~40,000.
+    private const val POPULAR_HEAD = "SELECT product_id FROM ("
+    private const val POPULAR_TAIL = ") GROUP BY product_id HAVING SUM(qty) > 0 ORDER BY SUM(qty) DESC, product_id LIMIT ?"
 
-    /** The products sold most (by quantity) from [fromDay] to [toDay], best first. */
-    fun popularIds(db: SQLiteDatabase, fromDay: Long, toDay: Long, limit: Int): List<Long> =
-        db.queryList(POPULAR_IDS, args(fromDay, toDay, limit)) { it.getLong(0) }
+    /** The products sold most (by quantity) from [fromDay] to [toDay] (inclusive), best first. */
+    fun popularIds(db: SQLiteDatabase, fromDay: Long, toDay: Long, limit: Int): List<Long> {
+        val rows = SummaryRange.qty(SummaryRange.plan(db, Period(fromDay, toDay + 1)))
+        return db.queryList(POPULAR_HEAD + rows.sql + POPULAR_TAIL, rows.args + limit.toString()) { it.getLong(0) }
+    }
 
     private const val BY_ID_PREFIX =
         "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
@@ -627,7 +632,7 @@ object ProductDao {
         "product_export" to EXPORT_PAGE,
         "product_export_barcodes" to EXPORT_BARCODES,
         "barcode_owners" to OWNERS_2,
-        "popular_ids" to POPULAR_IDS,
+        "popular_ids" to POPULAR_HEAD + SummaryRange.qty(SummaryRange.SAMPLE).sql + POPULAR_TAIL,
         "products_by_ids" to BY_ID_PREFIX + "(?,?,?)",
     )
 }

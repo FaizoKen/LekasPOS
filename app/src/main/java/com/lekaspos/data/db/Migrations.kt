@@ -77,6 +77,13 @@ object Migrations {
             db.execSQL(Schema.SYNC_DEFERRED)
             db.execSQL("DELETE FROM sync_cursor")
         },
+        // v6 → v7 (1.5.1, D-058): per-year product totals, filled from the per-month ones; an
+        // index for this till's open shift (SQLite 3.22 scanned the shift table for it).
+        Migration(6, 7) { db ->
+            db.execSQL(Schema.SUM_YEAR_PRODUCT)
+            db.execSQL(com.lekaspos.data.sale.Summaries.YEARS_FROM_MONTHS)
+            db.execSQL(Schema.SHIFT_OPEN_INDEX)
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

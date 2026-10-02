@@ -2,9 +2,7 @@ package com.lekaspos.core.report
 
 import com.lekaspos.core.time.Days
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import org.junit.Test
 
 class PeriodsTest {
@@ -26,38 +24,6 @@ class PeriodsTest {
         assertEquals(Period(d(20251201), d(20260101)), Preset.LAST_MONTH.period(d(20260115)))
         assertEquals(Period(d(20260801), d(20260901)).previous(), Period(d(20260701), d(20260801)))
         assertEquals(202609, Months.key(today))
-    }
-
-    @Test
-    fun rangesSplitIntoWholeMonthsAndLooseDays() {
-        // 15 Jan – 10 Apr (exclusive): Jan 15–31 loose, Feb + Mar whole, Apr 1–9 loose.
-        val s = MonthSplit.of(Period(d(20260115), d(20260410)))
-        assertEquals(MonthSplit(d(20260115), d(20260201), 202602, 202604, d(20260401), d(20260410)), s)
-        assertTrue(s.hasMonths)
-        // A whole year is twelve months and no loose days.
-        val y = MonthSplit.of(Period(d(20250101), d(20260101)))
-        assertEquals(MonthSplit(d(20250101), d(20250101), 202501, 202601, d(20260101), d(20260101)), y)
-        // Inside one month: days only.
-        val m = MonthSplit.of(Period(d(20260903), d(20260920)))
-        assertFalse(m.hasMonths)
-        assertEquals(d(20260903), m.headFrom)
-        assertEquals(d(20260920), m.headTo)
-        assertEquals(m.tailFrom, m.tailTo)
-        // Across a year end.
-        val x = MonthSplit.of(Period(d(20251120), d(20260205)))
-        assertEquals(202512, x.fromMonth)
-        assertEquals(202602, x.toMonth)
-        // Every day of a range is covered exactly once.
-        for (p in listOf(Period(d(20260115), d(20260410)), Period(d(20251231), d(20260102)), Period(d(20260201), d(20260301)))) {
-            val sp = MonthSplit.of(p)
-            var covered = (sp.headTo - sp.headFrom) + (sp.tailTo - sp.tailFrom)
-            var mDay = if (sp.hasMonths) sp.headTo else sp.tailFrom
-            while (sp.hasMonths && mDay < sp.tailFrom) {
-                covered += Days.nextMonthStart(mDay) - mDay
-                mDay = Days.nextMonthStart(mDay)
-            }
-            assertEquals(p.days, covered, "coverage of $p")
-        }
     }
 
     @Test

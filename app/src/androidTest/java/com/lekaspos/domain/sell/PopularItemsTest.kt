@@ -64,6 +64,22 @@ class PopularItemsTest {
         assertEquals(listOf("Telur", "Roti", "Gula"), graph.popular.load(now).map { it.name })
     }
 
+    /** D-058: the tab shows the ranking kept from last time (also after a restart) and never waits for a new one. */
+    @Test
+    fun theKeptRankingShowsAtOnceAfterARestart() = runBlocking {
+        val db = graph.db()
+        val roti = TestDb.product(db, "Roti", 350L)
+        val telur = TestDb.product(db, "Telur", 1_650L)
+        sell(roti, 2_000L)
+        val now = System.currentTimeMillis()
+        assertEquals(listOf("Roti"), graph.popular.load(now).map { it.name })
+        sell(telur, 5_000L)
+        // The app was restarted a minute later: the ranking kept in this till's meta, at once.
+        assertEquals(listOf("Roti"), PopularItems(graph).load(now + 60_000L).map { it.name })
+        // Days later the kept ranking is too old to show: a new one is made first.
+        assertEquals(listOf("Telur", "Roti"), PopularItems(graph).load(now + 4L * Days.DAY_MS).map { it.name })
+    }
+
     @Test
     fun aNewPriceShowsAtOnceEvenWhileTheRankingIsKept() = runBlocking {
         val db = graph.db()

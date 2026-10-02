@@ -101,7 +101,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v6)
+## 6. Table catalog (schema v7)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -117,7 +117,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `supplier` | LWW | suppliers | `name_key` |
 | `customer` | LWW | customers (optional feature) | `name_key`, `phone` |
 | `payment_method` | LWW | cash/card/e-wallet/credit/other | — |
-| `shift` | LWW (owner device edits only) | shift open/close, float, counted cash | `opened_at` |
+| `shift` | LWW (owner device edits only) | shift open/close, float, counted cash | `opened_at`, `(device_no, closed_at, opened_at)` (v7) |
 | `cash_movement` | EVENT | cash in/out/drop during a shift | `shift_id` |
 | `sale` | EVENT | sales and refunds (`kind`), totals, receipt no | `sold_at`, `receipt_no`, `shift_id`, `customer_id`, `ref_sale_id` |
 | `sale_line` | EVENT (child) | lines; also the stock movements of sales | `sale_id`, `(product_id, hlc)` |
@@ -134,6 +134,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `sum_day` | DERIVED | per-day totals | PK day |
 | `sum_day_product` | DERIVED | per-day per-product qty/net/cost/tax | PK (day, product_id), `(product_id, day)` |
 | `sum_month_product` | DERIVED | per-month (yyyymm) per-product qty/net/cost/tax (v4, D-043) | PK (month, product_id) |
+| `sum_year_product` | DERIVED | per-year (yyyy) per-product qty/net/cost/tax = Σ its months (v7, D-058) | PK (year, product_id) |
 | `sum_day_payment` | DERIVED | per-day per-payment-method | PK (day, method_id) |
 | `sum_day_staff` | DERIVED | per-day per-cashier | PK (day, staff_id) |
 | `cart`, `cart_line` | LOCAL | open bill + held (parked) bills | `(cart_id, line_no)` |
@@ -187,7 +188,13 @@ are plain columns without FK constraints because sync can deliver them in any or
   (a bare `a < ? OR (a = ? AND b < ?)` may not use the index on old SQLite).
 - Partial indexes are only used when the query repeats the index predicate literally
   (`AND deleted = 0`).
-- Reports read `sum_*` tables; drill-downs read detail tables by indexed ranges.
+- Reports read `sum_*` tables; drill-downs read detail tables by indexed ranges. A period's
+  product rows come from `SummaryRange` (`:core` `RangePlan`, D-058): whole years from
+  `sum_year_product`, whole months from `sum_month_product`, loose days from `sum_day_product`;
+  a month or year partly outside the period is read whole when the days outside had no sales
+  (an index probe), and a nearly whole one as the whole less the days (months) outside. The
+  pieces always add up to exactly the period, so `sum_year = Σ months = Σ days` must hold.
+  Categories and best sellers come from one reading of the period (`ReportDao.summary`).
 - "After this HLC, ties broken by device" is written with a range term first:
   `hlc >= ? AND (hlc > ? OR (id >> 41) > ?)` (`StockDao`, D-054); `QueryPlans` checks the range.
 - Product search hides switched-off products at the till; the manage and pick screens pass

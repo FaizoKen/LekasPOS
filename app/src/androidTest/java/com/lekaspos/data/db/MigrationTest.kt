@@ -105,6 +105,13 @@ class MigrationTest {
                 }
             }
             assertEquals(listOf("202512|5|9|1000|100|1", "202601|5|9|5000|500|2", "202601|6|9|500|50|1"), months)
+            // v7 (D-058): the per-year table, filled from the months.
+            val years = db.readBlocking { r ->
+                r.queryList("SELECT year, product_id, category_id, qty, net_ex, cost FROM sum_year_product ORDER BY year, product_id") {
+                    (0 until 6).joinToString("|") { i -> it.getString(i) }
+                }
+            }
+            assertEquals(listOf("2025|5|9|1000|100|1", "2026|5|9|5000|500|2", "2026|6|9|500|50|1"), years)
         } finally {
             TestDb.delete(db)
         }

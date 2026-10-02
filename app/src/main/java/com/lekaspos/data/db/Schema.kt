@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 6
+    const val VERSION = 7
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -19,6 +19,21 @@ object Schema {
         ver_hlc INTEGER NOT NULL,
         ver_dev INTEGER NOT NULL,
         fver TEXT"""
+
+    /** v7 (D-058): per-year product totals (year = yyyy), the sum of that year's months. */
+    const val SUM_YEAR_PRODUCT = """CREATE TABLE sum_year_product (
+            year INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            category_id INTEGER,
+            qty INTEGER NOT NULL DEFAULT 0,
+            net_ex INTEGER NOT NULL DEFAULT 0,
+            tax INTEGER NOT NULL DEFAULT 0,
+            cost INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (year, product_id)
+        ) WITHOUT ROWID"""
+
+    /** v7 (D-058): `ShiftDao.current` 's lookup. */
+    const val SHIFT_OPEN_INDEX = "CREATE INDEX shift_open ON shift(device_no, closed_at, opened_at)"
 
     /** Promotions (v6, Phase 8): LWW; `products` = the product ids, comma-separated. */
     const val PROMOTION = """CREATE TABLE promotion (
@@ -168,6 +183,8 @@ object Schema {
             note TEXT,$LWW
         )""",
         "CREATE INDEX shift_opened ON shift(opened_at)",
+        // v7: this till's open shift, by index on every SQLite (3.22 scanned the table for it, D-058).
+        SHIFT_OPEN_INDEX,
         // v2: a stock count (stock take). Counts apply as they are entered; the session groups them.
         """CREATE TABLE count_session (
             id INTEGER PRIMARY KEY,
@@ -412,6 +429,8 @@ object Schema {
             cost INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (month, product_id)
         ) WITHOUT ROWID""",
+        // v7: per-year product totals, so a year of a big store is ~45,000 rows instead of 12 months of them (D-058).
+        SUM_YEAR_PRODUCT,
         """CREATE TABLE sum_day_payment (
             day INTEGER NOT NULL,
             method_id INTEGER NOT NULL,
@@ -520,7 +539,7 @@ object Schema {
     )
     val DERIVED_TABLES = listOf(
         "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",
-        "sum_day_payment", "sum_day_staff",
+        "sum_year_product", "sum_day_payment", "sum_day_staff",
     )
     val LOCAL_TABLES = listOf(
         "meta", "cart", "cart_line", "print_job", "outbox", "sync_segment", "sync_cursor", "sync_deferred",

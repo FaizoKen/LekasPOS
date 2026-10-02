@@ -46,6 +46,7 @@ class DerivedConsistencyTest {
             "sum_day" to rows("SELECT day, sale_count + refund_count + void_count, sale_count, refund_count, void_count, gross, discount, net_ex, tax, rounding, total, cost, refund_total, items FROM sum_day ORDER BY day"),
             "sum_day_product" to rows("SELECT day, product_id, qty, net_ex, tax, cost FROM sum_day_product ORDER BY day, product_id"),
             "sum_month_product" to rows("SELECT month, product_id, qty, net_ex, tax, cost FROM sum_month_product ORDER BY month, product_id"),
+            "sum_year_product" to rows("SELECT year, product_id, qty, net_ex, tax, cost FROM sum_year_product ORDER BY year, product_id"),
             "sum_day_payment" to rows("SELECT day, method_id, amount, count FROM sum_day_payment ORDER BY day, method_id"),
             "sum_day_staff" to rows("SELECT day, staff_id, sale_count, total, net_ex FROM sum_day_staff ORDER BY day, staff_id"),
             "stock_level" to r.queryList("SELECT product_id, qty FROM stock_level WHERE qty != 0 ORDER BY product_id") { "${it.getLong(0)}|${it.getLong(1)}" },

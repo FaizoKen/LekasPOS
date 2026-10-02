@@ -21,7 +21,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
-| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — latest download (phone tests passed); the relay is live |
+| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
+| — | **Release 1.5.1**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** |
 
 ## Open questions for the user
 
@@ -1064,3 +1065,34 @@ once; reports go through a small relay to a **private** GitHub repository, one i
    `FaizoKen/LekasPOS-reports` with the note.
 4. With PIN login on, a cashier without the Settings permission is never asked; the owner is.
 5. Everything else works as in 1.4.0 (a quick sale, a refund, a backup).
+
+## 1.5.1 — reports fast on the store's tablet, D-058
+
+The first error reports (#4 QUICK, #6 FULL in `FaizoKen/LekasPOS-reports`) were the performance
+test on the store's own tablet (Android V62, Android 10, SQLite 3.22): one plan check failed on
+its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`report_year` 6.6 s,
+`report_month` 1.7 s, `slow_movers` 1.37 s, `popular_items` 445 ms, `search_multiword` p95 54 ms).
+
+- [x] Measured first, on the same data shape (Node's SQLite and the SQLite 3.22 shell): the time
+      is the per-product sort of every summary row of a period, done twice per report
+- [x] Schema v7: `sum_year_product` (+ maintenance, rebuild, migration, snapshot 7.sql, migration
+      test) and `shift_open` index (plan on SQLite 3.22: SEARCH, no sort)
+- [x] `:core` `RangePlan` (years, months less days, probes for "no sales outside"), 5 unit tests incl.
+      400 random periods that must add up exactly; `MonthSplit` removed
+- [x] `ReportDao.summary`: categories and best sellers from one reading; slow movers in one reading
+- [x] Popular tab: kept ranking shown at once, refreshed in the background; new instrumented test
+- [x] Multi-word search sorts ids only (p95 −35%, same results)
+- [x] Report correctness: instrumented test with two years of random sales and 64 periods (products,
+      categories, slow movers, popular items) against the per-day rows; derived consistency covers
+      the year table
+- [x] Check reports keep their numbers (no "<number>" in performance reports)
+- [ ] CI, perf FULL, test build; the owner runs Diagnostics → FULL on the tablet again
+
+### Needs real-device testing (1.5.1)
+
+1. Install over 1.5.0: data, staff, settings still there (the update builds the year totals once).
+2. **Diagnostics → Run FULL** on the store's tablet: PASS (or, if anything fails, the report arrives
+   in `LekasPOS-reports` with all its numbers).
+3. Reports → This year, Last year, This month: the same totals as before, shown faster.
+4. Selling screen: the Popular tab shows at once, also right after the app was closed and opened.
+5. Search two words (e.g. "milo susu"): results as before.

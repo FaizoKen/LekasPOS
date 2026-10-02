@@ -39,31 +39,6 @@ object Months {
     fun key(day: Long): Int = Days.toYmd(day) / 100
 }
 
-/**
- * A day range split for reading summaries (D-043): whole months come from the per-month
- * table, the loose days before and after them from the per-day table. Empty parts have
- * `from == to`. Month keys: [fromMonth] inclusive, [toMonth] exclusive.
- */
-data class MonthSplit(
-    val headFrom: Long,
-    val headTo: Long,
-    val fromMonth: Int,
-    val toMonth: Int,
-    val tailFrom: Long,
-    val tailTo: Long,
-) {
-    val hasMonths: Boolean get() = toMonth > fromMonth
-
-    companion object {
-        fun of(p: Period): MonthSplit {
-            val firstFull = if (Days.monthStart(p.from) == p.from) p.from else Days.nextMonthStart(p.from)
-            val fullEnd = Days.monthStart(p.to)
-            if (firstFull >= fullEnd) return MonthSplit(p.from, p.to, 0, 0, p.to, p.to)
-            return MonthSplit(p.from, firstFull, Months.key(firstFull), Months.key(fullEnd), fullEnd, p.to)
-        }
-    }
-}
-
 enum class Granularity {
     DAY, WEEK, MONTH;
 

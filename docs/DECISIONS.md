@@ -803,6 +803,41 @@ the public repository (a slip in scrubbing or a spammed relay would be public fo
 contact must stay private); sending without asking (the privacy policy promised nothing leaves
 the phone by default); Google Play's Android vitals alone (not on Play yet, no logged errors).
 
+### D-058 — Reports fast on the store's tablet: years, months less days, one reading (1.5.1, 2026-10-02)
+The first error reports (D-057) were two failed performance tests from the store's own tablet
+(Android 10, SQLite 3.22, 2.8 GB, low-end ARM). QUICK passed every timing but one plan check;
+FULL (50,000 products, 1M sale lines) missed five budgets: `report_year` 6.6 s (3 s),
+`report_month` 1.7 s (1 s), `slow_movers` 1.37 s (1 s), `popular_items` 445 ms (300 ms),
+`search_multiword` p95 54 ms (50 ms) — 4–6× slower than the CI emulators (fast x86 servers), so
+the budgets had only been met on emulators. Measured on the same data (Node's SQLite and the
+SQLite 3.22 shell from sqlite.org) before changing anything; every change gives the same rows.
+- **`shift_current`**: SQLite 3.22 scanned and sorted `shift` for this till's open shift (only an
+  `opened_at` index). v7 index `shift_open (device_no, closed_at, opened_at)`: a direct lookup on
+  every SQLite version (checked on 3.22).
+- **Reports read fewer rows.** The time was the `GROUP BY product` sort of every product row of
+  the period (a year of a big store: ~425,000 rows), done twice (categories, best sellers). Now:
+  a per-year table `sum_year_product` (v7; Σ of its months; maintained with the month table, rebuilt
+  by `DerivedRebuild`, filled by the migration); `RangePlan` (`:core`, exhaustively tested) reads a
+  period as whole years, whole months and loose days, a month or year partly outside the period
+  whole when its days outside had no sales ("this month", "this year": the rest is the future — an
+  index probe), and a nearly whole one as the whole less the days or months outside; categories and
+  best sellers from one reading (`ReportDao.summary`). Rolling year: 425,000 → 152,000 rows in one
+  pass instead of two (1.08 s → 0.27 s on SQLite 3.22); 30 days: 70,000 → 41,000 rows (0.22 s →
+  0.07 s); this year: 293,000 → 51,000 rows. Slow movers: one reading for the list, count and value.
+- **Popular tab** (on the selling screen): its ranking reads a month of sales, ~0.3 s at FULL on the
+  tablet even after the above. The tab now shows the ranking kept in this till's `meta`
+  (`dev.popular`) at once and makes a fresh one in the background when it is older than 10 minutes;
+  only a ranking older than 3 days (or none) is waited for. Perf scenarios: `popular_ranking`
+  (background, ≤ 1 s) and `popular_items` (the tab's tiles, ≤ 50 ms).
+- **Multi-word search**: only the id and sort key of the 2,000 FTS candidates are sorted; columns and
+  stock are read for the page of 50 (p95 −35%, same results).
+- **Error reports of checks** keep their numbers (the performance report is the app's own text, no
+  shop data; "sale_lines <number>" hid the scale).
+Rejected: product-ordered month table `(product_id, month)` (faster with one year of history, no
+better after three — it scans every month ever); seeks per product instead of the sort (slower);
+a month-driven popular query or a top-K two-pass (no faster on SQLite 3.22); raising the budgets
+(the tablet is the store's real till).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.
