@@ -23,6 +23,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
+| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — built and tested locally; CI and the owner's phone tests next |
 
 ## Open questions for the user
 
@@ -1137,3 +1138,51 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
 4. Move a sold product to another category: its sales show under the new category in Reports.
 5. Selling screen: the Popular tab shows at once, also right after the app was closed and opened.
 6. Search "julie s" or two words (e.g. "milo susu"): the expected products.
+
+## 1.6.0 — the app updates itself, D-059
+
+The owner asked that the app check for a new version and install it from inside the app (until now:
+download from the website and install over). Design: the latest GitHub release, checked daily; the
+download checked against GitHub's SHA-256 and the release key; Android's installer confirms.
+
+- [x] `:core` `update.Releases` (which release, which APK, versions) + `ReleaseNotes` ("What's new"
+      in English or Malay, Markdown taken out): 12 unit tests
+- [x] `app.AppUpdates`: GitHub API with ETag, download (HTTPS only, redirects by hand, `.part`,
+      size + SHA-256), APK checks (package, newer build, signing key), installer intent (FileProvider
+      on Android 7+, a readable file on 5–6); `UpdateWorker` daily when online (release-signed builds,
+      not Play installs); "updated to …" once after an update
+- [x] `PublicTrust` (was `RelayTrust`): + USERTrust ECC/RSA and Sectigo E46/R46 (GitHub) beside the
+      relay's roots; every chain checked with `openssl` against these roots only (api.github.com,
+      github.com ECDSA and RSA, release-assets.githubusercontent.com, the relay)
+- [x] UI: "Update 1.6.0" pill on the selling screen (Settings permission), Settings → App updates
+      (state, "Look every day", "Include test versions", Check now), the offer with What's new and
+      size, download progress (Cancel), Android 8+ install permission explained first, no open bill,
+      manager's PIN when needed; English + Bahasa Melayu
+- [x] `REQUEST_INSTALL_PACKAGES`; privacy policy (EN + MS), website update steps, `docs/PLAY.md`
+      (the Play build must drop it), D-059, architecture.md §9a, BUILD.md release checklist
+- [x] Instrumented `AppUpdatesTest`: GitHub's JSON; a live check; release 1.5.2's APK downloaded and
+      checked on the emulator (SHA-256, package `com.lekaspos.app`, build, the release key's
+      certificate) — the Android 5 path through the bundled roots
+- [x] Local: `:core` 221 and `:app` 37 JVM tests pass, lint 0 errors; release APK **1,423,396 bytes**
+      (1,390 KB; 1.5.2 was 1,392,493 — +31 KB)
+- [ ] CI (API 21 and 36 incl. `AppUpdatesTest`, tablet, release smoke) and perf QUICK
+- [ ] Test build **v1.6.0** as a pre-release
+- [ ] The owner's phone tests below, then release 1.6.0 as latest
+
+### Needs real-device testing (1.6.0)
+
+The update itself can only be seen once a newer version than the phone's is published, so:
+1. Install the v1.6.0 test build over 1.5.2 (from the pre-release page, as before): data, staff and
+   settings still there.
+2. Settings → **App updates**: "This phone has LekasPOS 1.6.0 (build N)", "Look every day" on. Tap
+   **Check now** → "Up to date" (1.5.2 is the latest release).
+3. Tick **Include test versions**, then I publish a **v1.6.1 test build** (a pre-release): Check now
+   → "Version 1.6.1 is ready…" / the offer shows What's new and the size; the selling screen shows
+   **Update 1.6.1** (with no PIN login, or signed in as the owner; not as a cashier).
+4. With an item on the bill, Update now → "Finish or hold the bill first". Clear the bill.
+5. **Update now** → the download (progress) → Android 8+: "Allow updates" → the settings screen →
+   turn on "Allow from this source" → back → Android's installer asks → confirm → "App installed" →
+   Open: "LekasPOS was updated to version 1.6.1"; sales, products, staff, settings, shift still there.
+6. The internet off: Check now → "No internet connection…"; nothing else changes, selling works.
+7. Untick "Include test versions": the 1.6.1 offer is gone when the phone has 1.6.0.
+8. On the store's tablet (Android 10) the same once, if possible.

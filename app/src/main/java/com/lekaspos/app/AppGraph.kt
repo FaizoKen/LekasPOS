@@ -115,6 +115,9 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
 
     val autoSync: AutoSync by lazy { AutoSync(this, app) }
 
+    /** New versions from the app's GitHub releases (D-059). */
+    val updates: AppUpdates by lazy { AppUpdates(app) }
+
     private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
 
     /**

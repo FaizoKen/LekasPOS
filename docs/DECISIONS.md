@@ -865,6 +865,53 @@ better after three — it scans every month ever); seeks per product instead of 
 a month-driven popular query or a top-K two-pass (no faster on SQLite 3.22); raising the budgets
 (the tablet is the store's real till).
 
+### D-059 — The app updates itself from its GitHub releases (1.6.0, 2026-10-03)
+The owner asked that the app check for a new version and install it from inside the app. This
+replaces D-051's "a link to the website is enough" (rejected then: network use beyond Drive).
+- **Where from:** the GitHub release marked *latest* — the same file the website's Download link
+  serves. GitHub's API (`/repos/FaizoKen/LekasPOS/releases/latest`, or `/releases?per_page=10` with
+  test versions on) gives the tag, the notes, and each asset's size and SHA-256 (`digest`, on every
+  asset uploaded since mid-2025). Conditional requests (`If-None-Match`) keep repeat checks cheap;
+  unauthenticated checks are limited to 60 an hour per internet address (a shop's tills share one),
+  so a refusal waits for the next day. No server of our own, no extra release step: the release
+  checklist already makes the assets `LekasPOS.apk` and `LekasPOS-<version>.apk`.
+- **Which version:** `:core` `Releases` (tested): not a draft, not a pre-release (unless the phone
+  asked for test versions), a newer `versionName` than the installed one (numbers compared one by
+  one), and an APK over HTTPS with a plausible size (≤ 64 MB) and a SHA-256.
+- **Checks before installing:** the download's size and SHA-256 must match GitHub's; Android must
+  read the APK; same package; a higher `versionCode`; signed with this app's key (all signers, a
+  rotated key's history allowed). Android refuses another key anyway — checked here so the shop
+  gets a clear message; a mismatch on a release-signed build is logged as an error (the release
+  went wrong). The file is hashed again just before it is handed to Android's installer.
+- **When:** a WorkManager job once a day (online, battery not low, storage not low) checks and
+  downloads; a start more than a day after the last answer also asks once. Only release-signed
+  builds check by themselves, never a copy installed by Google Play; any build checks by hand.
+  On by default (Settings → App updates: "Look every day", "Include test versions").
+- **Install:** the selling screen shows "Update 1.6.0" to whoever may change settings; Settings →
+  App updates shows the state. "Update now" needs no open bill and the Settings permission (a
+  manager's PIN otherwise), then Android's installer (`ACTION_INSTALL_PACKAGE`; content URI through
+  the FileProvider on Android 7+, a world-readable file in `files/updates` on Android 5–6 — their
+  installer reads files only). Android asks to confirm; on Android 8+ the first time also to allow
+  LekasPOS to install apps (our own explanation first, then its settings screen). Data stays. The
+  first start of a new version says "LekasPOS was updated to …".
+- **What's new:** the offer lists the release notes' "### What's new…" list (an "Apa yang baharu"
+  list when the release has one and the app is in Malay), Markdown taken out.
+- **Old Android:** `api.github.com` and `github.com` chain to Sectigo's roots (via USERTrust), the
+  download host to Let's Encrypt; Android 5–7 lack them. `PublicTrust` (was `RelayTrust`) now bundles
+  USERTrust ECC/RSA and Sectigo E46/R46 beside the relay's four roots (11 KB), phone's store first.
+- **Privacy:** the request holds the app and Android versions (User-Agent); GitHub sees the address.
+  Privacy policy (EN + MS) and `docs/PLAY.md` updated. New permission `REQUEST_INSTALL_PACKAGES`.
+- **Google Play:** Play forbids self-updates and allows that permission only for installer apps. A
+  Play-installed copy never offers updates (installer check); the Play build must also drop the
+  permission and the check (`docs/PLAY.md`).
+Rejected: `PackageInstaller` sessions (cleaner results and silent updates on Android 12+, but
+reported unreliable on Android 5.0 and on MIUI with its optimisations on — many shops' phones; the
+intent is what the browser used to install the app in the first place); our own version file on
+the website (another manual step per release that can drift from the APK); downloading through the
+relay (Cloudflare bandwidth for no gain); updating without asking (Android does not allow it outside
+Play/device owners, and a till must not restart under a cashier); Google Play in-app updates (not on
+Play).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

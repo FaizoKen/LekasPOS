@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kemas kini aplikasi daripada keluaran GitHub aplikasi (D-059). -->
+<resources>
+    <string name="update_settings_title">Kemas kini aplikasi</string>
+    <string name="update_pill">Kemas kini %1$s</string>
+    <string name="update_sub_checking">Mencari versi baharu…</string>
+    <string name="update_sub_downloading">Memuat turun versi %1$s… %2$d%%</string>
+    <string name="update_sub_available">Versi %1$s sedia: ketik untuk kemas kini</string>
+    <string name="update_sub_available_test">Versi ujian %1$s sedia: ketik untuk kemas kini</string>
+    <string name="update_sub_up_to_date">Terkini (disemak %1$s)</string>
+    <string name="update_sub_never">Belum disemak</string>
+    <string name="update_sub_off">Semakan automatik dimatikan</string>
+    <string name="update_sub_play">Dikemas kini oleh Google Play</string>
+
+    <string name="update_title">Versi baharu: %1$s</string>
+    <string name="update_title_test">Versi ujian: %1$s</string>
+    <string name="update_whats_new">Apa yang baharu:</string>
+    <string name="update_details">Saiz muat turun %1$s. Jualan, produk, pekerja dan tetapan anda kekal. LekasPOS ditutup semasa Android memasangnya; kemudian ketik Buka.</string>
+    <string name="update_test_note">Versi ujian, untuk penguji: mungkin masih ada masalah.</string>
+    <string name="update_now">Kemas kini sekarang</string>
+    <string name="update_later">Nanti</string>
+    <string name="update_size_mb">%1$s MB</string>
+    <string name="update_bill_open">Selesaikan atau simpan bil dahulu, kemudian kemas kini.</string>
+    <string name="update_downloading_title">Memuat turun kemas kini</string>
+    <string name="update_downloading">Versi %1$s, %2$s</string>
+    <string name="update_allow_title">Benarkan kemas kini</string>
+    <string name="update_allow_message">Android meminta sekali untuk membenarkan LekasPOS memasang kemas kininya.\n\nPada skrin seterusnya, hidupkan “Benarkan daripada sumber ini”, kemudian kembali.</string>
+    <string name="update_allow_continue">Teruskan</string>
+    <string name="update_not_allowed">LekasPOS tidak dibenarkan memasang aplikasi, jadi kemas kini tidak dipasang.</string>
+    <string name="update_no_installer">Telefon ini tidak membenarkan LekasPOS memasang kemas kininya. Muat turun versi baharu dari laman web.</string>
+    <string name="update_done">LekasPOS telah dikemas kini ke versi %1$s</string>
+
+    <string name="update_settings_version">Telefon ini mempunyai LekasPOS %1$s (binaan %2$d).</string>
+    <string name="update_settings_help">LekasPOS mencari versi baharu di GitHub, tempat ia diterbitkan. Hanya permintaan itu dihantar, tiada apa-apa tentang kedai anda.</string>
+    <string name="update_auto">Semak setiap hari</string>
+    <string name="update_tests">Termasuk versi ujian (untuk penguji)</string>
+    <string name="update_check_now">Semak sekarang</string>
+    <string name="update_checking">Mencari versi baharu…</string>
+    <string name="update_up_to_date">Terkini: ini versi terbaharu.</string>
+
+    <string name="update_problem_offline">Tiada sambungan internet. Cuba lagi apabila telefon dalam talian.</string>
+    <string name="update_problem_server">GitHub tidak menjawab. Cuba lagi nanti.</string>
+    <string name="update_problem_no_space">Ruang storan tidak mencukupi untuk kemas kini (kira-kira %1$s diperlukan).</string>
+    <string name="update_problem_download">Muat turun terhenti. Cuba lagi.</string>
+    <string name="update_problem_damaged">Fail yang dimuat turun tidak lengkap dan telah dipadam. Cuba lagi.</string>
+    <string name="update_problem_wrong_app">Kemas kini ini tidak sesuai dengan salinan LekasPOS ini (binaan ujian, atau salinan dari tempat lain). Pasang versi baharu dari laman web.</string>
+    <string name="update_problem_not_installable">Versi ini tidak boleh dipasang pada telefon ini. Lihat laman web.</string>
+</resources>

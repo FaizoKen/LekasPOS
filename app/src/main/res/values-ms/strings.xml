@@ -270,7 +270,7 @@
     <string name="language_phone">Bahasa telefon</string>
     <string name="settings_about">Perihal</string>
     <string name="settings_about_sub">LekasPOS %1$s (binaan %2$d) · GPL-3.0</string>
-    <string name="about_text">LekasPOS %1$s — aplikasi jualan percuma dan sumber terbuka, berlesen GNU General Public License v3.0: anda boleh menggunakan, mengkaji, berkongsi dan mengubahnya. Data anda kekal dalam telefon ini, dan dalam Google Drive anda sendiri hanya jika anda menghidupkan sandaran Google Drive. Versi baharu: Laman web &amp; kemas kini.</string>
+    <string name="about_text">LekasPOS %1$s — aplikasi jualan percuma dan sumber terbuka, berlesen GNU General Public License v3.0: anda boleh menggunakan, mengkaji, berkongsi dan mengubahnya. Data anda kekal dalam telefon ini, dan dalam Google Drive anda sendiri hanya jika anda menghidupkan sandaran Google Drive. Versi baharu: Tetapan → Kemas kini aplikasi, atau Laman web &amp; kemas kini.</string>
     <string name="about_notices">Mengandungi perisian sumber terbuka: pustaka AndroidX (Core, RecyclerView, WorkManager, Room), Kotlin dan kotlinx.coroutines, serta pustaka kod bar ZXing — semuanya di bawah Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, di bawah Android Software Development Kit License.</string>
     <string name="about_privacy">Dasar privasi</string>
     <string name="about_website">Laman web &amp; kemas kini</string>

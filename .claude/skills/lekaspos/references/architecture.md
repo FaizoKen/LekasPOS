@@ -110,6 +110,8 @@ network on the main thread already throws on API 21+.
 - **Auto Backup is disabled** (`allowBackup=false`, empty data-extraction rules): restoring a
   copied DB onto another phone would clone the device identity and corrupt multi-device sync.
 - No cleartext HTTP (`usesCleartextTraffic=false`). File sharing only through `FileProvider`.
+- `REQUEST_INSTALL_PACKAGES` is only for the app's own updates (§9a, D-059); a Google Play build
+  must drop it.
 
 ## 6. Startup (cold start < 2 s on a 1 GB / API 21 device)
 
@@ -287,6 +289,24 @@ restore that `Db.open` applies before opening the database (D-044).
   `NonCancellable`: the screen that asked may be closing (D-056).
 - Money/sale writes are atomic transactions; nothing is printed or shown as "paid" until the
   commit returns.
+
+## 9a. App updates (D-059)
+
+- `app.AppUpdates` (`graph.updates`): reads the latest GitHub release (`api.github.com`, ETag), lets
+  `:core` `Releases` choose (newer `versionName`, an APK with GitHub's SHA-256), downloads into
+  `files/updates` (redirects followed by hand, HTTPS only, `.part` then rename, progress in its
+  `StateFlow`), checks size + SHA-256, then package, higher `versionCode` and signing key, and builds
+  the installer intent (`ACTION_INSTALL_PACKAGE`: FileProvider `content://` on API 24+, world-readable
+  `file://` below). Settings and what is known live in the `lekas_updates` preferences file.
+- `UpdateWorker` (daily, online) checks and downloads; only release-signed builds, never a copy
+  installed by Google Play. `atStart` (selling screen, background) schedules it and says once
+  "updated to …" after an update.
+- UI: `ui.settings.UpdateUi` — the "Update 1.6.0" pill on the selling screen (Settings permission),
+  Settings → App updates, the offer with "What's new" (`ReleaseNotes`), the download dialog, Android
+  8+'s install permission (screens forward `onActivityResult` to `UpdateUi.onResult`). Updating needs
+  no open bill. Android's installer confirms; the old process is ended by Android.
+- HTTPS: `PublicTrust` (bundled roots after the phone's own, for the relay and GitHub). Release notes
+  must keep a `### What's new` list (optionally `### Apa yang baharu`); keep the asset names.
 
 ## 10. Dependencies (every one justified; versions pinned for minSdk 21)
 

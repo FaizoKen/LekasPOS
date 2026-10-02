@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Store name, who is selling, and pills that appear only when there is something to see
-     (held bills, printer, backup). Every control has a word, not just an icon (D-049).
+     (held bills, printer, backup, a new version). Every control has a word, not just an icon (D-049).
      TopBarLayout: first child = the name, last child = Menu (always top right); pills that do
      not fit beside the name move to a line below (small phones). -->
 <com.lekaspos.ui.sell.TopBarLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -81,6 +81,23 @@
         android:singleLine="true"
         android:textColor="@color/text_on_brand"
         android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- A new version of the app is ready (D-059): shown to whoever may change settings. -->
+    <TextView
+        android:id="@+id/update_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/pill_info_bg"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:minHeight="48dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:singleLine="true"
+        android:textColor="@color/text_on_brand"
+        android:textSize="13sp"
+        android:textStyle="bold"
         android:visibility="gone" />
 
     <LinearLayout

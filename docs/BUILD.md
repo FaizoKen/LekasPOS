@@ -157,7 +157,12 @@ the existing Android OAuth client keeps working.
 3. Record APK size and results in `docs/PHASES.md`.
 4. GitHub release `v<version>` on the CI build's commit, marked **latest** (not pre-release),
    assets `LekasPOS.apk` (the website's "Download" link always takes the latest release's file of
-   that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes.
+   that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes. **Publishing it updates every
+   shop** (D-059): from 1.6.0 the app finds the latest release within a day and offers it. So the
+   tag must be a higher version than the last release (`v1.6.1`, never a reused number), the assets
+   must be uploaded before the release is marked latest, and the notes need a `### What's new`
+   heading with a `-` list (the app shows it; an optional `### Apa yang baharu` list is shown in
+   Malay). Test builds stay **pre-releases**: only phones with "Include test versions" on see them.
 5. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
 6. Attach the CI build's `mapping.txt` (artifact `mapping`, kept 90 days) to the release as
    `mapping-<version>.txt`, for reading crash traces (`retrace`). Error reports (D-057) are retraced

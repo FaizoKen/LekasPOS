@@ -22,7 +22,9 @@ import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.staff.StaffActivity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Settings hub. */
@@ -41,6 +43,7 @@ class SettingsActivity : ScreenActivity() {
     /** This phone's answer about error reports (D-057), once read. */
     private var reports: Int? = null
     private var reportsRow = 0
+    private var updatesRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +62,9 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
             Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
             Entry(R.string.error_reports_title, null, null, sub = { reportsLine() }) { chooseReports() },
+            Entry(R.string.update_settings_title, null, null, sub = { UpdateUi.subtitle(this, graph.updates.status.value) }) {
+                UpdateUi.settings(this, scope)
+            },
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
             Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
         )
@@ -72,6 +78,7 @@ class SettingsActivity : ScreenActivity() {
         adapter.submit(entries)
         this.adapter = adapter
         reportsRow = entries.indexOfFirst { it.title == R.string.error_reports_title }
+        updatesRow = entries.indexOfFirst { it.title == R.string.update_settings_title }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -80,6 +87,22 @@ class SettingsActivity : ScreenActivity() {
             reports = withContext(Dispatchers.IO) { ErrorReports.consent(app) }
             adapter.notifyItemChanged(reportsRow)
         }
+    }
+
+    /** App updates (D-059): the row follows checks and downloads while the screen is open. */
+    override fun onStarted(scope: CoroutineScope) {
+        val updates = graph.updates
+        scope.launch {
+            updates.load()
+            updates.status.collect { adapter?.notifyItemChanged(updatesRow) }
+        }
+    }
+
+    @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        UpdateUi.onResult(this, scope, requestCode) // allowed to install the update (or not)
     }
 
     private fun reportsLine(): String? = when (reports) {
@@ -104,8 +127,8 @@ class SettingsActivity : ScreenActivity() {
     }
 
     /**
-     * Version, licence, the website (downloads and updates — there is no app store to update from,
-     * D-051; the source code is linked there) and the notices of the bundled libraries.
+     * Version, licence, the website (downloads — the app also updates itself, D-059; the source code
+     * is linked there) and the notices of the bundled libraries.
      */
     private fun about() {
         val text = listOf(getString(R.string.about_text, BuildConfig.VERSION_NAME), getString(R.string.about_notices))

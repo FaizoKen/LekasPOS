@@ -18,6 +18,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Updates from the app's own GitHub releases (D-059): Android's installer asks the user to
+         confirm each one (and, on Android 8+, once to allow LekasPOS to install apps). A Google
+         Play build must leave this out (Play updates it; Play does not allow self-updates). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Optional camera barcode scanning (D-025). -->
     <uses-permission android:name="android.permission.CAMERA" />
 

@@ -89,4 +89,9 @@ any SDK that sends data, these answers and the privacy policy change first.
   no scanning, no location.
 - `CAMERA`: optional barcode scanning, frames processed on the device.
 - `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync, and error reports when the shop allows them.
+- `REQUEST_INSTALL_PACKAGES`: **must not be in the Play build.** The downloaded app updates itself
+  from GitHub (D-059); Play forbids apps that update themselves outside Play and allows this
+  permission only for apps whose core purpose is installing apps. Before the first upload, make the
+  Play build leave it out (`tools:node="remove"` in a Play-only manifest) and turn the update check
+  off there; a copy installed by Play already never updates itself (`AppUpdates.selfUpdate`).
 - `WAKE_LOCK` (and WorkManager's foreground-service entry): background backups and sync.

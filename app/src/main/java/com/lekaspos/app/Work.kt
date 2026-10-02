@@ -28,6 +28,8 @@ object Work {
     private const val SYNC_SOON = "sync-soon"
     private const val REPORTS = "error-reports"
     private const val REPORTS_LATER = "error-reports-later"
+    private const val UPDATES = "app-updates-daily"
+    private const val UPDATES_SOON = "app-updates-soon"
 
     /**
      * Never throws: a till without background jobs still sells (backups and sync then run only
@@ -69,6 +71,37 @@ object Work {
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(if (laterHours > 0) REPORTS_LATER else REPORTS, ExistingWorkPolicy.KEEP, req)
+    }
+
+    /**
+     * The daily look for a new version of the app (AppUpdates, D-059) when [on], else none; with
+     * [soon] also one as soon as the phone is online (the last answer is over a day old). Off the
+     * main thread.
+     */
+    fun updates(context: Context, on: Boolean, soon: Boolean) = safely("Scheduling the update check failed") {
+        val wm = WorkManager.getInstance(context)
+        if (on) {
+            val conditions = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .setRequiresStorageNotLow(true)
+                .build()
+            val daily = PeriodicWorkRequestBuilder<UpdateWorker>(24, TimeUnit.HOURS)
+                .setConstraints(conditions)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+                .build()
+            wm.enqueueUniquePeriodicWork(UPDATES, ExistingPeriodicWorkPolicy.KEEP, daily)
+            if (soon) {
+                val once = OneTimeWorkRequestBuilder<UpdateWorker>()
+                    .setConstraints(conditions)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+                    .build()
+                wm.enqueueUniqueWork(UPDATES_SOON, ExistingWorkPolicy.KEEP, once)
+            }
+        } else {
+            wm.cancelUniqueWork(UPDATES)
+            wm.cancelUniqueWork(UPDATES_SOON)
+        }
     }
 
     /** The app already synced (auto sync, D-053): the fallback "sync soon" job is not needed. Off the main thread. */
@@ -115,6 +148,12 @@ class ReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             ErrorReports.Outcome.RETRY -> if (runAttemptCount < 8) Result.retry() else Result.success()
         }
     }
+}
+
+/** Looks for a new version of the app and downloads it (D-059); retried while offline, otherwise again tomorrow. */
+class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result =
+        if (LekasApp.graph(applicationContext).updates.background() || runAttemptCount >= 3) Result.success() else Result.retry()
 }
 
 /** Background sync (references/sync.md §10): retried with backoff; a needed sign-in stops it until the user acts. */

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App updates from the app's GitHub releases (D-059). -->
+<resources>
+    <string name="update_settings_title">App updates</string>
+    <string name="update_pill">Update %1$s</string>
+    <string name="update_sub_checking">Looking for a new version…</string>
+    <string name="update_sub_downloading">Downloading version %1$s… %2$d%%</string>
+    <string name="update_sub_available">Version %1$s is ready: tap to update</string>
+    <string name="update_sub_available_test">Test version %1$s is ready: tap to update</string>
+    <string name="update_sub_up_to_date">Up to date (checked %1$s)</string>
+    <string name="update_sub_never">Not checked yet</string>
+    <string name="update_sub_off">Automatic check off</string>
+    <string name="update_sub_play">Updated by Google Play</string>
+
+    <string name="update_title">New version: %1$s</string>
+    <string name="update_title_test">Test version: %1$s</string>
+    <string name="update_whats_new">What’s new:</string>
+    <string name="update_details">Download size %1$s. Your sales, products, staff and settings stay. LekasPOS closes while Android installs it; then tap Open.</string>
+    <string name="update_test_note">A test version, for testers: it may still have problems.</string>
+    <string name="update_now">Update now</string>
+    <string name="update_later">Later</string>
+    <string name="update_size_mb">%1$s MB</string>
+    <string name="update_bill_open">Finish or hold the bill first, then update.</string>
+    <string name="update_downloading_title">Downloading the update</string>
+    <string name="update_downloading">Version %1$s, %2$s</string>
+    <string name="update_allow_title">Allow updates</string>
+    <string name="update_allow_message">Android asks once to allow LekasPOS to install its updates.\n\nOn the next screen, turn on “Allow from this source”, then go back.</string>
+    <string name="update_allow_continue">Continue</string>
+    <string name="update_not_allowed">LekasPOS is not allowed to install apps, so the update was not installed.</string>
+    <string name="update_no_installer">This phone does not let LekasPOS install its update. Download the new version from the website.</string>
+    <string name="update_done">LekasPOS was updated to version %1$s</string>
+
+    <string name="update_settings_version">This phone has LekasPOS %1$s (build %2$d).</string>
+    <string name="update_settings_help">LekasPOS looks for a new version on GitHub, where it is published. Only the request is sent, nothing about your shop.</string>
+    <string name="update_auto">Look every day</string>
+    <string name="update_tests">Include test versions (for testers)</string>
+    <string name="update_check_now">Check now</string>
+    <string name="update_checking">Looking for a new version…</string>
+    <string name="update_up_to_date">Up to date: this is the newest version.</string>
+
+    <string name="update_problem_offline">No internet connection. Try again when the phone is online.</string>
+    <string name="update_problem_server">GitHub did not answer. Try again later.</string>
+    <string name="update_problem_no_space">Not enough free storage for the update (about %1$s needed).</string>
+    <string name="update_problem_download">The download stopped. Try again.</string>
+    <string name="update_problem_damaged">The downloaded file was not complete and was deleted. Try again.</string>
+    <string name="update_problem_wrong_app">This update does not fit this copy of LekasPOS (a test build, or a copy from somewhere else). Install the new version from the website.</string>
+    <string name="update_problem_not_installable">This version cannot be installed on this phone. See the website.</string>
+</resources>

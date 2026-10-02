@@ -5,4 +5,8 @@
     <cache-path
         name="shared"
         path="shared/" />
+    <!-- A downloaded update, read by Android's installer (AppUpdates, D-059). -->
+    <files-path
+        name="updates"
+        path="updates/" />
 </paths>

@@ -22,6 +22,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
@@ -31,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
+import com.lekaspos.app.AppUpdates
 import com.lekaspos.app.ErrorReports
 import com.lekaspos.app.LekasApp
 import com.lekaspos.app.Work
@@ -88,6 +90,7 @@ import com.lekaspos.ui.settings.ReportsChoice
 import com.lekaspos.ui.settings.SettingsActivity
 import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.SyncActivity
+import com.lekaspos.ui.settings.UpdateUi
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.shift.openShift
 import com.lekaspos.ui.staff.LockActivity
@@ -136,6 +139,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var printerState: TextView
     private lateinit var syncState: TextView
     private lateinit var heldPill: TextView
+    private lateinit var updatePill: TextView
     private lateinit var cameraButton: View
     private lateinit var search: EditText
     private lateinit var searchClear: View
@@ -201,6 +205,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         printerState = findViewById(R.id.printer_state)
         syncState = findViewById(R.id.sync_state)
         heldPill = findViewById(R.id.held_pill)
+        updatePill = findViewById(R.id.update_pill)
         cameraButton = findViewById(R.id.btn_camera)
         search = findViewById(R.id.search)
         searchClear = findViewById(R.id.search_clear)
@@ -274,6 +279,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         discountButton.setOnClickListener { billDiscount() }
         findViewById<View>(R.id.btn_menu).setOnClickListener { showMenu(it) }
         heldPill.setOnClickListener { showHeld() }
+        updatePill.setOnClickListener { UpdateUi.offer(this, scope) }
         @Suppress("DEPRECATION")
         cameraButton.setOnClickListener { startActivityForResult(CameraScanActivity.sellIntent(this), REQ_CAMERA_SELL) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
@@ -320,6 +326,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.appScope.launch(Dispatchers.IO) {
                 Work.schedule(app) // background jobs, after the till is usable (WorkManager starts here, off the main thread)
                 ErrorReports.atStart(app) // waiting error reports, and how the app last ended (D-057)
+                // New versions (D-059): the daily check; once after an update, say so.
+                graph.updates.atStart()?.let { version ->
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(app, app.getString(R.string.update_done, version), Toast.LENGTH_LONG).show()
+                    }
+                }
             }
             graph.sync.refreshStatus()
             graph.autoSync.start() // the other tills' changes now, and again when the internet comes back (D-053)
@@ -327,6 +339,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
+        s.launch { combine(graph.updates.status, graph.staff.state) { u, st -> u to st }.collect { renderUpdate(it.first, it.second) } }
         s.launch {
             while (true) {
                 delay(IDLE_CHECK_MS)
@@ -376,12 +389,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
             reportsChecked = true
             return
         }
-        val staff = graph.staff.state.value
-        val mayDecide = staff.loaded && !staff.locked &&
-            (!staff.loginRequired || staff.current?.let { Perm.has(it.perms, Perm.SETTINGS) } == true)
-        if (!mayDecide || graph.cart.state.value.cart.items.isNotEmpty() || isFinishing) return
+        if (!maySetUp(graph.staff.state.value) || graph.cart.state.value.cart.items.isNotEmpty() || isFinishing) return
         reportsChecked = true
         ReportsChoice.ask(this)
+    }
+
+    /** Whoever is signed in may change settings (or the till has no sign-in). */
+    private fun maySetUp(staff: StaffSession.State): Boolean = staff.loaded && !staff.locked &&
+        (!staff.loginRequired || staff.current?.let { Perm.has(it.perms, Perm.SETTINGS) } == true)
+
+    /** "Update 1.6.0" while a newer version is known, for someone who may install it (D-059). */
+    private fun renderUpdate(u: AppUpdates.Status, staff: StaffSession.State) {
+        val update = u.update
+        updatePill.text = update?.let { getString(R.string.update_pill, it.version) }
+        updatePill.visible(update != null && u.selfUpdate && maySetUp(staff))
     }
 
     override fun onStop() {
@@ -804,6 +825,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (UpdateUi.onResult(this, scope, requestCode)) return // allowed to install the update (or not)
         if (requestCode == REQ_NEW_PRODUCT && resultCode == RESULT_OK) {
             val id = data?.getLongExtra(ProductEditActivity.EXTRA_PRODUCT_ID, 0L) ?: 0L
             if (id != 0L) addProductById(id)

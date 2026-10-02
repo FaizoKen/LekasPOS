@@ -33,6 +33,8 @@ When a decision changes: update the reference file here **and** add an entry to
   run number as `versionCode` ("build N"). Tester builds: GitHub **pre-releases**. Public
   releases: a normal "latest" GitHub release with assets `LekasPOS.apk` (the website's Download
   link) and `LekasPOS-<version>.apk` — docs/BUILD.md "Release checklist". Not on Google Play yet.
+  Shops' apps update themselves from the latest release (D-059): bump `versionName` for every
+  public release, keep those asset names, and give the notes a `### What's new` list.
 - Before publishing a tester build, the CI **release smoke** jobs must pass: the R8 release APK
   installed over the last tester build and fresh, selling screen open 20 s, no crash
   (`scripts/ci/release-smoke.sh`; update `PREV_APK_URL` in `ci.yml` after each release). The

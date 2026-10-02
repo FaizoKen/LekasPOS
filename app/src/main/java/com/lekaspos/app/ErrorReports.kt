@@ -12,7 +12,6 @@ import android.util.JsonReader
 import android.util.JsonToken
 import android.util.JsonWriter
 import androidx.annotation.RequiresApi
-import com.google.android.gms.security.ProviderInstaller
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.diag.CrashText
 import com.lekaspos.core.diag.ErrorReport
@@ -30,7 +29,6 @@ import java.net.URL
 import java.security.SecureRandom
 import java.util.Locale
 import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLSocketFactory
 
 /**
  * Error reports to the LekasPOS developer (D-057, references/architecture.md §9).
@@ -100,9 +98,6 @@ object ErrorReports {
 
     @Volatile
     private var lastTrigger = 0L
-
-    @Volatile
-    private var securityChecked = false
 
     /** Tests only: let a debug build send on its own. */
     @Volatile
@@ -180,7 +175,6 @@ object ErrorReports {
             .clipped()
         val f = File(dir(ctx), "$MANUAL$at$EXT")
         synchronized(lock) { write(f, r) }
-        securityProvider(ctx)
         val sent = send(ctx, f, manual = true) == Sent.YES
         if (!sent) trigger(ctx, force = true)
         return sent
@@ -190,7 +184,6 @@ object ErrorReports {
     fun sendPending(context: Context): Outcome {
         val ctx = context.applicationContext
         val auto = autoAllowed(ctx)
-        securityProvider(ctx)
         var outcome = Outcome.DONE
         for (f in pending(ctx)) {
             val manual = f.name.startsWith(MANUAL)
@@ -217,7 +210,6 @@ object ErrorReports {
     internal fun relayStatus(context: Context): Int {
         val ctx = context.applicationContext
         val r = build(ctx, ErrorReport.ERROR, CrashText.ofName("test", "Connection test"), System.currentTimeMillis())
-        securityProvider(ctx)
         return post(ctx, r, install(ctx), test = true)
     }
 
@@ -447,43 +439,6 @@ object ErrorReports {
         return b.joinToString("") { String.format(Locale.ROOT, "%02x", it.toInt() and 0xff) }
     }
 
-    /** Up-to-date TLS on old Android when Play services are there (as for Drive), once per process. */
-    private fun securityProvider(ctx: Context) {
-        if (securityChecked) return
-        securityChecked = true
-        try {
-            ProviderInstaller.installIfNeeded(ctx)
-        } catch (e: Exception) {
-            // No Play services: the phone's own TLS is tried.
-        } catch (e: LinkageError) {
-            // the same
-        }
-    }
-
-    /** HTTPS for the relay ([RelayTrust]), made once; null: the phone's own (it could not be made). */
-    private fun relaySockets(ctx: Context): SSLSocketFactory? {
-        if (!relaySocketsMade) {
-            synchronized(lock) {
-                if (!relaySocketsMade) {
-                    relaySocketsFactory = try {
-                        RelayTrust.socketFactory(ctx)
-                    } catch (e: Exception) {
-                        android.util.Log.w(Log.TAG, "Error reports: the relay's TLS setup failed", e)
-                        null
-                    }
-                    relaySocketsMade = true
-                }
-            }
-        }
-        return relaySocketsFactory
-    }
-
-    @Volatile
-    private var relaySocketsMade = false
-
-    @Volatile
-    private var relaySocketsFactory: SSLSocketFactory? = null
-
     /** The relay's HTTP status; [NO_HOST] when its name is unknown (offline, or no DNS), -1 when it could not be reached. */
     private fun post(ctx: Context, r: ErrorReport, install: String, test: Boolean): Int {
         val body = ByteArrayOutputStream().also { out -> JsonWriter(OutputStreamWriter(out, Charsets.UTF_8)).use { toJson(it, r, install) } }
@@ -491,7 +446,8 @@ object ErrorReports {
         var c: HttpURLConnection? = null
         return try {
             c = URL(URL).openConnection() as HttpURLConnection
-            relaySockets(ctx)?.let { (c as? HttpsURLConnection)?.sslSocketFactory = it }
+            // Current TLS (Play services) and, on Android 5-7, the bundled roots (PublicTrust).
+            PublicTrust.sockets(ctx)?.let { (c as? HttpsURLConnection)?.sslSocketFactory = it }
             c.requestMethod = "POST"
             c.connectTimeout = TIMEOUT_MS
             c.readTimeout = TIMEOUT_MS
