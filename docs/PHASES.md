@@ -1103,13 +1103,31 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
       report's time goes: on Android 10 every returned row costs ~9 µs (0.6 µs on Android 16), and
       1.5.1 returned every product's totals. 1.5.2: two readings with small results on every Android
       (Android 10 emulator: month 278 → 91 ms, year 649 → 277, calendar year 445 → 87)
-- [ ] 1.5.2: CI, perf FULL (API 21, 29, 36), test build; the owner runs FULL on the tablet again
+- [x] Scaled by the scenarios that did not change (the tablet is ~10–12× the Android 10 emulator),
+      month would still be ~1 s on the tablet: the per-category part grouped every product of the
+      period. Schema v8: `sum_day/month/year_category` (a product's sales under its current category,
+      moved when it changes category — here or from another till, also when its sales arrived
+      first), indexes `sum_month_product_p`, `sum_year_product_p`; migration builds them read-only
+      from the product totals; snapshot 8.sql, migration test, derived consistency with random
+      category moves, a sync test across tills
+- [x] Search: one-letter words ("julie s" from "Julie's") filter the longer words' candidates
+- [x] Perf FULL on v8 (run 37009379208): **PASS** on API 21, 29 and 36, every plan check ok.
+      Android 10 emulator: report_month 92 → 31 ms, report_year 195 → 68, report_calendar_year
+      56 → 32, slow_movers 72, stock_value 37 (× ~11 for the tablet: all well inside budget)
+- [x] CI on 3ad2ec7 failed 17 tests per API: a product from another till with no category bound
+      a null into rawQuery (the sync round stopped), and one search test expected the wrong order.
+      Fixed in d9d6ab9 (category 0 stands for none; no update when the product has no sales)
+- [x] Stock value was the tablet's closest call (459 of 500 ms): grouped first, then the category
+      names (one name lookup per category, not per product) — −28% on SQLite 3.22, same rows
+- [ ] 1.5.2: CI green, test build; the owner runs QUICK and FULL on the tablet again
 
-### Needs real-device testing (1.5.1)
+### Needs real-device testing (1.5.2)
 
-1. Install over 1.5.0: data, staff, settings still there (the update builds the year totals once).
-2. **Diagnostics → Run FULL** on the store's tablet: PASS (or, if anything fails, the report arrives
-   in `LekasPOS-reports` with all its numbers).
-3. Reports → This year, Last year, This month: the same totals as before, shown faster.
-4. Selling screen: the Popular tab shows at once, also right after the app was closed and opened.
-5. Search two words (e.g. "milo susu"): results as before.
+1. Install over 1.5.1 (or 1.5.0): data, staff, settings still there (the update builds the year and
+   category totals once).
+2. **Diagnostics → Run QUICK, then FULL** on the store's tablet: PASS (or, if anything fails, the
+   report arrives in `LekasPOS-reports` with all its numbers and notes).
+3. Reports → This year, Last year, This month: the same totals and category split as before, faster.
+4. Move a sold product to another category: its sales show under the new category in Reports.
+5. Selling screen: the Popular tab shows at once, also right after the app was closed and opened.
+6. Search "julie s" or two words (e.g. "milo susu"): the expected products.
