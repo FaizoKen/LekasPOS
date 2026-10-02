@@ -222,6 +222,10 @@ object ProductDao {
     private const val FTS_PAGE =
         "SELECT p.id AS id, p.name_key AS k FROM (SELECT docid FROM product_fts WHERE product_fts MATCH ? LIMIT $FTS_CANDIDATES) f " +
             "CROSS JOIN product p ON p.id = f.docid WHERE p.deleted = 0"
+    private const val FTS_ORDER = " ORDER BY p.name_key, p.id LIMIT ?"
+
+    /** A one-letter word of the search, as a filter on the candidates: a word of the name starts with it. */
+    private const val LETTER = " AND (' ' || p.name_key) LIKE ?"
     private const val FTS_COLUMNS =
         ") t CROSS JOIN product p ON p.id = t.id LEFT JOIN stock_level s ON s.product_id = p.id ORDER BY t.k, t.id"
     private const val SEARCH_FTS =
@@ -285,8 +289,21 @@ object ProductDao {
             val sql = if (includeInactive) SEARCH_PREFIX_ALL else SEARCH_PREFIX
             db.queryList(sql, args(p, prefixUpper(p), limit), ::listItem)
         } else {
-            val match = SearchText.ftsQuery(input) ?: return out.values.toList()
-            db.queryList(if (includeInactive) SEARCH_FTS_ALL else SEARCH_FTS, args(match, limit), ::listItem)
+            // A one-letter word ("Julie's" → "julie s", "F&N" → "f n") merges the index entries of
+            // every word with that letter (the index keeps 2- and 3-letter prefixes): with longer words
+            // to search by, it filters their candidates instead — 2.5× faster, same results (D-058).
+            val words = tokens.take(SearchText.MAX_QUERY_TOKENS)
+            val longer = words.filter { it.length > 1 || SearchText.isCjkChar(it) }
+            val letters = words.filter { it.length == 1 && !SearchText.isCjkChar(it) }
+            if (longer.isNotEmpty() && letters.isNotEmpty()) {
+                val match = SearchText.ftsQuery(longer.joinToString(" ")) ?: return out.values.toList()
+                val sql = "SELECT $LIST_COLUMNS FROM ($FTS_PAGE" + (if (includeInactive) "" else " AND p.active = 1") +
+                    LETTER.repeat(letters.size) + FTS_ORDER + FTS_COLUMNS
+                db.queryList(sql, args(match, *letters.map { "% $it%" }.toTypedArray(), limit), ::listItem)
+            } else {
+                val match = SearchText.ftsQuery(input) ?: return out.values.toList()
+                db.queryList(if (includeInactive) SEARCH_FTS_ALL else SEARCH_FTS, args(match, limit), ::listItem)
+            }
         }
         for (item in more) {
             if (out.size >= limit) break
@@ -623,6 +640,7 @@ object ProductDao {
         "search_prefix" to SEARCH_PREFIX,
         "search_barcode_prefix" to SEARCH_BARCODE_PREFIX,
         "search_fts_all" to SEARCH_FTS_ALL,
+        "search_fts_letter" to "SELECT $LIST_COLUMNS FROM ($FTS_PAGE AND p.active = 1$LETTER$FTS_ORDER$FTS_COLUMNS",
         "search_prefix_all" to SEARCH_PREFIX_ALL,
         "search_barcode_prefix_all" to SEARCH_BARCODE_PREFIX_ALL,
         "category_page" to BY_CATEGORY,

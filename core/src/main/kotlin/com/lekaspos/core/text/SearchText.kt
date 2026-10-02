@@ -50,11 +50,14 @@ object SearchText {
      * inject FTS operators: only lowercase letters, digits and marks survive normalization
      * (FTS operators are uppercase or punctuation).
      */
-    fun ftsQuery(input: String, maxTokens: Int = 6): String? {
+    fun ftsQuery(input: String, maxTokens: Int = MAX_QUERY_TOKENS): String? {
         val t = tokens(input)
         if (t.isEmpty()) return null
         return t.take(maxTokens).joinToString(" ") { "$it*" }
     }
+
+    /** Words of a search that count; more are ignored. */
+    const val MAX_QUERY_TOKENS = 6
 
     /** Sort/prefix key stored in `*_key` columns. */
     fun key(name: String): String = normalize(name)

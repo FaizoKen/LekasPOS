@@ -155,6 +155,22 @@ class ProductDaoTest {
         assertEquals(emptyList(), search("  -  "))
     }
 
+    /** D-058: one-letter words ("Julie's" → "julie s") filter the candidates of the longer words. */
+    @Test
+    fun oneLetterWordsFilterTheLongerOnes() {
+        TestDb.product(db, "Julie's Cream Crackers", 450)
+        TestDb.product(db, "Julie's Peanut Butter", 600)
+        TestDb.product(db, "Jacob's Cream Crackers", 500)
+        TestDb.product(db, "F&N Orange 325ml", 220)
+        TestDb.product(db, "Julie Sardin", 300, active = false)
+        assertEquals(listOf("Julie's Cream Crackers", "Julie's Peanut Butter"), search("julie's"))
+        assertEquals(listOf("Julie's Cream Crackers"), search("julie s cr"))
+        assertEquals(listOf("Jacob's Cream Crackers", "Julie's Cream Crackers"), search("s cream"))
+        assertEquals(listOf("F&N Orange 325ml"), search("f n ora"))
+        assertEquals(emptyList(), search("julie x"))
+        assertEquals(listOf("Julie Sardin", "Julie's Cream Crackers", "Julie's Peanut Butter"), db.readBlocking { ProductDao.search(it, "julie s", 50, includeInactive = true) }.map { it.name })
+    }
+
     @Test
     fun switchedOffProductsAreFoundOnlyWhenAsked() {
         TestDb.product(db, "Milo 1kg", 2_500, codes = listOf("9556001000013"))
