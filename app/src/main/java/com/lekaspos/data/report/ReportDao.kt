@@ -14,7 +14,6 @@ import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
-import java.util.PriorityQueue
 
 data class Totals(
     val saleCount: Long,
@@ -111,21 +110,13 @@ object ReportDao {
     /** After `GROUP BY product_id` over a period's rows: products whose totals are not all zero. */
     private const val NOT_ZERO = "HAVING SUM(qty) != 0 OR SUM(net_ex) != 0 OR SUM(tax) != 0 OR SUM(cost) != 0"
 
-    // One reading of a period's product rows (SummaryRange, D-058) gives both the category totals
-    // and the best sellers: each product's totals with its current category. A category follows
-    // the product's current one, so a range read from days, months or years puts a product's sales
-    // under the same category; the category kept in a summary row (the first sale's of that day,
-    // month or year) is used only when there is no product row ("other items").
-    private const val PER_PRODUCT_HEAD =
-        "SELECT u.product_id AS product_id, CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END AS cat, " +
-            "u.qty AS qty, u.net_ex AS net_ex, u.tax AS tax, u.cost AS cost FROM " +
-            "(SELECT product_id, MIN(category_id) AS category_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, " +
-            "SUM(tax) AS tax, SUM(cost) AS cost FROM ("
-    private const val PER_PRODUCT_TAIL = ") GROUP BY product_id $NOT_ZERO) u LEFT JOIN product p ON p.id = u.product_id"
-
-    // Android 5–8 (API < 28) has no bigger cursor windows: a result beyond the 2 MB window runs its
-    // query again for every further window, so there the period is read twice with small results
-    // (the best sellers, then the categories straight from the rows, by the product's category).
+    // A period's product rows (SummaryRange, D-058) are read twice, each time into a small result:
+    // the best sellers, then the categories straight from the rows. Returning every product's totals
+    // to the app (one reading) was the tablet's undoing: on Android 10 each row a query returns costs
+    // ~9 µs (0.6 µs on Android 16) — 0.4 s for a year of 50,000 products, more than the SQL itself.
+    // A category follows the product's current one, so a range read from days, months or years puts
+    // a product's sales under the same category; the category kept in a summary row (the first sale's
+    // of that day, month or year) is used only when there is no product row ("other items").
     private const val TOP_HEAD =
         "SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost FROM ("
     private const val TOP_BY_NET_TAIL = ") GROUP BY product_id $NOT_ZERO ORDER BY net_ex DESC, product_id LIMIT ?"
@@ -134,7 +125,11 @@ object ReportDao {
         "SELECT CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END, SUM(u.qty), SUM(u.net_ex), SUM(u.cost) FROM ("
     private const val CATEGORIES_TAIL = ") u LEFT JOIN product p ON p.id = u.product_id GROUP BY 1"
 
-    /** One reading's rows fit one cursor window on API 28+ (~76 bytes a product: 200,000 products). */
+    /** Products sold in a period (perf notes). */
+    private const val COUNT_HEAD = "SELECT COUNT(*) FROM (SELECT product_id FROM ("
+    private const val COUNT_TAIL = ") GROUP BY product_id $NOT_ZERO)"
+
+    /** An export's rows fit one cursor window on API 28+ (it must return every product). */
     private const val WINDOW_BYTES = 16L * 1024L * 1024L
 
     /** Every product sold in a period, best first, with its name (exports). */
@@ -208,85 +203,46 @@ object ReportDao {
     /** Categories and best sellers of one period, from one reading of its product rows. */
     class ProductSummary(val categories: List<CategoryTotal>, val top: List<ProductTotal>)
 
-    /**
-     * How [summary] reads a period: [AUTO] by Android version; the others for the perf suite's notes
-     * (D-058) — one reading in a big or the default cursor window, or two readings.
-     */
-    enum class Path { AUTO, ONE_BIG, ONE_DEFAULT, TWO }
-
-    /** Perf notes (D-058): the period's product rows, the SQL alone (ns), and how many rows one big window held. */
-    internal fun probe(db: SQLiteDatabase, p: Period): Triple<Long, Long, Int> {
+    /** Perf notes (D-058): how many products sold in [p], and how long grouping its rows by product takes (ns). */
+    internal fun probe(db: SQLiteDatabase, p: Period): Pair<Long, Long> {
         val rows = SummaryRange.all(SummaryRange.plan(db, p))
         val t = System.nanoTime()
-        val n = db.long("SELECT COUNT(*) + 0 * TOTAL(cat) FROM (" + PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL + ")", *rows.args)
-        val sqlNs = System.nanoTime() - t
-        val held = bigWindow(db.rawQuery(PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL, rows.args)).use { c ->
-            c.moveToFirst()
-            (c as? AbstractWindowedCursor)?.window?.numRows ?: -1
-        }
-        return Triple(n, sqlNs, held)
+        val n = db.long(COUNT_HEAD + rows.sql + COUNT_TAIL, *rows.args)
+        return n to System.nanoTime() - t
     }
 
     /**
      * The categories of [p] (most net sales first) and its [topN] best sellers by net sales, or by
      * quantity ([byQty]); [topN] = Int.MAX_VALUE for every product sold, 0 for none.
      */
-    fun summary(db: SQLiteDatabase, p: Period, topN: Int = 20, byQty: Boolean = false, path: Path = Path.AUTO): ProductSummary {
+    fun summary(db: SQLiteDatabase, p: Period, topN: Int = 20, byQty: Boolean = false): ProductSummary {
         val rows = SummaryRange.all(SummaryRange.plan(db, p))
-        val cats = HashMap<Long, LongArray>() // category (or NO_CATEGORY) → qty, net_ex, cost
-        // Best first: the larger measure, then the smaller id (the old SQL's ORDER BY … DESC, product_id).
-        val better = Comparator<LongArray> { a, b ->
-            val m = if (byQty) 1 else 2
-            if (a[m] != b[m]) b[m].compareTo(a[m]) else a[0].compareTo(b[0])
+        val top = ArrayList<ProductTotal>()
+        if (topN > 0) {
+            val raw = ArrayList<LongArray>() // product, qty, net_ex, tax, cost — best first
+            db.rawQuery(TOP_HEAD + rows.sql + if (byQty) TOP_BY_QTY_TAIL else TOP_BY_NET_TAIL, rows.args + topN.toString()).use { c ->
+                while (c.moveToNext()) raw.add(longArrayOf(c.getLong(0), c.getLong(1), c.getLong(2), c.getLong(3), c.getLong(4)))
+            }
+            val names = names(db, raw.map { it[0] })
+            raw.mapTo(top) { t -> ProductTotal(t[0], names[t[0]], t[1], t[2], t[3], t[4]) }
         }
-        val top = ArrayList<LongArray>() // product, qty, net_ex, tax, cost
-        val one = if (path == Path.AUTO) Build.VERSION.SDK_INT >= 28 else path != Path.TWO
-        if (one) {
-            // One reading: every product's totals with its current category, in one big cursor window.
-            val kept = PriorityQueue(minOf(topN, 256) + 1, Comparator<LongArray> { a, b -> better.compare(b, a) }) // worst first
-            val cursor = db.rawQuery(PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL, rows.args)
-            (if (path == Path.ONE_DEFAULT) cursor else bigWindow(cursor)).use { c ->
-                while (c.moveToNext()) {
-                    val t = longArrayOf(c.getLong(0), c.getLong(2), c.getLong(3), c.getLong(4), c.getLong(5))
-                    val acc = cats.getOrPut(if (c.isNull(1)) NO_CATEGORY else c.getLong(1)) { LongArray(3) }
-                    acc[0] += t[1]
-                    acc[1] += t[2]
-                    acc[2] += t[4]
-                    if (topN > 0) {
-                        kept.add(t)
-                        if (kept.size > topN) kept.poll()
-                    }
-                }
-            }
-            top.addAll(kept)
-        } else {
-            if (topN > 0) {
-                val sql = TOP_HEAD + rows.sql + if (byQty) TOP_BY_QTY_TAIL else TOP_BY_NET_TAIL
-                db.rawQuery(sql, rows.args + topN.toString()).use { c ->
-                    while (c.moveToNext()) top.add(longArrayOf(c.getLong(0), c.getLong(1), c.getLong(2), c.getLong(3), c.getLong(4)))
-                }
-            }
-            db.rawQuery(CATEGORIES_HEAD + rows.sql + CATEGORIES_TAIL, rows.args).use { c ->
-                while (c.moveToNext()) cats[if (c.isNull(0)) NO_CATEGORY else c.getLong(0)] = longArrayOf(c.getLong(1), c.getLong(2), c.getLong(3))
+        val cats = ArrayList<CategoryTotal>()
+        db.rawQuery(CATEGORIES_HEAD + rows.sql + CATEGORIES_TAIL, rows.args).use { c ->
+            while (c.moveToNext()) {
+                // A category whose products add up to nothing is left out, like every group that does (D-054).
+                if (c.getLong(1) == 0L && c.getLong(2) == 0L && c.getLong(3) == 0L) continue
+                cats.add(CategoryTotal(if (c.isNull(0)) null else c.getLong(0), null, c.getLong(1), c.getLong(2), c.getLong(3)))
             }
         }
-        val names = names(db, top.map { it[0] })
-        val products = top.sortedWith(better).map { t -> ProductTotal(t[0], names[t[0]], t[1], t[2], t[3], t[4]) }
-        // A category whose products add up to nothing is left out, like every group that does (D-054).
-        val sold = cats.filterValues { a -> a[0] != 0L || a[1] != 0L || a[2] != 0L }
-        val catNames = if (sold.isEmpty()) emptyMap() else categoryNames(db)
-        val categories = sold.entries
-            .sortedWith(compareByDescending<Map.Entry<Long, LongArray>> { it.value[1] }.thenBy { it.key })
-            .map { (k, a) ->
-                val id = if (k == NO_CATEGORY) null else k
-                CategoryTotal(id, id?.let { catNames[it] }, a[0], a[1], a[2])
-            }
-        return ProductSummary(categories, products)
+        val catNames = if (cats.isEmpty()) emptyMap() else categoryNames(db)
+        val categories = cats.map { it.copy(name = it.categoryId?.let { id -> catNames[id] }) }
+            .sortedWith(compareByDescending<CategoryTotal> { it.netEx }.thenBy { it.categoryId ?: Long.MIN_VALUE })
+        return ProductSummary(categories, top)
     }
 
     /**
-     * [c] with a cursor window that holds a whole reading (API 28+): with the default 2 MB, every
-     * further window ran the query again — three times the work for a year of 50,000 products.
+     * [c] with a cursor window that holds every row (API 28+): with the default 2 MB one, the query
+     * runs again for every further window.
      */
     private fun bigWindow(c: Cursor): Cursor {
         if (Build.VERSION.SDK_INT >= 28) (c as? AbstractWindowedCursor)?.setWindow(CursorWindow("report", WINDOW_BYTES))
@@ -339,7 +295,6 @@ object ReportDao {
     private fun categoryNames(db: SQLiteDatabase): Map<Long, String?> =
         db.queryList(CATEGORY_NAMES) { c -> c.getLong(0) to c.stringOrNull(1) }.toMap()
 
-    private const val NO_CATEGORY = Long.MIN_VALUE
 
     fun stockValue(db: SQLiteDatabase): List<StockValue> = db.queryList(STOCK_VALUE, null) { c ->
         StockValue(c.longOrNull(0), c.stringOrNull(1), c.getLong(2), c.getLong(3))
@@ -390,7 +345,6 @@ object ReportDao {
         "report_staff" to BY_STAFF,
         // Built per period from SummaryRange's fragments: checked with every kind of piece.
         "report_has_sales" to SummaryRange.HAS_SALES,
-        "report_products" to PER_PRODUCT_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + PER_PRODUCT_TAIL,
         "report_top_products" to TOP_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + TOP_BY_NET_TAIL,
         "report_categories" to CATEGORIES_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + CATEGORIES_TAIL,
         "report_export_products" to EXPORT_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + EXPORT_TAIL,

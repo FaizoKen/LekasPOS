@@ -109,6 +109,10 @@ plus one plan check its older planner failed (`shift_current`). Reports now read
 from one reading; on SQLite 3.22 the rolling year went from 1.08 s to 0.27 s and 30 days from
 0.22 s to 0.07 s for the same rows (laptop). Check plans and timings on SQLite 3.22 too: the
 `sqlite-tools-win32-x86-3220000` shell from sqlite.org runs the app's SQL as the tablet does.
+Keep query results small on old Android: each row a query returns costs ~9 µs on Android 10 against
+0.6 µs on Android 16 (1.5.1 returned 50,000 rows per report and missed the budgets only there).
+The perf run includes an Android 10 emulator, and its notes show per report the products sold, the
+pieces read, the grouping and the report's queries.
 
 ## 3. Cold start
 

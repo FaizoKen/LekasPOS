@@ -824,12 +824,18 @@ SQLite 3.22 shell from sqlite.org) before changing anything; every change gives 
   best sellers from one reading (`ReportDao.summary`). Rolling year: 425,000 → 152,000 rows in one
   pass instead of two (1.08 s → 0.27 s on SQLite 3.22); 30 days: 70,000 → 41,000 rows (0.22 s →
   0.07 s); this year: 293,000 → 51,000 rows. Slow movers: one reading for the list, count and value.
-- **Cursor windows.** The one reading returns every product's totals (~50,000 rows for a year),
-  more than Android's 2 MB cursor window: the platform runs the query again for every further
-  window (the first FULL run on CI made the API 21 month report slower, 307 → 430 ms). API 28+
-  gives the cursor a 16 MB window (`CursorWindow(name, bytes)`), so the query runs once; API 21–27
-  read the period twice with small results (the best sellers, and the categories straight from the
-  rows), still 1.4–2.7× faster than before. Exports use the big window too.
+- **Small results, two readings (1.5.2).** 1.5.1 read a period once and returned every product's
+  totals to the app (~50,000 rows for a year) to make categories and best sellers in Kotlin. The
+  CI emulators (Android 5 and 16) looked good; the tablet did not (report_year 4.8 s, report_month
+  1.8 s, report_calendar_year 3.3 s). An Android 10 emulator, added to the perf run with notes on
+  where each report's time goes, showed why: each row a query returns costs ~9 µs on Android 10
+  (0.6 µs on Android 16) — a 16 MB cursor window held all rows, so nothing ran twice, yet the year
+  took 649 ms against 130 ms of SQL. Now every Android reads the period twice into small results:
+  the best sellers (ORDER BY … LIMIT) and the categories straight from the rows (by the product's
+  current category): on the Android 10 emulator month 278 → 91 ms, year 649 → 277 ms, calendar year
+  445 → 87 ms; the tablet runs ~6–8× slower than that emulator. Exports, which must return every
+  product, use a 16 MB window on API 28+ (the default 2 MB one runs the query again per window).
+  The perf run now includes Android 10 (API 29): the store's tablet runs it.
 - **Popular tab** (on the selling screen): its ranking reads a month of sales, ~0.3 s at FULL on the
   tablet even after the above. The tab now shows the ranking kept in this till's `meta`
   (`dev.popular`) at once and makes a fresh one in the background when it is older than 10 minutes;

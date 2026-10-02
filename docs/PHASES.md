@@ -22,7 +22,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
-| — | **Release 1.5.1**: reports fast on the store's tablet (D-058) — from its first error reports | **test build** v1.5.1 published 2026-10-02 — waiting for the tablet's FULL run |
+| — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** — 1.5.1 (test build) still missed three report budgets on the tablet |
 
 ## Open questions for the user
 
@@ -1097,7 +1097,13 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
       report_year 1,217 → 611, report_month 307 → 240, slow_movers 269 → 162
 - [x] Test build **v1.5.1** (pre-release; build 94, release key, SHA-256 `1f41ca88…4488`,
       `mapping-1.5.1.txt` attached); the public download stays v1.5.0 until the owner's tests
-- [ ] The owner runs Diagnostics → FULL on the tablet again
+- [x] The owner ran FULL on the tablet with 1.5.1 (#6, build 94): QUICK passed; FULL still missed
+      report_month 1.8 s, report_year 4.8 s, report_calendar_year 3.3 s (slow movers 0.68 s and the
+      Popular tab 4 ms passed). The perf run gained an Android 10 emulator and notes on where a
+      report's time goes: on Android 10 every returned row costs ~9 µs (0.6 µs on Android 16), and
+      1.5.1 returned every product's totals. 1.5.2: two readings with small results on every Android
+      (Android 10 emulator: month 278 → 91 ms, year 649 → 277, calendar year 445 → 87)
+- [ ] 1.5.2: CI, perf FULL (API 21, 29, 36), test build; the owner runs FULL on the tablet again
 
 ### Needs real-device testing (1.5.1)
 

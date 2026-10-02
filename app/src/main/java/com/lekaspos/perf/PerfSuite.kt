@@ -268,24 +268,22 @@ class PerfSuite(
         val lastYear = Period(yearStart, Days.fromYmd(Days.toYmd(today) / 10_000 * 10_000 + 101))
         add(measure("report_calendar_year", 3000.0, warmup = 1, n = 3) { ReportService.build(r, lastYear, 20) })
 
-        // Where a report's time goes on this phone (D-058): notes, never pass or fail. The SQL alone,
-        // one reading in a 16 MB and in the default 2 MB cursor window, and two readings.
+        // Where a report's time goes on this phone (D-058): notes, never pass or fail — how many
+        // products sold, the pieces read, grouping their rows by product, and the best sellers and
+        // categories (the report's two queries).
         progress.update("report notes")
         for ((id, period) in listOf(
             "report_month" to Period(today - 29, today + 1),
             "report_year" to Period(today - 364, today + 1),
             "report_calendar_year" to lastYear,
         )) {
-            val (rows, sqlNs, held) = ReportDao.probe(r, period)
-            fun ms(path: ReportDao.Path): String {
-                val s = LongArray(3) {
-                    val t = System.nanoTime()
-                    ReportDao.summary(r, period, 20, path = path)
-                    System.nanoTime() - t
-                }
-                s.sort()
-                return (s[1] / 1_000_000L).toString()
+            val (rows, groupNs) = ReportDao.probe(r, period)
+            val s = LongArray(3) {
+                val t = System.nanoTime()
+                ReportDao.summary(r, period, 20)
+                System.nanoTime() - t
             }
+            s.sort()
             val pieces = SummaryRange.plan(r, period).joinToString(" ") { x ->
                 (if (x.sign < 0) "-" else "+") + when (x.kind) {
                     RangePlan.Kind.DAYS -> "d${x.to - x.from}"
@@ -294,9 +292,8 @@ class PerfSuite(
                 }
             }
             notes.add(
-                "$id: $rows product rows ($pieces); SQL alone ${sqlNs / 1_000_000L} ms; one reading: 16 MB window " +
-                    "${ms(ReportDao.Path.ONE_BIG)} ms (held $held rows), 2 MB window ${ms(ReportDao.Path.ONE_DEFAULT)} ms; " +
-                    "two readings ${ms(ReportDao.Path.TWO)} ms",
+                "$id: $rows products sold ($pieces); grouped by product ${groupNs / 1_000_000L} ms; " +
+                    "best sellers and categories ${s[1] / 1_000_000L} ms",
             )
         }
 
