@@ -787,6 +787,14 @@ on shops' phones are known and fixed without waiting for a shop to send the erro
   trace" workflow comments the R8-retraced trace from the release's `mapping-<version>.txt`.
 - **No new dependency:** HttpURLConnection, `android.util.JsonWriter/JsonReader`, Play services'
   `ProviderInstaller` (already there for Drive) for current TLS on old Android.
+- **Old Android's certificates:** the relay's certificate (Cloudflare, Google Trust Services WE1 →
+  GTS Root R4, ECDSA) was reached from Android 16 but not from Android 5 in CI. `app.RelayTrust`
+  asks the phone's trust store first and, only when it refuses, accepts a chain ending at one of four
+  bundled public roots (GTS Root R1/R4, ISRG Root X1/X2 — the CAs Cloudflare issues from; 5.4 KB),
+  for the relay's connections only. Rejected: a custom domain with a chosen CA (still not trusted by
+  Android 5–7) and plain HTTP (reports would travel unencrypted).
+- **Duplicates:** GitHub lists a new issue a moment late, so reports of one bug at the same moment
+  can file two issues; the next report counts the extra ones into the oldest and closes them.
 Rejected: Firebase Crashlytics (Firebase SDKs need Android 6+ since 2025; a Google backend and
 SDK; rejected for privacy in D-045); Sentry (a good product, but another company holding the
 reports, a size cost, 5k events a month); ACRA (needs its own server, or an e-mail app that is

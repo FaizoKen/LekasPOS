@@ -29,6 +29,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.SecureRandom
 import java.util.Locale
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLSocketFactory
 
 /**
  * Error reports to the LekasPOS developer (D-057, references/architecture.md §9).
@@ -82,6 +84,10 @@ object ErrorReports {
 
     /** [post]: the relay's name did not resolve. */
     internal const val NO_HOST = -2
+
+    /** Why the last send failed (tests and diagnosis). */
+    @Volatile
+    internal var lastFailure: String? = null
 
     /** The application context (never an activity's). */
     @SuppressLint("StaticFieldLeak")
@@ -212,7 +218,7 @@ object ErrorReports {
         val ctx = context.applicationContext
         val r = build(ctx, ErrorReport.ERROR, CrashText.ofName("test", "Connection test"), System.currentTimeMillis())
         securityProvider(ctx)
-        return post(r, install(ctx), test = true)
+        return post(ctx, r, install(ctx), test = true)
     }
 
     /** Tests: the reports waiting on this phone. Blocking. */
@@ -351,7 +357,7 @@ object ErrorReports {
     private fun send(ctx: Context, f: File, manual: Boolean): Sent {
         val r = synchronized(lock) { if (f.exists()) read(f) else null } ?: return Sent.DROPPED.also { synchronized(lock) { f.delete() } }
         if (!manual && !mayGo(ctx, r.fingerprint)) return Sent.HELD
-        val code = post(r, install(ctx), test = false)
+        val code = post(ctx, r, install(ctx), test = false)
         return when {
             code in 200..299 -> {
                 synchronized(lock) {
@@ -450,13 +456,38 @@ object ErrorReports {
         }
     }
 
+    /** HTTPS for the relay ([RelayTrust]), made once; null: the phone's own (it could not be made). */
+    private fun relaySockets(ctx: Context): SSLSocketFactory? {
+        if (!relaySocketsMade) {
+            synchronized(lock) {
+                if (!relaySocketsMade) {
+                    relaySocketsFactory = try {
+                        RelayTrust.socketFactory(ctx)
+                    } catch (e: Exception) {
+                        android.util.Log.w(Log.TAG, "Error reports: the relay's TLS setup failed", e)
+                        null
+                    }
+                    relaySocketsMade = true
+                }
+            }
+        }
+        return relaySocketsFactory
+    }
+
+    @Volatile
+    private var relaySocketsMade = false
+
+    @Volatile
+    private var relaySocketsFactory: SSLSocketFactory? = null
+
     /** The relay's HTTP status; [NO_HOST] when its name is unknown (offline, or no DNS), -1 when it could not be reached. */
-    private fun post(r: ErrorReport, install: String, test: Boolean): Int {
+    private fun post(ctx: Context, r: ErrorReport, install: String, test: Boolean): Int {
         val body = ByteArrayOutputStream().also { out -> JsonWriter(OutputStreamWriter(out, Charsets.UTF_8)).use { toJson(it, r, install) } }
             .toByteArray()
         var c: HttpURLConnection? = null
         return try {
             c = URL(URL).openConnection() as HttpURLConnection
+            relaySockets(ctx)?.let { (c as? HttpsURLConnection)?.sslSocketFactory = it }
             c.requestMethod = "POST"
             c.connectTimeout = TIMEOUT_MS
             c.readTimeout = TIMEOUT_MS
@@ -474,8 +505,10 @@ object ErrorReports {
             }
             code
         } catch (e: java.net.UnknownHostException) {
+            lastFailure = e.toString()
             NO_HOST
         } catch (e: Exception) {
+            lastFailure = generateSequence<Throwable>(e) { it.cause }.take(4).joinToString(" <- ")
             -1
         } finally {
             c?.disconnect()

@@ -83,9 +83,13 @@ class ErrorReportsTest {
     @Test
     fun theRelayCanBeReachedFromThisAndroid() {
         val code = ErrorReports.relayStatus(ctx)
-        android.util.Log.i(Log.TAG, "Error-report relay answered $code")
+        // Whether the phone's own trust store took the relay's certificate, or the bundled roots had to.
+        val note = "Error-report relay answered $code; the phone's trust store: ${RelayTrust.systemRefusal ?: "accepted"}"
+        android.util.Log.i(Log.TAG, note)
+        // Also in the test run's own output (CI keeps it whole; the old emulators' logcat is cut short).
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "$note\n") })
         // No name yet (the Cloudflare subdomain is set up once) or no network: nothing to learn here.
         assumeTrue("${ErrorReports.URL} does not resolve", code != ErrorReports.NO_HOST)
-        assertTrue(code > 0, "no HTTPS connection to ${ErrorReports.URL}")
+        assertTrue(code > 0, "no HTTPS connection to ${ErrorReports.URL}: ${ErrorReports.lastFailure} (trust store: ${RelayTrust.systemRefusal})")
     }
 }
