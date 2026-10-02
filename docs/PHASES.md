@@ -22,7 +22,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
-| — | **Release 1.5.1**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** |
+| — | **Release 1.5.1**: reports fast on the store's tablet (D-058) — from its first error reports | **test build** v1.5.1 published 2026-10-02 — waiting for the tablet's FULL run |
 
 ## Open questions for the user
 
@@ -1086,7 +1086,18 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
       categories, slow movers, popular items) against the per-day rows; derived consistency covers
       the year table
 - [x] Check reports keep their numbers (no "<number>" in performance reports)
-- [ ] CI, perf FULL, test build; the owner runs Diagnostics → FULL on the tablet again
+- [x] Cursor windows: the first CI perf run showed the one reading slower on API 21 (its ~50,000 rows
+      overflow the 2 MB window and the query ran again per window): API 28+ use a 16 MB window,
+      API 21–27 two readings with small results
+- [x] CI on cf39c1c (run 94): **222/222 on API 21 and 36**, tablet, release smoke (upgrade from
+      1.5.0), lint; release APK **1,388,294 bytes** (1,356 KB)
+- [x] Perf FULL (run 36999017940): **PASS** on both. API 36 (the tablet's path): report_year 867 →
+      185 ms, report_month 162 → 76, report_calendar_year 214 → 102, slow_movers 130 → 59,
+      search_multiword 6.4 → 1.7, Popular tab 34 → 0.3 (ranking 20 ms in the background). API 21:
+      report_year 1,217 → 611, report_month 307 → 240, slow_movers 269 → 162
+- [x] Test build **v1.5.1** (pre-release; build 94, release key, SHA-256 `1f41ca88…4488`,
+      `mapping-1.5.1.txt` attached); the public download stays v1.5.0 until the owner's tests
+- [ ] The owner runs Diagnostics → FULL on the tablet again
 
 ### Needs real-device testing (1.5.1)
 
