@@ -713,7 +713,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
             it.lookup(code) // price check open: look up, never add to the bill
             return
         }
-        if (graph.checkout.outcome.value != null) graph.checkout.acknowledge() // next customer
+        if (graph.checkout.outcome.value != null) {
+            graph.checkout.acknowledge() // next customer
+            if (graph.staff.lockIfIdle()) return // the idle time ran out during the last payment
+        }
         scope.launch {
             when (val r = graph.cart.scan(code)) {
                 is CartSession.ScanResult.Added -> beeper?.ok()

@@ -1,5 +1,6 @@
 package com.lekaspos.domain.sell
 
+import android.os.SystemClock
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.cart.Cart
 import com.lekaspos.core.credit.CreditMath
@@ -78,6 +79,11 @@ class CheckoutService(private val graph: AppGraph) {
     private val _outcome = MutableStateFlow<Outcome?>(null)
     val outcome: StateFlow<Outcome?> = _outcome
 
+    /** Time since boot when [outcome] was last published. */
+    @Volatile
+    var outcomeAt = 0L
+        private set
+
     private val _last = MutableStateFlow<Done?>(null)
 
     /** The last sale of this session (this process): the empty bill shows its change and a reprint. */
@@ -89,7 +95,7 @@ class CheckoutService(private val graph: AppGraph) {
      */
     fun start(tenders: List<Tender>, rounding: Long, approvals: List<Approval> = emptyList()) {
         graph.appScope.launch(Dispatchers.Main.immediate) {
-            _outcome.value = try {
+            val o = try {
                 Outcome.Completed(complete(tenders, rounding, approvals))
             } catch (e: ActionRefused) {
                 Outcome.Refused(e.reason)
@@ -97,6 +103,8 @@ class CheckoutService(private val graph: AppGraph) {
                 Log.e("Checkout failed", e)
                 Outcome.Failed(e.message ?: e.javaClass.simpleName)
             }
+            outcomeAt = SystemClock.elapsedRealtime()
+            _outcome.value = o
         }
     }
 

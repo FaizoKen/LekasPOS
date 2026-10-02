@@ -332,7 +332,12 @@ class StaffSession(private val graph: AppGraph) {
         if (minutes <= 0 || !s.loginRequired || s.current == null) return false
         val bill = graph.cart.state.value
         if (bill.paying || bill.busy) return false
-        if (SystemClock.elapsedRealtime() - lastActivity < minutes * 60_000L) return false
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastActivity < minutes * 60_000L) return false
+        // The result of a payment that just ended (the change to give) stays until it is closed, for
+        // at most a minute: a payment longer than the idle time locked the till within seconds of
+        // the sale and took the change off the screen (2026-10 review). It locks right after.
+        if (graph.checkout.outcome.value != null && now - graph.checkout.outcomeAt < RESULT_GRACE_MS) return false
         lock()
         return true
     }
@@ -434,6 +439,7 @@ class StaffSession(private val graph: AppGraph) {
         /** Wall-clock time of recent activity, stored every [HEARTBEAT_MS] at most (see [touch]). */
         const val KEY_SEEN = "session.seen_at"
         private const val HEARTBEAT_MS = 30_000L
+        private const val RESULT_GRACE_MS = 60_000L
 
         /** The boot part of a wrong-PIN stamp on phones without a boot count (Android 5 and 6). */
         private const val UNKNOWN_BOOT = "u"

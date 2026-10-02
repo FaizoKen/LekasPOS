@@ -344,10 +344,12 @@ class ProductCsvService(private val graph: AppGraph) {
         }
         // Every product using each barcode (also in its UPC/EAN form), the one a scan picks first: a
         // code on two products (two tills) updates the product the till sells (2026-10 review).
-        // A product an older version stored without the leading 0 is found too (else imported twice).
+        // A product an older version stored without the leading 0, or as the file wrote the code
+        // ("955-6001-234568", before 1.4.0 kept such codes as they were), is found too (else
+        // imported twice).
         val owners = row.barcodes.map { code ->
             ProductDao.owners(db, Gtin.lookupVariants(code)).ifEmpty {
-                Gtin.withoutLeadingZero(code)?.let { ProductDao.owners(db, listOf(it)) }.orEmpty()
+                ProductDao.owners(db, listOfNotNull(Gtin.withoutLeadingZero(code), row.asWritten[code]).distinct())
             }
         }
         val picks = owners.mapNotNull { it.firstOrNull() }.toSet()

@@ -78,6 +78,8 @@ object ProductCsv {
         val active: Boolean? = null,
         /** [Column.ID]: the product this row was exported from (matched first on import). */
         val id: Long? = null,
+        /** Barcodes as the file wrote them, where that differs from [barcodes] (canonical form → as written). */
+        val asWritten: Map<String, String> = emptyMap(),
     )
 
     sealed class Parsed {
@@ -121,8 +123,9 @@ object ProductCsv {
 
         val cost = cell(Column.COST)?.let { t -> money(t, currency).also { if (it == null || it < 0L) problems.add(Problem.COST_BAD to Column.COST) } }
 
-        val barcodes = cell(Column.BARCODES)?.let(::unformatNumber)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }
-            ?.map(Gtin::canonical).orEmpty() // "1234565" (a number in a spreadsheet) → "01234565"; a GTIN-14 → its EAN-13
+        val written = cell(Column.BARCODES)?.let(::unformatNumber)?.split(BARCODE_SPLIT)
+            ?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        val barcodes = written.map(Gtin::canonical) // "1234565" (a number in a spreadsheet) → "01234565"; a GTIN-14 → its EAN-13
         // "9.55600E+12": the spreadsheet turned the barcode into a number and lost its digits; and a
         // decimal number is never a barcode ("9556001234567.5").
         if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } || SCIENTIFIC.matches(it) || DECIMAL.matches(it) }) {
@@ -146,6 +149,7 @@ object ProductCsv {
                 category = cell(Column.CATEGORY), unit = cell(Column.UNIT), cost = cost, tax = tax,
                 sellMode = sellMode, trackStock = track, stock = stock, lowStock = low, active = active,
                 id = cell(Column.ID)?.removePrefix("#")?.trim()?.toLongOrNull()?.takeIf { it > 0L },
+                asWritten = written.zip(barcodes).filter { (w, c) -> w != c }.associate { (w, c) -> c to w },
             ),
         )
     }

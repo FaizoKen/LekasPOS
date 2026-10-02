@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.staff.PinLockout
 import com.lekaspos.data.audit.AuditDao
@@ -14,6 +15,9 @@ import com.lekaspos.data.staff.RoleDao
 import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.sale.ActionRefused
+import com.lekaspos.domain.sell.CheckoutService
+import com.lekaspos.domain.sell.Tender
+import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -23,7 +27,11 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -204,6 +212,34 @@ class StaffTest {
         assertFalse(s.state.value.locked)
         graph.cart.setPaying(false)
         assertTrue(s.lockIfIdle()) // ... but right after it: the tap on the payment did not renew the idle time
+
+        // A payment that ended in a sale: its result (the change to give) is not taken off the screen.
+        assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
+        graph.cart.addProduct(TestDb.sellable(graph.db(), TestDb.product(graph.db(), "Kopi", 250L)))
+        graph.cart.setPaying(true)
+        s.idleFor(2 * 60_000L)
+        val total = graph.cart.state.value.priced.total
+        graph.checkout.start(listOf(Tender(Seed.Ids.PM_CARD, PaymentKind.CARD, "Card", false, total, total, 0L)), 0L)
+        assertIs<CheckoutService.Outcome.Completed>(withTimeout(10_000L) { graph.checkout.outcome.first { it != null } })
+        graph.cart.setPaying(false)
+        assertFalse(s.lockIfIdle()) // the change is still on the screen ...
+        assertFalse(s.dialogActivity()) // ... its buttons work ...
+        graph.checkout.acknowledge()
+        assertTrue(s.lockIfIdle()) // ... and once it is closed, the till locks
+    }
+
+    /** 2026-10 review: the store's first PIN locked the till for a moment: the screen left, the recovery code was never seen. */
+    @Test
+    fun theStoresFirstPinNeverLocksTheTillOnTheWay() = runBlocking {
+        val s = graph.staff
+        assertFalse(s.state.value.loginRequired)
+        // What every screen does: leave as soon as the till locks.
+        val locked = async(Dispatchers.Unconfined) { s.state.first { it.locked } }
+        assertNotNull(graph.staffAdmin.setPin(owner, "2468").recoveryCode)
+        assertTrue(s.state.value.loginRequired)
+        assertEquals(owner, s.state.value.current?.id)
+        assertFalse(locked.isCompleted)
+        locked.cancel()
     }
 
     /** 2026-10 review: after a power cut on screen, the till opened signed in with a fresh idle time. */

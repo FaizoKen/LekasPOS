@@ -107,9 +107,11 @@ class StaffService(private val graph: AppGraph) {
             }
             s.copy(pin = record)
         }
-        graph.staff.reload()
-        // The owner who just typed the store's first PIN is the one using the till.
+        // The owner who just typed the store's first PIN is the one using the till: signed in before
+        // the reload turns the PIN login on, so the till never looks locked in between (a screen
+        // leaves when the till locks: the recovery code was never shown — 2026-10 review).
         if (!wasRequired && record != null && staff.canSignIn && graph.staff.state.value.current == null) graph.staff.adopt(staff)
+        graph.staff.reload()
         return PinSet(code)
     }
 

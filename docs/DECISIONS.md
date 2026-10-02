@@ -686,8 +686,8 @@ Decisions that change behaviour:
   cut-short code); camera scans are checked like keys; an idle time that ran out during a payment
   locks the till as soon as the payment ends; back-office screens leave when the till locks for any
   reason; the last sale's result is cleared on lock (its Share was a free first copy); recent
-  activity is stored every 30 s, so a power cut counts as idle time. Wrong-PIN waits are measured
-  by the time since boot also on Android 5 and 6.
+  activity is stored at the sign-in and every 30 s, so a power cut counts as idle time. Wrong-PIN
+  waits are measured by the time since boot also on Android 5 and 6.
 - **Restore and copies off the phone.** A restored database loses any triggers and views (the app
   makes none; a doctored backup could bring one that deletes audit entries); who restored which
   backup is in the restored activity log; saving or sharing a backup copy is audited. Opening stock
@@ -728,6 +728,15 @@ Decisions that change behaviour:
   screen. Customer phone search matches "012…", "6012…" and "+6012…".
 - **Printing.** A sent job is recorded before the next one runs (a drawer pulse in between printed
   a receipt twice); a job cleared from the queue while the printer connected is not printed.
+- **Review of these changes** (one more read-only review of the whole change, then CI). The store's
+  first PIN signed its owner in only after turning the PIN login on: for a moment nobody was signed
+  in, the new "leave when the till locks" rule closed the Staff screen (and Setup), and the one-time
+  owner recovery code was never shown — the owner is now signed in first. A payment longer than the
+  idle time locked the till within seconds of the sale and took the change off the screen: the
+  result now stays until it is closed, for at most a minute, then the till locks (a scan for the
+  next customer locks first). A delivery order's own barcode scanned into Receive's reference field
+  stays there when it is no product. A barcode an older version kept with its dashes is still found
+  by an import (and gets its digits added). The sign-in itself stores the first idle heartbeat.
 Not changed (for the owner, or later): folder and saved backups still hold the PIN hashes (a 4–6
 digit PIN cannot be protected by hashing; encrypting backups would tie every restore to the
 recovery code, and a lost code would lose the data — the copies are audited instead, and PINs are

@@ -287,6 +287,26 @@ class ProductCsvServiceTest {
         assertEquals(setOf("1234565", "01234565"), db.read { ProductDao.barcodes(it, mints) }.map { it.code }.toSet())
     }
 
+    /** 2026-10 review: a code an older version kept with its dashes made a second product on the next import. */
+    @Test
+    fun aBarcodeStoredAsWrittenWithDashesIsStillFound() = runBlocking {
+        val g = graph()
+        val db = g.db()
+        val milo = db.write(reserveIds = 3L) { tx ->
+            val m = tx.nextId()
+            ProductDao.create(tx, Product(m, "Milo", price = 500L), listOf(Barcode(tx.nextId(), m, "955-6001-234568")), System.currentTimeMillis())
+            m
+        }
+        val csv = "name,price,barcode\r\nMilo,5.20,955-6001-234568\r\n"
+        assertEquals(1, g.productCsv.preview { StringReader(csv) }.updates)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(0, r.created)
+        assertEquals(1, r.updated)
+        assertEquals(520L, db.read { ProductDao.get(it, milo) }?.price)
+        // The digits are added, so a scan of the printed barcode finds it from now on.
+        assertEquals(setOf("955-6001-234568", "9556001234568"), db.read { ProductDao.barcodes(it, milo) }.map { it.code }.toSet())
+    }
+
     /** 2026-10 review: an import that stops part-way logs the chunks it committed. */
     @Test
     fun anImportThatStopsPartWayIsLogged() = runBlocking {

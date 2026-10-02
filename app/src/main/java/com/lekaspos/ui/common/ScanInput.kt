@@ -12,9 +12,11 @@ import com.lekaspos.core.scan.ScanBuffer
  * became "INV-07719556001234567") and the item was lost. The field still gets every key; when a
  * burst at scanner speed ends with Enter or Tab, the burst is taken out of the field again (what
  * was typed before stays) and handed to [onScan]. The selling screen had this since D-054;
- * receiving, counting and picking lost such scans (2026-10 review).
+ * receiving, counting and picking lost such scans (2026-10 review). With [takeOutAtOnce] false,
+ * the scan stays in the field until the screen calls [takeOut] (a field that may be scanned on
+ * purpose, like a delivery order's number).
  */
-class FieldScan(private val onScan: (String) -> Unit) {
+class FieldScan(private val takeOutAtOnce: Boolean = true, private val onScan: (String) -> Unit) {
     private val burst = ScanBuffer()
 
     /** Every key of the screen while [field] has focus; true when the key ended a scan (consumed). */
@@ -23,7 +25,7 @@ class FieldScan(private val onScan: (String) -> Unit) {
         when (e.keyCode) {
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_TAB -> {
                 val r = burst.onTerminator() as? ScanBuffer.Result.Scan ?: return false
-                takeOut(field, r.code)
+                if (takeOutAtOnce) takeOut(field, r.code)
                 onScan(r.code)
                 return true
             }
@@ -38,7 +40,8 @@ class FieldScan(private val onScan: (String) -> Unit) {
 
     fun clear() = burst.clear()
 
-    private fun takeOut(field: android.widget.EditText, code: String) {
+    /** Takes a scanned [code] out of [field] again; what was typed before it stays. */
+    fun takeOut(field: android.widget.EditText, code: String) {
         val text = field.text ?: return
         val end = field.selectionEnd.takeIf { it in 0..text.length } ?: text.length
         val start = end - code.length

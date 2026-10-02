@@ -977,9 +977,12 @@ shared a placeholder SKU into one product and imported "Nescaf�" from Excel fi
    expects RM10.05; a repayment of more than is owed is refused; the activity log shows "Credit repaid".
 6. **Staff** (PIN login on): as a cashier, have the owner approve the Staff screen, then try to make
    yourself owner → the owner's PIN is asked for that change. A manager cannot add "Settings" to
-   their own role.
+   their own role. On a fresh install (no PINs yet), set the owner's first PIN: the recovery
+   code shows and the Staff screen stays open.
 7. **Auto-lock** 1 minute: open Pay, leave it 2 minutes, press Cancel → the sign-in shows at the next
-   tap. Switch the phone off at the wall while signed in, wait 2 minutes, start it → the sign-in shows.
+   tap. Signed in on the selling screen, restart the phone from its power menu; 2 minutes after it
+   started, open the app → the sign-in shows. Open Pay, wait 2 minutes, then pay in cash: the
+   change shows until you close it, then the sign-in shows.
 8. **Date**: set the phone's date to 2020 and press Pay → "Check the date and time" (no sale);
    set it back → selling works.
 9. **Held bills**: hold a bill → Held bills → "Delete a bill…" deletes it (with the cancel permission).
@@ -989,7 +992,8 @@ shared a placeholder SKU into one product and imported "Nescaf�" from Excel fi
     down the file: names come in right. A file whose SKU column is all "-" imports every row as its
     own product.
 13. **Receive stock** with a keyboard scanner while the invoice number field has the cursor: the item
-    is added and the invoice number stays as typed.
+    is added and the invoice number stays as typed. Scan a delivery order's own barcode into that field:
+    it stays there (no "not found").
 14. **Diagnostics → Share the error log**: a text file (or "the error log is empty").
 15. Printer and drawer (when available): clear the queue while the printer is off, switch it on —
     nothing cleared prints.

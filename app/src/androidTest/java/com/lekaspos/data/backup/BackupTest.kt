@@ -90,7 +90,7 @@ class BackupTest {
         val kept = (replacedCopies() - earlier).single()
         val keptHeader = assertNotNull(kept.inputStream().use { BackupFiles.readHeader(it) })
         assertEquals(50L, keptHeader.sales)
-        kept.delete()
+        assertTrue(kept.delete())
     }
 
     /** 2026-10 review: a restore left no trace, and a doctored backup could bring triggers of its own. */

@@ -179,11 +179,15 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   touch or key counts (`StaffSession.activity()`): after the phone's screen was off the first tap
   used to reset it (D-055). `IdleLockTest` turns the emulator's screen off and on for real. When the app goes out of sight the last activity time is stored (`session.away_at`),
   so a new process still knows how long the till was idle; while signed in, recent activity is
-  also stored every 30 s (`session.seen_at`), so a power cut on screen counts as idle time (D-056).
+  also stored at the sign-in and then every 30 s (`session.seen_at`), so a power cut on screen counts
+  as idle time (D-056).
   Screens call `activity()` (drops the event while locked — the rest of a scan that woke the till),
   dialogs and pads `dialogActivity()` (the lock screen's own dialogs work while locked). The till
   never locks during a payment, but an idle time that ran out meanwhile is not renewed by taps on
-  the payment: it locks as soon as the payment ends (D-056). Wrong PINs count per person
+  the payment: it locks as soon as the payment ends and its result (the change) is closed, at most a
+  minute later (`CheckoutService.outcomeAt`; a scan for the next customer locks first) (D-056).
+  The store's first PIN signs its owner in before the login turns on (never locked in between).
+  Wrong PINs count per person
   (`pin.fails.<id>`), 5 free tries, then 30 s doubling to 15 min, measured by the wall clock and,
   while the phone has not restarted, by the time since boot (setting the clock cannot skip it;
   Android 5–6 have no boot count: the same boot while the time since boot has not gone back); a

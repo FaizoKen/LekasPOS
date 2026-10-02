@@ -181,6 +181,15 @@ class CsvTest {
         assertEquals(listOf(ProductCsv.Problem.BARCODE_BAD), (bad as ProductCsv.Parsed.Bad).problems.map { it.first })
     }
 
+    /** The digits of a code written with dashes; the file's own form is kept to find what older versions stored. */
+    @Test
+    fun aBarcodeWrittenWithDashesKeepsItsFormForTheLookup() {
+        val h = ProductCsv.header(listOf("name", "price", "barcode"))
+        val row = (ProductCsv.parse(listOf("Milo", "18.90", "955-6001-234568 | 9556001234575"), h, myr) as ProductCsv.Parsed.Ok).row
+        assertEquals(listOf("9556001234568", "9556001234575"), row.barcodes)
+        assertEquals(mapOf("9556001234568" to "955-6001-234568"), row.asWritten)
+    }
+
     /** 2026-10 review: a placeholder in the SKU column made every row one product. */
     @Test
     fun placeholdersInTheSkuColumnAreNoSku() {

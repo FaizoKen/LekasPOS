@@ -52,7 +52,9 @@ class ReceiveActivity : ScreenActivity() {
     private lateinit var save: Button
     private lateinit var list: RecyclerView
     private val scanInput = ScanInput(onScan = { addByCode(it) }, onTyped = { _, _ -> })
-    private val fieldScan = FieldScan { addByCode(it) }
+    // The reference field is also scanned on purpose (a delivery order's own barcode): a scan there
+    // that is no product stays in it (2026-10 review).
+    private val fieldScan = FieldScan(takeOutAtOnce = false) { addByCode(it, fromRef = true) }
 
     private val currency get() = graph.settings.store.value.currency
 
@@ -139,12 +141,13 @@ class ReceiveActivity : ScreenActivity() {
         graph.appScope.launch(Dispatchers.Main) { graph.inventory.saveDraft(next) }
     }
 
-    private fun addByCode(code: String) {
+    private fun addByCode(code: String, fromRef: Boolean = false) {
         if (saving) return
         launchUi {
             val p = InventoryUi.resolve(graph, code)
             if (saving) return@launchUi
             if (p == null) {
+                if (fromRef) return@launchUi // the delivery order's or invoice's number, as typed in
                 beeper?.error()
                 Dialogs.confirm(this@ReceiveActivity, getString(R.string.sell_not_found_title), getString(R.string.sell_not_found_message, code), getString(R.string.sell_add_product)) {
                     @Suppress("DEPRECATION")
@@ -152,6 +155,7 @@ class ReceiveActivity : ScreenActivity() {
                 }
                 return@launchUi
             }
+            if (fromRef) fieldScan.takeOut(ref, code)
             beeper?.ok()
             add(p)
         }
