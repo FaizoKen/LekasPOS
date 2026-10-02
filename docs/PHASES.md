@@ -23,7 +23,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
-| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — test builds v1.6.0 and v1.6.1 published (CI, perf QUICK passed); the owner's phone tests next |
+| — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
 
 ## Open questions for the user
 
@@ -1177,7 +1177,12 @@ download checked against GitHub's SHA-256 and the release key; Android's install
       the GitHub check this time passed on both (Android 5 through the bundled roots). Pre-release;
       1,424,032 bytes, release key, SHA-256 `56884ff0…d976`, `mapping-1.6.1.txt` attached. GitHub's
       release list (what a phone with test versions on reads) shows v1.6.1 first with its digest
-- [ ] The owner's phone tests below, then release 1.6.1 as latest
+- [x] The owner tested it on the phone (2026-10-03): the update from 1.6.0 to 1.6.1 inside the app
+      works, and asked to release it: **v1.6.1 is the latest release** (2026-10-03; the website's
+      Download link serves it, SHA-256 and version checked; public notes with What's new in English
+      and Malay); smoke baseline (`PREV_APK_URL`) v1.6.1. v1.6.0 stays a test build. Perf FULL was not
+      run for this release (no database or hot-path change; QUICK passed on API 21, 29 and 36).
+      Shops on 1.5.x install 1.6.1 by hand once; from 1.6.1 on, new releases are offered in the app
 
 ### Needs real-device testing (1.6.0)
 
