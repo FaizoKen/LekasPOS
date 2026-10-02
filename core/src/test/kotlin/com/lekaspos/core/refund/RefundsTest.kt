@@ -29,6 +29,16 @@ class RefundsTest {
     }
 
     @Test
+    fun theCostShareFollowsTheQuantitiesNotWhatEarlierRefundsStored() {
+        // 4 units costing 400; one came back spoiled and was thrown away: its refund stored cost 0.
+        val src = RefundSource(1L, qty = 4000L, baseQty = 4000L, gross = 800L, discount = 0L, billDiscount = 0L, net = 800L, tax = 0L, cost = 400L)
+        val thrownAway = Refunds.part(src, 1000L).copy(cost = 0L)
+        val after = src.copy(refunded = thrownAway)
+        assertEquals(200L, Refunds.part(after, 2000L).cost) // not 400 − 0 spread over what is left
+        assertEquals(300L, Refunds.part(after, 3000L).cost) // the last three units: their own cost only
+    }
+
+    @Test
     fun returningEverythingRefundsWhatWasPaid() {
         val p = Refunds.part(line, 3000L)
         assertEquals(RefundPart(7L, 3000L, 3000L, 1000L, 0L, 0L, 1000L, 57L, 600L), p)

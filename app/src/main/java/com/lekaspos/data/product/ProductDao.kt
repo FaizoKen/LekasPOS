@@ -2,6 +2,7 @@ package com.lekaspos.data.product
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.text.SearchText
@@ -161,17 +162,19 @@ object ProductDao {
             "FROM product_barcode b JOIN product p ON p.id = b.product_id " +
             "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 " +
             "WHERE b.code IN (?, ?) AND b.deleted = 0 AND b.kind = ? AND p.deleted = 0 " +
-            "ORDER BY $CODE_WINNER LIMIT 1"
+            "ORDER BY b.code = ? DESC, $CODE_WINNER LIMIT 1"
 
     /**
      * Resolves a scanned code. [codes] are the lookup variants (see Gtin.lookupVariants), at
-     * most two. With duplicates, the barcode created last wins, on every till ([CODE_WINNER]).
+     * most two. The code exactly as scanned comes first (a newer product with only its padded form
+     * took over the scans of "1234565", 2026-10 review); with duplicates, the barcode created last
+     * wins, on every till ([CODE_WINNER]).
      */
     fun findByCode(db: SQLiteDatabase, codes: List<String>, kind: Int = BarcodeKind.BARCODE): ScanHit? =
         when (codes.size) {
             0 -> null
             1 -> db.queryOne(FIND_BY_CODE_1, args(codes[0], kind), ::scanHit)
-            else -> db.queryOne(FIND_BY_CODE_2, args(codes[0], codes[1], kind), ::scanHit)
+            else -> db.queryOne(FIND_BY_CODE_2, args(codes[0], codes[1], kind, codes[0]), ::scanHit)
         }
 
     private fun sellable(c: Cursor) = SellableProduct(
@@ -543,11 +546,18 @@ object ProductDao {
     }
 
     /** Other products that already use [code] (duplicate-barcode warning). */
-    fun codeOwners(db: SQLiteDatabase, code: String, exceptProductId: Long): List<Pair<Long, String>> = db.queryList(
-        "SELECT p.id, p.name FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
-            "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 AND p.id != ? LIMIT 5",
-        args(code, exceptProductId),
-    ) { it.getLong(0) to it.getString(1) }
+    /**
+     * Other products with [code] — also in its other UPC/EAN form, which answers the same scan
+     * ("036000291452" beside "0036000291452" went unnoticed, 2026-10 review).
+     */
+    fun codeOwners(db: SQLiteDatabase, code: String, exceptProductId: Long): List<Pair<Long, String>> =
+        Gtin.lookupVariants(code).flatMap { c ->
+            db.queryList(
+                "SELECT p.id, p.name FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+                    "WHERE b.code = ? AND b.deleted = 0 AND p.deleted = 0 AND p.id != ? LIMIT 5",
+                args(c, exceptProductId),
+            ) { it.getLong(0) to it.getString(1) }
+        }.distinct().take(5)
 
     private const val MANAGE_PAGE =
         "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +

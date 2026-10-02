@@ -163,20 +163,66 @@ class StaffTest {
         assertEquals(0L, s.waitMs(manager)) // someone else can still sign in
 
         // Setting the clock forward (only the wall-clock time moves): still a wait while the phone
-        // has not restarted, measured by the time since boot (Android 7+, 2026-10 review).
+        // has not restarted, measured by the time since boot (2026-10 review: on Android 5 and 6 too).
         graph.db().write(reserveIds = 0L) { tx ->
             Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, (System.currentTimeMillis() - 31_000L).toString())
         }
-        if (graph.bootCount() != null) assertIs<StaffSession.Check.Wait>(s.signIn(cashier, "1111"))
+        assertIs<StaffSession.Check.Wait>(s.signIn(cashier, "1111"))
 
         // Time passes (the last failure moves 31 s back on both clocks): the right PIN works and resets the count.
-        val boot = graph.bootCount()
+        val boot = graph.bootCount()?.toString() ?: "u" // "u": no boot count (Android 5 and 6)
         graph.db().write(reserveIds = 0L) { tx ->
             Meta.put(tx.db, StaffSession.KEY_LAST_FAIL + cashier, (System.currentTimeMillis() - 31_000L).toString())
-            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL_RT + cashier, boot?.let { "$it:${android.os.SystemClock.elapsedRealtime() - 31_000L}" })
+            Meta.put(tx.db, StaffSession.KEY_LAST_FAIL_RT + cashier, "$boot:${android.os.SystemClock.elapsedRealtime() - 31_000L}")
         }
         assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
         assertNull(graph.db().read { Meta.get(it, StaffSession.KEY_FAILS + cashier) })
+    }
+
+    /**
+     * 2026-10 review: the rest of a scan that woke an idle till went into the bill with nobody signed
+     * in, and a payment left open renewed the idle time for whoever closed it.
+     */
+    @Test
+    fun aLockedTillDropsInputAndAnIdleTimeThatRanOutWhilePayingLocksAfterIt() = runBlocking {
+        val (_, cashier) = team()
+        graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = 1))
+        val s = graph.staff
+        s.lock()
+        assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
+        s.idleFor(2 * 60_000L)
+        assertTrue(s.activity()) // locks: this key was meant for the person signed in before
+        assertTrue(s.state.value.locked)
+        assertTrue(s.activity()) // the rest of the scan: dropped as well
+        assertFalse(s.dialogActivity()) // the sign-in screen's own dialogs still work
+
+        assertIs<StaffSession.Check.Ok>(s.signIn(cashier, "1111"))
+        graph.cart.load()
+        graph.cart.setPaying(true)
+        s.idleFor(2 * 60_000L)
+        assertFalse(s.dialogActivity()) // never locked in the middle of a payment ...
+        assertFalse(s.state.value.locked)
+        graph.cart.setPaying(false)
+        assertTrue(s.lockIfIdle()) // ... but right after it: the tap on the payment did not renew the idle time
+    }
+
+    /** 2026-10 review: after a power cut on screen, the till opened signed in with a fresh idle time. */
+    @Test
+    fun aPowerCutWhileSignedInCountsAsIdleTime() = runBlocking {
+        val (_, cashier) = team()
+        graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = 5))
+        graph.staff.lock()
+        assertIs<StaffSession.Check.Ok>(graph.staff.signIn(cashier, "1111"))
+        // The heartbeat of the sign-ins is stored in the background ...
+        while (graph.db().read { Meta.get(it, StaffSession.KEY_SEEN) } == null) kotlinx.coroutines.delay(20L)
+        // ... it was ten minutes ago, then the power went: no screen stopped, no away time was stored.
+        graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, StaffSession.KEY_SEEN, (System.currentTimeMillis() - 10 * 60_000L).toString())
+            Meta.put(tx.db, StaffSession.KEY_AWAY, null)
+        }
+        TestGraph.close(graph)
+        graph = TestGraph.reopen(name)
+        assertTrue(graph.staff.state.value.locked)
     }
 
     @Test
@@ -224,6 +270,34 @@ class StaffTest {
         assertEquals(cashier, graph.staff.state.value.current?.id)
         assertTrue(graph.permissions.allowed(Perm.REPRINT))
         assertFalse(graph.permissions.allowed(Perm.VOID))
+    }
+
+    /**
+     * 2026-10 review: the owner's approval of the Staff screen ("I need to add the new hire") let
+     * the cashier make themselves owner, and "Manage staff" widened any role, also one's own.
+     */
+    @Test
+    fun ownerChangesAndWiderRolesNeedTheOwnerForThatChange() = runBlocking {
+        val (_, cashier) = team()
+        val gate = graph.permissions
+        graph.staff.lock()
+        assertIs<StaffSession.Check.Ok>(graph.staff.signIn(cashier, "1111"))
+        gate.elevate(assertNotNull(gate.approve(owner, "2468", Perm.MANAGE_STAFF).second)) // the Staff screen
+        val me = assertNotNull(graph.db().read { StaffDao.get(it, cashier) })
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.save(me, me.name, Seed.Ids.ROLE_OWNER, true) }
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.setPin(owner, "0000") }
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.delete(owner) }
+        val cashierRole = assertNotNull(graph.db().read { RoleDao.get(it, Seed.Ids.ROLE_CASHIER) })
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.saveRole(cashierRole, cashierRole.name, cashierRole.perms or Perm.VOID) }
+        assertEquals(Seed.Ids.ROLE_CASHIER, assertNotNull(graph.db().read { StaffDao.get(it, cashier) }).roleId)
+
+        // The owner approving that one change: done, with the owner as approver.
+        val once = assertNotNull(gate.approve(owner, "2468", Perm.MANAGE_STAFF).second)
+        graph.staffAdmin.saveRole(cashierRole, cashierRole.name, cashierRole.perms or Perm.VOID, once)
+        assertTrue(Perm.has(assertNotNull(graph.db().read { RoleDao.get(it, Seed.Ids.ROLE_CASHIER) }).perms, Perm.VOID))
+        // Ordinary staff changes still work with the screen's approval.
+        graph.staffAdmin.save(me, "Siti Aminah", Seed.Ids.ROLE_CASHIER, true)
+        assertEquals("Siti Aminah", assertNotNull(graph.db().read { StaffDao.get(it, cashier) }).name)
     }
 
     @Test

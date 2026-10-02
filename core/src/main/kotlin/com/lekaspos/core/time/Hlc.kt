@@ -19,12 +19,14 @@ class Hlc(private val wallClock: () -> Long, initial: Long = 0L) {
 
     /**
      * Folds in a timestamp seen from another device. Returns false (and ignores it) if it lies
-     * more than [MAX_FUTURE_MS] ahead of our wall clock — a device with a wrong clock must not
-     * drag every other device's clock into the future.
+     * more than [MAX_FUTURE_MS] ahead of our own time — a device with a wrong clock must not
+     * drag every other device's clock into the future. Our own time is the later of the wall clock
+     * and our last timestamp: a till whose clock was set back stopped following the others, and its
+     * later stock counts and sales sorted before theirs (2026-10 review).
      */
     @Synchronized
     fun observe(remote: Long): Boolean {
-        if (physicalOf(remote) > wallClock() + MAX_FUTURE_MS) return false
+        if (physicalOf(remote) > maxOf(wallClock(), physicalOf(last)) + MAX_FUTURE_MS) return false
         if (remote > last) last = remote
         return true
     }

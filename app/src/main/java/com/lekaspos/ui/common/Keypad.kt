@@ -29,7 +29,9 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
     fun clear() = set("")
 
     private fun press(key: String) {
-        LekasApp.graph(context).staff.touch() // dialogs are windows of their own: the screen does not see these taps
+        // Dialogs are windows of their own: the screen does not see these taps. An idle time that ran
+        // out while paying is kept (the till locks after the payment), so it is not simply reset here.
+        if (LekasApp.graph(context).staff.dialogActivity()) return
         val next = when (key) {
             DEL -> digits.dropLast(1)
             else -> if ((digits + key).length > maxDigits) digits else (digits + key).trimStart('0')

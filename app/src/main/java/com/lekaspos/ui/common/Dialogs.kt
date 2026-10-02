@@ -12,6 +12,16 @@ import com.lekaspos.R
 /** Small platform AlertDialog helpers (no AppCompat, D-002). */
 object Dialogs {
 
+    /**
+     * [content] in a scroll container, for a dialog's own view: a number pad or PIN pad is taller
+     * than a phone in landscape or a window in split screen, and without it the bottom keys — "0",
+     * OK — were cut off and could not be reached (2026-10 review).
+     */
+    fun scrolling(content: View): View = android.widget.ScrollView(content.context).apply {
+        isFillViewport = true
+        addView(content)
+    }
+
     fun message(ctx: Context, title: CharSequence?, message: CharSequence): AlertDialog =
         AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).show().trackedBy(ctx)
 

@@ -55,4 +55,25 @@ class RefundDraftTest {
         assertEquals(-57L, d.tax)
         assertEquals(false, d.lines.single().restock)
     }
+
+    /** 2026-10 review: Cash was always offered first, also for goods taken on customer credit. */
+    @Test
+    fun aRefundPaysBackTheWayTheSaleWasPaid() {
+        fun pay(method: Long, kind: Int, amount: Long) = com.lekaspos.data.sale.PaymentRow(method, method, null, kind, amount, amount, 0L, false)
+        val credit = SaleActions.RefundInfo(header, listOf(line), emptyMap(), payments = listOf(pay(1L, PaymentKind.CASH, 800L), pay(4L, PaymentKind.CREDIT, 205L)))
+        assertEquals(4L, credit.usualMethodId) // any part on credit: back onto the account
+        val card = SaleActions.RefundInfo(header, listOf(line), emptyMap(), payments = listOf(pay(1L, PaymentKind.CASH, 205L), pay(2L, PaymentKind.CARD, 800L)))
+        assertEquals(2L, card.usualMethodId)
+        assertEquals(null, SaleActions.RefundInfo(header, listOf(line), emptyMap()).usualMethodId)
+    }
+
+    @Test
+    fun goodsNotPutBackKeepTheirCostInCostOfGoods() {
+        // Spoiled milk taken back and thrown away: the money goes back, the goods are lost.
+        val thrownAway = SaleActions.refundDraft(header, parts(1000L), restock = false, reason = "spoiled", method = cash, cashStep = 5L, staffId = 1L, now = 7L)
+        assertEquals(0L, thrownAway.lines.single().cost)
+        assertEquals(-334L, thrownAway.lines.single().net)
+        val backOnTheShelf = SaleActions.refundDraft(header, parts(1000L), restock = true, reason = "unopened", method = cash, cashStep = 5L, staffId = 1L, now = 7L)
+        assertEquals(-200L, backOnTheShelf.lines.single().cost)
+    }
 }

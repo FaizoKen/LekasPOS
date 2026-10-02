@@ -1,5 +1,6 @@
 package com.lekaspos.ui.sell
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
@@ -40,6 +41,7 @@ import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.scan.ScanBuffer
+import com.lekaspos.core.time.ClockCheck
 import com.lekaspos.core.time.DateText
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
@@ -48,6 +50,7 @@ import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
+import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sale.ActionRefused
@@ -65,6 +68,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.keys
+import com.lekaspos.ui.common.scanChar
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.customers.pickCustomer
@@ -264,7 +268,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         discountButton.setOnClickListener { billDiscount() }
         findViewById<View>(R.id.btn_menu).setOnClickListener { showMenu(it) }
         heldPill.setOnClickListener { showHeld() }
-        cameraButton.setOnClickListener { startActivity(CameraScanActivity.sellIntent(this)) }
+        @Suppress("DEPRECATION")
+        cameraButton.setOnClickListener { startActivityForResult(CameraScanActivity.sellIntent(this), REQ_CAMERA_SELL) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
         staffChip.setOnClickListener { staffMenu(it) }
         customerChip.setOnClickListener { customerAction() }
@@ -444,6 +449,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showLock() {
         if (lockShown) return
         lockShown = true
+        scanInput.clear() // the start of a scan that woke the till is not kept for the next person
         paymentDialog?.dismiss()
         dialogs.dismissAll()
         startActivity(Intent(this, LockActivity::class.java))
@@ -676,7 +682,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 return true
             }
         }
-        val ch = e.getUnicodeChar(e.metaState)
+        val ch = scanChar(e)
         if (ch > 0x1F && ch and KeyCharacterMap.COMBINING_ACCENT == 0) {
             if (fieldBurst.isIdle(e.eventTime)) fieldBurst.clear() // a person's earlier typing is not part of a scan
             fieldBurst.onChar(ch.toChar(), e.eventTime)
@@ -775,6 +781,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 scope.launch {
                     graph.cart.load()
                     graph.cart.setCustomer(id, name)
+                }
+            }
+        }
+        if (requestCode == REQ_CAMERA_SELL && resultCode == RESULT_OK) {
+            // A code the camera could not add by itself: unknown (register it), or it needs a weight
+            // or a price. The bill is loaded first (Android may have ended the app meanwhile).
+            data?.getStringExtra(CameraScanActivity.EXTRA_CODE)?.let { code ->
+                scope.launch {
+                    graph.cart.load()
+                    onScanned(code)
                 }
             }
         }
@@ -1099,7 +1115,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     // ------------------------------------------------------------------ payment
 
-    private fun openPayment() {
+    private fun openPayment(clockChecked: Boolean = false) {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty) return
         val store = graph.settings.store.value
@@ -1110,8 +1126,30 @@ class SellActivity : Activity(), LineActions, DialogHost {
             return
         }
         scope.launch {
+            if (!clockChecked) {
+                // The sale is filed for good under the phone's date (ClockCheck, 2026-10 review).
+                val now = System.currentTimeMillis()
+                val db = graph.db()
+                val last = db.read { SaleDao.lastOwnSoldAt(it, db.deviceNo) }
+                when (ClockCheck.verdict(now, last)) {
+                    ClockCheck.Verdict.OK -> Unit
+                    ClockCheck.Verdict.WRONG -> {
+                        wrongClock(getString(R.string.clock_wrong, DateText.dateTime(now, TimeZone.getDefault())), sellAnyway = null)
+                        return@launch
+                    }
+                    ClockCheck.Verdict.SUSPECT -> {
+                        val tz = TimeZone.getDefault()
+                        val text = getString(R.string.clock_suspect, DateText.dateTime(now, tz), DateText.dateTime(last ?: now, tz))
+                        wrongClock(text) { openPayment(clockChecked = true) }
+                        return@launch
+                    }
+                }
+            }
             val credit = store.creditEnabled && graph.cart.state.value.customerId != null
             val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
+            // Priced with today's promotions: a bill rung up before midnight kept a deal that had
+            // ended, or missed one that started (2026-10 review).
+            graph.cart.reprice()
             val now = graph.cart.state.value
             if (!now.canEdit || now.cart.isEmpty) return@launch
             graph.cart.setPaying(true)
@@ -1119,6 +1157,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.cart.payment = draft
             showPayment(draft)
         }
+    }
+
+    /** The phone's date or time looks wrong: set it in Android's settings ([sellAnyway]: or go on). */
+    private fun wrongClock(message: String, sellAnyway: (() -> Unit)?) {
+        val b = AlertDialog.Builder(this)
+            .setTitle(R.string.clock_wrong_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.clock_settings) { _, _ ->
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_DATE_SETTINGS))
+                } catch (e: android.content.ActivityNotFoundException) {
+                    Log.w("No date settings screen", e)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+        if (sellAnyway != null) b.setNeutralButton(R.string.clock_sell_anyway) { _, _ -> sellAnyway() }
+        b.show().trackedBy(this)
     }
 
     /**
@@ -1216,6 +1271,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun showResult(done: CheckoutService.Done): AlertDialog {
+        @SuppressLint("InflateParams") // a dialog's view has no parent to inflate into
         val v = layoutInflater.inflate(R.layout.dialog_result, null)
         val device = graph.settings.device.value
         v.findViewById<TextView>(R.id.result_label).setText(if (done.change > 0L) R.string.result_change else R.string.result_paid)
@@ -1240,7 +1296,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val low = v.findViewById<TextView>(R.id.result_low_stock)
         low.text = if (done.lowStock.isEmpty()) "" else getString(R.string.result_low_stock, done.lowStock.joinToString(", ") { "${it.name} (${MoneyFormat.formatQty(it.qty)})" })
         low.visible(done.lowStock.isNotEmpty())
-        val d = AlertDialog.Builder(this).setView(v).create()
+        val d = AlertDialog.Builder(this).setView(Dialogs.scrolling(v)).create()
         val print = v.findViewById<Button>(R.id.result_print)
         print.visible(device.hasPrinter)
         print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
@@ -1256,6 +1312,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     companion object {
         private const val REQ_NEW_PRODUCT = 1
         private const val REQ_PRICE_SCAN = 7
+        private const val REQ_CAMERA_SELL = 8
         private const val REQ_CUSTOMER = 2
         private const val IDLE_CHECK_MS = 15_000L
         private const val DOUBLE_TAP_MS = 600L

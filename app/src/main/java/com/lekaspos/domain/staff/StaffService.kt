@@ -15,7 +15,6 @@ import com.lekaspos.data.staff.Role
 import com.lekaspos.data.staff.RoleDao
 import com.lekaspos.data.staff.Staff
 import com.lekaspos.data.staff.StaffDao
-import com.lekaspos.domain.Actor
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.sale.ActionRefused
@@ -41,7 +40,7 @@ class StaffService(private val graph: AppGraph) {
         val id = graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             val role = RoleDao.get(tx.db, roleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (role.isOwner || before?.isOwner == true) requireOwner(tx, actor)
+            if (role.isOwner || before?.isOwner == true) requireOwner(tx, approval)
             val id: Long
             if (before == null) {
                 id = StaffDao.insert(tx, name.trim(), roleId, active, null, now)
@@ -65,7 +64,7 @@ class StaffService(private val graph: AppGraph) {
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (s.isOwner) requireOwner(tx, actor)
+            if (s.isOwner) requireOwner(tx, approval)
             checkOwnerRemains(all.filter { it.id != staffId })
             StaffDao.delete(tx, staffId, now)
             AuditDao.log(tx, AuditAction.STAFF_CHANGE, actor.staffId, now, Entity.STAFF, staffId, detail = "removed: ${s.name}", approvedBy = actor.approvedBy)
@@ -90,7 +89,7 @@ class StaffService(private val graph: AppGraph) {
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (s.isOwner) requireOwner(tx, actor)
+            if (s.isOwner) requireOwner(tx, approval)
             val after = all.map { if (it.id == staffId) it.copy(pin = record) else it }
             if (record != null && !s.isOwner && after.none { it.isOwner && it.canSignIn }) {
                 throw ActionRefused(ActionRefused.Reason.OWNER_PIN_FIRST)
@@ -174,6 +173,7 @@ class StaffService(private val graph: AppGraph) {
         require(name.isNotBlank()) { "name required" }
         val id = graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
+            requireMayGrant(tx, before, if (before?.isOwner == true) before.perms else perms, approval)
             val id = if (before == null) {
                 RoleDao.insert(tx, name.trim(), perms, now)
             } else {
@@ -200,15 +200,36 @@ class StaffService(private val graph: AppGraph) {
 
     /**
      * Owners are managed by owners only: making someone an owner, or changing an owner's role,
-     * active flag or PIN, or removing them, needs an owner doing it (or approving it for someone
-     * whose role cannot manage staff). With "Manage staff" alone a manager made themselves owner,
-     * renewed the recovery code and demoted the real owner (2026-10 review). While nobody has a PIN
-     * the till runs as the owner (D-037).
+     * active flag or PIN, or removing them, needs the signed-in owner, or an owner's [approval]
+     * of this one change. With "Manage staff" alone a manager made themselves owner, renewed the
+     * recovery code and demoted the real owner (D-055). An owner's approval of the whole Staff
+     * screen is not enough either: "I need to add the new hire" let the cashier make themselves
+     * owner before the screen closed (2026-10 review). While nobody has a PIN the till runs as the
+     * owner (D-037).
      */
-    private fun requireOwner(tx: Db.Tx, actor: Actor) {
+    private fun requireOwner(tx: Db.Tx, approval: Approval?) {
         if (!graph.staff.state.value.loginRequired) return
-        val who = StaffDao.get(tx.db, actor.approvedBy ?: actor.staffId)
-        if (who == null || who.deleted || !who.isOwner) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
+        if (isOwner(tx, graph.staff.state.value.current?.id)) return
+        if (!isOwner(tx, approval?.staffId)) throw ActionRefused(ActionRefused.Reason.OWNER_ONLY)
+    }
+
+    private fun isOwner(tx: Db.Tx, staffId: Long?): Boolean =
+        staffId != null && StaffDao.get(tx.db, staffId)?.let { it.isOwner && it.canSignIn } == true
+
+    /**
+     * Whoever widens a role grants only what they may do themselves (by their own role, or the
+     * owner who approves this change), and a role's holder never widens it: with "Manage staff" a
+     * manager added Settings and the activity log to their own role (2026-10 review).
+     */
+    private fun requireMayGrant(tx: Db.Tx, before: Role?, perms: Long, approval: Approval?) {
+        if (!graph.staff.state.value.loginRequired) return
+        val me = graph.staff.state.value.current
+        if (isOwner(tx, me?.id) || isOwner(tx, approval?.staffId)) return
+        val added = perms and (before?.perms ?: 0L).inv()
+        val mine = (me?.let { StaffDao.get(tx.db, it.id)?.perms } ?: 0L) or
+            (approval?.let { a -> StaffDao.get(tx.db, a.staffId)?.takeIf { it.canSignIn }?.perms } ?: 0L)
+        val ownRole = before != null && me != null && StaffDao.get(tx.db, me.id)?.roleId == before.id
+        if (added and mine.inv() != 0L || (ownRole && added != 0L)) throw ActionRefused(ActionRefused.Reason.OWNER_ONLY)
     }
 
     /** While anyone can sign in, an owner must be able to (else nobody could manage staff). */

@@ -245,7 +245,9 @@ class CustomerActivity : ScreenActivity() {
                     val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT }
                     Dialogs.choose(this@CustomerActivity, getString(R.string.credit_paid_with), methods.map { it.name }) { i ->
                         launchUi {
-                            val left = graph.customers.receivePayment(c.id, amount, methods[i], null, approval)
+                            val left = graph.customers.receivePayment(
+                                c.id, amount, methods[i], null, approval, getString(R.string.credit_cash_rounding),
+                            )
                             toast(getString(R.string.customer_owes, MoneyFormat.format(left, currency)))
                             reload()
                         }

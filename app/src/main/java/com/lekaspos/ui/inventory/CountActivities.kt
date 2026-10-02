@@ -28,6 +28,7 @@ import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
+import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
@@ -129,6 +130,7 @@ class CountActivity : ScreenActivity() {
     private var end = false
     private var beeper: Beeper? = null
     private val scanInput = ScanInput(onScan = { onCode(it) }, onTyped = { text, _ -> typed(text) })
+    private val fieldScan = FieldScan { onCode(it) }
 
     private val adapter = RowAdapter<ProductListItem>(
         bind = { h, p ->
@@ -191,7 +193,7 @@ class CountActivity : ScreenActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (!search.hasFocus() && scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+        (if (search.hasFocus()) fieldScan.onKey(event, search) else scanInput.onKey(event)) || super.dispatchKeyEvent(event)
 
     private fun typed(text: String) {
         search.setText(text)

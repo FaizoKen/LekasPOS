@@ -38,6 +38,9 @@ class ProductImportActivity : ScreenActivity() {
     override fun onStarted(scope: CoroutineScope) {
         scope.launch {
             graph.productCsv.state.collect { st ->
+                // The screen stays on while importing: with it off the phone sleeps and a long import
+                // stopped half-way (2026-10 review).
+                keepScreenOn(st is ProductCsvService.State.Running)
                 // A result left by an earlier import of another file is not this file's result.
                 val mine = graph.productCsv.source == uri.toString()
                 when (st) {
@@ -148,6 +151,7 @@ class ProductImportActivity : ScreenActivity() {
                 Problem.BARCODE_TWICE -> R.string.problem_barcode_twice
                 Problem.BARCODE_TAKEN -> R.string.problem_barcode_taken
                 Problem.BARCODES_SPLIT -> R.string.problem_barcodes_split
+                Problem.SKU_TWICE -> R.string.problem_sku_twice
             },
         )
         return if (c == null) what else "${c.header}: $what"

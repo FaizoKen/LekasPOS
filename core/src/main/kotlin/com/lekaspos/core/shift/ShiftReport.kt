@@ -64,6 +64,8 @@ data class ShiftReport(
     val counted: Long? = null,
     val creditCharged: Long = 0L,
     val creditRepaid: List<MethodTotal> = emptyList(),
+    /** What the closer wrote, e.g. why the drawer is over or short (2026-10 review: it could not be said). */
+    val note: String? = null,
 ) {
     val open: Boolean get() = closedAt == null
 }
@@ -104,6 +106,7 @@ data class ShiftText(
     val creditSection: String,
     val creditCharged: String,
     val creditRepaid: String,
+    val note: String,
 ) {
     companion object {
         val EN = ShiftText(
@@ -113,7 +116,7 @@ data class ShiftText(
             openingFloat = "Opening float", cashSales = "Cash sales", cashRefunds = "Cash refunds", voided = "Voided (cash)",
             cashIn = "Cash in", cashOut = "Cash out", drops = "Cash drops", creditRepayments = "Credit repaid in cash",
             expected = "Expected cash", counted = "Counted cash", difference = "Over / short",
-            creditSection = "Customer credit", creditCharged = "Sold on credit", creditRepaid = "Repaid",
+            creditSection = "Customer credit", creditCharged = "Sold on credit", creditRepaid = "Repaid", note = "Note",
         )
         val MS = ShiftText(
             title = "LAPORAN SYIF", till = "Kaunter", opened = "Dibuka", closed = "Ditutup", stillOpen = "masih dibuka",
@@ -123,7 +126,7 @@ data class ShiftText(
             cashRefunds = "Bayaran balik tunai", voided = "Dibatalkan (tunai)", cashIn = "Wang masuk", cashOut = "Wang keluar",
             drops = "Simpanan wang", creditRepayments = "Bayaran hutang tunai", expected = "Tunai dijangka",
             counted = "Tunai dikira", difference = "Lebih / kurang", creditSection = "Kredit pelanggan",
-            creditCharged = "Jualan kredit", creditRepaid = "Bayaran hutang",
+            creditCharged = "Jualan kredit", creditRepaid = "Bayaran hutang", note = "Catatan",
         )
 
         fun forLanguage(lang: String): ShiftText = if (lang == "ms") MS else EN
@@ -191,6 +194,7 @@ class ShiftReportLayout(private val currency: CurrencySpec, private val t: Shift
             for (m in r.creditRepaid) rows.add(ReportRow("${t.creditRepaid}: ${m.name} (${m.count})", money(m.amount)))
             out.add(ReportSection(t.creditSection, rows))
         }
+        if (!r.note.isNullOrBlank()) out.add(ReportSection(t.note, listOf(ReportRow(r.note.trim(), ""))))
         return out
     }
 

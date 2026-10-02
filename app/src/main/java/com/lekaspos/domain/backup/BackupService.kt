@@ -107,10 +107,21 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         // as recent (waiting for the clock to catch up stopped every backup for as long, 2026-10
         // review), and they are the first to go when pruning.
         val latest = withContext(Dispatchers.IO) { autoFiles().filter { it.lastModified() <= now + CLOCK_SLACK_MS }.maxByOrNull { it.lastModified() } }
-        val made = if (latest == null || !recent(latest.lastModified(), now, DUE_MS)) {
+        val due = latest == null || !recent(latest.lastModified(), now, DUE_MS)
+        // Copying the database pauses every sale while it runs (seconds for a large store on a slow
+        // phone): while a bill is being rung up or the till has just sold, the backup waits for a
+        // quiet moment — but never past OVERDUE_MS since the last one (2026-10 review: it ran right
+        // when the till was switched on in the morning, and Pay hung with the first customer).
+        if (due && latest != null && recent(latest.lastModified(), now, OVERDUE_MS) && busy(now)) throw Postponed()
+        val made = if (due) {
             val db = graph.db()
-            val check = integrityForTests ?: KeepDamagedDatabase.problem ?: runCatching { db.read { BackupFiles.integrity(it) } }
-                .getOrElse { it.message ?: it.javaClass.simpleName }
+            val check = integrityForTests ?: KeepDamagedDatabase.problem ?: try {
+                db.read { BackupFiles.integrity(it) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // the job was stopped (battery low): that is no damage (2026-10 review)
+            } catch (e: Exception) {
+                e.message ?: e.javaClass.simpleName
+            }
             if (check != "ok") {
                 // Keep every backup as it is: rotating would replace good copies by damaged ones.
                 val why = check.take(200)
@@ -246,12 +257,19 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
      * backup at a time (they share a work file).
      */
     suspend fun export(open: () -> OutputStream) = lock.withLock {
-        graph.permissions.actor(Perm.SETTINGS)
+        val actor = graph.permissions.actor(Perm.SETTINGS)
         val db = graph.db()
         withContext(Dispatchers.IO) {
             open().use { out -> BackupFiles.write(db, out, File(app.cacheDir, "backup-tmp"), BuildConfig.VERSION_NAME, "export") }
         }
-        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.BACKUP_EXPORT_OK, System.currentTimeMillis().toString()) }
+        // A copy of all the shop's data left the app (saved or shared): on record (2026-10 review).
+        db.write(reserveIds = 1L) { tx ->
+            val now = System.currentTimeMillis()
+            Meta.put(tx.db, Meta.BACKUP_EXPORT_OK, now.toString())
+            com.lekaspos.data.audit.AuditDao.log(
+                tx, com.lekaspos.core.model.AuditAction.SETTINGS_CHANGE, actor.staffId, now, detail = "backup copy saved or shared", approvedBy = actor.approvedBy,
+            )
+        }
         refreshProtection()
     }
 
@@ -267,9 +285,10 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
      * backed up again right before it is replaced.
      */
     suspend fun stageRestore(open: () -> InputStream, mode: Restore.Mode): BackupFiles.Header {
-        graph.permissions.actor(Perm.SETTINGS)
+        val actor = graph.permissions.actor(Perm.SETTINGS)
+        val who = Restore.Who(actor.staffId, actor.approvedBy)
         return try {
-            withContext(Dispatchers.IO) { open().use { Restore.prepare(app, it, mode) } }
+            withContext(Dispatchers.IO) { open().use { Restore.prepare(app, it, mode, who) } }
         } catch (e: Exception) {
             // Also when the screen closed while checking: nothing stays waiting to be applied.
             withContext(NonCancellable + Dispatchers.IO) { Restore.cancelStaged(app) }
@@ -324,6 +343,16 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     /** [at] is less than [window] ago — and not in the future (a clock set back since). */
     private fun recent(at: Long, now: Long, window: Long): Boolean = at <= now + CLOCK_SLACK_MS && now - at < window
 
+    /** A bill is being rung up, or a sale was made in the last [QUIET_MS]. */
+    private suspend fun busy(now: Long): Boolean {
+        if (!graph.cart.state.value.cart.isEmpty) return true
+        val last = graph.db().read { SaleDao.lastSoldAt(it) } ?: return false
+        return now - last in 0L until QUIET_MS
+    }
+
+    /** The automatic backup waits for a quiet moment; the worker tries again a little later. */
+    class Postponed : Exception("the till is busy: the automatic backup waits")
+
     companion object {
         const val AUTO = "auto-"
         const val MANUAL = "manual-"
@@ -331,6 +360,8 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         const val KEEP_REPLACED = 3
         const val KEEP_FOLDER = 7
         const val DUE_MS = 20L * 60L * 60L * 1000L
+        private const val OVERDUE_MS = 36L * 60L * 60L * 1000L
+        private const val QUIET_MS = 3L * 60L * 1000L
         private const val CLOCK_SLACK_MS = 5L * 60L * 1000L
 
         /** A copy off this phone counts as recent for this long (then "not backed up" shows). */

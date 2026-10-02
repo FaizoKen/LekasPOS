@@ -102,8 +102,7 @@ class ProductListActivity : ScreenActivity() {
         m.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.string.csv_import -> requireAccess(Perm.MANAGE_PRODUCTS) {
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(CsvFiles.openDocumentIntent(), REQ_IMPORT)
+                    startPicker(CsvFiles.openDocumentIntent(), REQ_IMPORT)
                 }
                 R.string.csv_export -> requireAccess(Perm.MANAGE_PRODUCTS) {
                     exportCsv("lekaspos-products.csv") { out -> graph.productCsv.export(out).toLong() }

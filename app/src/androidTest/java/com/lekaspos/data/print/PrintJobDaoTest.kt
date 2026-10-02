@@ -47,8 +47,12 @@ class PrintJobDaoTest {
         db.writeBlocking { tx -> PrintJobDao.markFailed(tx, second, "sale missing", 3_000L) }
         assertEquals(null, db.readBlocking { PrintJobDao.next(it) })
 
-        db.writeBlocking { tx -> PrintJobDao.enqueue(tx, PrintJobKind.TEST, null, 1, 4_000L) }
+        val test = db.writeBlocking { tx -> PrintJobDao.enqueue(tx, PrintJobKind.TEST, null, 1, 4_000L) }
         assertEquals(1, db.writeBlocking { tx -> PrintJobDao.cancelPending(tx, 5_000L) })
+        // The printer was still busy with it when the queue was cleared: it stays cleared (2026-10 review).
+        assertEquals(false, db.readBlocking { PrintJobDao.isPending(it, test) })
+        db.writeBlocking { tx -> PrintJobDao.markDone(tx, test, 5_500L) }
+        assertEquals("cancelled", db.readBlocking { it.stringOrNull("SELECT last_error FROM print_job WHERE id = ?", test) })
         assertEquals(0L, db.readBlocking { PrintJobDao.pendingCount(it) })
         assertEquals(3, db.writeBlocking { tx -> PrintJobDao.purge(tx, 6_000L) })
         assertEquals(0L, db.readBlocking { it.long("SELECT COUNT(*) FROM print_job") })

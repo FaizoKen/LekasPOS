@@ -29,6 +29,26 @@ import com.lekaspos.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * Runs [action] (a staff or role change). Refused as owner-only while the signed-in person is not
+ * an owner, an owner approves this one change with their PIN and it runs again with that approval:
+ * owners and what roles may do are an owner's business, and an approval of the whole Staff screen
+ * no longer counts for them (2026-10 review).
+ */
+private fun ScreenActivity.asOwnerIfRefused(action: suspend (com.lekaspos.domain.Approval?) -> Unit) {
+    launchUi {
+        try {
+            action(null)
+        } catch (e: com.lekaspos.domain.sale.ActionRefused) {
+            val s = graph.staff.state.value
+            if (e.reason != com.lekaspos.domain.sale.ActionRefused.Reason.OWNER_ONLY || !s.loginRequired || s.current?.isOwner == true) throw e
+            ApprovalDialog.show(this@asOwnerIfRefused, graph, scope, Perm.MANAGE_STAFF, onCancel = null, ownersOnly = true) { a ->
+                launchUi { action(a) }
+            }
+        }
+    }
+}
+
 /** Settings → Staff: who may use the till, their roles and PINs (D-037). */
 class StaffActivity : ScreenActivity() {
 
@@ -196,8 +216,8 @@ class StaffEditActivity : ScreenActivity() {
             return
         }
         val r = roles.getOrNull(role.selectedItemPosition) ?: return
-        launchUi {
-            val id = graph.staffAdmin.save(before, n, r.id, active.isChecked)
+        asOwnerIfRefused { approval ->
+            val id = graph.staffAdmin.save(before, n, r.id, active.isChecked, approval)
             if (before == null) {
                 // A new staff member needs a PIN to sign in: ask for it right away.
                 staffId = id
@@ -212,8 +232,8 @@ class StaffEditActivity : ScreenActivity() {
 
     private fun setPin(s: Staff) {
         askNewPin(this, getString(R.string.pin_new_title, s.name)) { pin ->
-            launchUi {
-                val result = graph.staffAdmin.setPin(s.id, pin)
+            asOwnerIfRefused { approval ->
+                val result = graph.staffAdmin.setPin(s.id, pin, approval)
                 toast(R.string.pin_changed)
                 val code = result.recoveryCode
                 if (code != null) {
@@ -227,8 +247,8 @@ class StaffEditActivity : ScreenActivity() {
 
     private fun removePin(s: Staff) {
         Dialogs.confirm(this, getString(R.string.staff_pin_remove), getString(R.string.staff_pin_remove_confirm, s.name), getString(R.string.staff_pin_remove)) {
-            launchUi {
-                graph.staffAdmin.setPin(s.id, null)
+            asOwnerIfRefused { approval ->
+                graph.staffAdmin.setPin(s.id, null, approval)
                 finish()
             }
         }
@@ -236,8 +256,8 @@ class StaffEditActivity : ScreenActivity() {
 
     private fun delete(s: Staff) {
         Dialogs.confirm(this, getString(R.string.delete), getString(R.string.staff_delete_confirm, s.name), getString(R.string.delete)) {
-            launchUi {
-                graph.staffAdmin.delete(s.id)
+            asOwnerIfRefused { approval ->
+                graph.staffAdmin.delete(s.id, approval)
                 finish()
             }
         }
@@ -330,8 +350,8 @@ class RoleEditActivity : ScreenActivity() {
         }
         var perms = 0L
         for ((p, sw) in switches) if (sw.isChecked) perms = perms or p
-        launchUi {
-            graph.staffAdmin.saveRole(before, n, perms)
+        asOwnerIfRefused { approval ->
+            graph.staffAdmin.saveRole(before, n, perms, approval)
             finish()
         }
     }

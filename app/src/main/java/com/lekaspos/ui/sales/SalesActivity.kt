@@ -13,6 +13,7 @@ import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.time.DateText
+import com.lekaspos.data.sale.ReceiptNumbers
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleRow
 import com.lekaspos.ui.common.RowAdapter
@@ -76,8 +77,13 @@ class SalesActivity : ScreenActivity() {
         val q = search.text.toString().trim().uppercase()
         job = scope.launch {
             if (debounce) delay(250L)
-            val items = graph.db().read { r ->
-                if (q.isEmpty()) SaleDao.history(r, null, PAGE) else listOfNotNull(SaleDao.byReceipt(r, q))
+            val db = graph.db()
+            val items = db.read { r ->
+                if (q.isEmpty()) {
+                    SaleDao.history(r, null, PAGE)
+                } else {
+                    ReceiptNumbers.candidates(q, ReceiptNumbers.prefix(r, db.deviceNo)).mapNotNull { SaleDao.byReceipt(r, it) }.distinctBy { it.id }
+                }
             }
             adapter.submit(items)
             end = q.isNotEmpty() || items.size < PAGE

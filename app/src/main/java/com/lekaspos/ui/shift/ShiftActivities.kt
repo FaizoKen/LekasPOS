@@ -119,16 +119,22 @@ class ShiftActivity : ScreenActivity() {
 
     private fun close() {
         AmountDialog(this, getString(R.string.shift_count), AmountDialog.Kind.MONEY, graph.settings.store.value.currency, message = getString(R.string.shift_count_hint), allowZero = true) { counted ->
-            Dialogs.confirm(this, getString(R.string.shift_close), getString(R.string.shift_close_confirm, money(counted)), getString(R.string.shift_close)) {
+            // With the confirmation, an optional note for the owner (why the drawer is over or short):
+            // it could not be written anywhere (2026-10 review). It shows on the shift report.
+            Dialogs.input(
+                this, getString(R.string.shift_close), getString(R.string.shift_close_note_hint),
+                message = getString(R.string.shift_close_confirm, money(counted)),
+            ) { note ->
                 launchUi {
                     val shiftId = graph.shifts.current.value?.id ?: return@launchUi
-                    graph.shifts.close(counted, null)
+                    graph.shifts.close(counted, note.ifEmpty { null })
                     if (graph.permissions.allowed(Perm.SHIFT_REPORT)) {
                         startActivity(ShiftReportActivity.intent(this@ShiftActivity, shiftId))
                     } else {
                         Dialogs.message(this@ShiftActivity, getString(R.string.shift_closed), getString(R.string.shift_closed_blind, money(counted)))
                     }
                 }
+                true
             }
         }.show()
     }

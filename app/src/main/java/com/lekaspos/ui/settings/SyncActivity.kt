@@ -23,6 +23,7 @@ import com.lekaspos.ui.sell.visible
 import java.lang.ref.WeakReference
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -91,6 +92,7 @@ class SyncActivity : ScreenActivity() {
      * scrolled it back to the top (2026-10 review).
      */
     private fun render(s: SyncEngine.Status) {
+        keepScreenOn(s.running) // the first sync of a large shop takes minutes: the phone must not sleep (2026-10 review)
         val layout = when {
             !s.enabled -> LAYOUT_OFF
             s.needsSignIn -> LAYOUT_SIGN_IN
@@ -308,7 +310,9 @@ class SyncActivity : ScreenActivity() {
 
     private fun turnOff() {
         Dialogs.confirm(this, getString(R.string.sync_turn_off), getString(R.string.sync_turn_off_confirm), getString(R.string.sync_turn_off)) {
-            launchUi { graph.sync.disable() }
+            // In the app scope: it waits for a running round, and leaving this screen meanwhile must not
+            // cancel it (the till kept syncing although "Turn off" was confirmed, 2026-10 review).
+            launchUi { graph.appScope.async { graph.sync.disable() }.await() }
         }
     }
 

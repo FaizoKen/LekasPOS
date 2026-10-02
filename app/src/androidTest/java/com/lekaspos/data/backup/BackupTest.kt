@@ -87,6 +87,28 @@ class BackupTest {
         assertEquals(50L, keptHeader.sales)
     }
 
+    /** 2026-10 review: a restore left no trace, and a doctored backup could bring triggers of its own. */
+    @Test
+    fun aRestoreIsOnRecordAndBringsNoTriggers() = runBlocking {
+        sell(2)
+        val db = graph.db()
+        db.writeBlocking { tx -> tx.db.execSQL("CREATE TRIGGER sneaky AFTER INSERT ON audit_log BEGIN DELETE FROM audit_log; END") }
+        val bytes = backupBytes()
+        db.writeBlocking { tx -> tx.db.execSQL("DROP TRIGGER sneaky") }
+        Restore.prepare(ctx, ByteArrayInputStream(bytes), Restore.Mode.REPLACE, Restore.Who(com.lekaspos.data.db.Seed.Ids.STAFF_OWNER, null))
+        assertTrue(Restore.arm(ctx))
+        TestGraph.close(graph)
+        graph = TestGraph.reopen(name)
+        val restored = graph.db()
+        assertEquals(0L, restored.read { it.long("SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger'") })
+        val details = restored.read { r ->
+            r.rawQuery("SELECT detail FROM audit_log WHERE action = ?", arrayOf(com.lekaspos.core.model.AuditAction.SETTINGS_CHANGE.toString())).use { c ->
+                generateSequence { if (c.moveToNext()) c.getString(0) else null }.toList()
+            }
+        }
+        assertTrue(details.any { it.startsWith("backup restored") }, details.toString())
+    }
+
     @Test
     fun aRestoreAsANewTillGetsItsOwnIdentity() = runBlocking {
         sell(3)

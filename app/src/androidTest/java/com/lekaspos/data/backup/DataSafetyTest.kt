@@ -136,6 +136,20 @@ class DataSafetyTest {
         assertEquals(State.PROTECTED, service.refreshProtection().state)
     }
 
+    /** 2026-10 review: the daily copy paused every sale while it ran, even in the middle of a rush. */
+    @Test
+    fun theDailyBackupWaitsForAQuietTillButNotForever() = runBlocking {
+        service.backupNow(auto = true)
+        val hour = 60L * 60L * 1000L
+        val backup = service.dir.listFiles().orEmpty().single()
+        backup.setLastModified(System.currentTimeMillis() - 25 * hour) // due
+        sell() // the till sold just now
+        assertEquals(true, runCatching { service.backupIfDue() }.exceptionOrNull() is BackupService.Postponed)
+        assertEquals(1, service.dir.listFiles().orEmpty().size) // nothing made yet
+        backup.setLastModified(System.currentTimeMillis() - 37 * hour) // overdue: busy or not
+        assertTrue(service.backupIfDue())
+    }
+
     @Test
     fun aDamagedDatabaseNeverRotatesGoodBackupsAway() = runBlocking {
         sell()

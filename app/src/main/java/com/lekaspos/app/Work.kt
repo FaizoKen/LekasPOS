@@ -76,6 +76,8 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     override suspend fun doWork(): Result = try {
         LekasApp.graph(applicationContext).backups.backupIfDue()
         Result.success()
+    } catch (e: com.lekaspos.domain.backup.BackupService.Postponed) {
+        Result.retry() // a till in use: again after the back-off (30 s, doubling)
     } catch (e: Exception) {
         Log.e("Automatic backup failed", e)
         if (runAttemptCount < 3) Result.retry() else Result.failure()

@@ -28,7 +28,7 @@
     <string name="report_net_ex_tax">Jualan bersih (tanpa cukai)</string>
     <string name="report_tax">Cukai</string>
     <string name="report_rounding">Pelarasan</string>
-    <string name="report_total">Jumlah diterima</string>
+    <string name="report_total">Jumlah (selepas bayaran balik)</string>
     <string name="report_cost">Kos barang</string>
     <string name="report_profit">Untung kasar</string>
     <string name="report_margin">Margin kasar</string>
@@ -62,6 +62,7 @@
     <string name="export_saved">Disimpan (baris: %1$d).</string>
     <string name="export_failed">Eksport tidak selesai (%1$s). Fail yang belum siap telah dipadam; sila cuba lagi.</string>
     <string name="export_lost">Eksport terganggu. Sila cuba lagi.</string>
+    <string name="no_picker">Telefon ini tiada aplikasi untuk memilih fail. Gunakan Kongsi, atau pasang pengurus fail.</string>
     <string name="export_summary">Ringkasan (CSV)</string>
     <string name="export_daily">Jualan harian (CSV)</string>
     <string name="export_products">Produk terjual (CSV)</string>
@@ -109,6 +110,7 @@
     <string name="problem_barcode">kod bar ada ruang kosong, terlalu panjang, atau telah ditukar oleh hamparan kepada nombor seperti 9.55E+12 (format lajur itu sebagai teks)</string>
     <string name="problem_tax">tiada kadar cukai dengan nama atau peratus ini</string>
     <string name="problem_barcode_twice">kod bar ini juga ada pada baris sebelumnya</string>
+    <string name="problem_sku_twice">SKU ini juga ada pada baris sebelumnya (setiap produk perlu SKU sendiri, atau tiada)</string>
     <string name="problem_barcode_taken">kod bar milik produk lain daripada SKU</string>
     <string name="problem_barcodes_split">kod bar milik produk yang berlainan</string>
 </resources>

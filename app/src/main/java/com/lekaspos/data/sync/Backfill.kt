@@ -23,8 +23,11 @@ object Backfill {
 
     private const val CHUNK = 300
 
-    /** Writes all events; [progress] gets (table, rows done). Sync must already be enabled. */
-    suspend fun run(db: Db, progress: (String, Long) -> Unit = { _, _ -> }) {
+    /**
+     * Writes all events; [progress] gets (table, rows done) after each committed chunk (the caller
+     * seals the outbox there now and then). Sync must already be enabled.
+     */
+    suspend fun run(db: Db, progress: suspend (String, Long) -> Unit = { _, _ -> }) {
         check(db.syncEnabled) { "enable sync before the backfill, or new changes would be missed" }
         settings(db)
         for ((entity, table) in Importer.LWW_TABLES.entries.sortedBy { order(it.value) }) {
@@ -64,7 +67,7 @@ object Backfill {
         }
     }
 
-    private suspend fun lwwTable(db: Db, entity: Int, table: String, progress: (String, Long) -> Unit) {
+    private suspend fun lwwTable(db: Db, entity: Int, table: String, progress: suspend (String, Long) -> Unit) {
         var after = Long.MIN_VALUE
         var done = 0L
         while (true) {
@@ -100,7 +103,7 @@ object Backfill {
         }
     }
 
-    private suspend fun sales(db: Db, progress: (String, Long) -> Unit) {
+    private suspend fun sales(db: Db, progress: suspend (String, Long) -> Unit) {
         var after = Long.MIN_VALUE
         var done = 0L
         while (true) {
@@ -128,7 +131,7 @@ object Backfill {
         }
     }
 
-    private suspend fun purchases(db: Db, progress: (String, Long) -> Unit) {
+    private suspend fun purchases(db: Db, progress: suspend (String, Long) -> Unit) {
         var after = Long.MIN_VALUE
         var done = 0L
         while (true) {
@@ -154,7 +157,7 @@ object Backfill {
         }
     }
 
-    private suspend fun rows(db: Db, table: String, entity: Int, filter: String, progress: (String, Long) -> Unit) {
+    private suspend fun rows(db: Db, table: String, entity: Int, filter: String, progress: suspend (String, Long) -> Unit) {
         var after = Long.MIN_VALUE
         var done = 0L
         while (true) {

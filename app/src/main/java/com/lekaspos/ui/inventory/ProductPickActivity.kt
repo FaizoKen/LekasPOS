@@ -16,6 +16,7 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
+import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
@@ -39,6 +40,7 @@ class ProductPickActivity : ScreenActivity() {
     private var job: Job? = null
     private var end = false
     private val scanInput = ScanInput(onScan = { onCode(it) }, onTyped = { text, submit -> typed(text, submit) })
+    private val fieldScan = FieldScan { onCode(it) }
 
     private val adapter = RowAdapter<ProductListItem>(
         bind = { h, p -> h.set(p.name, p.stockQty?.let { getString(R.string.inv_stock_now, InventoryUi.qty(it, p.unit)) }) },
@@ -84,7 +86,7 @@ class ProductPickActivity : ScreenActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (!search.hasFocus() && scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+        (if (search.hasFocus()) fieldScan.onKey(event, search) else scanInput.onKey(event)) || super.dispatchKeyEvent(event)
 
     private fun typed(text: String, submit: Boolean) {
         search.setText(text)

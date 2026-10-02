@@ -8,6 +8,7 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PrintJobKind
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.customer.CreditEntry
@@ -85,21 +86,58 @@ class CustomerService(private val graph: AppGraph) {
     /**
      * The customer pays back [amount] with [method]; cash goes into the open shift's drawer
      * (which then opens). Returns the new balance.
+     *
+     * A repayment is never more than is owed (2026-10 review): more would be a balance adjustment
+     * (CREDIT_LIMIT + audit), but any cashier could wipe a friend's debt with a "card" repayment
+     * of any size, or leave them credit to spend past their limit. Every repayment is audited.
+     * Cash is paid in steps of the smallest coin like a sale (MYR: 5 sen): the drawer gets the
+     * rounded amount, and paying off the whole debt books the difference as cash rounding, so the
+     * shift's expected cash and the balance (0.00) both come out right.
      */
-    suspend fun receivePayment(customerId: Long, amount: Long, method: PaymentMethod, note: String?, approval: Approval? = null): Long {
+    suspend fun receivePayment(
+        customerId: Long,
+        amount: Long,
+        method: PaymentMethod,
+        note: String?,
+        approval: Approval? = null,
+        /** The note of a cash-rounding entry, in the app's language. */
+        roundingNote: String = "Cash rounding",
+    ): Long {
         require(amount > 0L) { "amount must be positive" }
         require(method.kind != PaymentKind.CREDIT) { "credit cannot repay credit" }
         val actor = graph.permissions.actor(Perm.CUSTOMERS, approval)
-        val shiftRequired = method.kind == PaymentKind.CASH && graph.settings.store.value.shiftRequired
+        val store = graph.settings.store.value
+        val shiftRequired = method.kind == PaymentKind.CASH && store.shiftRequired
         val device = graph.settings.device.value
-        val balance = graph.db().write(reserveIds = 4L) { tx ->
+        val balance = graph.db().write(reserveIds = 6L) { tx ->
             val now = System.currentTimeMillis()
             // The shift open now (one closed meanwhile never gets cash its count did not see).
             val shiftId = ShiftDao.current(tx.db, tx.deviceNo)?.id
             if (shiftId == null && shiftRequired) throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
-            if (CustomerDao.get(tx.db, customerId) == null) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            CustomerDao.insertCredit(tx, customerId, CreditKind.PAYMENT, amount, null, method.id, actor.staffId, shiftId, note, now)
-            if (device.hasPrinter && device.drawerEnabled && method.opensDrawer) PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)
+            val customer = CustomerDao.get(tx.db, customerId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            val owed = CustomerDao.balance(tx.db, customerId)
+            if (amount > owed) throw ActionRefused(ActionRefused.Reason.MORE_THAN_OWED)
+            val paid = if (method.kind == PaymentKind.CASH) Settlement.cashDue(amount, store.currency.cashStep) else amount
+            val settles = amount == owed || paid >= owed
+            // Less than half the smallest coin, and the debt is not paid off: nothing was paid.
+            if (paid == 0L && !settles) return@write owed
+            val rounding = if (settles) paid - owed else 0L
+            var entry = 0L
+            if (paid != 0L) {
+                entry = CustomerDao.insertCredit(tx, customerId, CreditKind.PAYMENT, paid, null, method.id, actor.staffId, shiftId, note, now)
+            }
+            if (rounding != 0L) {
+                val id = CustomerDao.insertCredit(tx, customerId, CreditKind.ADJUST, rounding, null, null, actor.staffId, null, roundingNote, now)
+                if (entry == 0L) entry = id
+            }
+            val detail = buildString {
+                append(customer.name).append(": ").append(method.name)
+                if (rounding != 0L) append(" (").append(roundingNote).append(' ').append(MoneyFormat.plain(rounding, store.currency.decimals)).append(')')
+            }
+            AuditDao.log(tx, AuditAction.CREDIT_PAYMENT, actor.staffId, now, Entity.CREDIT, entry, paid, detail, actor.approvedBy)
+            if (paid != 0L && device.hasPrinter && device.drawerEnabled && method.opensDrawer) {
+                PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)
+            }
             CustomerDao.balance(tx.db, customerId)
         }
         graph.printer.wake()

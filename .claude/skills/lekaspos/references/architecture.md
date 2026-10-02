@@ -151,12 +151,18 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   `:core` `ScanBuffer` (burst timing, Enter/Tab or idle), so no field needs focus; slow typing
   goes to the search field (a scanner burst typed into the focused search field is taken out and
   scanned). Every dialog swallows Enter/Tab/Space so a scanner's Enter never presses a focused
-  button, and number pads drop scanner-speed digits (`DialogKeys`, D-054). SPP scanners
+  button, and number pads drop scanner-speed digits (`DialogKeys`, D-054; up to 60 ms per key, as
+  `ScanBuffer`, D-056). SPP scanners
   (`hw.scanner.SppScanner`) run while the selling screen is visible; a code without an Enter
   suffix is delivered after 250 ms of silence. The key-timing logic
-  lives in `ui.common.ScanInput`, shared by the selling, receiving, counting and product-picker screens. Camera scanning
+  lives in `ui.common.ScanInput`, shared by the selling, receiving, counting and product-picker screens;
+  `FieldScan` takes a scan typed into a focused field back out of it on those screens, and
+  `scanChar` reads digits by key code (numeric-keypad scanners, other layouts — D-056). Camera scanning
   (`ui.scan.CameraScanActivity`, Camera1 + ZXing 3.3.3) either adds every item to the bill or
-  returns one code. All paths end in `CartSession.scan`.
+  returns one code; in sell mode a code it cannot add by itself (unknown, needs a weight or a price)
+  goes back to the selling screen, which registers, weighs or prices it (D-056). All paths end in
+  `CartSession.scan`. Barcodes are stored in `Gtin.canonical` form; a scan tries `Gtin.lookupVariants`
+  (the exact code first), then scale templates, then the SKU.
 - Bluetooth permissions: paired devices only (D-027); `BLUETOOTH_CONNECT` is requested when
   choosing a device on Android 12+.
 - Back handling on the selling screen: `OnBackInvokedCallback` on API 33+ (registered only
@@ -172,13 +178,23 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   the app while their screen is off: waking calls onResume, not onStart — 1.3.1) and before a
   touch or key counts (`StaffSession.activity()`): after the phone's screen was off the first tap
   used to reset it (D-055). `IdleLockTest` turns the emulator's screen off and on for real. When the app goes out of sight the last activity time is stored (`session.away_at`),
-  so a new process still knows how long the till was idle. Wrong PINs count per person
+  so a new process still knows how long the till was idle; while signed in, recent activity is
+  also stored every 30 s (`session.seen_at`), so a power cut on screen counts as idle time (D-056).
+  Screens call `activity()` (drops the event while locked — the rest of a scan that woke the till),
+  dialogs and pads `dialogActivity()` (the lock screen's own dialogs work while locked). The till
+  never locks during a payment, but an idle time that ran out meanwhile is not renewed by taps on
+  the payment: it locks as soon as the payment ends (D-056). Wrong PINs count per person
   (`pin.fails.<id>`), 5 free tries, then 30 s doubling to 15 min, measured by the wall clock and,
-  while the phone has not restarted, by the time since boot (setting the clock cannot skip it); a
-  clock set back makes the wait count from now. A removed staff member cannot sign in or approve;
-  only owners manage owners (D-055).
+  while the phone has not restarted, by the time since boot (setting the clock cannot skip it;
+  Android 5–6 have no boot count: the same boot while the time since boot has not gone back); a
+  clock set back makes the wait count from now. A removed staff member cannot sign in or approve.
+  Only owners manage owners: the signed-in owner, or an owner's one-shot approval of that change —
+  never an approval a screen holds (D-056); a role is widened only with permissions the granter
+  holds, and never by its own holder.
 - `LockActivity` covers the selling screen whenever `state.locked`; secondary screens that find
-  the till locked jump back home (`ScreenActivity.onStart`). Back on the lock screen leaves the app.
+  the till locked jump back home (`ScreenActivity.onStart`, and while started whenever the state
+  turns locked, e.g. a sync reload removed the signed-in person). Locking clears the last sale's
+  result. Back on the lock screen leaves the app.
 - `PermissionGate`: every sensitive service call takes an optional `Approval` and resolves an
   `Actor(staffId, approvedBy)`. UI: `withApproval(perm)` = one-shot manager PIN for one action
   (selling screen, voids, refunds, reprints, drawer, cash moves, credit); `requireAccess(perm)`
@@ -246,9 +262,14 @@ restore that `Db.open` applies before opening the database (D-044).
 ## 9. Errors, logging, crash safety
 
 - Data-path exceptions are never swallowed: they propagate to the use case, which reports a
-  user-facing message and appends a line to the local error log (ring buffer file,
-  `files/logs/`), which the Diagnostics screen can export.
-- Uncaught exceptions: logged to the error log before the default handler runs.
+  user-facing message. `util.Log.w/e` also append to the local error log (`util.ErrorLog`:
+  `files/logs/errors.log`, 256 KB + one older file, written on its own thread), which Diagnostics →
+  "Share the error log" sends (D-056). It never holds PINs, tokens or customer data.
+- Uncaught exceptions: logged to the error log (synchronously) before the default handler runs.
+- WorkManager gets initialisation and scheduling exception handlers: a full disk must never crash
+  the app after every start (D-056).
+- A write that must update memory after its commit (shift open/close, device settings) runs in
+  `NonCancellable`: the screen that asked may be closing (D-056).
 - Money/sale writes are atomic transactions; nothing is printed or shown as "paid" until the
   commit returns.
 

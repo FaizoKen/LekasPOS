@@ -39,8 +39,12 @@ class DialogTracker : DialogHost {
  * swallows the keys that press a focused view; keypads also drop scanner-speed digits.
  */
 object DialogKeys {
-    /** Keys closer together than this come from a scanner, not a person. */
-    const val BURST_GAP_MS = 35L
+    /**
+     * Keys closer together than this come from a scanner, not a person: the selling screen's limit
+     * (ScanBuffer, 60 ms). At 35 ms a Bluetooth scanner sending a key every 40-50 ms typed its
+     * digits into the amount (2026-10 review).
+     */
+    const val BURST_GAP_MS = 60L
     const val BURST_IDLE_MS = 300L
 
     /** Keys that press (or move to) whatever view has keyboard focus. */
@@ -78,23 +82,26 @@ fun <T : Dialog> T.trackedBy(ctx: Context): T {
     val callback = w?.callback
     if (w != null && callback != null && callback !is ActivityCallback) {
         val staff = LekasApp.graph(ctx).staff
-        w.callback = ActivityCallback(callback) { staff.touch() }
+        w.callback = ActivityCallback(callback) { staff.dialogActivity() }
     }
     return this
 }
 
-/** Passes everything to the dialog ([inner]); touches and keys also call [onUse] first. */
+/**
+ * Passes everything to the dialog ([inner]); touches and keys call [onUse] first, which drops the
+ * event (returns true) when it just locked the till: it was meant for the person signed in before.
+ */
 private class ActivityCallback(
     private val inner: Window.Callback,
-    private val onUse: () -> Unit,
+    private val onUse: () -> Boolean,
 ) : Window.Callback by inner {
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        onUse()
+        if (onUse()) return true
         return inner.dispatchTouchEvent(event)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        onUse()
+        if (onUse()) return true
         return inner.dispatchKeyEvent(event)
     }
 }

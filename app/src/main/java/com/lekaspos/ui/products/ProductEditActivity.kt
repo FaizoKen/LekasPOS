@@ -16,6 +16,7 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import com.lekaspos.R
+import com.lekaspos.core.barcode.Gtin
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.Entity
@@ -60,6 +61,7 @@ class ProductEditActivity : ScreenActivity() {
     /** A save is running: a second tap on Save must not create the product twice. */
     private var saving = false
     private val codes = ArrayList<Code>()
+    private val scannedEarly = ArrayList<String>()
     private var categories: List<Category> = emptyList()
     private var taxes: List<TaxRate> = emptyList()
 
@@ -111,9 +113,13 @@ class ProductEditActivity : ScreenActivity() {
         taxes = data.taxes
         codes.clear()
         for (b in data.codes) codes.add(Code(b.id, b.code, b.kind, b.packQty, b.packPrice))
-        intent.getStringExtra(EXTRA_BARCODE)?.takeIf { it.isNotBlank() && codes.none { c -> c.code == it } }?.let {
+        intent.getStringExtra(EXTRA_BARCODE)?.let(Gtin::canonical)?.takeIf { it.isNotBlank() && codes.none { c -> c.code == it } }?.let {
             codes.add(Code(null, it, BarcodeKind.BARCODE, 1000L, null))
         }
+        // A code scanned with the camera before the form had loaded (Android ended the app meanwhile):
+        // clearing the codes for the loaded ones dropped it (2026-10 review).
+        for (c in scannedEarly) if (codes.none { it.code == c }) codes.add(Code(null, c, BarcodeKind.BARCODE, 1000L, null))
+        scannedEarly.clear()
         build(data.product, data.stock, data.shared)
         shown = data.product?.let { formProduct() ?: it }
     }
@@ -184,7 +190,10 @@ class ProductEditActivity : ScreenActivity() {
         )
         stockInfo = form.info(if (stock != null) getString(R.string.product_stock_now, MoneyFormat.formatQty(stock)) else "")
         if (p == null) {
-            opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
+            // Stock is set by whoever may receive, adjust and count it (as for a CSV import, D-054).
+            if (graph.permissions.allowed(Perm.MANAGE_STOCK)) {
+                opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
+            }
         } else {
             form.button(getString(R.string.hist_title)) { startActivity(StockHistoryActivity.intent(this, p.id)) }
             form.button(getString(R.string.inv_adjust)) { adjustProduct(p.id) { reloadStock(p.id) } }
@@ -248,7 +257,9 @@ class ProductEditActivity : ScreenActivity() {
                 @Suppress("DEPRECATION")
                 startActivityForResult(CameraScanActivity.pickIntent(this), REQ_SCAN)
             },
-        ) { code ->
+        ) { typed ->
+            // Stored in the form a scan finds (spaces of the printed digits, a 14-digit GTIN, 2026-10 review).
+            val code = Gtin.canonical(typed)
             if (code.isEmpty()) return@input false
             if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
             renderCodes()
@@ -277,7 +288,7 @@ class ProductEditActivity : ScreenActivity() {
             .setNegativeButton(R.string.cancel, null)
             .show()
         d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val c = code.text.toString().trim()
+            val c = Gtin.canonical(code.text.toString())
             val pieces = qty.text.toString().trim().toLongOrNull()
             val priceText = packPrice.text.toString().trim()
             val pp = if (priceText.isEmpty()) null else MoneyFormat.parse(priceText, currency)
@@ -300,9 +311,9 @@ class ProductEditActivity : ScreenActivity() {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_SCAN && resultCode == RESULT_OK) {
-            val code = data?.getStringExtra(CameraScanActivity.EXTRA_CODE) ?: return
+            val code = Gtin.canonical(data?.getStringExtra(CameraScanActivity.EXTRA_CODE) ?: return) // a camera code can end in a line break
             if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
-            if (::codeList.isInitialized) renderCodes()
+            if (::codeList.isInitialized) renderCodes() else scannedEarly.add(code) // the form loads after this: kept for it
         }
     }
 
@@ -386,8 +397,16 @@ class ProductEditActivity : ScreenActivity() {
         }
     }
 
+    /** For the activity log (its details are English, like the rest of them). */
+    private fun sellModeName(mode: Int) = when (mode) {
+        SellMode.WEIGHT -> "weight"
+        SellMode.OPEN_PRICE -> "open price"
+        else -> "piece"
+    }
+
     private suspend fun persist(p: Product, wanted: List<Code>, openingQty: Long): Long {
         val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS)
+        val stockAllowed = graph.permissions.allowed(Perm.MANAGE_STOCK)
         val staff = actor.staffId
         val c = currency
         val seen = shown
@@ -399,18 +418,37 @@ class ProductEditActivity : ScreenActivity() {
                 val id = tx.nextId()
                 val barcodes = wanted.map { Barcode(tx.nextId(), id, it.code, it.kind, it.packQty, it.packPrice) }
                 ProductDao.create(tx, p.copy(id = id), barcodes, now)
-                if (openingQty > 0L) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
+                if (openingQty > 0L && stockAllowed) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
                 id
             } else {
                 // Only what the user changed on this screen is written, against the row as it is now:
                 // a field another till changed while the screen was open keeps that change.
                 val changed = ProductDao.update(tx, seen ?: before, p, before, now)
+                val label = if ("name" in changed) p.name else before.name
                 if ("price" in changed) {
-                    val label = if ("name" in changed) p.name else before.name
                     AuditDao.log(
                         tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price,
                         "$label: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(p.price, c)}", actor.approvedBy,
                     )
+                }
+                // What else changes what the till charges is on record too: "open price" lets the
+                // cashier type any price, a tax rate changes the total (2026-10 review).
+                if ("sell_mode" in changed) {
+                    AuditDao.log(
+                        tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price,
+                        "$label: sold by ${sellModeName(before.sellMode)} -> ${sellModeName(p.sellMode)}", actor.approvedBy,
+                    )
+                }
+                if ("tax_rate_id" in changed) {
+                    AuditDao.log(tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price, "$label: tax rate changed", actor.approvedBy)
+                }
+                val packsBefore = seenCodes.filter { it.packQty != 1000L || it.packPrice != null }.map { Triple(it.code, it.packQty, it.packPrice) }.toSet()
+                val packsAfter = wanted.filter { it.packQty != 1000L || it.packPrice != null }.map { Triple(it.code, it.packQty, it.packPrice) }.toSet()
+                if (packsBefore != packsAfter) {
+                    val text = packsAfter.joinToString { (code, qty, price) ->
+                        "$code ×${MoneyFormat.formatQty(qty)}" + (price?.let { " = ${MoneyFormat.format(it, c)}" } ?: "")
+                    }
+                    AuditDao.log(tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price, "$label: packs: $text", actor.approvedBy)
                 }
                 val current = ProductDao.barcodes(tx.db, p.id)
                 val keep = wanted.mapNotNull { it.id }.toSet()

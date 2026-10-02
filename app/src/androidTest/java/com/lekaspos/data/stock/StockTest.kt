@@ -77,6 +77,33 @@ class StockTest {
         assertEquals(7_000, rebuilt())
     }
 
+    /**
+     * 2026-10 review: a count from a till whose clock had run a year ahead made every later sale of
+     * this till count as "before" it for a year, and a recount here seemed to do nothing.
+     */
+    @Test
+    fun aCountFromATillWhoseClockRanAheadStillCountsWhatCameAfter() {
+        val year = 365L * 24L * 60L * 60L * 1000L
+        val ahead = Hlc.pack(System.currentTimeMillis() + year, 0)
+        val other = db.deviceNo xor 1
+        db.writeBlocking { tx ->
+            tx.insert("INSERT INTO stock_count(id, product_id, qty, at, hlc) VALUES(?,?,?,?,?)", (other.toLong() shl 41) or 1L, p, 20_000L, 0L, ahead)
+            StockDao.rebuild(tx, p)
+        }
+        assertEquals(20_000, level())
+        // A sale here, after that count arrived: it comes off the count.
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 3_000L)), tz) }
+        assertEquals(17_000, level())
+        assertEquals(17_000, rebuilt())
+        // A recount here wins over it, and what comes after the recount counts.
+        db.writeBlocking { tx -> StockDao.insertCount(tx, p, 50_000, null, null, null, System.currentTimeMillis()) }
+        assertEquals(50_000, level())
+        assertEquals(50_000, rebuilt())
+        move(-1_000)
+        assertEquals(49_000, level())
+        assertEquals(49_000, rebuilt())
+    }
+
     @Test
     fun anOlderCountArrivingLateDoesNotReplaceANewerOne() {
         val newest = db.writeBlocking { tx ->

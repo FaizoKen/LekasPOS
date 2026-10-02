@@ -58,14 +58,16 @@ object BackupFiles {
         walCopy.delete()
         try {
             // Under the writer: fold the WAL into the file, then copy it (and the WAL if readers
-            // kept part of it from being folded in). Only file copies happen while writes wait.
+            // kept part of it from being folded in), and count what the copy holds. Only that happens
+            // while writes wait — and the copies are not synced: they are scratch copies, the backup
+            // file itself is synced (2026-10 review: syncing them doubled the pause on slow phones).
             // The copies go in the finally below also when copying fails: a half copy left by a
             // full disk filled the phone, and the next sale failed (2026-10 review).
             val header = db.onWriterThread { sqlite ->
                 val complete = checkpoint(sqlite)
-                copy(db.file, dbCopy)
+                copy(db.file, dbCopy, sync = false)
                 val wal = File(db.file.path + "-wal")
-                if (!complete && wal.exists() && wal.length() > 0L) copy(wal, walCopy)
+                if (!complete && wal.exists() && wal.length() > 0L) copy(wal, walCopy, sync = false)
                 header(sqlite, System.currentTimeMillis(), appVersion, reason)
             }
             zip(out, header, dbCopy, walCopy.takeIf { it.exists() })
@@ -78,13 +80,17 @@ object BackupFiles {
     /** SQLite's own integrity check (`quick_check`): "ok", or what is damaged. Reads the whole file. */
     fun integrity(db: SQLiteDatabase): String = db.pragma("PRAGMA quick_check") ?: "no answer"
 
-    /** Backs up database files that are not open (before an upgrade or a restore replaces them). */
+    /**
+     * Backs up database files that are not open (before an upgrade or a restore replaces them).
+     * They are made while the app starts and nothing works yet, so they are compressed for speed
+     * (the default level took half a minute for a large store on a slow phone, 2026-10 review).
+     */
     fun writeClosed(dbFile: File, out: OutputStream, appVersion: String, reason: String) {
         val wal = File(dbFile.path + "-wal").takeIf { it.exists() && it.length() > 0L }
         val header = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY, KeepDamagedDatabase).use { r ->
             header(r, System.currentTimeMillis(), appVersion, reason)
         }
-        zip(out, header, dbFile, wal)
+        zip(out, header, dbFile, wal, java.util.zip.Deflater.BEST_SPEED)
     }
 
     /** The header of a backup file, or null when it is not one. */
@@ -188,7 +194,14 @@ object BackupFiles {
     }
 
     /** Writes the ZIP to [out] and leaves [out] open (closing the ZIP stream releases its Deflater). */
-    private fun zip(out: OutputStream, h: Header, db: File, wal: File?) = ZipOutputStream(NonClosing(out).buffered(64 * 1024)).use { z ->
+    private fun zip(
+        out: OutputStream,
+        h: Header,
+        db: File,
+        wal: File?,
+        level: Int = java.util.zip.Deflater.DEFAULT_COMPRESSION,
+    ) = ZipOutputStream(NonClosing(out).buffered(64 * 1024)).use { z ->
+        z.setLevel(level)
         z.putNextEntry(ZipEntry(HEADER))
         val w = JsonWriter(OutputStreamWriter(NonClosing(z), Charsets.UTF_8))
         w.beginObject()
@@ -256,8 +269,13 @@ object BackupFiles {
         return Header(format, createdAt, reason, store, device, deviceNo, schema, app, name, sales, products)
     }
 
-    private fun copy(from: File, to: File) {
-        FileInputStream(from).use { i -> FileOutputStream(to).use { o -> i.copyTo(o, 256 * 1024); o.fd.sync() } }
+    private fun copy(from: File, to: File, sync: Boolean = true) {
+        FileInputStream(from).use { i ->
+            FileOutputStream(to).use { o ->
+                i.copyTo(o, 256 * 1024)
+                if (sync) o.fd.sync()
+            }
+        }
     }
 
     /** Lets a JsonWriter/Reader be closed-over without closing the ZIP stream underneath. */

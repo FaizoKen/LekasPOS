@@ -124,7 +124,7 @@ object InventoryUi {
         })
         col.addView(display, lp())
         col.addView(keypad.view, lp())
-        val d = AlertDialog.Builder(a).setTitle(title).setView(col)
+        val d = AlertDialog.Builder(a).setTitle(title).setView(com.lekaspos.ui.common.Dialogs.scrolling(col))
             .setPositiveButton(R.string.ok, null).setNegativeButton(R.string.cancel, null).create()
         d.keys { e -> keypad.onKey(e) }
         d.setOnShowListener {

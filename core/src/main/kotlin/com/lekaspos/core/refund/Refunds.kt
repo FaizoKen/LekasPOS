@@ -58,6 +58,10 @@ object Refunds {
         require(qty > 0L) { "refund qty must be > 0" }
         require(qty <= src.remainingQty) { "refund qty ${qty} exceeds remaining ${src.remainingQty}" }
         val done = src.refunded
+        // The cost share follows the quantities alone (2026-10 review): a refund whose goods do not
+        // go back on the shelf stores no cost (their cost stays in cost of goods), so what earlier
+        // refunds stored says nothing about how much of the line's cost they covered.
+        val costBefore = Rounding.mulDivHalfUp(src.cost, src.refundedQty, src.qty)
         if (qty == src.remainingQty) {
             return RefundPart(
                 lineId = src.lineId,
@@ -68,7 +72,7 @@ object Refunds {
                 billDiscount = src.billDiscount - (done?.billDiscount ?: 0L),
                 net = src.net - (done?.net ?: 0L),
                 tax = src.tax - (done?.tax ?: 0L),
-                cost = src.cost - (done?.cost ?: 0L),
+                cost = src.cost - costBefore,
             )
         }
         val upTo = Checked.add(src.refundedQty, qty)
@@ -113,7 +117,7 @@ object Refunds {
             billDiscount = partBill,
             net = partNet,
             tax = upToNow(src.tax, done?.tax ?: 0L) - (done?.tax ?: 0L),
-            cost = upToNow(src.cost, done?.cost ?: 0L) - (done?.cost ?: 0L),
+            cost = Rounding.mulDivHalfUp(src.cost, upTo, src.qty) - costBefore,
         )
     }
 

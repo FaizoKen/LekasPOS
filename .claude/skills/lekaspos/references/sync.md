@@ -34,8 +34,9 @@ Android Auto Backup is disabled for the same reason.
 64-bit value: `physicalMillis shl 16 or counter`. `now()`: `l = max(lastL, wallClock)`;
 counter increments when `l` did not advance. On import: `observe(remote)` advances the local
 clock past the remote HLC so later local edits order after what we have seen — unless the
-remote physical time is more than 24 h in the future (a device with a wrong clock), which is
-not adopted. Ties are broken by `device_no`. A local LWW edit is stamped above the version the
+remote physical time is more than 24 h ahead of this till's own time (the later of its wall clock
+and its last HLC: a till whose clock was set back still follows the others, D-056) — a device with a
+wrong clock — which is not adopted. Ties are broken by `device_no`. A local LWW edit is stamped above the version the
 field already holds (`Lww.stampAbove`, D-055), so a till whose clock is behind still wins with
 its later edit everywhere. Imports observe inside each applied chunk's transaction. Every Drive
 answer's `Date` header gives this phone's clock offset; more than 10 min off → `sync.clock_off`
@@ -82,6 +83,10 @@ staff member are LOCAL (`meta`: `pin.*`, `session.staff`), per till.
   (lines are snapshots); the product ends with A's price.
 - Stock: level = last count (by HLC) + movements after it. A count on A and offline sales on
   B made before the count (by HLC) are subsumed by the count; sales after it are subtracted.
+  Local stock events are stamped after what they follow (`StockDao.stampAfterCounts` /
+  `stampAfterEverything`): a sale or movement above the products' last counts, a count above the
+  product's latest sale, movement and count — so a count from a till whose clock ran ahead never
+  hides later sales or recounts of the other tills (D-056). The till's own clock is not moved.
 - Same barcode assigned to two products concurrently → both kept; a scan (and a CSV update by
   barcode) picks the barcode row created last (`created_at`, then id — the same on every till,
   D-055); the product's edit screen names the other product.
@@ -115,7 +120,8 @@ Streaming read/write only (`SegmentCodec`).
 ## 6. One sync round (`SyncEngine.sync`, under a mutex)
 
 0. First round after enabling (or after an interrupted one): **backfill** — every existing row
-   is published as an event (`Backfill`, chunks of 300). `meta sync.backfilled = store` marks it
+   is published as an event (`Backfill`, chunks of 300). The outbox is sealed into segments every 10 chunks
+   while it runs (the whole history went into the outbox table first: up to a gigabyte, D-056). `meta sync.backfilled = store` marks it
    done; imports are idempotent, so repeating it is harmless.
 1. Seal: one write transaction per segment moves ≤ 2,000 outbox rows into
    `files/sync/out/seg-<seq>.ndjson.gz`, records it in `sync_segment`, deletes those rows.
@@ -167,7 +173,8 @@ the creation fills; products are re-indexed for search.
     account, an emptied folder) → its numbering restarts at 1 (segments, local files, outbox and
     cursors cleared; backfill again). Other tills read a till's files in order from 1:
     continuing at k+1 they would never read it.
-- Disabling: outbox cleared, backfill flag cleared (re-enabling publishes everything again).
+- Disabling: outbox cleared, backfill flag cleared (re-enabling publishes everything again). The in-memory
+  flag changes inside that transaction (restored if it fails) and the call outlives the screen (D-056).
 - Restore (D-044): a database that published segments (or had sync on) always gets a **new
   identity** on restore; so does "restore this till" over data of the same till that has synced
   (whatever the backup contains, D-054); sync is turned off; the old device's cursor is set to its
@@ -181,6 +188,8 @@ the creation fills; products are re-indexed for search.
   wrong-PIN counts are this phone's (`Restore.Carry`). A restored till that keeps its identity
   skips 2^30 IDs (never meets IDs it handed out after the backup); on the same phone its receipt
   numbers continue after the highest used, on another phone it gets a new receipt prefix (D-055).
+  A restored database loses any triggers and views (the app makes none: a doctored backup could
+  bring one), and its activity log records who restored which backup (D-056).
 
 ## 8. Not built yet (deferred, D-045)
 

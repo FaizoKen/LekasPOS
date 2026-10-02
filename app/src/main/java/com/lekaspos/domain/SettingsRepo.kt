@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Store settings (synced, LWW per key) and this device's hardware settings, loaded once and
@@ -85,10 +86,16 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         }
     }
 
-    suspend fun saveDevice(d: DeviceSettings) {
+    /**
+     * Saves this till's own settings. What is in use follows the commit even when the screen that
+     * saved is closing (a new printer was stored but not used until the app restarted, 2026-10
+     * review); [then] runs in the same uninterruptible step (e.g. reconnecting the printer).
+     */
+    suspend fun saveDevice(d: DeviceSettings, then: () -> Unit = {}) = withContext(kotlinx.coroutines.NonCancellable) {
         val db = graph.db()
         db.write(reserveIds = 0) { tx -> DeviceSettings.save(tx, d) }
         _device.value = d
+        then()
     }
 
     /**
@@ -98,6 +105,9 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
     suspend fun needsSetup(): Boolean {
         load()
         if (_store.value.name.isNotBlank()) return false
+        // The shop's data was damaged and set aside: the empty store is not a new shop. The selling
+        // screen's "Data problem" leads to restoring a backup, not the welcome screen (2026-10 review).
+        if (com.lekaspos.data.db.KeepDamagedDatabase.problem != null) return false
         return graph.db().read { r ->
             Meta.get(r, SETUP_DONE) != "1" && !ProductDao.any(r) && !SaleDao.any(r)
         }

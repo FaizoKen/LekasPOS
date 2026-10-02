@@ -14,10 +14,14 @@ import com.lekaspos.perf.PerfRunner
 import com.lekaspos.perf.PerfScale
 import com.lekaspos.perf.PerfSuite
 import com.lekaspos.ui.colorOf
+import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.util.ErrorLog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Diagnostics and the in-app performance test (references/performance.md §2), so testers can
@@ -84,6 +88,19 @@ class DiagnosticsActivity : ScreenActivity() {
                     runner.deleteData() // a large file: deleted off the main thread
                     toast(R.string.diag_deleted)
                 }
+            }
+        }
+        // What went wrong on this phone (util.ErrorLog), for whoever helps the shop (2026-10 review).
+        v.findViewById<Button>(R.id.share_log).setOnClickListener {
+            launchUi {
+                val file = withContext(Dispatchers.IO) {
+                    val logs = ErrorLog.files()
+                    if (logs.isEmpty()) return@withContext null
+                    CsvFiles.sharedFile(this@DiagnosticsActivity, CsvFiles.KIND_CSV, "lekaspos-errors.txt").also { out ->
+                        out.outputStream().use { o -> for (f in logs) f.inputStream().use { it.copyTo(o) } }
+                    }
+                }
+                if (file == null) toast(R.string.diag_log_empty) else CsvFiles.share(this@DiagnosticsActivity, file, "text/plain")
             }
         }
         share.setOnClickListener {

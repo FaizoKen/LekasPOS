@@ -19,9 +19,11 @@ object Log {
 
     fun w(message: String, t: Throwable? = null) {
         android.util.Log.w(TAG, message, t)
+        ErrorLog.append("W", message, t)
     }
 
     fun e(message: String, t: Throwable? = null) {
         android.util.Log.e(TAG, message, t)
+        ErrorLog.append("E", message, t)
     }
 }

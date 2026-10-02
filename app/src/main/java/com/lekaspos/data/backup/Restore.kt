@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.id.Ids
+import com.lekaspos.core.time.DateText
 import com.lekaspos.data.db.KeepDamagedDatabase
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.long
@@ -48,11 +49,31 @@ object Restore {
      * (Back while "Checking…", or the idle lock closing the "Restart now" question): the till sold
      * all day, then a restart silently put the old backup back (2026-10 review).
      */
-    fun prepare(ctx: Context, input: InputStream, mode: Mode): BackupFiles.Header {
+    fun prepare(ctx: Context, input: InputStream, mode: Mode, by: Who? = null): BackupFiles.Header {
         cancelStaged(ctx)
         val h = BackupFiles.unpack(input, dir(ctx))
+        by?.let { byFile(ctx).writeText("${it.staffId}\n${it.approvedBy ?: ""}\n${DateText.dateTime(h.createdAt, java.util.TimeZone.getDefault())}") }
         prepared(ctx).writeText(mode.name)
         return h
+    }
+
+    /** Who restores a backup, for the audit entry the restored data gets (2026-10 review: there was none). */
+    class Who(val staffId: Long, val approvedBy: Long?)
+
+    /** Who asked for the restore being checked ([prepare]); moved to [auditFile] when it is applied. */
+    private fun byFile(ctx: Context) = File(dir(ctx), "by")
+
+    /** The audit entry still owed for an applied restore (see [takeAudit]). */
+    private fun auditFile(ctx: Context) = File(ctx.filesDir, "restore-audit")
+
+    /** For the restore just applied: who did it (staff, approver) and the backup's time, once; else null. */
+    fun takeAudit(ctx: Context): Triple<Long, Long?, String>? {
+        val f = auditFile(ctx)
+        if (!f.exists()) return null
+        val lines = runCatching { f.readText().split('\n') }.getOrNull()
+        f.delete()
+        val staff = lines?.getOrNull(0)?.toLongOrNull() ?: return null
+        return Triple(staff, lines.getOrNull(1)?.toLongOrNull(), lines.getOrNull(2).orEmpty())
     }
 
     /** The user confirmed: the prepared restore is applied at the next start. False if none is prepared. */
@@ -82,7 +103,9 @@ object Restore {
         if (marker.exists()) {
             val asked = runCatching { Mode.valueOf(marker.readText().trim()) }.getOrDefault(Mode.REPLACE)
             val staged = BackupFiles.unpackedDb(dir(ctx))
-            if (staged.exists()) place(ctx, staged, ctx.getDatabasePath(name), asked)
+            if (staged.exists() && place(ctx, staged, ctx.getDatabasePath(name), asked)) {
+                byFile(ctx).takeIf { it.exists() }?.let { runCatching { it.copyTo(auditFile(ctx), overwrite = true) } }
+            }
             cancelStaged(ctx)
         } else if (dir(ctx).exists()) {
             cancelStaged(ctx) // checked but never confirmed
@@ -92,7 +115,8 @@ object Restore {
         return runCatching { Mode.valueOf(pending.readText().trim()) }.getOrDefault(Mode.REPLACE)
     }
 
-    private fun place(ctx: Context, staged: File, current: File, asked: Mode) {
+    /** Puts [staged] in place of [current]; false when the restore is not done (see [failure]). */
+    private fun place(ctx: Context, staged: File, current: File, asked: Mode): Boolean {
         var mode = asked
         val pending = pending(ctx)
         if (current.exists()) {
@@ -102,13 +126,16 @@ object Restore {
             try {
                 val backups = backupDir(ctx).apply { mkdirs() }
                 val copy = File(backups, "replaced-${System.currentTimeMillis()}${BackupFiles.EXT}")
+                // Through a temporary name: a copy cut short by a kill was listed as a good backup.
+                val part = File(copy.path + ".part")
                 try {
-                    FileOutputStream(copy).use {
+                    FileOutputStream(part).use {
                         BackupFiles.writeClosed(current, it, BuildConfig.VERSION_NAME, REASON_REPLACED)
                         it.fd.sync()
                     }
+                    if (!part.renameTo(copy)) throw java.io.IOException("cannot name the replaced copy")
                 } catch (e: Exception) {
-                    copy.delete()
+                    part.delete()
                     // Data too damaged to read (often the reason for this restore): its files are kept
                     // exactly as they are instead (2026-10 review). Only if that fails too, no restore.
                     if (!keepFiles(current, File(backups, "replaced-${System.currentTimeMillis()}.db"))) throw e
@@ -117,7 +144,7 @@ object Restore {
             } catch (e: Exception) {
                 Log.e("Keeping the replaced database failed: the restore is not done", e)
                 runCatching { failure(ctx).writeText(e.message ?: e.javaClass.simpleName) }
-                return
+                return false
             }
         } else if (pending.exists()) {
             // Killed after the current data went and before the restored file took its place: the
@@ -132,6 +159,7 @@ object Restore {
             staged.copyTo(current, overwrite = true)
             staged.delete()
         }
+        return true
     }
 
     /** Copies the database file [db] and its WAL as they are to [to] (+ "-wal"); false if it failed. */
@@ -209,6 +237,15 @@ object Restore {
     fun afterOpen(db: SQLiteDatabase, mode: Mode, carry: Carry = Carry()) {
         db.beginTransaction()
         try {
+            // A backup is a file anyone can edit: the app makes no triggers or views, so any in it are
+            // dropped — a doctored backup could otherwise bring, say, a trigger deleting audit entries.
+            val extra = ArrayList<Pair<String, String>>()
+            db.rawQuery("SELECT type, name FROM sqlite_master WHERE type IN ('trigger', 'view')", null).use { c ->
+                while (c.moveToNext()) extra.add(c.getString(0) to c.getString(1))
+            }
+            for ((type, name) in extra) {
+                db.execSQL("DROP ${if (type == "view") "VIEW" else "TRIGGER"} IF EXISTS \"${name.replace("\"", "\"\"")}\"")
+            }
             db.execSQL("DELETE FROM print_job")
             db.execSQL("DELETE FROM meta WHERE key LIKE 'session.%'")
             // Wrong-PIN counts and waits belong to this phone, not to the backup: a restore must

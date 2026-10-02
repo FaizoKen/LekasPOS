@@ -168,8 +168,7 @@ class BackupActivity : ScreenActivity() {
         m.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.string.backup_save_file -> {
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(
+                    startPicker(
                         Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(MIME).putExtra(Intent.EXTRA_TITLE, fileName()),
                         REQ_SAVE,
                     )
@@ -182,8 +181,7 @@ class BackupActivity : ScreenActivity() {
                     reload()
                 }
                 R.string.backup_restore_file -> {
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), REQ_OPEN)
+                    startPicker(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), REQ_OPEN)
                 }
             }
             true

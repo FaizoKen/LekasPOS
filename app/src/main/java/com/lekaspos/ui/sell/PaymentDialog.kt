@@ -17,9 +17,9 @@ import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
 import com.lekaspos.R
 import com.lekaspos.core.model.PaymentKind
-import com.lekaspos.core.money.Checked
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.QuickCash
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.domain.sell.Tender
@@ -258,24 +258,16 @@ class PaymentDialog(
         changeView.visible(change > 0L)
     }
 
-    /** "Exact" and the next banknote amounts above the cash due. */
+    /** "Exact" and the notes customers hand over for the cash due (`:core` QuickCash). */
     private fun buildQuickCash(due: Long) {
         quick.removeAllViews()
         val cash = methods.firstOrNull { it.kind == PaymentKind.CASH } ?: return
         if (due <= 0L) return
-        val major = currency.scale
-        val amounts = LinkedHashSet<Long>()
-        amounts.add(due)
-        for (note in longArrayOf(1L, 5L, 10L, 50L, 100L)) {
-            val unit = Checked.mul(note, major)
-            val up = Checked.mul((due + unit - 1L) / unit, unit)
-            if (up > due) amounts.add(up)
-            if (amounts.size >= 4) break
-        }
+        val amounts = listOf(due) + QuickCash.amounts(due, currency.scale)
         val density = activity.resources.displayMetrics.density
         for ((i, a) in amounts.withIndex()) {
             val b = Button(activity, null, 0, R.style.Widget_Lekas_Button_Secondary)
-            b.text = if (i == 0) activity.getString(R.string.pay_exact) else MoneyFormat.format(a, currency)
+            b.text = if (i == 0) activity.getString(R.string.pay_exact) else wholeMoney(a)
             b.minWidth = 0 // four notes across a 5-inch phone
             b.setOnClickListener {
                 keypad.set(a.toString())
@@ -291,6 +283,13 @@ class PaymentDialog(
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
+
+    /** "RM100" for a note: "RM100.00" did not fit a quarter of a small phone's width (2026-10 review). */
+    private fun wholeMoney(v: Long): String {
+        val s = money(v)
+        val zeros = "." + "0".repeat(currency.decimals)
+        return if (currency.decimals > 0 && s.endsWith(zeros)) s.dropLast(zeros.length) else s
+    }
 
     private companion object {
         const val PER_ROW = 3

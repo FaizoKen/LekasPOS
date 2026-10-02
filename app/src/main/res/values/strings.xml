@@ -108,6 +108,8 @@
     <string name="held_label_hint">Name (optional), e.g. the customer</string>
     <string name="held_row">%1$s · %3$s · lines: %2$d</string>
     <string name="held_delete_confirm">Delete this held bill?</string>
+    <string name="held_delete_one">Delete a bill…</string>
+    <string name="held_delete_which">Delete which held bill?</string>
 
     <!-- Cancel bill -->
     <string name="clear_confirm_title">Cancel this bill?</string>
@@ -326,6 +328,8 @@
     <string name="printer_bt_settings">Pair a new printer (Bluetooth settings)</string>
     <string name="printer_no_paired">No paired devices. Pair the printer in Android’s Bluetooth settings first (the PIN is usually 0000 or 1234).</string>
     <string name="printer_permission_needed">Allow “Nearby devices” (Bluetooth) to use a printer.</string>
+    <string name="scanner_permission_needed">Allow “Nearby devices” (Bluetooth) to use a serial scanner.</string>
+    <string name="open_app_settings">Open settings</string>
     <string name="printer_section_paper">Paper and printing</string>
     <string name="printer_paper">Paper width</string>
     <string name="paper_58">58 mm (32 characters)</string>
@@ -377,8 +381,6 @@
     <string name="camera_permission">Camera permission is needed to scan.</string>
     <string name="camera_unavailable">The camera could not be opened.</string>
     <string name="camera_added">Added: %1$s</string>
-    <string name="camera_not_found">Not a known product: %1$s</string>
-    <string name="camera_needs_input">%1$s needs a weight or price: add it on the bill.</string>
 
     <!-- Activity log -->
     <string name="audit_empty">Nothing recorded yet.</string>
@@ -402,6 +404,8 @@
     <string name="diag_cancel">Stop</string>
     <string name="diag_delete">Delete test data</string>
     <string name="diag_share">Share report</string>
+    <string name="diag_share_log">Share the error log</string>
+    <string name="diag_log_empty">Nothing has gone wrong on this phone yet: the error log is empty.</string>
     <string name="diag_confirm_full_title">Run the full test?</string>
     <string name="diag_confirm_full_message">The full test creates about 350 MB of temporary test data and can take 5–20 minutes on a slow device. Keep the app open and the device charging. Your store data is not touched.</string>
     <string name="diag_start">Start</string>

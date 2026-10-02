@@ -60,6 +60,25 @@ class ProductCsvServiceTest {
         }
     }
 
+    /**
+     * 2026-10 review: a SKU column holding a placeholder (or one shared code) merged every row into
+     * ONE product carrying all their barcodes, while the preview promised them all as new.
+     */
+    @Test
+    fun rowsSharingASkuAreNeverMergedIntoOneProduct() = runBlocking {
+        val g = graph()
+        val file = "name,price,sku,barcode\n" +
+            "Milo 1kg,18.90,-,9556001000011\nGula 1kg,2.80,-,9556002000010\nBeras 5kg,16.50,-,9556003000019\n" +
+            "Teh A,5.00,TEH,9556004000018\nTeh B,5.50,teh,9556005000017\n"
+        val preview = g.productCsv.preview { StringReader(file) }
+        assertEquals(4, preview.newProducts)
+        assertEquals(1, preview.badRows) // the second "TEH"
+        val result = g.productCsv.import({ StringReader(file) }, setStock = false, staffId = null, approvedBy = null)
+        assertEquals(preview.newProducts, result.created)
+        val names = g.db().read { r -> listOf("9556001000011", "9556002000010", "9556003000019").map { ProductDao.findByCode(r, listOf(it))?.product?.name } }
+        assertEquals(listOf("Milo 1kg", "Gula 1kg", "Beras 5kg"), names)
+    }
+
     @Test
     fun anExportImportsIntoAnEmptyStoreAsTheSameCatalogue() = runBlocking {
         val a = graph()

@@ -77,10 +77,19 @@ fun Activity.withApproval(graph: AppGraph, scope: CoroutineScope, perm: Long, bl
 /** A manager approves one permission with their PIN (D-037). */
 object ApprovalDialog {
 
-    fun show(a: Activity, graph: AppGraph, scope: CoroutineScope, perm: Long, onCancel: (() -> Unit)?, onApproved: (Approval) -> Unit) {
+    /** [ownersOnly]: only an owner may approve (changes to owners and to what roles may do). */
+    fun show(
+        a: Activity,
+        graph: AppGraph,
+        scope: CoroutineScope,
+        perm: Long,
+        onCancel: (() -> Unit)?,
+        ownersOnly: Boolean = false,
+        onApproved: (Approval) -> Unit,
+    ) {
         scope.launch {
             val approvers = try {
-                graph.db().read { StaffDao.approvers(it, perm) }
+                graph.db().read { StaffDao.approvers(it, perm) }.filter { !ownersOnly || it.isOwner }
             } catch (e: Exception) {
                 Log.e("Loading approvers failed", e)
                 emptyList()
@@ -94,7 +103,8 @@ object ApprovalDialog {
                 orientation = LinearLayout.VERTICAL
                 setPadding(pad, pad / 2, pad, 0)
             }
-            col.addView(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = a.getString(R.string.approval_needed, a.getString(permLabel(perm))) })
+            val why = if (ownersOnly) a.getString(R.string.approval_owner_needed) else a.getString(R.string.approval_needed, a.getString(permLabel(perm)))
+            col.addView(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = why })
             val picker = Spinner(a)
             picker.adapter = ArrayAdapter(a, android.R.layout.simple_spinner_dropdown_item, approvers.map { it.name })
             picker.minimumHeight = (48 * a.resources.displayMetrics.density).toInt()
@@ -129,7 +139,7 @@ object ApprovalDialog {
             col.addView(pinPad.view)
             val d = AlertDialog.Builder(a)
                 .setTitle(R.string.approval_title)
-                .setView(col)
+                .setView(Dialogs.scrolling(col))
                 .setNegativeButton(R.string.cancel, null)
                 .create()
             d.keys { e -> pinPad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
@@ -154,7 +164,7 @@ fun askPin(a: Activity, title: CharSequence, message: CharSequence?, onPin: (Str
         }
     }
     col.addView(pad.view)
-    d = AlertDialog.Builder(a).setTitle(title).setView(col).setNegativeButton(R.string.cancel, null).create()
+    d = AlertDialog.Builder(a).setTitle(title).setView(Dialogs.scrolling(col)).setNegativeButton(R.string.cancel, null).create()
     d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)
@@ -184,7 +194,7 @@ fun askNewPin(a: Activity, title: CharSequence, onPin: (String) -> Unit): AlertD
         }
     }
     col.addView(pad.view)
-    d = AlertDialog.Builder(a).setTitle(title).setView(col).setNegativeButton(R.string.cancel, null).create()
+    d = AlertDialog.Builder(a).setTitle(title).setView(Dialogs.scrolling(col)).setNegativeButton(R.string.cancel, null).create()
     d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)

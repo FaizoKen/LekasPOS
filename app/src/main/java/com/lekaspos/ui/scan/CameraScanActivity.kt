@@ -349,7 +349,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         }
         lastCode = code
         lastAt = now
-        graph.staff.touch() // scanning is using the till, though the screen is not touched
+        if (graph.staff.activity()) return // scanning is using the till, though the screen is not touched; locked: dropped
         if (!sellMode) {
             beeper?.ok()
             setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
@@ -357,15 +357,22 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
             return
         }
         scope.launch {
-            val r = graph.cart.scan(code)
-            // As on the selling screen, the beep tells the result: "ok" only when the item was added.
-            if (r is CartSession.ScanResult.Added) beeper?.ok() else beeper?.error()
-            status.text = when (r) {
-                is CartSession.ScanResult.Added -> getString(R.string.camera_added, r.name)
-                is CartSession.ScanResult.NotFound -> getString(R.string.camera_not_found, code)
-                is CartSession.ScanResult.NeedsWeight -> getString(R.string.camera_needs_input, r.product.name)
-                is CartSession.ScanResult.NeedsPrice -> getString(R.string.camera_needs_input, r.product.name)
-                CartSession.ScanResult.Busy -> getString(R.string.sell_busy)
+            when (val r = graph.cart.scan(code)) {
+                is CartSession.ScanResult.Added -> {
+                    beeper?.ok() // as on the selling screen, the beep tells the result
+                    status.text = getString(R.string.camera_added, r.name)
+                }
+                CartSession.ScanResult.Busy -> {
+                    beeper?.error()
+                    status.text = getString(R.string.sell_busy)
+                }
+                // The selling screen registers an unknown barcode (then it is on the bill) or asks for
+                // the weight or price: the camera could only say so, and a shop that scans with the
+                // phone could not add its products at the till (D-050, 2026-10 review).
+                is CartSession.ScanResult.NotFound, is CartSession.ScanResult.NeedsWeight, is CartSession.ScanResult.NeedsPrice -> {
+                    setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
+                    finish()
+                }
             }
         }
     }

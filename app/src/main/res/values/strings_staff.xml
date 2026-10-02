@@ -29,6 +29,7 @@
     <string name="recovery_wrong">That recovery code is not right.</string>
     <string name="approval_title">Manager approval</string>
     <string name="approval_needed">%1$s needs a manager\'s approval.</string>
+    <string name="approval_owner_needed">Only an owner may make this change. The owner approves it with their PIN.</string>
 
     <!-- Staff and roles -->
     <string name="staff_title">Staff</string>
@@ -110,6 +111,7 @@
     <string name="shift_count">Count the drawer</string>
     <string name="shift_count_hint">Count all the cash in the drawer and enter the total.</string>
     <string name="shift_close_confirm">Close the shift with %1$s counted in the drawer?</string>
+    <string name="shift_close_note_hint">Note for the owner (optional), e.g. why it is over or short</string>
     <string name="shift_closed">Shift closed</string>
     <string name="shift_closed_blind">The shift is closed. Counted: %1$s.</string>
     <string name="shift_history">Past shifts</string>
@@ -118,6 +120,11 @@
     <string name="shift_till">Till %1$d</string>
     <string name="shift_moves">Cash movements</string>
     <string name="shift_print">Print report</string>
+    <string name="clock_wrong_title">Check the date and time</string>
+    <string name="clock_wrong">This phone shows %1$s, which cannot be right (its clock was probably reset). A sale is kept under the date it was made, for good. Set the date and time first.</string>
+    <string name="clock_suspect">This phone shows %1$s, earlier than this till\'s last sale (%2$s). A sale is kept under the date it was made, for good: check the date and time first.</string>
+    <string name="clock_settings">Set the date</string>
+    <string name="clock_sell_anyway">Sell anyway</string>
     <string name="shift_needed_title">No shift open</string>
     <string name="shift_needed">Payments need an open shift on this till. Open one now?</string>
     <string name="section_cash">Shifts and customers</string>
@@ -156,6 +163,7 @@
     <string name="credit_adjust_title">Adjust balance</string>
     <string name="credit_adjust_more">Owes more</string>
     <string name="credit_adjust_less">Owes less</string>
+    <string name="credit_cash_rounding">Cash rounding</string>
     <string name="credit_over_limit_title">Over the credit limit</string>
     <string name="credit_over_limit">%1$s owes %2$s and the limit is %3$s. This sale adds %4$s.</string>
     <string name="credit_allow">Allow</string>
@@ -173,6 +181,8 @@
     <string name="error_has_balance">This customer still owes money (or has credit). Settle the balance first.</string>
     <string name="error_last_owner">Not possible: at least one owner must be able to sign in with a PIN.</string>
     <string name="error_credit_off">Customers and credit are switched off in Settings → Store.</string>
+    <string name="error_more_than_owed">That is more than the customer owes. To give the customer credit, use Adjust balance.</string>
+    <string name="error_owner_only">Only an owner may make this change.</string>
     <string name="error_owner_pin_first">Set a PIN for an owner first, so someone can always manage staff.</string>
     <string name="error_seed_role">The owner, manager and cashier roles cannot be removed.</string>
     <string name="error_role_in_use">Staff still have this role. Give them another role first.</string>
@@ -192,5 +202,6 @@
     <string name="audit_product_import">Products imported</string>
     <string name="audit_credit_limit">Credit limit changed</string>
     <string name="audit_settings">Settings changed</string>
+    <string name="audit_credit_payment">Credit repaid</string>
     <string name="audit_pin_reset">Owner PIN reset</string>
 </resources>

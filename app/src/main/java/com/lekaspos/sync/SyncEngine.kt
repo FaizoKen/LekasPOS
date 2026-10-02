@@ -21,6 +21,7 @@ import com.lekaspos.util.Log
 import java.io.File
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -285,16 +286,26 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     /** Stops syncing (the data stays). Enabling again publishes everything again. */
     suspend fun disable() = mutex.withLock {
         val db = graph.db()
-        db.syncEnabled = false
-        db.write(reserveIds = 0L) { tx ->
-            Meta.put(tx.db, Meta.SYNC_ENABLED, "0")
-            Meta.put(tx.db, BACKFILLED, null)
-            Meta.put(tx.db, PROVIDER, null)
-            Meta.put(tx.db, LAST_ERROR, null)
-            Meta.put(tx.db, LIST_SINCE, null)
-            Meta.put(tx.db, FULL_LIST_AT, null)
-            Meta.put(tx.db, CLOCK_OFF, null)
-            tx.update("DELETE FROM outbox")
+        // The flag changes inside the transaction that stores it (writes read it on this same thread):
+        // switched off first, a write that then failed or never ran — the screen closed while it
+        // waited behind the daily backup — left sync on in the database but off in memory, and
+        // every change until the next start was never queued for the other tills (2026-10 review).
+        try {
+            db.write(reserveIds = 0L) { tx ->
+                db.syncEnabled = false
+                Meta.put(tx.db, Meta.SYNC_ENABLED, "0")
+                Meta.put(tx.db, BACKFILLED, null)
+                Meta.put(tx.db, PROVIDER, null)
+                Meta.put(tx.db, LAST_ERROR, null)
+                Meta.put(tx.db, LIST_SINCE, null)
+                Meta.put(tx.db, FULL_LIST_AT, null)
+                Meta.put(tx.db, CLOCK_OFF, null)
+                tx.update("DELETE FROM outbox")
+            }
+        } catch (e: Exception) {
+            // Not stored (a full disk): the flag says what the database says.
+            withContext(NonCancellable) { db.syncEnabled = db.read { Meta.get(it, Meta.SYNC_ENABLED) } == "1" }
+            throw e
         }
         cardKey = null
         refreshStatus()
@@ -331,6 +342,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 step(PHASE_PREPARE, 0L, 0L)
                 var before = 0L
                 var table = ""
+                var chunks = 0
                 Backfill.run(db) { t, n ->
                     if (t != table) {
                         before = _status.value.done
@@ -338,6 +350,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                     }
                     _status.update { it.copy(done = before + n) }
                     progress(t, n)
+                    // Sealed into compressed files as it goes: the whole history went into the outbox
+                    // table first, and a large store's database grew by up to a gigabyte on the first
+                    // sync — enough to fill a small phone and stop its sales (2026-10 review).
+                    if (++chunks % SEAL_EVERY_CHUNKS == 0) seal(db, store)
                 }
                 db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, BACKFILLED, store) }
             }
@@ -858,6 +874,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     companion object {
         const val MAX_EVENTS = 2_000
+
+        /** Backfill chunks (300 rows each) between two seals of the outbox. */
+        private const val SEAL_EVERY_CHUNKS = 10
         const val IMPORT_CHUNK = 200
         const val IMPORT_TX_MS = 100L
         const val KEEP_LOCAL_MS = 14L * 24L * 60L * 60L * 1000L

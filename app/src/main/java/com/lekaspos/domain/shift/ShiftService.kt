@@ -22,10 +22,12 @@ import com.lekaspos.data.shift.ShiftTotals
 import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.sale.ActionRefused
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Shifts and cash management of this till (D-038): open with a float, cash in / out / drops,
@@ -60,17 +62,22 @@ class ShiftService(private val graph: AppGraph) {
         load()
         val staff = graph.staff.staffId
         val device = graph.settings.device.value
-        val shift = graph.db().write(reserveIds = 4L) { tx ->
-            if (ShiftDao.current(tx.db, tx.deviceNo) != null) throw ActionRefused(ActionRefused.Reason.SHIFT_OPEN)
-            val now = System.currentTimeMillis()
-            val s = ShiftDao.open(tx, staff, openingFloat, now)
-            AuditDao.log(tx, AuditAction.SHIFT_OPEN, staff, now, Entity.SHIFT, s.id, openingFloat)
-            if (device.hasPrinter && device.drawerEnabled && openingFloat > 0L) PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)
-            s
+        // The shift in memory follows the commit even when the screen that asked is closing: a
+        // shift opened in the database but not here refused every payment (no shift) and every
+        // open (one is open) until the app restarted (2026-10 review). Likewise for close.
+        return withContext(NonCancellable) {
+            val shift = graph.db().write(reserveIds = 4L) { tx ->
+                if (ShiftDao.current(tx.db, tx.deviceNo) != null) throw ActionRefused(ActionRefused.Reason.SHIFT_OPEN)
+                val now = System.currentTimeMillis()
+                val s = ShiftDao.open(tx, staff, openingFloat, now)
+                AuditDao.log(tx, AuditAction.SHIFT_OPEN, staff, now, Entity.SHIFT, s.id, openingFloat)
+                if (device.hasPrinter && device.drawerEnabled && openingFloat > 0L) PrintJobDao.enqueue(tx, PrintJobKind.DRAWER, null, 1, now)
+                s
+            }
+            _current.value = shift
+            graph.printer.wake()
+            shift
         }
-        _current.value = shift
-        graph.printer.wake()
-        return shift
     }
 
     /** Cash in, cash out or a drop ([kind] = CashMoveKind) during the open shift (permission + audit). */
@@ -116,15 +123,19 @@ class ShiftService(private val graph: AppGraph) {
         val store = graph.settings.store.value
         val device = graph.settings.device.value
         val printIt = device.hasPrinter && device.autoPrint && graph.permissions.allowed(Perm.SHIFT_REPORT)
+        return withContext(NonCancellable) { closeCommitted(open, counted, note, staff, store.name, printIt) }
+    }
+
+    private suspend fun closeCommitted(open: Shift, counted: Long, note: String?, staff: Long, storeName: String, printIt: Boolean): ShiftReport {
         val report = graph.db().write(reserveIds = 4L) { tx ->
             val shift = ShiftDao.get(tx.db, open.id)?.takeIf { it.open } ?: throw ActionRefused(ActionRefused.Reason.NEEDS_SHIFT)
             val now = System.currentTimeMillis()
-            val before = build(shift, ShiftDao.totals(tx.db, shift.id), PaymentMethodDao.names(tx.db), StaffDao.names(tx.db), store.name)
+            val before = build(shift, ShiftDao.totals(tx.db, shift.id), PaymentMethodDao.names(tx.db), StaffDao.names(tx.db), storeName)
             val expected = before.cash.expected
             val closed = ShiftDao.close(tx, shift, staff, counted, expected, note?.takeIf { it.isNotBlank() }, now)
             AuditDao.log(tx, AuditAction.SHIFT_CLOSE, staff, now, Entity.SHIFT, shift.id, Checked.sub(counted, expected), note)
             if (printIt) PrintJobDao.enqueue(tx, PrintJobKind.SHIFT, shift.id, 1, now)
-            before.copy(closedBy = StaffDao.name(tx.db, staff), closedAt = closed.closedAt, counted = counted)
+            before.copy(closedBy = StaffDao.name(tx.db, staff), closedAt = closed.closedAt, counted = counted, note = note?.takeIf { it.isNotBlank() })
         }
         _current.value = null
         if (printIt) graph.printer.wake()
@@ -189,6 +200,7 @@ class ShiftService(private val graph: AppGraph) {
                 counted = shift.countedCash,
                 creditCharged = t.credit.filter { it.kind == CreditKind.CHARGE }.sumOf { it.amount },
                 creditRepaid = repaid,
+                note = shift.note,
             )
         }
     }

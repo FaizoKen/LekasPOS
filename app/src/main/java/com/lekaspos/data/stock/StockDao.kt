@@ -6,6 +6,7 @@ import com.lekaspos.core.id.Ids
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.model.SaleStatus
+import com.lekaspos.core.sync.Lww
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.long
@@ -59,6 +60,29 @@ object StockDao {
 
     fun level(db: SQLiteDatabase, productId: Long): Long =
         db.long("SELECT qty FROM stock_level WHERE product_id = ?", productId)
+
+    /**
+     * The timestamp a new local sale or movement of [productIds] gets: [now], or just above the
+     * products' last counts when one of them is stamped later. Stock is ordered by these timestamps
+     * on every till (count, then what came after it); a count from a till whose clock had run a year
+     * ahead made every later sale of the other tills count as "before" it for a year, and recounts
+     * seemed to do nothing (2026-10 review). This till's own clock is not moved.
+     */
+    fun stampAfterCounts(db: SQLiteDatabase, now: Long, productIds: Collection<Long>): Long {
+        var floor = 0L
+        for (id in productIds) floor = maxOf(floor, db.long(COUNT_HLC, id))
+        return Lww.stampAbove(now, floor)
+    }
+
+    /** The timestamp a new local count of [productId] gets: after everything known about its stock (see [stampAfterCounts]). */
+    fun stampAfterEverything(db: SQLiteDatabase, now: Long, productId: Long): Long {
+        val floor = maxOf(db.long(COUNT_HLC, productId), db.long(LAST_SALE_HLC, productId), db.long(LAST_MOVE_HLC, productId))
+        return Lww.stampAbove(now, floor)
+    }
+
+    private const val COUNT_HLC = "SELECT count_hlc FROM stock_level WHERE product_id = ?"
+    private const val LAST_SALE_HLC = "SELECT MAX(hlc) FROM sale_line WHERE product_id = ?"
+    private const val LAST_MOVE_HLC = "SELECT MAX(hlc) FROM stock_movement WHERE product_id = ?"
 
     private const val LAST_COUNT =
         "SELECT qty, hlc, id FROM stock_count WHERE product_id = ? ORDER BY hlc DESC, (id >> 41) DESC LIMIT 1"
@@ -152,7 +176,7 @@ object StockDao {
         at: Long,
     ): Long {
         val id = tx.nextId()
-        val hlc = tx.hlcNow()
+        val hlc = stampAfterCounts(tx.db, tx.hlcNow(), listOf(productId))
         val values = arrayOf<Any?>(id, productId, kind, qty, unitCost, refId, reason, staffId, at, hlc)
         insertMovementRow(tx, values)
         if (tx.syncEnabled) {
@@ -213,7 +237,7 @@ object StockDao {
      */
     fun insertCount(tx: Db.Tx, productId: Long, qty: Long, sessionId: Long?, staffId: Long?, note: String?, at: Long): Long {
         val id = tx.nextId()
-        val hlc = tx.hlcNow()
+        val hlc = stampAfterEverything(tx.db, tx.hlcNow(), productId)
         val expected = level(tx.db, productId)
         val cost = tx.db.longOrNull("SELECT cost FROM product WHERE id = ?", productId)
         val values = arrayOf<Any?>(id, productId, qty, sessionId, staffId, note, at, hlc, expected, cost)
@@ -231,6 +255,9 @@ object StockDao {
         "low_stock_next" to LOW_STOCK_NEXT,
         "stock_last_count" to LAST_COUNT,
         "stock_moves_after" to MOVES_AFTER,
+        "stock_count_hlc" to COUNT_HLC,
+        "stock_last_sale_hlc" to LAST_SALE_HLC,
+        "stock_last_move_hlc" to LAST_MOVE_HLC,
         "stock_sales_after" to SALES_AFTER,
         "movements_first" to MOVES_FIRST,
         "movements_next" to MOVES_NEXT,

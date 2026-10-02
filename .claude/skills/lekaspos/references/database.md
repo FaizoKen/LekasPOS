@@ -154,6 +154,9 @@ are plain columns without FK constraints because sync can deliver them in any or
   Σ `stock_movement.qty` after that count + Σ `sale_line.stock_qty` of non-voided sales
   after that count. `stock_level` caches it and is updated in the same transaction as each
   inserted movement/line/count/void. `StockDao.rebuild(productId?)` recomputes from events.
+  New local events are stamped after what they must follow (a sale or movement after the
+  products' last counts; a count after the product's latest sale, movement and count), so the
+  order stays causal even when another till's clock ran ahead (D-056).
 - `sale_line.stock_qty` is the signed stock effect in base units (sale: −qty×pack; refund with
   restock: +; untracked product or refund without restock: 0).
 - `sale.status` (voided) and `sale.refunded` are derived from `sale_void` and refund

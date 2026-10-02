@@ -20,6 +20,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 — latest download |
+| — | **1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **in progress** — CI, then a test build for the owner |
 
 ## Open questions for the user
 
@@ -943,3 +944,52 @@ lock screen stays and would block the next tests).
 2. With a staff PIN and auto-lock 1 minute: sign in, let the phone's screen turn off (or press the
    power button), wait 2 minutes, wake it — the sign-in shows at once, without a tap.
 3. Wake it again within the minute: still signed in (no lock before the idle time).
+
+## 1.4.0 — third bug hunt: cross-cutting reviews, weak features (in progress)
+
+The owner asked for a third, free-hand search for bugs and weak features (2026-10-02). Twelve
+read-only reviews took angles the earlier hunts had not (concurrency, money end to end, clocks,
+Android versions and devices, start-up and failures, real-world input, security, daily shop
+workflows, performance at scale, regressions of D-053 to D-055); every finding was checked in the
+code, then fixed, most with a test (D-056). The most serious: a cashier given the owner's approval
+for the Staff screen could make themselves owner; damage in a page read right after opening failed
+every start with no way to restore; a full phone crashed the app after every start (WorkManager);
+the daily backup paused sales for many seconds at opening time; a till whose clock once ran ahead
+made the other tills' sales and recounts "earlier" than its stock count; CSV files merged rows that
+shared a placeholder SKU into one product and imported "Nescaf�" from Excel files.
+
+- [x] Fixes and tests: see D-056
+- [x] Local: `:core` and `:app` JVM tests pass (196 + 37)
+- [ ] CI (API 21 and 36, tablet, release smoke) and perf FULL
+- [ ] Test build published as a pre-release
+
+### Needs real-device testing (1.4.0)
+
+1. Install over 1.3.1: data, staff, settings and backup still there.
+2. **Camera at the till**: scan an unknown barcode with the camera → "Add product" → it is on the
+   bill; scan a weighed item's barcode → the weight is asked.
+3. **Payment**: a bill of RM23.45 offers Exact, RM25, RM30, RM50; RM61.70 offers RM65, RM70, RM100.
+   Turn the phone to landscape and open a weighed item's weight pad and a manager PIN: every key,
+   "0" and OK can be reached (scroll if needed).
+4. **Refund** a sale paid with customer credit: "Pay back with" shows Customer credit first. Refund
+   an item without "put back in stock": the day's report keeps its cost (profit goes down by it).
+5. **Credit**: a customer owes RM10.03 and pays it all in cash → the balance is 0.00 and the shift
+   expects RM10.05; a repayment of more than is owed is refused; the activity log shows "Credit repaid".
+6. **Staff** (PIN login on): as a cashier, have the owner approve the Staff screen, then try to make
+   yourself owner → the owner's PIN is asked for that change. A manager cannot add "Settings" to
+   their own role.
+7. **Auto-lock** 1 minute: open Pay, leave it 2 minutes, press Cancel → the sign-in shows at the next
+   tap. Switch the phone off at the wall while signed in, wait 2 minutes, start it → the sign-in shows.
+8. **Date**: set the phone's date to 2020 and press Pay → "Check the date and time" (no sale);
+   set it back → selling works.
+9. **Held bills**: hold a bill → Held bills → "Delete a bill…" deletes it (with the cancel permission).
+10. **Sales**: type only the number of a receipt ("123") in Sales & refunds → it is found.
+11. **Shift**: close a shift with a note → the shift report shows the note.
+12. **Products → Import** a CSV saved by Excel as "CSV (Comma delimited)" with accented names far
+    down the file: names come in right. A file whose SKU column is all "-" imports every row as its
+    own product.
+13. **Receive stock** with a keyboard scanner while the invoice number field has the cursor: the item
+    is added and the invoice number stays as typed.
+14. **Diagnostics → Share the error log**: a text file (or "the error log is empty").
+15. Printer and drawer (when available): clear the queue while the printer is off, switch it on —
+    nothing cleared prints.

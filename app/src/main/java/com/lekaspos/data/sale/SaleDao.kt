@@ -62,7 +62,8 @@ object SaleDao {
         require(d.kind == SaleKind.SALE || d.refSaleId != null) { "a refund must reference its sale" }
 
         val id = tx.nextId()
-        val hlc = tx.hlcNow()
+        // After the last count of every product sold (StockDao.stampAfterCounts).
+        val hlc = StockDao.stampAfterCounts(tx.db, tx.hlcNow(), d.lines.mapNotNull { it.productId }.distinct())
         val docSeq = Meta.increment(tx.db, Meta.docSeqKey(d.kind))
         val receiptNo = ReceiptNumbers.format(ReceiptNumbers.prefix(tx), d.kind, docSeq)
         val day = Days.epochDay(d.soldAt, tz)
@@ -425,6 +426,15 @@ object SaleDao {
 
     /** Any sale at all (O(1), unlike [count]). */
     fun any(db: SQLiteDatabase): Boolean = db.long("SELECT EXISTS(SELECT 1 FROM sale)") == 1L
+
+    /** When this till's own latest sale or refund was made (its ids are one range, in order), or null. */
+    fun lastOwnSoldAt(db: SQLiteDatabase, deviceNo: Int): Long? = db.queryOne(
+        "SELECT sold_at FROM sale WHERE id >= ? AND id < ? ORDER BY id DESC LIMIT 1",
+        args(deviceNo.toLong() shl 41, (deviceNo.toLong() + 1L) shl 41),
+    ) { it.getLong(0) }
+
+    /** When the latest sale or refund was made (index `sale_sold`), or null when there is none. */
+    fun lastSoldAt(db: SQLiteDatabase): Long? = db.queryOne("SELECT sold_at FROM sale ORDER BY sold_at DESC LIMIT 1", args()) { it.getLong(0) }
 
     fun isVoided(db: SQLiteDatabase, saleId: Long): Boolean =
         db.queryOne("SELECT status FROM sale WHERE id = ?", args(saleId)) { it.getInt(0) == SaleStatus.VOIDED } ?: false

@@ -47,7 +47,9 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
     }
 
     private fun press(key: String) {
-        LekasApp.graph(context).staff.touch() // dialogs are windows of their own: the screen does not see these taps
+        // Dialogs are windows of their own: the screen does not see these taps. An idle time that ran
+        // out while paying is kept (the till locks after the payment), so it is not simply reset here.
+        if (LekasApp.graph(context).staff.dialogActivity()) return
         when (key) {
             DEL -> if (pin.isNotEmpty()) pin = pin.dropLast(1)
             OK -> {
@@ -138,7 +140,7 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
         private const val OK = "OK"
 
         /** Keys closer together than this come from a scanner, not a person. */
-        private const val BURST_GAP_MS = 35L
+        private const val BURST_GAP_MS = DialogKeys.BURST_GAP_MS // as the number pads (2026-10 review)
         private const val BURST_IDLE_MS = 300L
     }
 }

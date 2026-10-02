@@ -28,6 +28,7 @@
     <string name="recovery_wrong">Kod pemulihan itu salah.</string>
     <string name="approval_title">Kelulusan pengurus</string>
     <string name="approval_needed">%1$s memerlukan kelulusan pengurus.</string>
+    <string name="approval_owner_needed">Hanya pemilik boleh membuat perubahan ini. Pemilik meluluskannya dengan PIN mereka.</string>
 
     <!-- Kakitangan dan peranan -->
     <string name="staff_title">Kakitangan</string>
@@ -108,6 +109,7 @@
     <string name="shift_count">Kira laci</string>
     <string name="shift_count_hint">Kira semua wang tunai dalam laci dan masukkan jumlahnya.</string>
     <string name="shift_close_confirm">Tutup syif dengan %1$s dikira dalam laci?</string>
+    <string name="shift_close_note_hint">Catatan untuk pemilik (pilihan), cth. sebab lebih atau kurang</string>
     <string name="shift_closed">Syif ditutup</string>
     <string name="shift_closed_blind">Syif telah ditutup. Dikira: %1$s.</string>
     <string name="shift_history">Syif lepas</string>
@@ -116,6 +118,11 @@
     <string name="shift_till">Kaunter %1$d</string>
     <string name="shift_moves">Pergerakan tunai</string>
     <string name="shift_print">Cetak laporan</string>
+    <string name="clock_wrong_title">Semak tarikh dan masa</string>
+    <string name="clock_wrong">Telefon ini menunjukkan %1$s, yang tidak mungkin betul (jamnya mungkin telah ditetapkan semula). Jualan disimpan di bawah tarikh ia dibuat, selamanya. Tetapkan tarikh dan masa dahulu.</string>
+    <string name="clock_suspect">Telefon ini menunjukkan %1$s, lebih awal daripada jualan terakhir kaunter ini (%2$s). Jualan disimpan di bawah tarikh ia dibuat, selamanya: semak tarikh dan masa dahulu.</string>
+    <string name="clock_settings">Tetapkan tarikh</string>
+    <string name="clock_sell_anyway">Jual juga</string>
     <string name="shift_needed_title">Tiada syif dibuka</string>
     <string name="shift_needed">Bayaran memerlukan syif yang dibuka di kaunter ini. Buka sekarang?</string>
     <string name="section_cash">Syif dan pelanggan</string>
@@ -154,6 +161,7 @@
     <string name="credit_adjust_title">Laraskan baki</string>
     <string name="credit_adjust_more">Hutang bertambah</string>
     <string name="credit_adjust_less">Hutang berkurang</string>
+    <string name="credit_cash_rounding">Pembundaran tunai</string>
     <string name="credit_over_limit_title">Melebihi had kredit</string>
     <string name="credit_over_limit">%1$s berhutang %2$s dan hadnya %3$s. Jualan ini menambah %4$s.</string>
     <string name="credit_allow">Benarkan</string>
@@ -171,6 +179,8 @@
     <string name="error_has_balance">Pelanggan ini masih ada baki hutang (atau kredit). Selesaikan baki dahulu.</string>
     <string name="error_last_owner">Tidak boleh: sekurang-kurangnya seorang pemilik mesti boleh log masuk dengan PIN.</string>
     <string name="error_credit_off">Pelanggan dan kredit dimatikan dalam Tetapan → Kedai.</string>
+    <string name="error_more_than_owed">Jumlah itu melebihi hutang pelanggan. Untuk memberi kredit kepada pelanggan, gunakan Laraskan baki.</string>
+    <string name="error_owner_only">Hanya pemilik boleh membuat perubahan ini.</string>
     <string name="error_owner_pin_first">Tetapkan PIN pemilik dahulu, supaya sentiasa ada yang boleh mengurus kakitangan.</string>
     <string name="error_seed_role">Peranan pemilik, pengurus dan juruwang tidak boleh dibuang.</string>
     <string name="error_role_in_use">Masih ada kakitangan dengan peranan ini. Beri mereka peranan lain dahulu.</string>
@@ -190,5 +200,6 @@
     <string name="audit_product_import">Produk diimport</string>
     <string name="audit_credit_limit">Had kredit diubah</string>
     <string name="audit_settings">Tetapan diubah</string>
+    <string name="audit_credit_payment">Hutang dibayar</string>
     <string name="audit_pin_reset">PIN pemilik ditetapkan semula</string>
 </resources>

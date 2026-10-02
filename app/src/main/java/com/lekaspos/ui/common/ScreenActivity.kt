@@ -33,6 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -132,6 +133,12 @@ abstract class ScreenActivity : Activity(), DialogHost {
                     if (graph.staff.lockIfIdle()) goHome()
                 }
             }
+            // Locked for any other reason (the signed-in person was removed or lost their PIN on
+            // another till, and sync brought it in): this screen kept running (2026-10 review).
+            launch {
+                graph.staff.state.first { it.locked }
+                goHome()
+            }
             enter(s)
         }
     }
@@ -195,6 +202,24 @@ abstract class ScreenActivity : Activity(), DialogHost {
         guardPerm = perm // checked in onStart, once the signed-in staff member is known
     }
 
+    /**
+     * Starts a system picker (file, folder, picture) for a result. Some phones and POS terminals
+     * have none (no Files app, a locked-down build): that closed the app (2026-10 review). Returns
+     * false, after saying so, when nothing can open it.
+     */
+    fun startPicker(intent: Intent, request: Int): Boolean = try {
+        @Suppress("DEPRECATION")
+        startActivityForResult(intent, request)
+        true
+    } catch (e: android.content.ActivityNotFoundException) {
+        Dialogs.message(this, null, getString(R.string.no_picker))
+        false
+    } catch (e: SecurityException) {
+        Log.w("The picker could not be opened", e)
+        Dialogs.message(this, null, getString(R.string.no_picker))
+        false
+    }
+
     private var pendingExport: (suspend (Appendable) -> Long)? = null
 
     /**
@@ -212,8 +237,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
                 }
             } else {
                 pendingExport = write
-                @Suppress("DEPRECATION")
-                startActivityForResult(CsvFiles.createDocumentIntent(fileName), REQ_EXPORT)
+                if (!startPicker(CsvFiles.createDocumentIntent(fileName), REQ_EXPORT)) pendingExport = null
             }
         }
     }
@@ -307,6 +331,15 @@ abstract class ScreenActivity : Activity(), DialogHost {
         super.onDestroy()
     }
 
+    /** Keeps the phone's screen (and so its CPU) on while a long job of this screen runs. */
+    fun keepScreenOn(on: Boolean) {
+        if (on) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     fun toast(text: CharSequence) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
     fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
@@ -348,6 +381,8 @@ abstract class ScreenActivity : Activity(), DialogHost {
                     ActionRefused.Reason.SEED_ROLE -> R.string.error_seed_role
                     ActionRefused.Reason.ROLE_IN_USE -> R.string.error_role_in_use
                     ActionRefused.Reason.WRONG_PIN -> R.string.pin_wrong_plain
+                    ActionRefused.Reason.MORE_THAN_OWED -> R.string.error_more_than_owed
+                    ActionRefused.Reason.OWNER_ONLY -> R.string.error_owner_only
                 },
             )
             else -> a.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName)

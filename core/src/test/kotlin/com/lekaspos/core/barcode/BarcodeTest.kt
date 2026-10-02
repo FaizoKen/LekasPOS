@@ -45,11 +45,25 @@ class BarcodeTest {
         assertEquals(2, Gtin.checkDigit("03600029145"))
     }
 
+    /** 2026-10 review: typed, imported or camera codes came in forms no scan could reach. */
+    @Test
+    fun barcodesAreStoredInTheFormAScanFinds() {
+        assertEquals("9556001234568", Gtin.canonical(" 9 556001 234568 ")) // as printed under the bars
+        assertEquals("9556001234568", Gtin.canonical("955-6001-234568"))
+        assertEquals("9556001234568", Gtin.canonical("09556001234568")) // GTIN-14 → its EAN-13
+        assertEquals("ABC123", Gtin.canonical("ABC123\n")) // a camera code with a line break
+        assertEquals("01234565", Gtin.canonical("1234565")) // the 0 a spreadsheet dropped
+        assertEquals("ABC-123", Gtin.canonical("ABC-123")) // a shop's own code keeps its dash
+        assertEquals("12 34", Gtin.canonical("12 34")) // digits that are no GTIN stay as typed
+        assertEquals("036000291452", Gtin.canonical("036000291452"))
+    }
+
     @Test
     fun lookupVariantsCoverUpcAndEanForms() {
         assertEquals(listOf("036000291452", "0036000291452"), Gtin.lookupVariants("036000291452"))
         assertEquals(listOf("0036000291452", "036000291452"), Gtin.lookupVariants(" 0036000291452 "))
-        assertEquals(listOf("9556001000013"), Gtin.lookupVariants("9556001000013"))
+        // An EAN-13 also finds its 14-digit form (stored from a distributor's file before canonical forms).
+        assertEquals(listOf("9556001000013", "09556001000013"), Gtin.lookupVariants("9556001000013"))
         assertEquals(listOf("ABC-1"), Gtin.lookupVariants("ABC-1"))
         assertEquals(emptyList(), Gtin.lookupVariants("  "))
     }

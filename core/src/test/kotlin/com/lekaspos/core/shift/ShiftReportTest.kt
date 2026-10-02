@@ -69,12 +69,23 @@ class ShiftReportTest {
         assertNull(open.first { it.title == "Cash drawer" }.rows.firstOrNull { it.label == "Counted cash" })
     }
 
+    /** 2026-10 review: why the drawer was over or short could not be written anywhere. */
+    @Test
+    fun theClosingNoteIsOnTheReport() {
+        val layout = ShiftReportLayout(CurrencySpec.MYR, ShiftText.EN, TimeZone.getTimeZone("UTC"))
+        val noted = report.copy(note = "RM3 short: change given twice to one customer")
+        assertEquals(listOf("RM3 short: change given twice to one customer"), layout.sections(noted).first { it.title == "Note" }.rows.map { it.label })
+        assertNull(layout.sections(report).firstOrNull { it.title == "Note" })
+        val text = layout.lines(noted, 32).joinToString("\n") { (it as PrintLine.Text).text }
+        assertTrue(text.contains("NOTE") && text.contains("change given"))
+    }
+
     @Test
     fun printedSlipFitsThePaper() {
         for (lang in listOf("en", "ms")) {
             val layout = ShiftReportLayout(CurrencySpec.MYR, ShiftText.forLanguage(lang), TimeZone.getTimeZone("UTC"))
             for (cols in listOf(32, 42, 48)) {
-                val lines = layout.lines(report, cols)
+                val lines = layout.lines(report.copy(note = "A long note that wraps over more than one line of the printed slip"), cols)
                 assertTrue(lines.size > 20)
                 for (l in lines) {
                     val text = (l as PrintLine.Text).text

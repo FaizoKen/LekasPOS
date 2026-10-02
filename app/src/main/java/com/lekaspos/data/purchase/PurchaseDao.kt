@@ -53,7 +53,8 @@ object PurchaseDao {
     fun commit(tx: Db.Tx, p: PurchaseIn, staffId: Long?, at: Long): Long {
         require(p.lines.isNotEmpty()) { "a delivery needs at least one line" }
         val id = tx.nextId()
-        val hlc = tx.hlcNow()
+        // Its RECEIVE movements come after the products' last counts (StockDao.stampAfterCounts).
+        val hlc = StockDao.stampAfterCounts(tx.db, tx.hlcNow(), p.lines.map { it.productId }.distinct())
         var total = 0L
         for (l in p.lines) {
             require(l.qty > 0L && l.total >= 0L && l.unitCost >= 0L) { "invalid delivery line" }
@@ -68,8 +69,11 @@ object PurchaseDao {
             val v = arrayOf<Any?>(lineId, id, l.productId, l.qty, l.unitCost, l.total)
             tx.insert(INSERT_LINE, *v)
             lineValues.add(v)
-            // Average against what is on hand *before* this line arrives.
-            val newCost = CostMath.movingAverage(StockDao.level(tx.db, l.productId), product.cost, l.qty, l.total)
+            // Average against what is on hand *before* this line arrives. A product without stock
+            // tracking has no stock to average with: its sales never lower the level, so the level
+            // only grew with every delivery and price rises never reached its cost (2026-10 review).
+            val onHand = if (product.trackStock) StockDao.level(tx.db, l.productId) else 0L
+            val newCost = CostMath.movingAverage(onHand, product.cost, l.qty, l.total)
             StockDao.insertMovementRow(
                 tx, arrayOf<Any?>(lineId, l.productId, MovementKind.RECEIVE, l.qty, l.unitCost, id, null, staffId, at, hlc),
             )

@@ -108,8 +108,7 @@ class StoreSettingsActivity : ScreenActivity() {
         // The logo is on every receipt: changing it needs the same permission as Save.
         f.button(getString(R.string.receipt_logo_pick)) {
             requireAccess(Perm.SETTINGS) {
-                @Suppress("DEPRECATION")
-                startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), REQ_LOGO)
+                startPicker(Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), REQ_LOGO)
             }
         }
         removeLogo = f.button(getString(R.string.receipt_logo_remove)) {

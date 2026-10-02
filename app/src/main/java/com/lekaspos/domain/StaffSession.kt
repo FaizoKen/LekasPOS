@@ -118,7 +118,11 @@ class StaffSession(private val graph: AppGraph) {
             val (required, signed, away) = db.read { r ->
                 val required = StaffDao.loginRequired(r)
                 val id = inMemory ?: if (first) Meta.getLong(r, KEY_STAFF) else null
-                val away = if (first) Meta.getLong(r, KEY_AWAY) else null
+                // Out of sight, the last activity was stored when the app went away; a power cut or
+                // a restart while the till was on screen leaves only the last heartbeat (2026-10
+                // review: the morning after a power cut the till opened signed in as last night's
+                // cashier, with a fresh idle time).
+                val away = if (first) Meta.getLong(r, KEY_AWAY) ?: Meta.getLong(r, KEY_SEEN) else null
                 Triple(required, id?.let { StaffDao.get(r, it) }?.takeIf { it.canSignIn }, away)
             }
             var current = if (required) signed?.let(::signed) else null
@@ -201,6 +205,9 @@ class StaffSession(private val graph: AppGraph) {
             _state.value = s.copy(current = null)
             g = ++generation
         }
+        // The last sale's result is not shown to whoever signs in next: its Share sent the receipt
+        // as the first copy, without the reprint permission or an audit entry (2026-10 review).
+        graph.checkout.acknowledge()
         graph.appScope.launch {
             graph.db().write(reserveIds = 0L) { tx -> if (generation == g) Meta.put(tx.db, KEY_STAFF, null) }
         }
@@ -241,13 +248,35 @@ class StaffSession(private val graph: AppGraph) {
     }
 
     /**
-     * A touch or key: locks first when the till has been idle too long (returns true: the event
-     * must be dropped, it was meant for the person signed in before), else records the activity.
+     * A touch or key on a screen: locks first when the till has been idle too long, and drops it
+     * (returns true) while the till is locked — the event was meant for the person signed in before.
+     * The rest of a scan that woke the till went on into the bill as a cut-short code, with nobody
+     * signed in (2026-10 review). Otherwise it is recorded as activity ([dialogActivity]).
      */
     fun activity(): Boolean {
         if (lockIfIdle()) return true
-        touch()
+        if (_state.value.locked) return true
+        if (!idleExpired()) touch()
         return false
+    }
+
+    /**
+     * A touch or key in a dialog (the sign-in screen's own dialogs work while locked): locks first
+     * when the till has been idle too long (true: drop the event). While a bill is being paid the
+     * till does not lock, but an idle time that ran out is kept, so the till locks as soon as the
+     * payment is over: a payment left open no longer let the next person carry on as the one who
+     * walked away (2026-10 review).
+     */
+    fun dialogActivity(): Boolean {
+        if (lockIfIdle()) return true
+        if (!idleExpired()) touch()
+        return false
+    }
+
+    private fun idleExpired(): Boolean {
+        val minutes = graph.settings.device.value.autoLockMinutes
+        val s = _state.value
+        return minutes > 0 && s.loginRequired && s.current != null && SystemClock.elapsedRealtime() - lastActivity >= minutes * 60_000L
     }
 
     /** Audits a manager's approval that a screen keeps (the permission bits go in `amount`). */
@@ -258,10 +287,23 @@ class StaffSession(private val graph: AppGraph) {
         }
     }
 
-    /** Records user activity (touches and keys) for the idle lock. */
+    /**
+     * Records user activity (touches and keys) for the idle lock. While someone is signed in with
+     * an auto-lock, the time is also stored now and then ([KEY_SEEN]): a till whose power went off
+     * on screen knows at the next start how long it was idle.
+     */
     fun touch() {
-        lastActivity = SystemClock.elapsedRealtime()
+        val now = SystemClock.elapsedRealtime()
+        lastActivity = now
+        if (now - heartbeatAt < HEARTBEAT_MS || _state.value.current == null || graph.settings.device.value.autoLockMinutes <= 0) return
+        heartbeatAt = now
+        val at = System.currentTimeMillis()
+        graph.appScope.launch { graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_SEEN, at.toString()) } }
     }
+
+    /** Time since boot of the last [KEY_SEEN] write (0: none yet in this process). */
+    @Volatile
+    private var heartbeatAt = 0L
 
     /** Tests: as if the last touch or key was [ms] ago. */
     @androidx.annotation.VisibleForTesting
@@ -306,16 +348,22 @@ class StaffSession(private val graph: AppGraph) {
      */
     private fun remaining(f: Fails, now: Long): Long {
         var wait = PinLockout.remainingMs(f.count, f.last, now)
-        val boot = graph.bootCount()
         val at = f.lastRt?.split(':')
-        if (boot != null && at != null && at.size == 2 && at[0] == boot.toString()) {
-            val rt = at[1].toLongOrNull()
-            if (rt != null) wait = maxOf(wait, PinLockout.remainingMs(f.count, rt, SystemClock.elapsedRealtime()))
+        val rt = at?.getOrNull(1)?.toLongOrNull()
+        if (at != null && at.size == 2 && rt != null) {
+            val elapsed = SystemClock.elapsedRealtime()
+            // The same boot: the boot count matches — or, on Android 5 and 6 (no boot count), the time
+            // since boot has not gone back, as it does after a restart. Without this, setting the
+            // clock forward still skipped every wait there (2026-10 review). After a restart with a
+            // long uptime the wait counts once more at worst (15 minutes).
+            val boot = graph.bootCount()
+            val sameBoot = if (boot != null) at[0] == boot.toString() else at[0] == UNKNOWN_BOOT && elapsed >= rt
+            if (sameBoot) wait = maxOf(wait, PinLockout.remainingMs(f.count, rt, elapsed))
         }
         return wait
     }
 
-    private fun bootStamp(): String? = graph.bootCount()?.let { "$it:${SystemClock.elapsedRealtime()}" }
+    private fun bootStamp(): String = "${graph.bootCount() ?: UNKNOWN_BOOT}:${SystemClock.elapsedRealtime()}"
 
     /** Forgets [staffId]'s wrong PINs (a new PIN was set for them, or the owner used the recovery code). */
     internal fun clearFails(tx: com.lekaspos.data.db.Db.Tx, staffId: Long) {
@@ -371,6 +419,13 @@ class StaffSession(private val graph: AppGraph) {
 
         /** Wall-clock time of the last activity while the till was out of sight (see [screenStopped]). */
         const val KEY_AWAY = "session.away_at"
+
+        /** Wall-clock time of recent activity, stored every [HEARTBEAT_MS] at most (see [touch]). */
+        const val KEY_SEEN = "session.seen_at"
+        private const val HEARTBEAT_MS = 30_000L
+
+        /** The boot part of a wrong-PIN stamp on phones without a boot count (Android 5 and 6). */
+        private const val UNKNOWN_BOOT = "u"
     }
 }
 

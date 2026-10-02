@@ -167,6 +167,35 @@ class CsvTest {
         assertIs<ProductCsv.Parsed.Ok>(ProductCsv.parse(listOf("Milo", "18.90", "9556001234567"), h, myr))
     }
 
+    /** 2026-10 review: "Number" and thousands-separator formats came in as junk codes no scan matched. */
+    @Test
+    fun aBarcodeASpreadsheetFormattedAsANumberGetsItsDigitsBack() {
+        val h = ProductCsv.header(listOf("name", "price", "barcode"))
+        fun codes(cell: String) = (ProductCsv.parse(listOf("Milo", "18.90", cell), h, myr) as ProductCsv.Parsed.Ok).row.barcodes
+        assertEquals(listOf("9556001234568"), codes("9556001234568.00"))
+        assertEquals(listOf("9556001234568"), codes("9,556,001,234,568"))
+        assertEquals(listOf("01234565"), codes("1234565.0"))
+        // Commas that do not make one valid EAN/UPC still separate codes.
+        assertEquals(listOf("123", "456", "789"), codes("123,456,789"))
+        val bad = ProductCsv.parse(listOf("Milo", "18.90", "9556001234568.5"), h, myr)
+        assertEquals(listOf(ProductCsv.Problem.BARCODE_BAD), (bad as ProductCsv.Parsed.Bad).problems.map { it.first })
+    }
+
+    /** 2026-10 review: a placeholder in the SKU column made every row one product. */
+    @Test
+    fun placeholdersInTheSkuColumnAreNoSku() {
+        val h = ProductCsv.header(listOf("name", "price", "sku"))
+        fun sku(cell: String) = (ProductCsv.parse(listOf("Milo", "18.90", cell), h, myr) as ProductCsv.Parsed.Ok).row.sku
+        for (none in listOf("-", "0", "N/A", "na", "none", "tiada", "--", "—")) assertNull(sku(none), none)
+        assertEquals("MILO-1KG", sku("MILO-1KG"))
+        assertEquals("000123", sku("000123"))
+    }
+
+    @Test
+    fun rowsOfSeparatorsOnlyAreSkipped() {
+        assertEquals(listOf(listOf("name", "price"), listOf("Gula", "2.80")), readAll("name,price\n,\n , \nGula,2.80\n,,\n"))
+    }
+
     @Test
     fun aBarcodeASpreadsheetStrippedOfItsLeadingZeroGetsItBack() {
         val h = ProductCsv.header(listOf("name", "price", "barcodes"))

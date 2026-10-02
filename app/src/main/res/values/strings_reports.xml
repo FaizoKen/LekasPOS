@@ -28,7 +28,7 @@
     <string name="report_net_ex_tax">Net sales (without tax)</string>
     <string name="report_tax">Tax</string>
     <string name="report_rounding">Rounding</string>
-    <string name="report_total">Total received</string>
+    <string name="report_total">Total (after refunds)</string>
     <string name="report_cost">Cost of goods</string>
     <string name="report_profit">Gross profit</string>
     <string name="report_margin">Gross margin</string>
@@ -62,6 +62,7 @@
     <string name="export_saved">Saved (rows: %1$d).</string>
     <string name="export_failed">The export did not finish (%1$s). Its unfinished file was deleted; please try again.</string>
     <string name="export_lost">The export was interrupted. Please try again.</string>
+    <string name="no_picker">This phone has no app for choosing files. Use Share instead, or install a file manager.</string>
     <string name="export_summary">Summary (CSV)</string>
     <string name="export_daily">Sales per day (CSV)</string>
     <string name="export_products">Products sold (CSV)</string>
@@ -109,6 +110,7 @@
     <string name="problem_barcode">a barcode has spaces, is too long, or was turned into a number like 9.55E+12 by the spreadsheet (format that column as text)</string>
     <string name="problem_tax">no tax rate with this name or percentage</string>
     <string name="problem_barcode_twice">this barcode is also on an earlier line</string>
+    <string name="problem_sku_twice">this SKU is also on an earlier line (each product needs its own SKU, or none)</string>
     <string name="problem_barcode_taken">the barcode belongs to another product than the SKU</string>
     <string name="problem_barcodes_split">the barcodes belong to different products</string>
 </resources>

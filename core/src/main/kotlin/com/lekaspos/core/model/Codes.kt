@@ -125,6 +125,9 @@ object AuditAction {
 
     /** Store settings, the receipt logo or a tax rate changed (detail: what). */
     const val SETTINGS_CHANGE = 27
+
+    /** A customer paid back credit (amount: paid; detail: customer, method, cash rounding). */
+    const val CREDIT_PAYMENT = 28
 }
 
 /** Permission bits stored in `role.perms`. The owner role always has every permission. */

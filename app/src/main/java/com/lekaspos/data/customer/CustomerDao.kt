@@ -73,10 +73,33 @@ object CustomerDao {
         }
     }
 
-    /** Customers whose phone number starts with the digits of [digits]. */
+    /**
+     * Customers whose phone number starts with the digits of [digits], in any of its Malaysian
+     * forms ("012…", "6012…", "+6012…"): a number saved from WhatsApp as "+60 12-345 6789" was not
+     * found by "012-345 6789", and the cashier made a second customer whose debts and limit were
+     * apart from the first (2026-10 review).
+     */
     fun byPhone(db: SQLiteDatabase, digits: String, limit: Int = 50): List<CustomerItem> {
-        val p = normalizePhone(digits) ?: return emptyList()
-        return db.queryList(BY_PHONE, args(p, SearchText.prefixUpperBound(p), limit), ::item)
+        val out = LinkedHashMap<Long, CustomerItem>()
+        for (form in phoneForms(digits)) {
+            for (c in db.queryList(BY_PHONE, args(form, SearchText.prefixUpperBound(form), limit), ::item)) {
+                if (c.id !in out) out[c.id] = c
+            }
+        }
+        return out.values.take(limit)
+    }
+
+    /** [text] as stored ([normalizePhone]) and, for a Malaysian number, its other two forms. */
+    fun phoneForms(text: String): List<String> {
+        val p = normalizePhone(text) ?: return emptyList()
+        val national = when {
+            p.startsWith("+60") -> p.substring(3)
+            p.startsWith("60") -> p.substring(2)
+            p.startsWith("0") -> p.substring(1)
+            else -> null
+        }
+        if (national == null || national.length < 2) return listOf(p)
+        return listOf(p, "0$national", "60$national", "+60$national").distinct()
     }
 
     fun get(db: SQLiteDatabase, id: Long): Customer? = db.queryOne("SELECT $COLUMNS FROM customer WHERE id = ?", args(id), ::row)

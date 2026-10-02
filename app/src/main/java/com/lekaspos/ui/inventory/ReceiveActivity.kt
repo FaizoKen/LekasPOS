@@ -18,6 +18,7 @@ import com.lekaspos.data.supplier.Supplier
 import com.lekaspos.data.supplier.SupplierDao
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
+import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.products.ProductEditActivity
@@ -51,6 +52,7 @@ class ReceiveActivity : ScreenActivity() {
     private lateinit var save: Button
     private lateinit var list: RecyclerView
     private val scanInput = ScanInput(onScan = { addByCode(it) }, onTyped = { _, _ -> })
+    private val fieldScan = FieldScan { addByCode(it) }
 
     private val currency get() = graph.settings.store.value.currency
 
@@ -115,7 +117,7 @@ class ReceiveActivity : ScreenActivity() {
 
     // No scans while the delivery is being recorded: they belong to no delivery (2026-10 review).
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (loaded && !saving && !ref.hasFocus() && scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+        (loaded && !saving && if (ref.hasFocus()) fieldScan.onKey(event, ref) else scanInput.onKey(event)) || super.dispatchKeyEvent(event)
 
     private fun render() {
         supplierButton.text = draft.supplierId?.let { id -> suppliers.firstOrNull { it.id == id }?.name } ?: getString(R.string.inv_no_supplier)

@@ -22,12 +22,14 @@ object CostMath {
     /**
      * Average unit cost after receiving [addQty] units for [addTotal] while [onHand] units
      * costing [onHandCost] each are in stock. Stock at or below zero has nothing to average
-     * with, so the received cost is used as it is. Only one rounding, at the end.
+     * with, so the received cost is used as it is; so does stock whose cost was never entered
+     * (cost 0: products imported or added without a cost — averaging with it halved the cost of
+     * the first delivery and overstated profit for months, 2026-10 review). Only one rounding.
      */
     fun movingAverage(onHand: Long, onHandCost: Long, addQty: Long, addTotal: Long): Long {
         require(addQty > 0L) { "received qty must be > 0" }
         require(addTotal >= 0L && onHandCost >= 0L) { "costs must be >= 0" }
-        if (onHand <= 0L) return unitCost(addTotal, addQty)
+        if (onHand <= 0L || onHandCost == 0L) return unitCost(addTotal, addQty)
         val value = Checked.add(Checked.mul(onHand, onHandCost), Checked.mul(addTotal, 1000L))
         return Rounding.roundHalfUp(value, Checked.add(onHand, addQty))
     }

@@ -199,24 +199,35 @@ class Db private constructor(
          */
         fun open(context: Context, name: String = Schema.FILE_NAME, seedNames: SeedNames = SeedNames(), storeData: Boolean = true): Db {
             assertNotMainThread()
-            if (storeData) KeepDamagedDatabase.storePath = context.getDatabasePath(name).path
+            // Half-written backups of a process that was killed (or ran out of space) mid-way: no
+            // backup can be running before the store opens, and nothing else ever deleted them —
+            // each one the size of the whole database (2026-10 review).
+            if (storeData) deleteUnfinishedBackups(context)
             // A restore staged before the restart goes in first; otherwise an upgrade is backed up (D-044).
             val restored = if (storeData) Restore.applyIfStaged(context, name) else null
+            // The store's file is known as such only now: damage met while the restore read the data
+            // it replaces (often the reason for the restore) marked the restored data as damaged, and
+            // automatic backups stayed off (2026-10 review).
+            if (storeData) KeepDamagedDatabase.storePath = context.getDatabasePath(name).path
             if (restored == null && storeData) backupBeforeUpgrade(context, name)
-            var helper = DbOpenHelper(context.applicationContext, name, seedNames)
-            val sqlite = try {
-                helper.writableDatabase
+            return try {
+                openChecked(context, name, seedNames, restored, storeData).also { if (restored != null) auditRestore(context, it) }
             } catch (e: SQLiteDatabaseCorruptException) {
-                // Too damaged to open: kept aside, and the store starts empty so a backup can be
-                // restored from the app (it failed at every start before; Android's own handler
-                // used to delete the file instead, 2026-10 review).
+                // Too damaged to open, or a page read right after opening (meta, staff) is damaged:
+                // kept aside, and the store starts empty so a backup can be restored from the app.
+                // Damage found after the open failed every start and no screen, Backup & restore
+                // included, could open (2026-10 review); Android's own handler used to delete the file.
                 if (!storeData) throw e
-                helper.close()
                 KeepDamagedDatabase.setAside(context, name, e)
-                helper = DbOpenHelper(context.applicationContext, name, seedNames)
-                helper.writableDatabase
+                if (restored != null) Restore.finished(context) // the restored data went aside with it
+                openChecked(context, name, seedNames, null, storeData)
             }
+        }
+
+        private fun openChecked(context: Context, name: String, seedNames: SeedNames, restored: Restore.Mode?, storeData: Boolean): Db {
+            val helper = DbOpenHelper(context.applicationContext, name, seedNames)
             try {
+                val sqlite = helper.writableDatabase
                 if (storeData) KeepDamagedDatabase.checkSetAside(context)
                 if (restored != null) {
                     Restore.afterOpen(sqlite, restored, Restore.carried(context))
@@ -235,6 +246,28 @@ class Db private constructor(
                 helper.close() // a later try (AppGraph.db) opens it again; never two connection pools
                 throw e
             }
+        }
+
+        /**
+         * The restored data records who restored it, and which backup (2026-10 review: a restore
+         * left no trace, and it can erase a day's sales). Never stops the store from opening.
+         */
+        private fun auditRestore(context: Context, db: Db) {
+            try {
+                val (staff, approvedBy, backupTime) = Restore.takeAudit(context) ?: return
+                db.writeBlocking(reserveIds = 1L) { tx ->
+                    com.lekaspos.data.audit.AuditDao.log(
+                        tx, com.lekaspos.core.model.AuditAction.SETTINGS_CHANGE, staff, System.currentTimeMillis(),
+                        detail = "backup restored: $backupTime", approvedBy = approvedBy,
+                    )
+                }
+            } catch (e: Exception) {
+                com.lekaspos.util.Log.e("The restore could not be recorded in the activity log", e)
+            }
+        }
+
+        private fun deleteUnfinishedBackups(context: Context) {
+            Restore.backupDir(context).listFiles { f -> f.name.endsWith(".part") }?.forEach { it.delete() }
         }
 
         /** Keeps a backup of a database about to be migrated to a newer schema (kept: the last 3). */
@@ -258,9 +291,13 @@ class Db private constructor(
                 } finally {
                     part.delete()
                 }
-                // Newest first by time written ("upgrade-v10" sorts before "upgrade-v9" by name).
-                dir.listFiles { f -> f.name.startsWith("upgrade-") && f.name.endsWith(BackupFiles.EXT) }
-                    ?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
+                // Newest first by time written ("upgrade-v10" sorts before "upgrade-v9" by name). The
+                // one just written always stays, and times in the future (a clock that ran ahead) count
+                // as oldest: with the clock behind, the new copy sorted last and was deleted at once.
+                val now = System.currentTimeMillis()
+                dir.listFiles { f -> f.name.startsWith("upgrade-") && f.name.endsWith(BackupFiles.EXT) && f.name != target.name }
+                    ?.sortedByDescending { f -> f.lastModified().takeIf { it <= now } ?: Long.MIN_VALUE }
+                    ?.drop(2)?.forEach { it.delete() }
             } catch (e: Exception) {
                 com.lekaspos.util.Log.e("Backup before upgrade failed", e) // never block opening the store
             }

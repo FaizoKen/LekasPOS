@@ -89,7 +89,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
     private var delim: Char = delimiter ?: '\u0000'
     private var first = true
 
-    /** The next record, or null at the end of the input. Blank lines are skipped. */
+    /** The next record, or null at the end of the input. Blank lines (also separators only) are skipped. */
     fun next(): List<String>? {
         while (true) {
             if (first) {
@@ -99,7 +99,9 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
             if (peek() == -1) return null
             recordLine = line
             val fields = record()
-            if (fields.size == 1 && fields[0].isEmpty()) continue // blank line
+            // A blank line, or one of separators only: Excel writes ",,,,," for formatted empty rows, and
+            // each became "name missing, price missing", burying the real problems (2026-10 review).
+            if (fields.all { it.isBlank() }) continue
             return fields
         }
     }

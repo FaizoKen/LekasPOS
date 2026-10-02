@@ -106,7 +106,8 @@ class RefundActivity : ScreenActivity() {
         if (qtyViews.isEmpty()) form.info(getString(R.string.refund_nothing_left))
         restock = form.switch(getString(R.string.refund_restock), true)
         reason = form.text(getString(R.string.refund_reason), "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
-        method = form.choice(getString(R.string.refund_method), methods.map { it.name }, 0) { renderTotal() }
+        val usual = methods.indexOfFirst { it.id == data.usualMethodId }.coerceAtLeast(0)
+        method = form.choice(getString(R.string.refund_method), methods.map { it.name }, usual) { renderTotal() }
         totalView = form.info("")
         submit = form.button(getString(R.string.refund_do), primary = true) { confirm() }
         content.removeAllViews()

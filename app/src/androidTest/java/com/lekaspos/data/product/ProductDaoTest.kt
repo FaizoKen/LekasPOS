@@ -41,6 +41,18 @@ class ProductDaoTest {
         assertNull(find("9999999999994"))
     }
 
+    /** 2026-10 review: a newer product with only the padded form took over an older product's scans. */
+    @Test
+    fun theCodeExactlyAsScannedComesBeforeItsOtherForm() {
+        val own = TestDb.product(db, "Kuih (own code)", 150, codes = listOf("1234565"))
+        val ean8 = TestDb.product(db, "Biskut (EAN-8)", 300, codes = listOf("01234565"))
+        assertEquals(own, find("1234565")?.product?.id)
+        assertEquals(ean8, find("01234565")?.product?.id)
+        // An EAN-13 also finds a product stored with the 14-digit form.
+        val gtin14 = TestDb.product(db, "Susu (GTIN-14)", 500, codes = listOf("09556001234568"))
+        assertEquals(gtin14, find("9556001234568")?.product?.id)
+    }
+
     @Test
     fun packBarcodeCarriesItsPackSizeAndPrice() {
         val id = db.writeBlocking { tx ->

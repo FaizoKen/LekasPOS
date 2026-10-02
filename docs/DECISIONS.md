@@ -645,6 +645,106 @@ Rejected: renumbering a till from 1 when its files vanished from the folder (til
 read further would skip the new files); observing remote clocks without the 24 h limit (one bad
 till would pull every till's clock into its future); forcing a new identity for every restore on
 another phone (single-till shops keep their device number; the ID gap makes it safe).
+### D-056 — Third bug hunt: cross-cutting reviews and weak features (2026-10-02)
+The owner asked for a third, free-hand search for bugs and weak features. Twelve read-only reviews
+took angles the earlier hunts (by module) had not: concurrency and cancellation, money end to end,
+time and clocks, Android versions and devices, start-up and failure handling, real-world input,
+security, a shop's daily workflows, performance at scale, and regressions in the D-053, D-054 and
+D-055 changes. Each finding was checked in the code before it was fixed, most with a test.
+Decisions that change behaviour:
+- **Cost of goods.** A refund whose goods do not go back on the shelf keeps their cost in cost of
+  goods (refund line cost 0; spoiled or broken returns vanished from profit); a refund's cost share
+  follows the quantities. Stock whose cost was never entered (cost 0) takes the delivery's cost
+  instead of halving it; a product without stock tracking takes its latest delivery's cost (its
+  level only grew, so price rises never reached the cost). Both were "left for the owner" before.
+- **Credit repayments** are never more than is owed (more is a balance adjustment: CREDIT_LIMIT +
+  audit) and every one is audited (new audit action 28). Cash repayments are rounded to the 5-sen
+  step like a sale; paying off the debt books the difference as "Cash rounding", so the drawer and
+  the balance both come out right.
+- **Damaged data.** Damage found right after opening (a `meta` page) is set aside like damage at
+  the open: an empty store opens and Backup & restore is reachable (it failed at every start); no
+  welcome wizard while the data problem shows; a restore over a damaged database no longer marks
+  the restored data damaged; the set-aside marker is written before the files move.
+- **Start-up and background jobs.** WorkManager's initialisation and scheduling failures are
+  handled (a full disk crashed the app moments after every start). Half-written backups (`*.part`)
+  are deleted when the store opens; the "replaced" copy of a restore goes through `.part`; a stopped
+  backup job is not damage; the pre-upgrade backup just written is never pruned and is compressed
+  for speed. Shift open/close and this till's settings follow the commit even when their screen is
+  closing (a "shift required" till could not sell until restarted). Turning sync off changes the
+  flag inside the transaction that stores it, and finishes after the screen closes.
+- **Error log.** Warnings, errors and crashes go to `files/logs/errors.log` (256 KB, one older
+  file kept); Diagnostics → "Share the error log". It stays on the phone unless shared (privacy
+  policy updated); like all logs it holds no PINs, tokens or customer data.
+- **Daily backup at a quiet moment.** The automatic backup waits while a bill is being rung up or a
+  sale was made in the last 3 minutes, but never past 36 h since the last one (the copy pauses
+  sales; it ran when the till was switched on in the morning). Its scratch copies are not synced.
+- **Owners and roles.** Owner-only changes (making an owner; an owner's role, PIN, removal) need the
+  signed-in owner or an owner's PIN for that one change — an owner's approval of the whole Staff
+  screen no longer counts (the cashier could make themselves owner). A role is widened only with
+  permissions the person granting them holds, and nobody but an owner widens their own role.
+- **Idle lock.** A locked till drops input (the rest of a scan that woke it went into the bill as a
+  cut-short code); camera scans are checked like keys; an idle time that ran out during a payment
+  locks the till as soon as the payment ends; back-office screens leave when the till locks for any
+  reason; the last sale's result is cleared on lock (its Share was a free first copy); recent
+  activity is stored every 30 s, so a power cut counts as idle time. Wrong-PIN waits are measured
+  by the time since boot also on Android 5 and 6.
+- **Restore and copies off the phone.** A restored database loses any triggers and views (the app
+  makes none; a doctored backup could bring one that deletes audit entries); who restored which
+  backup is in the restored activity log; saving or sharing a backup copy is audited. Opening stock
+  on the product form needs the stock permission; changing how a product is sold, its tax rate or
+  its pack prices is audited like a price change.
+- **Clocks.** Payment is refused while the phone's date is before 2026-09-01 (a clock reset to 1970
+  or 2000 filed sales under that date for good) and asks first when the time is more than an hour
+  before this till's own last sale (`ClockCheck`). The HLC follows other tills relative to its own
+  last time (a till whose clock was set back stopped following them). Stock events are stamped
+  after what they follow — a sale or movement after the products' last counts, a count after the
+  product's latest sale, movement and count — so a till whose clock once ran a year ahead no longer
+  makes the other tills' sales and recounts "earlier" than its count (`StockDao.stampAfterCounts`).
+- **First sync of a large store.** The outbox is sealed into segment files every 10 backfill
+  chunks (the whole history went into the outbox table first: up to a gigabyte more database).
+- **Selling.** The camera hands unknown barcodes, weighed and open-price items to the selling
+  screen (Add product / weight / price — D-050 worked only with keyboard scanners). Refunds pay
+  back the way the sale was paid by default (customer credit first; cash was paid out for goods
+  taken on credit). Quick-cash buttons offer the notes customers hand over (next 5, next 10, RM20
+  for a small bill, next 50, next 100). A held bill can be deleted with a visible button. Number and
+  PIN pads scroll (their "0" and OK were cut off on phones in landscape and in split screen). The
+  bill is priced again when Pay is pressed (a promotion that started or ended at midnight). A scale
+  label with no weight or a 0.00 price is weighed or priced instead of sold as 0.001 kg or free.
+- **Back office.** A receipt number alone ("123", "R45") finds this till's sale or refund; the
+  report's "Total received" is "Total (after refunds)" (it counted sales on credit); the activity
+  log filters promotion changes and repayments; closing a shift takes an optional note shown on the
+  shift report; the screen stays on during an import or a sync round; a phone without a file picker
+  says so instead of closing the app; a refused Bluetooth permission offers App info.
+- **Input.** A CSV file is UTF-8 only when the whole file is (judged by 32 KB, "Nescafé" on row 700
+  was imported as "Nescaf�"); Excel's UTF-16 "Unicode text" is read; rows of separators only are
+  skipped; SKU placeholders ("-", "0", "N/A"…) mean no SKU and a SKU twice in a file is refused (the
+  rows merged into one product with every barcode); barcode cells written as numbers ("…568.00",
+  "9,556,001,234,568") get their digits back. Barcodes are stored in the form a scan finds
+  (`Gtin.canonical`: spaces of the printed digits, GTIN-14 as EAN-13, line breaks); the code exactly
+  as scanned wins over its padded form; an EAN-13 also finds a stored GTIN-14; a scanned SKU finds
+  its product. Scans typed into a focused field on Receive, Count and Pick are taken out and scanned
+  (`FieldScan`). Scanner digits are read by key code (numeric-keypad scanners without NumLock, other
+  keyboard layouts). Number and PIN pads take scanner bursts up to 60 ms per key, as the selling
+  screen. Customer phone search matches "012…", "6012…" and "+6012…".
+- **Printing.** A sent job is recorded before the next one runs (a drawer pulse in between printed
+  a receipt twice); a job cleared from the queue while the printer connected is not printed.
+Not changed (for the owner, or later): folder and saved backups still hold the PIN hashes (a 4–6
+digit PIN cannot be protected by hashing; encrypting backups would tie every restore to the
+recovery code, and a lost code would lose the data — the copies are audited instead, and PINs are
+best typed out of sight); renumbering a till's files after its Drive data was deleted (rare;
+D-055's `fullFrom` is the way to reuse); automatic rounds making one Drive file each and the daily
+full listing growing over the years (compaction, sync.md §8); the camera opened on the main thread;
+money that does not fit at very large font sizes; a store time zone setting (each till's own zone
+dates its sales); a settings form rebuilt after Android ended the app re-saving every field; voids
+made twice before 1.3.0 not repaired; a price-embedded scale code typed by hand. Weak features the
+review listed, for the owner to choose from: editable payment methods (DuitNow, e-wallet brands),
+a fuller "hutang" book (who owes most, sharing a statement), a quick "add product" form at the
+till, out-of-stock lists, selling prices on receiving, counting notes and coins at shift close,
+"pay part, rest on credit" from the payment screen.
+Rejected: blocking every sale until the phone's time passes the till's last sale (a clock that ran
+ahead and was corrected would stop the shop for hours); computing the backup's counts outside the
+writer pause (the header must describe exactly the data copied).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

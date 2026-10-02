@@ -109,6 +109,23 @@ class InventoryTest {
         assertEquals(6_000L, level(milo))
     }
 
+    /** 2026-10 review: an untracked product's level only grew, so its cost never caught up with price rises. */
+    @Test
+    fun anUntrackedProductTakesTheCostOfItsLatestDelivery() = runBlocking {
+        val db = graph.db()
+        val roti = TestDb.product(db, "Roti", 350L, cost = 0L, trackStock = false)
+        suspend fun deliver(qty: Long, unitCost: Long) {
+            val d = ReceiveDraft().add(1L, roti, "Roti", "pcs", qty, unitCost).first
+            graph.inventory.saveDraft(d)
+            graph.inventory.receive(d)
+        }
+        deliver(100_000L, 200L)
+        assertEquals(200L, cost(roti))
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(roti to 100_000L)), tz) }
+        deliver(100_000L, 240L)
+        assertEquals(240L, cost(roti)) // not (100 × 2.00 + 100 × 2.40) / 200 = 2.20
+    }
+
     /** 2026-10 review: a scan queued behind the receipt saved the delivery again (received twice). */
     @Test
     fun aLateDraftSaveCannotBringAReceivedDeliveryBack() = runBlocking {

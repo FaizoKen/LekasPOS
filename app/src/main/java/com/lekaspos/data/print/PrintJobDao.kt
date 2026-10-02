@@ -59,9 +59,17 @@ object PrintJobDao {
     fun pendingCount(db: SQLiteDatabase): Long =
         db.long("SELECT COUNT(*) FROM print_job WHERE status = ?", PrintJobStatus.PENDING)
 
+    /** Done; a job cleared meanwhile (FAILED "cancelled") stays so. */
     fun markDone(tx: Db.Tx, id: Long, now: Long) {
-        tx.update("UPDATE print_job SET status = ?, updated_at = ? WHERE id = ?", PrintJobStatus.DONE, now, id)
+        tx.update(
+            "UPDATE print_job SET status = ?, updated_at = ? WHERE id = ? AND status = ?",
+            PrintJobStatus.DONE, now, id, PrintJobStatus.PENDING,
+        )
     }
+
+    /** Still waiting to print (not done, failed or cleared from the queue)? */
+    fun isPending(db: SQLiteDatabase, id: Long): Boolean =
+        db.long("SELECT COUNT(*) FROM print_job WHERE id = ? AND status = ?", id, PrintJobStatus.PENDING) > 0L
 
     /** A failed attempt: the job stays pending and is retried after reconnecting. */
     fun markAttempt(tx: Db.Tx, id: Long, error: String?, now: Long) {

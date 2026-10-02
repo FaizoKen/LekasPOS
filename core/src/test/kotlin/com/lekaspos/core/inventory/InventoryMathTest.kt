@@ -31,6 +31,14 @@ class InventoryMathTest {
     }
 
     @Test
+    fun stockWhoseCostWasNeverEnteredTakesTheDeliveryCost() {
+        // 100 imported without a cost, then 100 received for 150.00: the cost is 1.50, not 0.75.
+        assertEquals(150L, CostMath.movingAverage(100_000L, 0L, 100_000L, 15_000L))
+        // Free goods on their own invoice line still lower a known cost.
+        assertEquals(50L, CostMath.movingAverage(100_000L, 100L, 100_000L, 0L))
+    }
+
+    @Test
     fun varianceValue() {
         assertEquals(-250L, CostMath.varianceValue(counted = 8_000L, expected = 10_000L, unitCost = 125L))
         assertEquals(0L, CostMath.varianceValue(5_000L, 5_000L, 125L))

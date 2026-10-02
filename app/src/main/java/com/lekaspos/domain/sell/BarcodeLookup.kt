@@ -40,6 +40,11 @@ object BarcodeLookup {
             val codes = if (stripped == plu) listOf(plu) else listOf(plu, stripped)
             ProductDao.findByCode(db, codes, BarcodeKind.SCALE_PLU)?.let { return Resolution.Scale(it.product, code, label) }
         }
+        // A shop's own label printed from the SKU, or a code a product file put in its SKU column:
+        // it was "unknown", and registering it again made a second product (2026-10 review).
+        ProductDao.bySku(db, code)?.let { ProductDao.sellableById(db, it) }?.let { p ->
+            return Resolution.Plain(ScanHit(p, code, BarcodeKind.BARCODE, 1000L, null))
+        }
         return Resolution.NotFound(code)
     }
 

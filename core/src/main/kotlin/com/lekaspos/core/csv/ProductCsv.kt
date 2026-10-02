@@ -46,6 +46,9 @@ object ProductCsv {
 
         /** Checked by the app: the same barcode twice in the file, or owned by another product. */
         BARCODE_TWICE, BARCODE_TAKEN, BARCODES_SPLIT, TAX_UNKNOWN,
+
+        /** Checked by the app: the same SKU twice in the file (the rows would merge into one product). */
+        SKU_TWICE,
     }
 
     /** Where each column is in the file; [missing] required columns make the file unusable. */
@@ -118,10 +121,11 @@ object ProductCsv {
 
         val cost = cell(Column.COST)?.let { t -> money(t, currency).also { if (it == null || it < 0L) problems.add(Problem.COST_BAD to Column.COST) } }
 
-        val barcodes = cell(Column.BARCODES)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }
-            ?.map(Gtin::restoreLeadingZero).orEmpty() // "1234565" (a number in a spreadsheet) → "01234565"
-        // "9.55600E+12": the spreadsheet turned the barcode into a number and lost its digits.
-        if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } || SCIENTIFIC.matches(it) }) {
+        val barcodes = cell(Column.BARCODES)?.let(::unformatNumber)?.split(BARCODE_SPLIT)?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?.map(Gtin::canonical).orEmpty() // "1234565" (a number in a spreadsheet) → "01234565"; a GTIN-14 → its EAN-13
+        // "9.55600E+12": the spreadsheet turned the barcode into a number and lost its digits; and a
+        // decimal number is never a barcode ("9556001234567.5").
+        if (barcodes.any { it.length > MAX_BARCODE || it.any { c -> c.isWhitespace() || c.code < 32 } || SCIENTIFIC.matches(it) || DECIMAL.matches(it) }) {
             problems.add(Problem.BARCODE_BAD to Column.BARCODES)
         }
 
@@ -138,7 +142,7 @@ object ProductCsv {
         if (problems.isNotEmpty() || name == null || price == null) return Parsed.Bad(problems)
         return Parsed.Ok(
             Row(
-                name = name, price = price, barcodes = barcodes.distinct(), sku = cell(Column.SKU),
+                name = name, price = price, barcodes = barcodes.distinct(), sku = cell(Column.SKU)?.takeUnless { NO_SKU.matches(it) },
                 category = cell(Column.CATEGORY), unit = cell(Column.UNIT), cost = cost, tax = tax,
                 sellMode = sellMode, trackStock = track, stock = stock, lowStock = low, active = active,
                 id = cell(Column.ID)?.removePrefix("#")?.trim()?.toLongOrNull()?.takeIf { it > 0L },
@@ -192,9 +196,29 @@ object ProductCsv {
         return v.toInt()
     }
 
+    /**
+     * A barcode cell a spreadsheet wrote as a formatted number (2026-10 review): "9556001234567.00"
+     * (a "Number" column) loses its zero decimals, and "9,556,001,234,567" (thousands separators)
+     * its commas when the digits make a valid EAN/UPC — commas otherwise separate several codes.
+     */
+    internal fun unformatNumber(cell: String): String {
+        val t = cell.trim()
+        ZERO_DECIMALS.matchEntire(t)?.let { return it.groupValues[1] }
+        val grouped = GROUPED.matchEntire(t) ?: return cell
+        val digits = grouped.groupValues[1].replace(",", "")
+        return if (digits.length in GTIN_LENGTHS && Gtin.isValid(digits)) digits else cell
+    }
+
     const val MAX_NAME = 120
     const val MAX_BARCODE = 48
     private val BARCODE_SPLIT = Regex("[|;,/]+")
     private val SCIENTIFIC = Regex("[0-9]+(?:[.,][0-9]+)?[eE][+-]?[0-9]+")
+    private val DECIMAL = Regex("[0-9]+[.,][0-9]+")
+    private val ZERO_DECIMALS = Regex("([0-9]+)\\.0+")
+    private val GROUPED = Regex("([0-9]{1,3}(?:,[0-9]{3})+)(?:\\.0+)?")
+    private val GTIN_LENGTHS = setOf(8, 12, 13, 14)
+
+    /** What spreadsheets hold where there is no SKU: rows with it must not all be one product (2026-10 review). */
+    private val NO_SKU = Regex("[-–—.0 ]+|n/?a|nil|none|null|tiada|tidak ada", RegexOption.IGNORE_CASE)
     private val PERCENT = Regex("(\\d+(?:\\.\\d{1,2})?)\\s*%?\\s*$")
 }

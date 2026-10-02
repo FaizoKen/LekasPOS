@@ -157,6 +157,15 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                 waitForWake(null)
                 continue
             }
+            if (sentJobId != -1L) {
+                // Its bytes went out but recording that failed, and the loop restarted: recorded before
+                // any other job runs - a drawer pulse in between cleared this, and the receipt printed
+                // twice (2026-10 review).
+                val sent = sentJobId
+                db.write(reserveIds = 0) { tx -> PrintJobDao.markDone(tx, sent, System.currentTimeMillis()) }
+                sentJobId = -1L
+                continue
+            }
             val job = db.read { PrintJobDao.next(it) }
             if (job == null) {
                 clearRendered() // e.g. the queue was cleared while a job was waiting for the printer
@@ -219,6 +228,9 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                     }
                     link = l
                 }
+                // Connecting can take a while: a job cleared from the queue meanwhile is not printed
+                // (it printed after "Clear the queue", 2026-10 review).
+                if (!db.read { PrintJobDao.isPending(it, job.id) }) return
                 _status.value = Status.Printing
                 write(bytes, cfg.dots)
                 sentJobId = job.id

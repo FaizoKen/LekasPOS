@@ -145,7 +145,18 @@ class CartSession(private val graph: AppGraph) {
         val res = graph.db().read { r -> BarcodeLookup.resolve(r, code, templates) }
         return when (res) {
             is Resolution.NotFound -> ScanResult.NotFound(res.code)
-            is Resolution.Scale -> added(add(itemForLabel(res)))
+            is Resolution.Scale -> {
+                val l = res.label
+                val p = res.product
+                if (l.priceMinor == 0L || (l.priceMinor == null && (l.weightMilli ?: 0L) <= 0L)) {
+                    // A label printed with no weight or a price of 0.00 (a scale fault, a test label) is
+                    // weighed or priced by the cashier: it went on the bill as 0.001 kg, or free, with
+                    // the "ok" beep (2026-10 review).
+                    if (p.sellMode == SellMode.WEIGHT && p.price > 0L) ScanResult.NeedsWeight(p, res.code) else ScanResult.NeedsPrice(p, res.code)
+                } else {
+                    added(add(itemForLabel(res)))
+                }
+            }
             is Resolution.Plain -> {
                 val p = res.hit.product
                 when {

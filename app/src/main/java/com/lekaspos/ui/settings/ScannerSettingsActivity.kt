@@ -113,21 +113,25 @@ class ScannerSettingsActivity : ScreenActivity() {
             if (perms.isNotEmpty()) requestPermissions(perms, REQ_BT) // only reached on API 31+
             return
         }
-        val paired = Bluetooth.paired(this)
-        if (paired.isEmpty()) {
-            Dialogs.message(this, getString(R.string.scanner_spp_choose), getString(R.string.printer_no_paired))
-            return
-        }
-        Dialogs.choose(this, getString(R.string.scanner_spp_choose), paired.map { "${it.name}\n${it.address}" }) { i ->
-            address = paired[i].address
-            scannerName = paired[i].name
-            renderSpp()
+        launchUi {
+            val paired = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Bluetooth.paired(this@ScannerSettingsActivity) }
+            if (paired.isEmpty()) {
+                Dialogs.message(this@ScannerSettingsActivity, getString(R.string.scanner_spp_choose), getString(R.string.printer_no_paired))
+                return@launchUi
+            }
+            Dialogs.choose(this@ScannerSettingsActivity, getString(R.string.scanner_spp_choose), paired.map { "${it.name}\n${it.address}" }) { i ->
+                address = paired[i].address
+                scannerName = paired[i].name
+                renderSpp()
+            }
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_BT && Bluetooth.hasPermission(this)) chooseScanner()
+        if (requestCode != REQ_BT) return
+        // Refused: it did nothing at all, and after two refusals Android no longer asks (2026-10 review).
+        if (Bluetooth.hasPermission(this)) chooseScanner() else bluetoothRefused(this, getString(R.string.scanner_permission_needed))
     }
 
     private fun save() {

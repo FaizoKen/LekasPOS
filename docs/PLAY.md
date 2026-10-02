@@ -65,7 +65,9 @@ file themselves.
   - Financial info: *Purchase history* (the shop's sales records) — optional, app functionality.
   - Personal info: *Email address* (the Google account, read to show which account syncs) —
     optional, app functionality.
-  - App info and performance: none. Device or other IDs: none. Location: none.
+  - App info and performance: none. Device or other IDs: none. Location: none. (The local error
+    log of D-056 stays on the phone; only the user sends it, by hand, to whoever they choose —
+    user-initiated sharing, not collection.)
 - **Shared with third parties:** no (Google Drive stores the user's own data on their behalf).
 - **Processed ephemerally:** no. **Required or optional:** optional (sync is off by default).
 - **Encrypted in transit:** yes (HTTPS to Google).

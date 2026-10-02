@@ -105,6 +105,8 @@
     <string name="held_label_hint">Nama (pilihan), cth. pelanggan</string>
     <string name="held_row">%1$s · %3$s · baris: %2$d</string>
     <string name="held_delete_confirm">Padam bil yang disimpan ini?</string>
+    <string name="held_delete_one">Padam bil…</string>
+    <string name="held_delete_which">Padam bil disimpan yang mana?</string>
 
     <!-- Batal bil -->
     <string name="clear_confirm_title">Batalkan bil ini?</string>
@@ -322,6 +324,8 @@
     <string name="printer_bt_settings">Pasangkan pencetak baru (tetapan Bluetooth)</string>
     <string name="printer_no_paired">Tiada peranti dipasangkan. Pasangkan pencetak dalam tetapan Bluetooth Android dahulu (PIN biasanya 0000 atau 1234).</string>
     <string name="printer_permission_needed">Benarkan “Peranti berdekatan” (Bluetooth) untuk menggunakan pencetak.</string>
+    <string name="scanner_permission_needed">Benarkan “Peranti berdekatan” (Bluetooth) untuk menggunakan pengimbas bersiri.</string>
+    <string name="open_app_settings">Buka tetapan</string>
     <string name="printer_section_paper">Kertas dan cetakan</string>
     <string name="printer_paper">Lebar kertas</string>
     <string name="paper_58">58 mm (32 aksara)</string>
@@ -373,8 +377,6 @@
     <string name="camera_permission">Kebenaran kamera diperlukan untuk mengimbas.</string>
     <string name="camera_unavailable">Kamera tidak dapat dibuka.</string>
     <string name="camera_added">Ditambah: %1$s</string>
-    <string name="camera_not_found">Bukan produk yang dikenali: %1$s</string>
-    <string name="camera_needs_input">%1$s perlukan berat atau harga: tambah di bil.</string>
 
     <!-- Log aktiviti -->
     <string name="audit_empty">Belum ada rekod.</string>
@@ -398,6 +400,8 @@
     <string name="diag_cancel">Henti</string>
     <string name="diag_delete">Padam data ujian</string>
     <string name="diag_share">Kongsi laporan</string>
+    <string name="diag_share_log">Kongsi log ralat</string>
+    <string name="diag_log_empty">Tiada masalah berlaku pada telefon ini lagi: log ralat kosong.</string>
     <string name="diag_confirm_full_title">Jalankan ujian penuh?</string>
     <string name="diag_confirm_full_message">Ujian penuh mencipta kira-kira 350 MB data ujian sementara dan boleh mengambil masa 5–20 minit pada peranti yang perlahan. Biarkan aplikasi terbuka dan peranti sedang dicas. Data kedai anda tidak disentuh.</string>
     <string name="diag_start">Mula</string>

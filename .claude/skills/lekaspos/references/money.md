@@ -74,6 +74,10 @@ Bill level:
   lines referencing original lines with **negative** qty/gross/net/tax, negative payments.
   Refund amount per line is the original line's net per unit × returned qty, so a partial
   return refunds exactly what was paid (allocated discounts included).
+- A refund line takes back the line's **cost** only when the goods go back on the shelf
+  (restock): goods thrown away keep their cost in cost of goods (refund line cost 0, D-056). The
+  cost share of a part follows the quantities (`round(cost × returned so far ÷ qty)`), whatever
+  earlier refunds stored.
 - A **void** cancels a whole completed sale (wrong transaction): `sale_void` event, sale
   status becomes voided, excluded from reports and stock. Needs permission + reason + audit.
 - Removing a line from the open bill before payment is a cart edit (audited if it needs
@@ -119,7 +123,11 @@ Bill level:
 
 - Product cost (minor units per base unit) is the **moving weighted average**: receiving
   `q` units for line amount `T` with `h` on hand at cost `c` gives
-  `roundHalfUp(h × c + T × 1000, h + q)`; with `h ≤ 0` the new cost is `roundHalfUp(T × 1000, q)`.
+  `roundHalfUp(h × c + T × 1000, h + q)`; with `h ≤ 0`, or `c = 0` (a cost never entered), the new
+  cost is `roundHalfUp(T × 1000, q)` (D-056). A product without stock tracking has no stock to
+  average with: `h` is 0, so it takes its latest delivery's cost.
+- Credit repayments in cash are rounded to the cash step like a sale; paying off the whole debt
+  books the difference as an ADJUST "Cash rounding" entry, so the balance ends at 0 (D-056).
 - A delivery line keeps the invoice amount `T` exactly when the user types it; the unit cost is
   derived from it. Line value = `roundHalfUp(qty × unitCost, 1000)`.
 - Count variance value = `roundHalfUp((counted − expected) × unitCost, 1000)` with the cost stored

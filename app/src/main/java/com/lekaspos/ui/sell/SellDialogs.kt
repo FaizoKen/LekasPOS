@@ -19,6 +19,7 @@ import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.core.time.DateText
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.ui.common.DialogKeys
+import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
@@ -101,7 +102,7 @@ class AmountDialog(
         col.addView(keypad.view, matchWrap())
         val d = AlertDialog.Builder(activity)
             .setTitle(title)
-            .setView(col)
+            .setView(Dialogs.scrolling(col))
             .setPositiveButton(R.string.ok, null)
             .setNegativeButton(R.string.cancel, null)
             .create()
@@ -193,7 +194,7 @@ class DiscountDialog(
         col.addView(keypad.view, matchWrap())
         val d = AlertDialog.Builder(activity)
             .setTitle(title)
-            .setView(col)
+            .setView(Dialogs.scrolling(col))
             .setPositiveButton(R.string.ok, null)
             .setNeutralButton(R.string.discount_none) { _, _ -> onSet(Discount.None) }
             .setNegativeButton(R.string.cancel, null)
@@ -250,21 +251,34 @@ fun showHeldBills(
         val name = it.label ?: DateText.time(it.updatedAt, tz)
         a.getString(R.string.held_row, name, it.lines, MoneyFormat.format(it.total, currency))
     }.toTypedArray<CharSequence>()
-    val d = AlertDialog.Builder(a)
-        .setTitle(R.string.held_title)
-        .setItems(labels) { _, which -> onResume(bills[which].id) }
-        .setNegativeButton(R.string.close, null)
-        .create()
-    d.listView.setOnItemLongClickListener { _, _, position, _ ->
+    fun confirmDelete(position: Int, then: () -> Unit) {
         AlertDialog.Builder(a)
             .setMessage(R.string.held_delete_confirm)
             .setPositiveButton(R.string.delete) { _, _ ->
-                d.dismiss()
+                then()
                 onDelete(bills[position].id)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
             .trackedBy(a)
+    }
+    // Deleting was a long press only, which nobody finds (D-049): bills left behind kept the
+    // "n held" pill on screen for good (2026-10 review). A tap still resumes at once.
+    val d = AlertDialog.Builder(a)
+        .setTitle(R.string.held_title)
+        .setItems(labels) { _, which -> onResume(bills[which].id) }
+        .setNeutralButton(R.string.held_delete_one) { _, _ ->
+            AlertDialog.Builder(a)
+                .setTitle(R.string.held_delete_which)
+                .setItems(labels) { _, which -> confirmDelete(which) {} }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+                .trackedBy(a)
+        }
+        .setNegativeButton(R.string.close, null)
+        .create()
+    d.listView.setOnItemLongClickListener { _, _, position, _ ->
+        confirmDelete(position) { d.dismiss() }
         true
     }
     d.show()

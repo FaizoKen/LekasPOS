@@ -30,7 +30,8 @@ object Gtin {
      * Codes to try when looking a scan up: scanners report UPC-A either as 12 digits or as
      * EAN-13 with a leading 0, and GTIN-14 with a leading 0 is an EAN-13. A 7- or 11-digit code
      * may be an EAN-8 / UPC-A without its leading 0 (a product file stores it with the 0 again,
-     * [restoreLeadingZero]), so the padded form is tried too when it is a valid GTIN.
+     * [restoreLeadingZero]), so the padded form is tried too when it is a valid GTIN. An EAN-13
+     * also finds a code stored in its 14-digit form (a distributor's file, before [canonical]).
      */
     fun lookupVariants(raw: String): List<String> {
         val code = raw.trim()
@@ -39,10 +40,26 @@ object Gtin {
         return when (code.length) {
             7, 11 -> if (isValid("0$code")) listOf(code, "0$code") else listOf(code)
             12 -> listOf(code, "0$code")
-            13 -> if (code[0] == '0') listOf(code, code.substring(1)) else listOf(code)
+            13 -> if (code[0] == '0') listOf(code, code.substring(1)) else listOf(code, "0$code")
             14 -> if (code[0] == '0') listOf(code, code.substring(1)) else listOf(code)
             else -> listOf(code)
         }
+    }
+
+    /**
+     * The form a barcode is stored in (2026-10 review: typed or imported codes came in forms no
+     * scan could reach): surrounding spaces and line ends gone ("ABC123\n" from a camera or a
+     * paste); the digits of an EAN/UPC typed as printed under the bars without their spaces or
+     * dashes ("9 556001 234567"); a GTIN-14 with a leading 0 as its EAN-13; a 7- or 11-digit code
+     * with the 0 a spreadsheet dropped ([restoreLeadingZero]). Other codes stay as they are.
+     */
+    fun canonical(raw: String): String {
+        val code = raw.trim()
+        if (code.isEmpty()) return code
+        val digits = if (code.any { it == ' ' || it == '-' }) code.filter { it != ' ' && it != '-' } else code
+        if (digits !== code && !(digits.all { it in '0'..'9' } && isValid(digits))) return code
+        if (digits.length == 14 && digits[0] == '0' && isValid(digits)) return digits.substring(1)
+        return restoreLeadingZero(digits)
     }
 
     /**

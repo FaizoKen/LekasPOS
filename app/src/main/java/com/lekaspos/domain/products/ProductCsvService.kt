@@ -310,6 +310,9 @@ class ProductCsvService(private val graph: AppGraph) {
     private class Context(val taxes: List<TaxRate>, val categories: MutableMap<String, Long>) {
         /** Barcode → first line using it in this file. */
         val seen = HashMap<String, Int>()
+
+        /** SKU (any case) → first line using it in this file. */
+        val skus = HashMap<String, Int>()
     }
 
     private sealed class Plan {
@@ -332,6 +335,12 @@ class ProductCsvService(private val graph: AppGraph) {
         for (b in row.barcodes) {
             val first = ctx.seen.getOrPut(b) { line }
             if (first != line) issues.add(Issue(line, Problem.BARCODE_TWICE, Column.BARCODES))
+        }
+        // A second row with the same SKU updated the product the first row had just created: a file
+        // whose SKU column held one shared code made ONE product with every row's barcodes, while
+        // the preview promised them all as new (2026-10 review).
+        row.sku?.let { sku ->
+            if (ctx.skus.getOrPut(sku.lowercase()) { line } != line) issues.add(Issue(line, Problem.SKU_TWICE, Column.SKU))
         }
         // Every product using each barcode (also in its UPC/EAN form), the one a scan picks first: a
         // code on two products (two tills) updates the product the till sells (2026-10 review).

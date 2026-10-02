@@ -20,6 +20,7 @@ import com.lekaspos.data.db.Db
 import com.lekaspos.data.print.PrintJobDao
 import com.lekaspos.data.sale.CommittedSale
 import com.lekaspos.data.sale.PaymentDraft
+import com.lekaspos.data.sale.PaymentRow
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
 import com.lekaspos.data.sale.SaleHeader
@@ -38,6 +39,12 @@ class ActionRefused(val reason: Reason) : Exception(reason.name) {
         /** Phase 4: shifts, customers and staff. */
         NEEDS_SHIFT, SHIFT_OPEN, NEEDS_CUSTOMER, OVER_CREDIT_LIMIT, HAS_BALANCE, LAST_OWNER, CREDIT_OFF, OWNER_PIN_FIRST,
         SEED_ROLE, ROLE_IN_USE, WRONG_PIN,
+
+        /** 2026-10 review: a repayment of more than the customer owes. */
+        MORE_THAN_OWED,
+
+        /** 2026-10 review: only an owner may make this change (an owner's PIN for it is asked for). */
+        OWNER_ONLY,
     }
 }
 
@@ -56,7 +63,17 @@ class SaleActions(private val graph: AppGraph) {
         val lines: List<SaleLineFull>,
         val sources: Map<Long, RefundSource>,
         val weighed: Set<Long> = emptySet(),
-    )
+        /** How the sale was paid: the refund pays back the same way by default. */
+        val payments: List<PaymentRow> = emptyList(),
+    ) {
+        /**
+         * The payment method a refund of this sale pays back with unless the cashier picks another:
+         * customer credit when any of it was on credit, else the method that paid the most. Cash was
+         * always first, and a new cashier paid out cash for goods taken on credit (2026-10 review).
+         */
+        val usualMethodId: Long?
+            get() = payments.firstOrNull { it.kind == PaymentKind.CREDIT }?.methodId ?: payments.maxByOrNull { it.amount }?.methodId
+    }
 
     suspend fun refundInfo(saleId: Long): RefundInfo? = graph.db().read { r ->
         val h = SaleQueries.header(r, saleId) ?: return@read null
@@ -65,7 +82,10 @@ class SaleActions(private val graph: AppGraph) {
         // A whole kilo sold (1.000 kg) could only be returned in whole kilos (2026-10 review).
         val byWeight = SaleQueries.soldByWeight(r, lines.mapNotNullTo(HashSet()) { it.productId })
         val weighed = lines.filter { l -> l.qty % 1000L != 0L || l.productId?.let { it in byWeight } == true }
-        RefundInfo(h, lines, lines.associate { it.id to source(it, done[it.id]) }, weighed.mapTo(HashSet()) { it.id })
+        RefundInfo(
+            h, lines, lines.associate { it.id to source(it, done[it.id]) }, weighed.mapTo(HashSet()) { it.id },
+            SaleQueries.payments(r, saleId),
+        )
     }
 
     /**
@@ -258,7 +278,9 @@ class SaleActions(private val graph: AppGraph) {
                     SaleLineDraft(
                         productId = l.productId, name = l.name, qty = -p.qty, baseQty = -p.baseQty, unitPrice = l.unitPrice,
                         gross = -p.gross, discount = -p.discount, billDiscount = -p.billDiscount, net = -p.net, tax = -p.tax,
-                        taxRateId = l.taxRateId, taxBp = l.taxBp, cost = -p.cost, barcode = l.barcode, unit = l.unit,
+                        // Goods that do not go back on the shelf are lost: their cost stays in cost of goods
+                        // (2026-10 review: profit left out every spoiled or broken item taken back).
+                        taxRateId = l.taxRateId, taxBp = l.taxBp, cost = if (restock) -p.cost else 0L, barcode = l.barcode, unit = l.unit,
                         categoryId = l.categoryId, refLineId = l.id, trackStock = l.stockQty != 0L, restock = restock,
                     )
                 },

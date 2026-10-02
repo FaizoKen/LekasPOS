@@ -100,6 +100,11 @@ class CartSessionTest {
         assertEquals(326L, items[1].fixedGross)
         assertEquals(253L, items[1].qty)
         assertEquals(listOf(1616L, 326L), cart.state.value.priced.lines.map { it.gross })
+
+        // 2026-10 review: a label with no weight or a 0.00 price went on the bill (0.001 kg, or free).
+        assertTrue(cart.scan(Gtin.withCheckDigit("20" + "01234" + "00000")) is CartSession.ScanResult.NeedsWeight)
+        assertTrue(cart.scan(Gtin.withCheckDigit("21" + "01234" + "00000")) is CartSession.ScanResult.NeedsWeight)
+        assertEquals(2, cart.state.value.cart.items.size) // nothing added
     }
 
     @Test

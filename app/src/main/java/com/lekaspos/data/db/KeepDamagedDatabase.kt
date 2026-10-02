@@ -42,6 +42,9 @@ object KeepDamagedDatabase : DatabaseErrorHandler {
         val db = ctx.getDatabasePath(name)
         val dir = File(ctx.filesDir, "backups").apply { mkdirs() }
         val stamp = System.currentTimeMillis()
+        // The marker first: killed while moving the files, the next start must still know that an
+        // empty store is not the shop's data (no "Data problem", automatic backups rotating).
+        marker(ctx).writeText(stamp.toString())
         for (suffix in listOf("", "-wal", "-shm", "-journal")) {
             val f = File(db.path + suffix)
             if (!f.exists()) continue
@@ -51,7 +54,6 @@ object KeepDamagedDatabase : DatabaseErrorHandler {
                 f.delete()
             }
         }
-        marker(ctx).writeText(stamp.toString())
         Log.e("The database could not be opened and was set aside as damaged-$stamp.db", cause)
     }
 
@@ -70,6 +72,13 @@ object KeepDamagedDatabase : DatabaseErrorHandler {
 
     /** A restore replaced the data: the problem of the set-aside file is over. */
     fun restored(ctx: Context) {
+        marker(ctx).delete()
+    }
+
+    /** Tests: forget the damage this process saw (other tests share the process). */
+    @androidx.annotation.VisibleForTesting
+    fun clearForTests(ctx: Context) {
+        problem = null
         marker(ctx).delete()
     }
 

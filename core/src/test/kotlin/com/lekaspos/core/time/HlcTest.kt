@@ -51,6 +51,18 @@ class HlcTest {
         assertTrue(hlc.now() < bogus)
     }
 
+    /** 2026-10 review: a till whose clock was set back stopped following the other tills. */
+    @Test
+    fun aClockSetBackStillFollowsTheOthersFromItsOwnLastTime() {
+        val day = 24L * 60L * 60L * 1000L
+        hlc.now()
+        wall -= 3 * day // the date was set three days back
+        val other = Hlc.pack(wall + 3 * day + 60_000L, 0) // another till, a minute after our last
+        assertTrue(hlc.observe(other))
+        assertTrue(hlc.now() > other)
+        assertFalse(hlc.observe(Hlc.pack(wall + 3 * day + 2 * day, 0))) // still not a till days ahead of us
+    }
+
     @Test
     fun resumesFromPersistedValue() {
         val persisted = Hlc.pack(wall + 1_000, 5)

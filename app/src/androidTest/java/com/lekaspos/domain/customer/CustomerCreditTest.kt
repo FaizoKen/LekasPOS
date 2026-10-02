@@ -99,6 +99,31 @@ class CustomerCreditTest {
         assertTrue(events.contains(Entity.CUSTOMER))
     }
 
+    /**
+     * 2026-10 review: a "repayment" of any size wiped a debt (or left credit to spend past the
+     * limit) without an audit entry, and cash ignored the 5-sen rounding (the drawer was 2 sen off).
+     */
+    @Test
+    fun repaymentsPayBackWhatIsOwedRoundedInCashAndAudited() = runBlocking {
+        val db = graph.db()
+        val card = PaymentMethod(Seed.Ids.PM_CARD, "Card", PaymentKind.CARD, false, 2)
+        val ali = graph.customers.save(null, Customer(0L, "Ali Bakar"))
+        graph.customers.adjust(ali.id, 1_003L, "notebook")
+        val shift = graph.shifts.open(0L)
+        refused(ActionRefused.Reason.MORE_THAN_OWED) { graph.customers.receivePayment(ali.id, 30_000L, card, null) }
+        assertEquals(1_003L, balance(ali.id))
+        // The whole debt in cash: RM10.05 goes into the drawer, 2 sen are cash rounding, nothing is owed.
+        assertEquals(0L, graph.customers.receivePayment(ali.id, 1_003L, cash, null))
+        val report = assertNotNull(graph.shifts.report(shift.id))
+        assertEquals(1_005L, report.cash.creditRepayments)
+        assertEquals(1_005L, report.cash.expected)
+        assertEquals(1L, db.read { AuditDao.countByAction(it, AuditAction.CREDIT_PAYMENT) })
+        refused(ActionRefused.Reason.MORE_THAN_OWED) { graph.customers.receivePayment(ali.id, 100L, cash, null) }
+        // Rebuilt balances agree with the entries (payment 10.05, rounding +0.02).
+        db.write(reserveIds = 0L) { tx -> DerivedRebuild.customerBalances(tx) }
+        assertEquals(0L, balance(ali.id))
+    }
+
     @Test
     fun goingOverTheLimitNeedsAManager() = runBlocking {
         val db = graph.db()

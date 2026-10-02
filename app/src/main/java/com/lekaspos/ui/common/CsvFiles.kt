@@ -10,11 +10,12 @@ import com.lekaspos.R
 import java.io.BufferedInputStream
 import java.io.BufferedWriter
 import java.io.File
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.Reader
 import java.nio.ByteBuffer
-import java.nio.charset.CharacterCodingException
+import java.nio.CharBuffer
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
 
@@ -65,11 +66,11 @@ object CsvFiles {
         return BufferedWriter(OutputStreamWriter(out, Charsets.UTF_8), 64 * 1024)
     }
 
-    fun share(a: Activity, file: File) {
+    fun share(a: Activity, file: File, mime: String = MIME) {
         val app = a.applicationContext
         val uri = FileProvider.getUriForFile(app, app.packageName + ".files", file)
         val send = Intent(Intent.ACTION_SEND)
-            .setType(MIME)
+            .setType(mime)
             .putExtra(Intent.EXTRA_STREAM, uri)
             .putExtra(Intent.EXTRA_SUBJECT, file.name)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -88,38 +89,44 @@ object CsvFiles {
         .putExtra(Intent.EXTRA_MIME_TYPES, OPEN_TYPES)
 
     /**
-     * A reader for an imported file: UTF-8 when the start of the file is valid UTF-8 (with or
-     * without BOM), otherwise Windows-1252 (Excel's "CSV" on Windows saves that).
+     * A reader for an imported file: UTF-16 when it starts with a UTF-16 BOM (Excel's "Unicode
+     * Text"), UTF-8 when the whole file is valid UTF-8 (with or without BOM), otherwise
+     * Windows-1252 (Excel's "CSV" on Windows saves that). The whole file is checked, in one pass
+     * of constant memory: judged by its first 32 KB, a file with "Nescafé" on row 700 was read as
+     * UTF-8 and the name imported as "Nescaf�" on every till (2026-10 review).
      */
     fun reader(ctx: Context, uri: Uri): Reader {
-        val input = BufferedInputStream(ctx.contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read $uri"), 64 * 1024)
-        input.mark(SNIFF)
-        val head = ByteArray(SNIFF)
-        var n = 0
-        while (n < SNIFF) {
-            val r = input.read(head, n, SNIFF - n)
-            if (r <= 0) break
-            n += r
-        }
-        input.reset()
-        return InputStreamReader(input, if (isUtf8(head, n)) Charsets.UTF_8 else Charset.forName("windows-1252"))
+        fun open() = ctx.contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read $uri")
+        val charset = open().use { charsetOf(it) }
+        return InputStreamReader(BufferedInputStream(open(), 64 * 1024), charset)
     }
 
-    /** Valid UTF-8? When the sample is full, a character cut off by its end (up to 3 bytes) is not an error. */
-    internal fun isUtf8(bytes: ByteArray, n: Int, full: Boolean = n == SNIFF): Boolean {
-        for (cut in 0..(if (full) minOf(3, n) else 0)) {
-            try {
-                Charsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes, 0, n - cut))
-                return true
-            } catch (e: CharacterCodingException) {
-                // try one byte shorter
-            }
+    /** The character set of a whole file read from [input] (see [reader]); [input] is read to its end. */
+    fun charsetOf(input: InputStream): Charset {
+        val buf = ByteBuffer.allocate(64 * 1024)
+        var read = input.read(buf.array(), 0, buf.capacity())
+        if (read <= 0) return Charsets.UTF_8
+        val a = buf.get(0).toInt() and 0xFF
+        val b = if (read > 1) buf.get(1).toInt() and 0xFF else -1
+        if (a == 0xFF && b == 0xFE) return Charsets.UTF_16LE // the CSV reader skips the BOM
+        if (a == 0xFE && b == 0xFF) return Charsets.UTF_16BE
+        val decoder = Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+        val out = CharBuffer.allocate(buf.capacity()) // a byte never makes more than one character
+        buf.position(read)
+        while (read >= 0) {
+            buf.flip()
+            if (decoder.decode(buf, out, false).isError) return WINDOWS_1252
+            out.clear()
+            buf.compact() // a character cut off by the end of this chunk is finished by the next one
+            read = input.read(buf.array(), buf.position(), buf.remaining())
+            if (read > 0) buf.position(buf.position() + read)
         }
-        return false
+        buf.flip()
+        if (decoder.decode(buf, out, true).isError || decoder.flush(out).isError) return WINDOWS_1252
+        return Charsets.UTF_8
     }
 
-    private const val SNIFF = 32 * 1024
+    private val WINDOWS_1252: Charset get() = Charset.forName("windows-1252")
 }

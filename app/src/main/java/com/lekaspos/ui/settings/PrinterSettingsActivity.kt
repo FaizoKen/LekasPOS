@@ -18,10 +18,13 @@ import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * This till's receipt printer and cash drawer (device-local settings): pick a paired Bluetooth
@@ -164,8 +167,7 @@ class PrinterSettingsActivity : ScreenActivity() {
         }
         val next = current()
         launchUi {
-            graph.settings.saveDevice(next)
-            graph.printer.reconnect()
+            graph.settings.saveDevice(next) { graph.printer.reconnect() }
             if (finishAfter) {
                 toast(R.string.saved)
                 finish()
@@ -179,15 +181,18 @@ class PrinterSettingsActivity : ScreenActivity() {
             requestBluetooth()
             return
         }
-        val paired = Bluetooth.paired(this)
-        if (paired.isEmpty()) {
-            Dialogs.message(this, getString(R.string.printer_choose), getString(R.string.printer_no_paired))
-            return
-        }
-        Dialogs.choose(this, getString(R.string.printer_choose), paired.map { "${it.name}\n${it.address}" }) { i ->
-            address = paired[i].address
-            printerName = paired[i].name
-            renderPrinter()
+        launchUi {
+            // Each device's name is a call to the Bluetooth service: off the main thread (2026-10 review).
+            val paired = withContext(Dispatchers.IO) { Bluetooth.paired(this@PrinterSettingsActivity) }
+            if (paired.isEmpty()) {
+                Dialogs.message(this@PrinterSettingsActivity, getString(R.string.printer_choose), getString(R.string.printer_no_paired))
+                return@launchUi
+            }
+            Dialogs.choose(this@PrinterSettingsActivity, getString(R.string.printer_choose), paired.map { "${it.name}\n${it.address}" }) { i ->
+                address = paired[i].address
+                printerName = paired[i].name
+                renderPrinter()
+            }
         }
     }
 
@@ -203,7 +208,7 @@ class PrinterSettingsActivity : ScreenActivity() {
             graph.printer.reconnect()
             choosePrinter()
         } else {
-            Dialogs.message(this, null, getString(R.string.printer_permission_needed))
+            bluetoothRefused(this, getString(R.string.printer_permission_needed))
         }
     }
 
@@ -245,4 +250,26 @@ class PrinterSettingsActivity : ScreenActivity() {
     companion object {
         private const val REQ_BT = 21
     }
+}
+
+/**
+ * The Bluetooth ("Nearby devices") permission was refused. After two refusals Android no longer
+ * asks, and a printer or scanner could never be chosen: the way to App info is offered (2026-10 review).
+ */
+internal fun bluetoothRefused(a: android.app.Activity, message: String) {
+    android.app.AlertDialog.Builder(a)
+        .setMessage(message)
+        .setPositiveButton(R.string.open_app_settings) { _, _ ->
+            try {
+                a.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(android.net.Uri.fromParts("package", a.packageName, null)),
+                )
+            } catch (e: android.content.ActivityNotFoundException) {
+                com.lekaspos.util.Log.w("No app settings screen", e)
+            }
+        }
+        .setNegativeButton(R.string.cancel, null)
+        .show()
+        .trackedBy(a)
 }
