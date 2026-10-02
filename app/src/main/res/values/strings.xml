@@ -406,6 +406,22 @@
     <string name="diag_share">Share report</string>
     <string name="diag_share_log">Share the error log</string>
     <string name="diag_log_empty">Nothing has gone wrong on this phone yet: the error log is empty.</string>
+    <!-- Error reports to the developer (D-057) -->
+    <string name="error_reports_title">Error reports</string>
+    <string name="error_reports_ask_title">Help fix problems?</string>
+    <string name="error_reports_ask_message">When something goes wrong in LekasPOS (the app stops, freezes or shows an error), this phone can send a short error report to the LekasPOS developer, so it gets fixed.\n\nA report says only what went wrong, the app version and the phone model. It never holds your sales, products, prices, customers, staff, PINs or Google account.\n\nYou can change this any time in Settings → Error reports.</string>
+    <string name="error_reports_yes">Send reports</string>
+    <string name="error_reports_no">Don’t send</string>
+    <string name="error_reports_on">On: sent to the LekasPOS developer</string>
+    <string name="error_reports_off">Off</string>
+    <string name="error_reports_unasked">Not chosen yet</string>
+    <string name="diag_send_report">Send a report to the developer</string>
+    <string name="diag_report_help">Sends this phone’s error log, the app version and the phone model, with what you type below. No sales, products or customers.</string>
+    <string name="diag_report_note">What happened? (optional)</string>
+    <string name="diag_report_contact">Your phone or e-mail, if you want a reply (optional)</string>
+    <string name="diag_report_send">Send</string>
+    <string name="diag_report_sent">Report sent. Thank you!</string>
+    <string name="diag_report_queued">The report will be sent when this phone is online.</string>
     <string name="diag_confirm_full_title">Run the full test?</string>
     <string name="diag_confirm_full_message">The full test creates about 350 MB of temporary test data and can take 5–20 minutes on a slow device. Keep the app open and the device charging. Your store data is not touched.</string>
     <string name="diag_start">Start</string>

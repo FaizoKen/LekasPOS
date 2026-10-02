@@ -21,6 +21,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 — latest download (phone tests passed) |
+| — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **in progress** — app and relay code done; the relay goes live once the owner renames the Cloudflare subdomain and adds two tokens |
 
 ## Open questions for the user
 
@@ -1012,3 +1013,37 @@ release after the owner's phone tests.
 14. **Diagnostics → Share the error log**: a text file (or "the error log is empty").
 15. Printer and drawer (when available): clear the queue while the printer is off, switch it on —
     nothing cleared prints.
+
+## 1.5.0 — error reports to the developer (D-057)
+
+The owner asked that errors, crashes and failed checks on shops' phones reach the developer by
+themselves, so bugs are known and fixed quickly. Design chosen with the owner: the shop is asked
+once; reports go through a small relay to a **private** GitHub repository, one issue per bug.
+
+- [x] `:core` `diag.CrashText` (fingerprint, title, scrubbing, ANR main thread) + `ErrorReport`,
+      8 unit tests
+- [x] `app.ErrorReports`: crashes, `Log.e`, failed perf test, Android 11+ ANR / app ended by
+      Android; queue in `files/reports`; `ReportWorker` job; crash tried at once (≤ 2.5 s); daily
+      limits; only release-signed builds send on their own
+- [x] The question on the selling screen (once; someone with the Settings permission; no bill open),
+      Settings → Error reports, Diagnostics → "Send a report to the developer" (note + optional
+      contact); English + Bahasa Melayu
+- [x] Refusals (`ActionRefused`) are warnings, not error reports
+- [x] R8 keeps the app's own class names (stable fingerprints): +67 KB
+- [x] Relay `relay/` (Cloudflare Worker) + 9 unit tests + `relay.yml`; private repository
+      `FaizoKen/LekasPOS-reports` with labels and the "Readable trace" workflow
+- [x] Privacy policy (EN + MS), `docs/PLAY.md` data safety, D-057, architecture.md §9
+- [ ] The owner renames the workers.dev subdomain to `faizoken` and adds the two tokens
+      (Cloudflare, GitHub) → the relay is deployed and answers
+- [ ] CI green (API 21 + 36 incl. the relay reached from Android 5), release smoke, test build
+
+### Needs real-device testing (1.5.0)
+
+1. Install over 1.4.0: data, staff and settings still there; the selling screen asks "Help fix
+   problems?" once (with no bill open). Answer **Send reports**.
+2. Settings → Error reports shows "On"; tap it, answer **Don't send** → "Off"; turn it on again.
+3. Diagnostics → **Send a report to the developer**, type a note → "Report sent" (or "will be sent
+   when online" with the internet off — then it goes by itself once online). The issue appears in
+   `FaizoKen/LekasPOS-reports` with the note.
+4. With PIN login on, a cashier without the Settings permission is never asked; the owner is.
+5. Everything else works as in 1.4.0 (a quick sale, a refund, a backup).

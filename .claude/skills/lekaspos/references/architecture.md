@@ -270,6 +270,17 @@ restore that `Db.open` applies before opening the database (D-044).
   `files/logs/errors.log`, 256 KB + one older file, written on its own thread), which Diagnostics →
   "Share the error log" sends (D-056). It never holds PINs, tokens or customer data.
 - Uncaught exceptions: logged to the error log (synchronously) before the default handler runs.
+- Error reports (D-057, `app.ErrorReports`): crashes, `Log.e` errors, a failed perf test and (API
+  30+) ANRs / the app ended by Android become report files in `files/reports` (one per fingerprint,
+  `core.diag.CrashText`; ≤ 20, 14 days), sent by the `ReportWorker` job to the relay (`relay/`, a
+  Cloudflare Worker that files them as issues in the private `FaizoKen/LekasPOS-reports`) only when
+  the shop said yes (asked once on the selling screen; Settings → Error reports; per phone, in a
+  preferences file) and only from release-signed builds; ≤ 10 a day, each bug once a day; a crash is
+  also tried once at once (≤ 2.5 s). Diagnostics → "Send a report" sends one by hand. Reports hold no
+  shop data; free text goes through `CrashText.scrub`. Never call `Log.e` from the reporting path
+  (a report about reports): it logs with `android.util.Log`. R8 keeps the app's own class names so
+  fingerprints match across builds. Tests that open the selling screen answer the question first
+  (`ErrorReports.setConsent(ctx, false)`), as they skip the welcome screen.
 - WorkManager gets initialisation and scheduling exception handlers: a full disk must never crash
   the app after every start (D-056).
 - A write that must update memory after its commit (shift open/close, device settings) runs in

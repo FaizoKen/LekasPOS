@@ -18,7 +18,8 @@
 (<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
 what happens to the information you put into it. In short: <strong>your data stays on your
 phone, and — only if you turn on sync — in your own Google Drive. The developer never receives
-any of it.</strong></p>
+any of it.</strong> If you allow error reports, the developer receives technical details about
+problems in the app, never your shop's data.</p>
 
 <h2>What the app stores</h2>
 <p>Everything you enter or record while running your shop: products, prices and stock; sales,
@@ -30,8 +31,8 @@ entered and are responsible for the customer and staff details you record.</p>
 
 <h2>What leaves the phone</h2>
 <ul>
-<li><strong>Nothing, by default.</strong> The app has no account with us, no servers, no
-analytics, no advertising and no crash-reporting services. It works fully offline.</li>
+<li><strong>Nothing, by default.</strong> The app has no account with us, no analytics and no
+advertising. It works fully offline.</li>
 <li><strong>Google Drive backup (optional).</strong> If you turn on Google Drive backup (Settings →
 Google Drive backup) and sign in with a Google account, the app stores its sync files in that
 account's <em>hidden app data folder</em> in Google Drive, so the shop's tills share the same data. The app asks Google only for
@@ -49,6 +50,21 @@ send or save them (for example WhatsApp, e-mail, a USB stick or your Drive).</li
 <li><strong>The error log, if you send it.</strong> The app keeps a short log of errors on the phone
 (technical messages only: no PINs, passwords, customer or sales details). It leaves the phone only
 if you send it yourself from Settings → Diagnostics, to whoever you choose.</li>
+<li><strong>Error reports (only if you allow them).</strong> The app asks once whether it may send
+error reports to the LekasPOS developer (change it any time in Settings → Error reports). If you
+allow them, a report is sent when the app stops, freezes, logs an error or fails a check. A report
+holds what went wrong (the technical error and the error log before it), the app version, the
+Android version, the phone model, its memory and free storage, the size of the app's data, the
+app's language and a random
+number for this installation (a new one each time reports are turned on). It never holds your
+sales, products, prices, customers, staff, PINs or Google account; e-mail addresses, long numbers
+and file names that appear in technical messages are removed first. Reports travel over an
+encrypted connection (HTTPS) through a small relay run on Cloudflare and are kept in the
+developer's private issue tracker on GitHub as long as they help fix the problem. Turning reports
+off deletes the ones not yet sent.</li>
+<li><strong>A report you send by hand.</strong> Settings → Diagnostics → "Send a report to the
+developer" sends the error log with what you type, including a phone number or e-mail address if
+you choose to leave one for a reply. It is sent and kept the same way as error reports.</li>
 </ul>
 
 <h2>Permissions</h2>
@@ -57,7 +73,8 @@ if you send it yourself from Settings → Diagnostics, to whoever you choose.</l
 paired in Android settings. The app does not scan for nearby devices or use your location.</li>
 <li><strong>Camera</strong> (optional) — to scan barcodes. Images are processed on the phone
 and are not stored or sent anywhere.</li>
-<li><strong>Internet and network state</strong> — only for Google Drive sync.</li>
+<li><strong>Internet and network state</strong> — for Google Drive sync and, if you allow them,
+error reports.</li>
 <li><strong>Keep awake</strong> — so backups and sync can finish in the background.</li>
 </ul>
 
@@ -70,6 +87,8 @@ on that phone (including the backups kept on it).</li>
 <li>Backup files copied to a folder you picked (SD card, USB drive) are not deleted with the app;
 delete them in a file manager.</li>
 <li>Backup and CSV files you saved elsewhere are yours to delete.</li>
+<li>To have error reports deleted, open an issue (below) with the phone model and roughly when the
+problem happened (reports do not say who you are).</li>
 </ul>
 
 <h2>Children</h2>

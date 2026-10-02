@@ -19,6 +19,7 @@ class LekasApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         ErrorLog.init(this) // crashes and logged failures go to files/logs (no disk work here)
+        ErrorReports.init(this) // and, if the shop allowed it, to the developer (D-057; no disk work here)
         if (BuildConfig.DEBUG) StrictModeSetup.enable()
         graph = AppGraph(this) // object creation only — no disk or network here (cold-start budget)
     }

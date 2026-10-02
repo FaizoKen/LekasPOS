@@ -38,6 +38,7 @@ public repositories):
 |---|---|---|
 | `.github/workflows/ci.yml` | every push to `main`, every PR, manual | JVM tests, lint, release/debug/test APKs, APK-size check (< 8 MB); then instrumented tests on API 21 (1 GB) and API 36 in parallel |
 | `.github/workflows/perf.yml` | manual (Actions → Performance → Run workflow, scale QUICK/FULL) | data generation + perf suite (instrumented, and the release build's in-app runner) + cold start on API 21 and API 36 |
+| `.github/workflows/relay.yml` | push to `main` touching `relay/`, manual | relay unit tests (`node --test`), deploy of the error-report relay to Cloudflare Workers, a test report over the internet (D-057) |
 
 Results: the run's summary page (APK size, test counts, perf report, cold start) and the
 uploaded artifacts (`apks`, `build-reports`, `instrumented-api*`, `perf-*`). The APKs artifact
@@ -45,6 +46,25 @@ is also the easiest way to get a build onto a test phone.
 
 The CI scripts live in `scripts/ci/` (bash). Locally, only the fast loop is needed:
 `.\gradlew.bat :core:test :app:testDebugUnitTest` and, when useful, a single emulator.
+
+## Error-report relay (D-057)
+
+Error reports from shops' phones go to `https://lekaspos-reports.faizoken.workers.dev/v1/report`
+(`relay/`, a Cloudflare Worker on the free plan) and become issues in the **private** repository
+`FaizoKen/LekasPOS-reports` (its README explains the labels; its "Readable trace" workflow
+comments the retraced trace using the release's `mapping-<version>.txt`). The address is in every
+APK (`ErrorReports.URL`): keep it working.
+
+`relay.yml` deploys it with these repository settings of `FaizoKen/LekasPOS`:
+
+| Name | Kind | What |
+|---|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | variable | the Cloudflare account (`b7a1867a…b24a`) |
+| `CLOUDFLARE_API_TOKEN` | secret | Cloudflare → My Profile → API Tokens → custom token: *Account · Workers Scripts · Edit* (+ *Account Settings · Read*), this account only |
+| `REPORTS_TOKEN` | secret | GitHub → Settings → Developer settings → fine-grained token: repository `FaizoKen/LekasPOS-reports` only, *Issues: Read and write*; it becomes the Worker's secret |
+
+Without the two secrets the workflow tests the relay but does not deploy it. Renew a token before
+it expires (then re-run the workflow). Locally: `cd relay; node --test`.
 
 ## Everyday commands (repo root, PowerShell)
 
@@ -139,6 +159,7 @@ the existing Android OAuth client keeps working.
    that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes.
 5. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
 6. Attach the CI build's `mapping.txt` (artifact `mapping`, kept 90 days) to the release as
-   `mapping-<version>.txt`, for reading crash traces (`retrace`).
+   `mapping-<version>.txt`, for reading crash traces (`retrace`). Error reports (D-057) are retraced
+   from there by the reports repository's "Readable trace" workflow, so attach it to pre-releases too.
 7. Google sign-in: the Android OAuth client in project `lekaspos` matches `com.lekaspos.app` +
    the release key's SHA-1 (see README); the consent screen is "In production" (D-051).

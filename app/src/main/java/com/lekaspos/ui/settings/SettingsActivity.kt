@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.BuildConfig
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
+import com.lekaspos.app.ErrorReports
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.Dialogs
@@ -21,17 +22,31 @@ import com.lekaspos.ui.diag.DiagnosticsActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.staff.StaffActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Settings hub. */
 class SettingsActivity : ScreenActivity() {
 
-    private class Entry(val title: Int, val subtitle: Int?, val target: Class<*>?, val action: (() -> Unit)? = null)
+    private class Entry(
+        val title: Int,
+        val subtitle: Int?,
+        val target: Class<*>?,
+        val sub: (() -> String?)? = null,
+        val action: (() -> Unit)? = null,
+    )
+
+    private var adapter: RowAdapter<Entry>? = null
+
+    /** This phone's answer about error reports (D-057), once read. */
+    private var reports: Int? = null
+    private var reportsRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.settings_title), R.layout.list_plain) ?: return
         val entries = listOf(
-            Entry(R.string.settings_language, null, null) { chooseLanguage() },
+            Entry(R.string.settings_language, null, null, sub = { languageName(AppLanguage.get(this)) }) { chooseLanguage() },
             Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java),
             Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java),
             Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java),
@@ -43,29 +58,43 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),
             Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
             Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
+            Entry(R.string.error_reports_title, null, null, sub = { reportsLine() }) { chooseReports() },
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
-            Entry(R.string.settings_about, null, null) { about() },
+            Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
         )
         val adapter = RowAdapter<Entry>(
-            bind = { h, e ->
-                val sub = if (e.title == R.string.settings_about) {
-                    aboutLine()
-                } else if (e.action != null) {
-                    languageName(AppLanguage.get(this))
-                } else {
-                    e.subtitle?.let { getString(it) }
-                }
-                h.set(getString(e.title), sub)
-            },
+            bind = { h, e -> h.set(getString(e.title), e.sub?.invoke() ?: e.subtitle?.let { getString(it) }) },
             onClick = { e ->
                 val action = e.action
                 if (action != null) action() else e.target?.let { startActivity(Intent(this, it)) }
             },
         )
         adapter.submit(entries)
+        this.adapter = adapter
+        reportsRow = entries.indexOfFirst { it.title == R.string.error_reports_title }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
+        val app = applicationContext
+        launchUi {
+            reports = withContext(Dispatchers.IO) { ErrorReports.consent(app) }
+            adapter.notifyItemChanged(reportsRow)
+        }
+    }
+
+    private fun reportsLine(): String? = when (reports) {
+        null -> null
+        ErrorReports.ON -> getString(R.string.error_reports_on)
+        ErrorReports.OFF -> getString(R.string.error_reports_off)
+        else -> getString(R.string.error_reports_unasked)
+    }
+
+    /** Error reports to the developer, on or off for this phone (D-057). */
+    private fun chooseReports() {
+        ReportsChoice.ask(this) { on ->
+            reports = if (on) ErrorReports.ON else ErrorReports.OFF
+            adapter?.notifyItemChanged(reportsRow)
+        }
     }
 
     /** "LekasPOS 1.0.0 (build 60) · GPL-3.0"; a build not signed with the release key says so. */

@@ -81,6 +81,7 @@ class IdleLockTest {
         val owner = Seed.Ids.STAFF_OWNER
         runBlocking {
             graph.settings.markSetupDone()
+            com.lekaspos.app.ErrorReports.setConsent(ctx, false) // no error-reports question on top (D-057)
             graph.staff.load()
             graph.staffAdmin.setPin(owner, "2468") // the store's first PIN signs the owner in
             graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = 1))

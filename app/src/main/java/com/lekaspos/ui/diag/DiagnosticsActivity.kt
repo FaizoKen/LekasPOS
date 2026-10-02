@@ -3,18 +3,21 @@ package com.lekaspos.ui.diag
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import com.lekaspos.R
+import com.lekaspos.app.ErrorReports
 import com.lekaspos.core.model.Perm
 import com.lekaspos.perf.PerfRunner
 import com.lekaspos.perf.PerfScale
 import com.lekaspos.perf.PerfSuite
 import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.CsvFiles
+import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.util.ErrorLog
@@ -103,6 +106,7 @@ class DiagnosticsActivity : ScreenActivity() {
                 if (file == null) toast(R.string.diag_log_empty) else CsvFiles.share(this@DiagnosticsActivity, file, "text/plain")
             }
         }
+        v.findViewById<Button>(R.id.send_report).setOnClickListener { sendReport() }
         share.setOnClickListener {
             val done = runner.state.value as? PerfRunner.State.Done ?: return@setOnClickListener
             val send = Intent(Intent.ACTION_SEND)
@@ -122,6 +126,32 @@ class DiagnosticsActivity : ScreenActivity() {
             PerfScale.values().firstOrNull { it.name == name }?.let { runner.start(it) }
         }
         scope.launch { runner.state.collect { render(it) } }
+    }
+
+    /**
+     * A report to the developer by hand (D-057): this phone's error log with the user's note and,
+     * if they want a reply, how to reach them. Sent now, or by the background job once online.
+     */
+    private fun sendReport() {
+        val f = Form(this)
+        f.info(getString(R.string.diag_report_help))
+        val note = f.text(getString(R.string.diag_report_note), "", lines = 3)
+        val contact = f.text(getString(R.string.diag_report_contact), "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.diag_send_report)
+            .setView(f.view)
+            .setPositiveButton(R.string.diag_report_send) { _, _ ->
+                val app = applicationContext
+                val typedNote = note.text.toString()
+                val typedContact = contact.text.toString()
+                launchUi {
+                    val sent = withContext(Dispatchers.IO) { ErrorReports.sendByHand(app, typedNote, typedContact) }
+                    toast(if (sent) R.string.diag_report_sent else R.string.diag_report_queued)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+            .trackedBy(this)
     }
 
     private fun render(s: PerfRunner.State) {

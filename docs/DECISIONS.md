@@ -753,6 +753,47 @@ till, out-of-stock lists, selling prices on receiving, counting notes and coins 
 Rejected: blocking every sale until the phone's time passes the till's last sale (a clock that ran
 ahead and was corrected would stop the shop for hours); computing the backup's counts outside the
 writer pause (the header must describe exactly the data copied).
+### D-057 — Error reports to the developer, with the shop's consent (1.5.0, 2026-10-02)
+The owner asked that errors, crashes and failed checks reach the developer by themselves, so bugs
+on shops' phones are known and fixed without waiting for a shop to send the error log (D-056).
+- **What is reported:** crashes, errors the app logs (`Log.e`), the performance test failing, and on
+  Android 11+ (`ApplicationExitInfo`, read at the next start) freezes (ANR, the main thread's stack)
+  and the app ended by Android (native crash; low memory while in use; too many resources; could
+  not start). Warnings are not reports; the error log's lines before an error go with it.
+- **What a report holds:** kind, title, the stack trace, the log before it, app version/build and
+  signing, Android version, phone model, RAM, free storage, database size, app language, a random
+  install id (new each time reports are turned on) — never sales, products, customers, staff, PINs,
+  tokens or the Google account. Free text goes through `core.diag.CrashText.scrub` (e-mail and
+  Bluetooth addresses, chosen files and folders, quoted values, numbers of 7+ digits).
+- **Consent:** asked once on the selling screen (someone with the Settings permission, no bill
+  open), changeable in Settings → Error reports, per phone (a preferences file: it must work when
+  the database is what failed). Off deletes what waits. Diagnostics → "Send a report to the
+  developer" sends one report by hand, with the user's note and optional contact, whatever the
+  setting. Only release-signed builds send on their own (test and CI builds would be noise).
+- **On the phone:** one file per bug in `files/reports` (repeats counted), at most 20, 14 days. A
+  WorkManager job sends them when online (exponential backoff), at most 10 a day and each bug once a
+  day; a crash is also tried once at once, for at most 2.5 s, so a crash at every start is heard.
+  Never on the main thread or in a sale's way; a report that cannot be kept or sent is dropped.
+- **Grouping:** a fingerprint (16 hex) from the exception types and the app's own frames without
+  line numbers, so the same bug is one fingerprint on every till and in every build. Release builds
+  therefore keep the names of the app's own classes (`-keep,allowshrinking,allowoptimization
+  class com.lekaspos.**`): +67 KB (1,290,284 → 1,357,473 bytes); libraries are still renamed.
+- **Where they go:** `relay/` — a Cloudflare Worker (free plan) deployed by `relay.yml` — checks a
+  report (format, sizes, 20 a minute per address) and files it in the **private** repository
+  `FaizoKen/LekasPOS-reports`: one issue per fingerprint (label `fp:…`), counts/tills/builds kept in
+  the issue, a comment for each new build, a closed issue reopened (`regression`) when a build newer
+  than every build seen before reports it again (not when labelled `wontfix`/`not-a-bug`). The relay
+  holds the only GitHub token (fine-grained: Issues on that repository). That repository's "Readable
+  trace" workflow comments the R8-retraced trace from the release's `mapping-<version>.txt`.
+- **No new dependency:** HttpURLConnection, `android.util.JsonWriter/JsonReader`, Play services'
+  `ProviderInstaller` (already there for Drive) for current TLS on old Android.
+Rejected: Firebase Crashlytics (Firebase SDKs need Android 6+ since 2025; a Google backend and
+SDK; rejected for privacy in D-045); Sentry (a good product, but another company holding the
+reports, a size cost, 5k events a month); ACRA (needs its own server, or an e-mail app that is
+not automatic); filing GitHub issues straight from the app (the token would be in every APK);
+the public repository (a slip in scrubbing or a spammed relay would be public for good, and a shop's
+contact must stay private); sending without asking (the privacy policy promised nothing leaves
+the phone by default); Google Play's Android vitals alone (not on Play yet, no logged errors).
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

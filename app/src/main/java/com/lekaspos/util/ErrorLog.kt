@@ -6,6 +6,7 @@ import com.lekaspos.core.time.DateText
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintWriter
+import java.io.RandomAccessFile
 import java.io.StringWriter
 import java.util.TimeZone
 import java.util.concurrent.Executors
@@ -14,9 +15,9 @@ import java.util.concurrent.RejectedExecutionException
 /**
  * The local error log (references/architecture.md §9): warnings, errors and the app's crashes,
  * appended to `files/logs/errors.log` (at most [MAX_BYTES], one older file kept) so a shop can send
- * what went wrong from Diagnostics. There is no crash reporting and no server: before this, a
- * release build's failures left no trace anyone could send (2026-10 review). Like every log line,
- * it holds no PINs, tokens or customer data (util.Log).
+ * what went wrong from Diagnostics, and app.ErrorReports sends errors and crashes to the developer
+ * when the shop allowed it (D-057). Before this, a release build's failures left no trace anyone
+ * could send (2026-10 review). Like every log line, it holds no PINs, tokens or customer data (util.Log).
  */
 object ErrorLog {
 
@@ -24,6 +25,7 @@ object ErrorLog {
     private const val OLDER = "errors.1.log"
     private const val MAX_BYTES = 256L * 1024L
     private const val MAX_TRACE_LINES = 40
+    private const val TAIL_CHARS = 8_000
 
     /** `files/logs`, from the app's data folder name: no Context kept, no disk touched at start. */
     @Volatile
@@ -38,7 +40,9 @@ object ErrorLog {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, e ->
             try {
+                val before = onCrash?.let { tail(TAIL_CHARS) }.orEmpty()
                 write(entry("CRASH", "uncaught on ${thread.name}", e)) // the process is ending: written here and now
+                onCrash?.invoke(thread, e, before)
             } catch (t: Throwable) {
                 // nothing more can be done
             }
@@ -46,13 +50,57 @@ object ErrorLog {
         }
     }
 
+    /**
+     * Told about every logged error (on this log's own thread) with the log's lines before it, and
+     * about a crash (on the crashing thread, after it is written): app.ErrorReports (D-057).
+     */
+    @Volatile
+    var onError: ((message: String, t: Throwable?, thread: String, before: String) -> Unit)? = null
+
+    @Volatile
+    var onCrash: ((thread: Thread, e: Throwable, before: String) -> Unit)? = null
+
     fun append(level: String, message: String, t: Throwable?) {
         if (dir == null) return
         val text = entry(level, message, t)
+        val thread = Thread.currentThread().name
         try {
-            writer.execute { write(text) }
+            writer.execute {
+                val hook = if (level == "E") onError else null
+                try {
+                    if (hook != null) hook(message, t, thread, tail(TAIL_CHARS))
+                } catch (e: Throwable) {
+                    // the log line below matters more
+                }
+                write(text)
+            }
         } catch (e: RejectedExecutionException) {
             // shutting down
+        }
+    }
+
+    /** The end of the log (at most [maxChars], from a line start), oldest first. Blocking. */
+    @Synchronized
+    fun tail(maxChars: Int): String {
+        val d = dir ?: return ""
+        return try {
+            val sb = StringBuilder()
+            for (f in listOf(File(d, FILE), File(d, OLDER))) { // newest first, until there is enough
+                if (sb.length >= maxChars || !f.exists()) continue
+                val want = (maxChars - sb.length).toLong()
+                RandomAccessFile(f, "r").use { raf ->
+                    val start = maxOf(0L, raf.length() - want)
+                    val bytes = ByteArray((raf.length() - start).toInt())
+                    raf.seek(start)
+                    raf.readFully(bytes)
+                    var text = String(bytes, Charsets.UTF_8)
+                    if (start > 0L) text = text.substringAfter('\n', "")
+                    sb.insert(0, text)
+                }
+            }
+            sb.toString()
+        } catch (e: Exception) {
+            ""
         }
     }
 

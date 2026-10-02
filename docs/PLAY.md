@@ -53,9 +53,9 @@ Google sign-in is public. Going on Play then means:
 
 ## Data safety (draft answers)
 
-Key facts: no developer servers, no analytics/ads/crash SDKs. Data leaves the device only when
-the user turns on **Google Drive sync** (to their own Drive app folder, over HTTPS) or shares a
-file themselves.
+Key facts: no analytics/ads/crash SDKs. Data leaves the device only when the user turns on
+**Google Drive sync** (to their own Drive app folder, over HTTPS), allows **error reports** (D-057:
+asked once, off unless allowed; to the developer through the relay), or shares a file themselves.
 
 - **Does the app collect or share user data?** Google counts data sent off the device as
   "collected" even when it goes to the user's own cloud account, so answer **Yes, collected**
@@ -65,23 +65,28 @@ file themselves.
   - Financial info: *Purchase history* (the shop's sales records) — optional, app functionality.
   - Personal info: *Email address* (the Google account, read to show which account syncs) —
     optional, app functionality.
-  - App info and performance: none. Device or other IDs: none. Location: none. (The local error
-    log of D-056 stays on the phone; only the user sends it, by hand, to whoever they choose —
-    user-initiated sharing, not collection.)
-- **Shared with third parties:** no (Google Drive stores the user's own data on their behalf).
+  - App info and performance: *Crash logs* and *Diagnostics* (error reports, D-057) — optional
+    (the user allows them), purpose *Analytics* (finding and fixing bugs); not shared. A report sent
+    by hand from Diagnostics may hold an *Email address* or *Phone number* the user types for a reply
+    — optional, purpose *Developer communications*.
+  - Device or other IDs: none (the reports' install id is random, reset when reports are turned
+    on again, and linked to nothing — Play counts it under Diagnostics, not as a device ID).
+    Location: none.
+- **Shared with third parties:** no (Google Drive stores the user's own data on their behalf;
+  Cloudflare and GitHub carry and store error reports as the developer's service providers).
 - **Processed ephemerally:** no. **Required or optional:** optional (sync is off by default).
-- **Encrypted in transit:** yes (HTTPS to Google).
+- **Encrypted in transit:** yes (HTTPS to Google and to the report relay).
 - **Users can request deletion:** yes — uninstall / clear storage deletes local data; Drive →
   Settings → Manage apps → LekasPOS → Delete hidden app data deletes synced data (explained in
   the privacy policy).
 
-Re-check before submitting: if a later version adds crash reporting, a server, or any SDK that
-sends data, these answers and the privacy policy change first.
+Re-check before submitting: if a later version changes what error reports hold, adds a server, or
+any SDK that sends data, these answers and the privacy policy change first.
 
 ## Permissions to explain if Play asks
 
 - `BLUETOOTH_CONNECT` (and `BLUETOOTH` ≤ API 30): paired receipt printers and serial scanners;
   no scanning, no location.
 - `CAMERA`: optional barcode scanning, frames processed on the device.
-- `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync only.
+- `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync, and error reports when the shop allows them.
 - `WAKE_LOCK` (and WorkManager's foreground-service entry): background backups and sync.

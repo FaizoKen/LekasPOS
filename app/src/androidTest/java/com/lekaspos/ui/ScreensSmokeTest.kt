@@ -77,6 +77,7 @@ class ScreensSmokeTest {
     @Before
     fun skipFirstRunSetup() = runBlocking {
         LekasApp.graph(ctx).settings.markSetupDone()
+        com.lekaspos.app.ErrorReports.setConsent(ctx, false) // nor the error-reports question (D-057)
         LekasApp.graph(ctx).staff.load() // as the selling screen does at start: nothing is allowed before
     }
 

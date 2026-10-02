@@ -18,7 +18,8 @@
 (<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
 apa yang berlaku kepada maklumat yang anda masukkan. Ringkasnya: <strong>data anda kekal dalam
 telefon anda, dan — hanya jika anda menghidupkan segerak — dalam Google Drive anda sendiri.
-Pembangun tidak pernah menerima sebarang data ini.</strong></p>
+Pembangun tidak pernah menerima sebarang data ini.</strong> Jika anda membenarkan laporan ralat,
+pembangun menerima butiran teknikal tentang masalah dalam aplikasi, bukan data kedai anda.</p>
 
 <h2>Apa yang disimpan oleh aplikasi</h2>
 <p>Semua yang anda masukkan atau rekodkan semasa menjalankan kedai: produk, harga dan stok;
@@ -32,8 +33,7 @@ dimasukkan dan bertanggungjawab atas butiran pelanggan dan kakitangan yang anda 
 <h2>Apa yang keluar dari telefon</h2>
 <ul>
 <li><strong>Tiada apa-apa, secara lalai.</strong> Aplikasi ini tiada akaun dengan kami, tiada
-pelayan, tiada analitik, tiada iklan dan tiada perkhidmatan laporan ranap. Ia berfungsi
-sepenuhnya tanpa internet.</li>
+analitik dan tiada iklan. Ia berfungsi sepenuhnya tanpa internet.</li>
 <li><strong>Sandaran Google Drive (pilihan).</strong> Jika anda menghidupkan sandaran Google Drive
 (Tetapan → Sandaran Google Drive) dan log masuk dengan akaun Google, aplikasi menyimpan fail segeraknya dalam <em>folder
 data aplikasi tersembunyi</em> akaun itu di Google Drive, supaya semua kaunter kedai berkongsi
@@ -54,6 +54,21 @@ Drive anda).</li>
 telefon (mesej teknikal sahaja: tiada PIN, kata laluan, butiran pelanggan atau jualan). Ia hanya
 keluar dari telefon jika anda sendiri menghantarnya dari Tetapan → Diagnostik, kepada sesiapa yang
 anda pilih.</li>
+<li><strong>Laporan ralat (hanya jika anda membenarkannya).</strong> Aplikasi bertanya sekali sama ada
+ia boleh menghantar laporan ralat kepada pembangun LekasPOS (tukar bila-bila masa di Tetapan →
+Laporan ralat). Jika dibenarkan, laporan dihantar apabila aplikasi berhenti, tersekat, merekod
+ralat atau gagal sesuatu semakan. Laporan mengandungi apa yang tidak kena (ralat teknikal dan log
+ralat sebelumnya), versi aplikasi, versi Android, model telefon, memori dan storan kosongnya, saiz
+data aplikasi, bahasa aplikasi dan satu nombor rawak bagi pemasangan ini (nombor baharu setiap kali
+laporan dihidupkan). Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, pekerja,
+PIN atau akaun Google anda; alamat e-mel, nombor panjang dan nama fail dalam mesej teknikal dibuang
+terlebih dahulu. Laporan dihantar melalui sambungan yang disulitkan (HTTPS) menerusi geganti kecil
+di Cloudflare dan disimpan dalam penjejak isu peribadi pembangun di GitHub selagi ia membantu
+membaiki masalah. Mematikan laporan memadam laporan yang belum dihantar.</li>
+<li><strong>Laporan yang anda hantar sendiri.</strong> Tetapan → Diagnostik → "Hantar laporan kepada
+pembangun" menghantar log ralat bersama apa yang anda taip, termasuk nombor telefon atau alamat
+e-mel jika anda memilih untuk meninggalkannya untuk dibalas. Ia dihantar dan disimpan dengan cara
+yang sama seperti laporan ralat.</li>
 </ul>
 
 <h2>Kebenaran</h2>
@@ -63,7 +78,8 @@ anda pasangkan dalam tetapan Android. Aplikasi tidak mengimbas peranti berdekata
 menggunakan lokasi anda.</li>
 <li><strong>Kamera</strong> (pilihan) — untuk mengimbas kod bar. Imej diproses dalam telefon dan
 tidak disimpan atau dihantar ke mana-mana.</li>
-<li><strong>Internet dan keadaan rangkaian</strong> — hanya untuk segerak Google Drive.</li>
+<li><strong>Internet dan keadaan rangkaian</strong> — untuk segerak Google Drive dan, jika anda
+membenarkannya, laporan ralat.</li>
 <li><strong>Kekal berjaga</strong> — supaya sandaran dan segerak dapat diselesaikan di latar
 belakang.</li>
 </ul>
@@ -78,6 +94,8 @@ tersembunyi.</li>
 <li>Fail sandaran yang disalin ke folder yang anda pilih (kad SD, pemacu USB) tidak dipadam bersama
 aplikasi; padamkannya dengan pengurus fail.</li>
 <li>Fail sandaran dan CSV yang anda simpan di tempat lain adalah milik anda untuk dipadam.</li>
+<li>Untuk memadam laporan ralat, buka isu (di bawah) dengan model telefon dan anggaran bila masalah
+itu berlaku (laporan tidak menyatakan siapa anda).</li>
 </ul>
 
 <h2>Kanak-kanak</h2>

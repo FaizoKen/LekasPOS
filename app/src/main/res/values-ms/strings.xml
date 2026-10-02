@@ -402,6 +402,22 @@
     <string name="diag_share">Kongsi laporan</string>
     <string name="diag_share_log">Kongsi log ralat</string>
     <string name="diag_log_empty">Tiada masalah berlaku pada telefon ini lagi: log ralat kosong.</string>
+    <!-- Laporan ralat kepada pembangun (D-057) -->
+    <string name="error_reports_title">Laporan ralat</string>
+    <string name="error_reports_ask_title">Bantu baiki masalah?</string>
+    <string name="error_reports_ask_message">Apabila berlaku masalah dalam LekasPOS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun LekasPOS supaya ia dibaiki.\n\nLaporan hanya menyatakan apa yang tidak kena, versi aplikasi dan model telefon. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, pekerja, PIN atau akaun Google anda.\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
+    <string name="error_reports_yes">Hantar laporan</string>
+    <string name="error_reports_no">Jangan hantar</string>
+    <string name="error_reports_on">Hidup: dihantar kepada pembangun LekasPOS</string>
+    <string name="error_reports_off">Mati</string>
+    <string name="error_reports_unasked">Belum dipilih</string>
+    <string name="diag_send_report">Hantar laporan kepada pembangun</string>
+    <string name="diag_report_help">Menghantar log ralat telefon ini, versi aplikasi dan model telefon, bersama apa yang anda taip di bawah. Tiada jualan, produk atau pelanggan.</string>
+    <string name="diag_report_note">Apa yang berlaku? (pilihan)</string>
+    <string name="diag_report_contact">Telefon atau e-mel anda, jika mahu dibalas (pilihan)</string>
+    <string name="diag_report_send">Hantar</string>
+    <string name="diag_report_sent">Laporan dihantar. Terima kasih!</string>
+    <string name="diag_report_queued">Laporan akan dihantar apabila telefon ini dalam talian.</string>
     <string name="diag_confirm_full_title">Jalankan ujian penuh?</string>
     <string name="diag_confirm_full_message">Ujian penuh mencipta kira-kira 350 MB data ujian sementara dan boleh mengambil masa 5–20 minit pada peranti yang perlahan. Biarkan aplikasi terbuka dan peranti sedang dicas. Data kedai anda tidak disentuh.</string>
     <string name="diag_start">Mula</string>

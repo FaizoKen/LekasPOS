@@ -15,6 +15,12 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Error reports (D-057): the app's own classes and methods keep their names, so a crash trace
+# reads the same in every build and the same bug gets the same fingerprint (core.diag.CrashText).
+# Still shrunk and optimized; libraries are still renamed. The source is public (GPL), so the
+# names hide nothing.
+-keep,allowshrinking,allowoptimization class com.lekaspos.** { *; }
+
 # WorkManager keeps its job list in a Room database whose generated class is created by
 # reflection (WorkDatabase_Impl.<init>()). R8 removed that constructor, and the release build
 # crashed ~1.5 s after the selling screen opened (Phase 6 tester build). Caught by the CI

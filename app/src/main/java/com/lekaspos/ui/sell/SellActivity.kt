@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
+import com.lekaspos.app.ErrorReports
 import com.lekaspos.app.LekasApp
 import com.lekaspos.app.Work
 import com.lekaspos.core.cart.CartItem
@@ -83,6 +84,7 @@ import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
 import com.lekaspos.ui.settings.BackupActivity
 import com.lekaspos.ui.settings.PrinterSettingsActivity
+import com.lekaspos.ui.settings.ReportsChoice
 import com.lekaspos.ui.settings.SettingsActivity
 import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.SyncActivity
@@ -106,6 +108,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.coroutines.withContext
 
 /**
  * The selling screen: launcher and home (references/architecture.md §4). Scanners work without
@@ -182,6 +185,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var hasCamera = false
     private var priceCheck: PriceCheckDialog? = null
     private var setupChecked = false
+
+    /** The error-reports question was considered this time on screen (D-057). */
+    private var reportsChecked = false
     private var backCallback: Any? = null
     private val dialogs = DialogTracker()
 
@@ -298,15 +304,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 reportedDrawn = true
                 reportFullyDrawn()
             }
+            var setupShown = false
             if (!setupChecked) {
                 setupChecked = true
-                if (graph.settings.needsSetup()) startActivity(Intent(this@SellActivity, SetupActivity::class.java))
+                if (graph.settings.needsSetup()) {
+                    startActivity(Intent(this@SellActivity, SetupActivity::class.java))
+                    setupShown = true
+                }
             }
+            if (!setupShown && !reportsChecked) askAboutReports()
             delay(HARDWARE_DELAY_MS) // keep Bluetooth work out of the cold-start path
             graph.printer.start()
             graph.sppScanner.start()
             val app = applicationContext
-            graph.appScope.launch(Dispatchers.IO) { Work.schedule(app) } // background jobs, after the till is usable (WorkManager starts here, off the main thread)
+            graph.appScope.launch(Dispatchers.IO) {
+                Work.schedule(app) // background jobs, after the till is usable (WorkManager starts here, off the main thread)
+                ErrorReports.atStart(app) // waiting error reports, and how the app last ended (D-057)
+            }
             graph.sync.refreshStatus()
             graph.autoSync.start() // the other tills' changes now, and again when the internet comes back (D-053)
             graph.backups.refreshProtection()
@@ -352,6 +366,24 @@ class SellActivity : Activity(), LineActions, DialogHost {
         graph.staff.lockIfIdle()
     }
 
+    /**
+     * Error reports (D-057): asked once, of someone who may change settings, with no bill open;
+     * otherwise again the next time this screen starts.
+     */
+    private suspend fun askAboutReports() {
+        val app = applicationContext
+        if (withContext(Dispatchers.IO) { ErrorReports.consent(app) } != ErrorReports.UNASKED) {
+            reportsChecked = true
+            return
+        }
+        val staff = graph.staff.state.value
+        val mayDecide = staff.loaded && !staff.locked &&
+            (!staff.loginRequired || staff.current?.let { Perm.has(it.perms, Perm.SETTINGS) } == true)
+        if (!mayDecide || graph.cart.state.value.cart.items.isNotEmpty() || isFinishing) return
+        reportsChecked = true
+        ReportsChoice.ask(this)
+    }
+
     override fun onStop() {
         started?.cancel()
         started = null
@@ -379,7 +411,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun track(d: android.app.Dialog) = dialogs.track(d)
 
     private fun showFailure(e: Throwable) {
-        Log.e("Selling screen job failed", e)
+        // A refusal is the rule working, not a bug: no error report (D-057).
+        if (e is ActionRefused) Log.w("Selling screen action refused: ${e.reason}") else Log.e("Selling screen job failed", e)
         if (isFinishing || isDestroyed || failureDialog?.isShowing == true) return // one message is enough
         val text = if (e is Exception) {
             ScreenActivity.errorText(this, e)

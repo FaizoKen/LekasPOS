@@ -77,7 +77,9 @@ When a decision changes: update the reference file here **and** add an entry to
 - Touch targets ≥ 48dp everywhere, ≥ 56dp on the selling screen. Layouts must work on a
   5-inch phone and a 10-inch tablet, portrait and landscape.
 - Logging via `com.lekaspos.util.Log` only; never log PINs, tokens or customer data.
-  Release builds strip debug/verbose logs with R8.
+  Release builds strip debug/verbose logs with R8. `Log.e` is for real failures: each one becomes
+  an error report to the developer when the shop allows them (D-057); expected outcomes (offline,
+  printer off, a rule refusing an action) use `Log.w`.
 - Tests: JVM unit tests for all `:core` rules; instrumented tests for SQL (they must pass on
   an API 21 image — the SQLite 3.8.4 check). Test method names are camelCase (no backticks:
   DEX rejects spaces in method names below API 30).

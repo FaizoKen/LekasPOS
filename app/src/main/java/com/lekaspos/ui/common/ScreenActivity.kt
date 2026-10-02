@@ -351,7 +351,8 @@ abstract class ScreenActivity : Activity(), DialogHost {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e("Screen action failed", e)
+            // A refusal is the rule working (not allowed, over the limit ...), not a bug: no error report (D-057).
+            if (e is ActionRefused) Log.w("Screen action refused: ${e.reason}") else Log.e("Screen action failed", e)
             Dialogs.message(this@ScreenActivity, getString(R.string.error_title), errorText(this@ScreenActivity, e))
         }
     }

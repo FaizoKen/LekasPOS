@@ -3,6 +3,7 @@ package com.lekaspos.perf
 import android.content.Context
 import android.os.PowerManager
 import android.os.SystemClock
+import com.lekaspos.app.ErrorReports
 import com.lekaspos.util.Log
 import java.io.File
 import java.text.SimpleDateFormat
@@ -70,6 +71,8 @@ class PerfRunner(private val context: Context, private val scope: CoroutineScope
                 val file = save(report)
                 for (line in report.toText().lines()) android.util.Log.i(LOG_TAG, line)
                 android.util.Log.i(LOG_TAG, "DONE ${if (report.passed) "PASS" else "FAIL"} ${file?.absolutePath ?: "-"}")
+                // Too slow on this phone: worth knowing (an error report, when the shop allows them — D-057).
+                if (!report.passed) ErrorReports.check("Performance test failed (${scale.name})", report.toText())
                 mutableState.value = State.Done(report, file)
             } catch (e: PerfDataGenerator.Cancelled) {
                 mutableState.value = State.Idle

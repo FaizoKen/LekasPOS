@@ -12,6 +12,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.lekaspos.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,6 +26,8 @@ object Work {
     private const val BACKUP = "backup-daily"
     private const val SYNC = "sync-periodic"
     private const val SYNC_SOON = "sync-soon"
+    private const val REPORTS = "error-reports"
+    private const val REPORTS_LATER = "error-reports-later"
 
     /**
      * Never throws: a till without background jobs still sells (backups and sync then run only
@@ -51,6 +55,20 @@ object Work {
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(SYNC_SOON, ExistingWorkPolicy.KEEP, req)
+    }
+
+    /**
+     * Sends waiting error reports when the phone is online (ErrorReports, D-057), now or in
+     * [laterHours]. Throws: ErrorReports handles a failure without logging an error (that would
+     * be a report about reports). Off the main thread.
+     */
+    fun sendReports(context: Context, laterHours: Long = 0) {
+        val req = OneTimeWorkRequestBuilder<ReportWorker>()
+            .setInitialDelay(laterHours, TimeUnit.HOURS)
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(if (laterHours > 0) REPORTS_LATER else REPORTS, ExistingWorkPolicy.KEEP, req)
     }
 
     /** The app already synced (auto sync, D-053): the fallback "sync soon" job is not needed. Off the main thread. */
@@ -81,6 +99,21 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     } catch (e: Exception) {
         Log.e("Automatic backup failed", e)
         if (runAttemptCount < 3) Result.retry() else Result.failure()
+    }
+}
+
+/** Sends waiting error reports (D-057): retried with backoff while offline; reports held by the daily limits go later. */
+class ReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        when (ErrorReports.sendPending(applicationContext)) {
+            ErrorReports.Outcome.DONE -> Result.success()
+            ErrorReports.Outcome.LATER -> {
+                ErrorReports.later(applicationContext)
+                Result.success()
+            }
+            // The relay or the network is down; after that the next start or error tries again.
+            ErrorReports.Outcome.RETRY -> if (runAttemptCount < 8) Result.retry() else Result.success()
+        }
     }
 }
 

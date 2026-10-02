@@ -1,0 +1,18 @@
+# The error-report relay (D-057): deployed by .github/workflows/relay.yml. The GitHub token is a
+# Worker secret (REPORTS_TOKEN), set by that workflow from the repository secret of the same name.
+name = "lekaspos-reports"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+REPORTS_REPO = "FaizoKen/LekasPOS-reports"
+# Not a secret (it is in every APK): it only keeps stray requests out. Must match ErrorReports.KEY.
+REPORT_KEY = "8b0c2e4f6f096ab8b1cb5d90"
+
+# At most 20 reports a minute from one address (each till sends a few a day at most).
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1057"
+simple = { limit = 20, period = 60 }
