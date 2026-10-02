@@ -212,10 +212,15 @@ class StaffTest {
         val (_, cashier) = team()
         graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = 5))
         graph.staff.lock()
+        graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, StaffSession.KEY_SEEN, null) }
+        val before = System.currentTimeMillis()
         assertIs<StaffSession.Check.Ok>(graph.staff.signIn(cashier, "1111"))
-        // The heartbeat of the sign-ins is stored in the background ...
-        while (graph.db().read { Meta.get(it, StaffSession.KEY_SEEN) } == null) kotlinx.coroutines.delay(20L)
-        // ... it was ten minutes ago, then the power went: no screen stopped, no away time was stored.
+        // The sign-in itself stores the first heartbeat: a power cut right after it counts from it.
+        assertTrue(assertNotNull(graph.db().read { Meta.getLong(it, StaffSession.KEY_SEEN) }) >= before)
+        TestGraph.close(graph)
+        graph = TestGraph.reopen(name)
+        assertEquals(cashier, graph.staff.state.value.current?.id) // a short cut: still signed in
+        // The last activity was ten minutes ago, then the power went: no screen stopped, no away time.
         graph.db().write(reserveIds = 0L) { tx ->
             Meta.put(tx.db, StaffSession.KEY_SEEN, (System.currentTimeMillis() - 10 * 60_000L).toString())
             Meta.put(tx.db, StaffSession.KEY_AWAY, null)

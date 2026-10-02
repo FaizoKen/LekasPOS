@@ -8,6 +8,7 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.staff.PinHash
 import com.lekaspos.core.staff.PinLockout
 import com.lekaspos.data.audit.AuditDao
+import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.Seed
 import com.lekaspos.data.staff.Staff
@@ -172,6 +173,7 @@ class StaffSession(private val graph: AppGraph) {
             synchronized(stateLock) { generation++ }
             graph.db().write(reserveIds = 2L) { tx ->
                 Meta.put(tx.db, KEY_STAFF, staffId.toString())
+                seen(tx, now) // the heartbeat starts with the sign-in, not with the first touch after it
                 AuditDao.log(tx, AuditAction.SIGN_IN, staffId, now, Entity.STAFF, staffId)
             }
             graph.permissions.clear()
@@ -187,7 +189,10 @@ class StaffSession(private val graph: AppGraph) {
     /** Signs [staff] in without a PIN check: right after they set their own PIN. */
     internal suspend fun adopt(staff: Staff) {
         synchronized(stateLock) { generation++ }
-        graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_STAFF, staff.id.toString()) }
+        graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, KEY_STAFF, staff.id.toString())
+            seen(tx, System.currentTimeMillis())
+        }
         touch()
         synchronized(stateLock) {
             generation++
@@ -299,6 +304,12 @@ class StaffSession(private val graph: AppGraph) {
         heartbeatAt = now
         val at = System.currentTimeMillis()
         graph.appScope.launch { graph.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_SEEN, at.toString()) } }
+    }
+
+    /** Stores [at] as the last activity of the person signing in: a power cut right after counts from it. */
+    private fun seen(tx: Db.Tx, at: Long) {
+        Meta.put(tx.db, KEY_SEEN, at.toString())
+        heartbeatAt = SystemClock.elapsedRealtime()
     }
 
     /** Time since boot of the last [KEY_SEEN] write (0: none yet in this process). */

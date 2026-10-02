@@ -53,6 +53,10 @@ class BackupTest {
         repeat(n) { db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 1_000L)), tz) } }
     }
 
+    /** Copies kept by restores (file times are whole seconds on Android 5: never pick one by time). */
+    private fun replacedCopies(): Set<File> =
+        Restore.backupDir(ctx).listFiles { f -> f.name.startsWith(Restore.REASON_REPLACED) }.orEmpty().toSet()
+
     private fun backupBytes(): ByteArray = runBlocking {
         val out = ByteArrayOutputStream()
         BackupFiles.write(graph.db(), out, File(ctx.cacheDir, "backup-test"), "test", "manual")
@@ -73,6 +77,7 @@ class BackupTest {
         val (device, store) = db.read { Meta.get(it, Meta.DEVICE_NO) to Meta.get(it, Meta.STORE_UUID) }
         db.writeBlocking { tx -> PrintJobDao.enqueue(tx, PrintJobKind.RECEIPT, 1L, 1, System.currentTimeMillis()) }
 
+        val earlier = replacedCopies()
         Restore.stage(ctx, ByteArrayInputStream(bytes), Restore.Mode.REPLACE)
         TestGraph.close(graph)
         graph = TestGraph.reopen(name) // the "restart": the staged restore goes in before opening
@@ -82,9 +87,10 @@ class BackupTest {
         assertEquals(store, restored.read { Meta.get(it, Meta.STORE_UUID) })
         assertEquals(0L, restored.read { it.long("SELECT COUNT(*) FROM print_job") }) // stale jobs never print
         // The data that was replaced was kept as a backup first.
-        val kept = Restore.backupDir(ctx).listFiles { f -> f.name.startsWith(Restore.REASON_REPLACED) }.orEmpty().maxByOrNull { it.lastModified() }
-        val keptHeader = assertNotNull(kept?.inputStream()?.use { BackupFiles.readHeader(it) })
+        val kept = (replacedCopies() - earlier).single()
+        val keptHeader = assertNotNull(kept.inputStream().use { BackupFiles.readHeader(it) })
         assertEquals(50L, keptHeader.sales)
+        kept.delete()
     }
 
     /** 2026-10 review: a restore left no trace, and a doctored backup could bring triggers of its own. */
@@ -95,6 +101,7 @@ class BackupTest {
         db.writeBlocking { tx -> tx.db.execSQL("CREATE TRIGGER sneaky AFTER INSERT ON audit_log BEGIN DELETE FROM audit_log; END") }
         val bytes = backupBytes()
         db.writeBlocking { tx -> tx.db.execSQL("DROP TRIGGER sneaky") }
+        val earlier = replacedCopies()
         Restore.prepare(ctx, ByteArrayInputStream(bytes), Restore.Mode.REPLACE, Restore.Who(com.lekaspos.data.db.Seed.Ids.STAFF_OWNER, null))
         assertTrue(Restore.arm(ctx))
         TestGraph.close(graph)
@@ -107,6 +114,7 @@ class BackupTest {
             }
         }
         assertTrue(details.any { it.startsWith("backup restored") }, details.toString())
+        (replacedCopies() - earlier).forEach { it.delete() }
     }
 
     @Test

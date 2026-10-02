@@ -56,16 +56,17 @@ class SaleActionsTest {
         val db = graph.db()
         val susu = TestDb.product(db, "Susu", 1003L, cost = 600L)
         val here = TimeZone.getDefault() // the refund's business day comes from the phone's zone
+        val day = com.lekaspos.core.time.Days.epochDay(System.currentTimeMillis(), here)
         val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(susu to 1_000L)), here) }
         val lineId = assertNotNull(graph.sales.refundInfo(sale.id)).lines.single().id
         graph.sales.refund(sale.id, mapOf(lineId to 1_000L), restock = false, reason = "spoiled", method = cash)
-        val day = com.lekaspos.core.time.Days.epochDay(System.currentTimeMillis(), here)
-        val t = db.readBlocking { com.lekaspos.data.report.ReportDao.totals(it, day, day) }
+        // Ranges are half-open; two days in case the test runs across midnight.
+        val t = db.readBlocking { com.lekaspos.data.report.ReportDao.totals(it, day, day + 2) }
         assertEquals(600L, t.cost) // the spoiled milk's cost stays
         assertEquals(-600L, t.grossProfit) // the money came back, the goods are gone
         // The summaries rebuilt from the documents say the same.
         db.writeBlocking { tx -> com.lekaspos.data.db.DerivedRebuild.summaries(tx) }
-        assertEquals(t, db.readBlocking { com.lekaspos.data.report.ReportDao.totals(it, day, day) })
+        assertEquals(t, db.readBlocking { com.lekaspos.data.report.ReportDao.totals(it, day, day + 2) })
     }
 
     @Test
