@@ -101,7 +101,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v7)
+## 6. Table catalog (schema v8)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -133,8 +133,9 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `customer_balance` | DERIVED | credit balance per customer | PK customer_id |
 | `sum_day` | DERIVED | per-day totals | PK day |
 | `sum_day_product` | DERIVED | per-day per-product qty/net/cost/tax | PK (day, product_id), `(product_id, day)` |
-| `sum_month_product` | DERIVED | per-month (yyyymm) per-product qty/net/cost/tax (v4, D-043) | PK (month, product_id) |
-| `sum_year_product` | DERIVED | per-year (yyyy) per-product qty/net/cost/tax = Σ its months (v7, D-058) | PK (year, product_id) |
+| `sum_month_product` | DERIVED | per-month (yyyymm) per-product qty/net/cost/tax (v4, D-043) | PK (month, product_id), `(product_id, month)` (v8) |
+| `sum_year_product` | DERIVED | per-year (yyyy) per-product qty/net/cost/tax = Σ its months (v7, D-058) | PK (year, product_id), `(product_id, year)` (v8) |
+| `sum_day_category` / `sum_month_category` / `sum_year_category` | DERIVED | qty/net/cost per period and the product's *current* category (0 = none; v8, D-058); `Summaries.recategorize` moves a product's sales when its category changes | PK (period, category_id) |
 | `sum_day_payment` | DERIVED | per-day per-payment-method | PK (day, method_id) |
 | `sum_day_staff` | DERIVED | per-day per-cashier | PK (day, staff_id) |
 | `cart`, `cart_line` | LOCAL | open bill + held (parked) bills | `(cart_id, line_no)` |
@@ -174,7 +175,9 @@ are plain columns without FK constraints because sync can deliver them in any or
 - Report rules on summaries (D-054): a void leaves zero rows behind (a rebuild has none), so
   every list drops groups that add up to nothing; "sold" means more sold than returned in the
   range (`HAVING SUM(qty) > 0`); category totals follow the product's *current* category (the
-  `category_id` kept in a summary row is the first sale's and is used only without a product row).
+  `category_id` kept in a summary row is the first sale's and is used only without a product row);
+  the category totals (v8) hold exactly that, so every write that changes a product's category
+  calls `Summaries.recategorize` in the same transaction.
 - LWW edits write only the fields the user changed, compared with the row as stored when the
   edit is saved (not the row the screen loaded): a field another till changed meanwhile stays.
 
@@ -194,7 +197,9 @@ are plain columns without FK constraints because sync can deliver them in any or
   a month or year partly outside the period is read whole when the days outside had no sales
   (an index probe), and a nearly whole one as the whole less the days (months) outside. The
   pieces always add up to exactly the period, so `sum_year = Σ months = Σ days` must hold.
-  Categories and best sellers come from one reading of the period (`ReportDao.summary`).
+  Best sellers come from the product rows (ORDER BY … LIMIT, a small result), categories from the
+  category totals (`ReportDao.summary`). Keep results small: on Android 10 each returned row costs
+  ~9 µs.
 - "After this HLC, ties broken by device" is written with a range term first:
   `hlc >= ? AND (hlc > ? OR (id >> 41) > ?)` (`StockDao`, D-054); `QueryPlans` checks the range.
 - Product search hides switched-off products at the till; the manage and pick screens pass

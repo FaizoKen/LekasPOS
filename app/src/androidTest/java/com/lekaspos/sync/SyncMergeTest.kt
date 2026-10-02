@@ -10,10 +10,13 @@ import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.pricing.Settlement
+import com.lekaspos.core.report.Period
 import com.lekaspos.core.sync.SyncNames
+import com.lekaspos.core.time.Days
 import com.lekaspos.core.time.Hlc
 import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.Restore
+import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.customer.Customer
 import com.lekaspos.data.customer.CustomerDao
 import com.lekaspos.data.db.DerivedRebuild
@@ -25,6 +28,7 @@ import com.lekaspos.data.db.queryList
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.promo.PromotionDao
 import com.lekaspos.data.promo.PromotionRow
+import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.SettingKeys
 import com.lekaspos.data.settings.SettingsDao
@@ -122,6 +126,10 @@ class SyncMergeTest {
             "sum_day" to ("day" to "sale_count, refund_count, void_count, gross, discount, net_ex, tax, rounding, total, cost, refund_total, items"),
             "sum_day_product" to ("day, product_id" to "qty, net_ex, tax, cost"),
             "sum_month_product" to ("month, product_id" to "qty, net_ex, tax, cost"),
+            "sum_year_product" to ("year, product_id" to "qty, net_ex, tax, cost"),
+            "sum_day_category" to ("day, category_id" to "qty, net_ex, cost"),
+            "sum_month_category" to ("month, category_id" to "qty, net_ex, cost"),
+            "sum_year_category" to ("year, category_id" to "qty, net_ex, cost"),
             "sum_day_payment" to ("day, method_id" to "amount, count"),
             "sum_day_staff" to ("day, staff_id" to "sale_count, total, net_ex"),
         )
@@ -172,6 +180,37 @@ class SyncMergeTest {
             assertEquals(2, prefixes.toSet().size)
             assertEquals(2L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
             assertTrue(folder.listFiles().orEmpty().any { it.name.startsWith(SyncNames.devicePrefix(sa ?: "")) })
+        }
+    }
+
+    /** D-058: a product moved to another category on one till takes all its sales there, on every till. */
+    @Test
+    fun aProductsSalesFollowItsCategoryOnEveryTill() {
+        val a = till()
+        val now = System.currentTimeMillis()
+        val (drinks, snacks) = runBlocking {
+            a.db().writeBlocking { tx -> CategoryDao.insert(tx, "Minuman", 0, 0, now) to CategoryDao.insert(tx, "Snek", 0, 1, now) }
+        }
+        val kopi = runBlocking { TestDb.product(a.db(), "Kopi", 1_250L, categoryId = drinks) }
+        sell(a, kopi, 2_000L)
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        syncAll(a, b)
+        // B moves Kopi to the snacks and sells it again; A changed nothing.
+        runBlocking {
+            b.db().writeBlocking { tx ->
+                val p = ProductDao.get(tx.db, kopi) ?: error("no product")
+                ProductDao.update(tx, p, p.copy(categoryId = snacks), now)
+            }
+        }
+        sell(b, kopi, 1_000L)
+        syncAll(a, b)
+        assertConverged(a, b)
+        val today = Days.epochDay(System.currentTimeMillis(), tz)
+        for (t in listOf(a, b)) {
+            val cats = runBlocking { t.db().read { ReportDao.byCategory(it, Period(today - 1, today + 1)) } }
+            assertEquals(listOf(snacks to 3_000L), cats.map { it.categoryId to it.qty })
         }
     }
 

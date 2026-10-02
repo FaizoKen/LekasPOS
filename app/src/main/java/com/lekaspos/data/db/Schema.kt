@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 7
+    const val VERSION = 8
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -35,6 +35,29 @@ object Schema {
     /** v7 (D-058): `ShiftDao.current` 's lookup. */
     const val SHIFT_OPEN_INDEX = "CREATE INDEX shift_open ON shift(device_no, closed_at, opened_at)"
 
+    /**
+     * v8 (D-058): category totals per day, month and year, by the product's current category
+     * (0 = none), so a report's categories are a few rows a day instead of every product's. The
+     * product summary rows carry the product's current category too; `Summaries.recategorize`
+     * moves a product's history when its category changes (here or on another till).
+     */
+    val SUM_CATEGORY: List<String> = listOf("day", "month", "year").map { p ->
+        """CREATE TABLE sum_${p}_category (
+            $p INTEGER NOT NULL,
+            category_id INTEGER NOT NULL,
+            qty INTEGER NOT NULL DEFAULT 0,
+            net_ex INTEGER NOT NULL DEFAULT 0,
+            cost INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY ($p, category_id)
+        ) WITHOUT ROWID"""
+    }
+
+    /** v8: a product's month and year rows, to move them to its new category. */
+    val SUM_PRODUCT_INDEXES: List<String> = listOf(
+        "CREATE INDEX sum_month_product_p ON sum_month_product(product_id, month)",
+        "CREATE INDEX sum_year_product_p ON sum_year_product(product_id, year)",
+    )
+
     /** Promotions (v6, Phase 8): LWW; `products` = the product ids, comma-separated. */
     const val PROMOTION = """CREATE TABLE promotion (
             id INTEGER PRIMARY KEY,
@@ -59,7 +82,7 @@ object Schema {
             payload TEXT NOT NULL
         )"""
 
-    val STATEMENTS: List<String> = listOf(
+    val STATEMENTS: List<String> = (listOf(
         // ---------- LOCAL: device identity, sequences, flags ----------
         """CREATE TABLE meta (
             key TEXT NOT NULL PRIMARY KEY,
@@ -431,6 +454,7 @@ object Schema {
         ) WITHOUT ROWID""",
         // v7: per-year product totals, so a year of a big store is ~45,000 rows instead of 12 months of them (D-058).
         SUM_YEAR_PRODUCT,
+    ) + SUM_PRODUCT_INDEXES + SUM_CATEGORY + listOf(
         """CREATE TABLE sum_day_payment (
             day INTEGER NOT NULL,
             method_id INTEGER NOT NULL,
@@ -526,7 +550,7 @@ object Schema {
             row_id INTEGER,
             payload TEXT NOT NULL
         )""",
-    ).map { normalize(it) }
+    )).map { normalize(it) }
 
     /** Tables by sync class (every table must appear exactly once; checked by SchemaTest). */
     val LWW_TABLES = listOf(
@@ -539,7 +563,7 @@ object Schema {
     )
     val DERIVED_TABLES = listOf(
         "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",
-        "sum_year_product", "sum_day_payment", "sum_day_staff",
+        "sum_year_product", "sum_day_category", "sum_month_category", "sum_year_category", "sum_day_payment", "sum_day_staff",
     )
     val LOCAL_TABLES = listOf(
         "meta", "cart", "cart_line", "print_job", "outbox", "sync_segment", "sync_cursor", "sync_deferred",

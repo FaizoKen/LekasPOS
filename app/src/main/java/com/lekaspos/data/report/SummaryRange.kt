@@ -28,7 +28,10 @@ object SummaryRange {
     /** `product_id, qty` of every piece (UNION ALL), for rankings by quantity. */
     fun qty(pieces: List<RangePlan.Piece>): Rows = rows(pieces, QTY_POS, QTY_NEG)
 
-    private fun rows(pieces: List<RangePlan.Piece>, pos: String, neg: String): Rows {
+    /** `category_id, qty, net_ex, cost` of every piece from the category totals (UNION ALL; 0 = no category). */
+    fun categories(pieces: List<RangePlan.Piece>): Rows = rows(pieces, CAT_POS, CAT_NEG, "category")
+
+    private fun rows(pieces: List<RangePlan.Piece>, pos: String, neg: String, of: String = "product"): Rows {
         require(pieces.isNotEmpty()) { "a period has at least one piece" }
         val sql = StringBuilder()
         val args = ArrayList<String?>(pieces.size * 2)
@@ -37,16 +40,16 @@ object SummaryRange {
             sql.append(if (p.sign < 0) neg else pos)
             when (p.kind) {
                 RangePlan.Kind.DAYS -> {
-                    sql.append(DAYS)
+                    sql.append(" FROM sum_day_$of WHERE day >= ? AND day < ?")
                     args.add(p.from.toString())
                     args.add(p.to.toString())
                 }
                 RangePlan.Kind.MONTH -> {
-                    sql.append(MONTH)
+                    sql.append(" FROM sum_month_$of WHERE month = ?")
                     args.add(p.key.toString())
                 }
                 RangePlan.Kind.YEAR -> {
-                    sql.append(YEAR)
+                    sql.append(" FROM sum_year_$of WHERE year = ?")
                     args.add(p.key.toString())
                 }
             }
@@ -58,9 +61,8 @@ object SummaryRange {
     private const val ALL_NEG = "SELECT product_id, category_id, -qty AS qty, -net_ex AS net_ex, -tax AS tax, -cost AS cost"
     private const val QTY_POS = "SELECT product_id, qty AS qty"
     private const val QTY_NEG = "SELECT product_id, -qty AS qty"
-    private const val DAYS = " FROM sum_day_product WHERE day >= ? AND day < ?"
-    private const val MONTH = " FROM sum_month_product WHERE month = ?"
-    private const val YEAR = " FROM sum_year_product WHERE year = ?"
+    private const val CAT_POS = "SELECT category_id, qty AS qty, net_ex AS net_ex, cost AS cost"
+    private const val CAT_NEG = "SELECT category_id, -qty AS qty, -net_ex AS net_ex, -cost AS cost"
 
     /** Every kind of piece, added and taken off: what the plan checks look at. */
     val SAMPLE: List<RangePlan.Piece> = listOf(

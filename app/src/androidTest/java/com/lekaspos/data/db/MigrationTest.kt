@@ -112,6 +112,16 @@ class MigrationTest {
                 }
             }
             assertEquals(listOf("2025|5|9|1000|100|1", "2026|5|9|5000|500|2", "2026|6|9|500|50|1"), years)
+            // v8 (D-058): the category totals, from the product rows (products 5 and 6 have no product row:
+            // their rows keep category 9).
+            val categories = db.readBlocking { r ->
+                r.queryList(
+                    "SELECT 'm', month, category_id, qty, net_ex, cost FROM sum_month_category UNION ALL " +
+                        "SELECT 'y', year, category_id, qty, net_ex, cost FROM sum_year_category ORDER BY 1, 2, 3",
+                ) { (0 until 6).joinToString("|") { i -> it.getString(i) } }
+            }
+            assertEquals(listOf("m|202512|9|1000|100|1", "m|202601|9|5500|550|3", "y|2025|9|1000|100|1", "y|2026|9|5500|550|3"), categories)
+            assertEquals(3L, db.readBlocking { it.long("SELECT COUNT(*) FROM sum_day_category") }) // three days, one category
         } finally {
             TestDb.delete(db)
         }

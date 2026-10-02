@@ -3,6 +3,8 @@ package com.lekaspos.data.db
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.pricing.Discount
+import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
@@ -47,6 +49,10 @@ class DerivedConsistencyTest {
             "sum_day_product" to rows("SELECT day, product_id, qty, net_ex, tax, cost FROM sum_day_product ORDER BY day, product_id"),
             "sum_month_product" to rows("SELECT month, product_id, qty, net_ex, tax, cost FROM sum_month_product ORDER BY month, product_id"),
             "sum_year_product" to rows("SELECT year, product_id, qty, net_ex, tax, cost FROM sum_year_product ORDER BY year, product_id"),
+            // v8 (D-058): the category totals.
+            "sum_day_category" to rows("SELECT day, category_id, qty, net_ex, cost FROM sum_day_category ORDER BY day, category_id"),
+            "sum_month_category" to rows("SELECT month, category_id, qty, net_ex, cost FROM sum_month_category ORDER BY month, category_id"),
+            "sum_year_category" to rows("SELECT year, category_id, qty, net_ex, cost FROM sum_year_category ORDER BY year, category_id"),
             "sum_day_payment" to rows("SELECT day, method_id, amount, count FROM sum_day_payment ORDER BY day, method_id"),
             "sum_day_staff" to rows("SELECT day, staff_id, sale_count, total, net_ex FROM sum_day_staff ORDER BY day, staff_id"),
             "stock_level" to r.queryList("SELECT product_id, qty FROM stock_level WHERE qty != 0 ORDER BY product_id") { "${it.getLong(0)}|${it.getLong(1)}" },
@@ -57,7 +63,9 @@ class DerivedConsistencyTest {
     @Test
     fun incrementalMaintenanceEqualsFullRebuild() {
         val rnd = Random(99)
-        val products = (1..12).map { i -> TestDb.product(db, "Product $i", 100L + 37L * i, trackStock = i % 4 != 0) }
+        val now = System.currentTimeMillis()
+        val cats = listOf("A", "B", "C").map { n -> db.writeBlocking { tx -> CategoryDao.insert(tx, n, 0, 0, now) } } + listOf<Long?>(null)
+        val products = (1..12).map { i -> TestDb.product(db, "Product $i", 100L + 37L * i, trackStock = i % 4 != 0, categoryId = cats[i % 4]) }
         // 150 sales over 45 days: the per-month table crosses at least one month boundary.
         val start = System.currentTimeMillis() - 45 * 86_400_000L
         val saleIds = ArrayList<Long>()
@@ -73,6 +81,11 @@ class DerivedConsistencyTest {
             when (rnd.nextInt(12)) {
                 0 -> db.writeBlocking { tx -> SaleDao.void(tx, saleIds[rnd.nextInt(saleIds.size)], "test", null, null, null, 0L) }
                 1 -> refund(saleIds[rnd.nextInt(saleIds.size)], start + n * 25_920_000L + 60_000L)
+                // A product moves to another category (or none): its history follows it (D-058).
+                2 -> db.writeBlocking { tx ->
+                    val p = ProductDao.get(tx.db, products[rnd.nextInt(products.size)]) ?: error("no product")
+                    ProductDao.update(tx, p, p.copy(categoryId = cats[rnd.nextInt(cats.size)]), now)
+                }
                 else -> Unit
             }
         }

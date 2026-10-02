@@ -84,6 +84,13 @@ object Migrations {
             db.execSQL(com.lekaspos.data.sale.Summaries.YEARS_FROM_MONTHS)
             db.execSQL(Schema.SHIFT_OPEN_INDEX)
         },
+        // v7 → v8 (1.5.2, D-058): category totals per day, month and year by the product's current
+        // category, built from the product totals; indexes to read a product's month and year rows
+        // when its category changes.
+        Migration(7, 8) { db ->
+            for (s in Schema.SUM_PRODUCT_INDEXES + Schema.SUM_CATEGORY) db.execSQL(s)
+            for (s in com.lekaspos.data.sale.Summaries.CATEGORIES_FROM_PRODUCTS) db.execSQL(s)
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

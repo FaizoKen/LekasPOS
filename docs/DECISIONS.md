@@ -836,13 +836,28 @@ SQLite 3.22 shell from sqlite.org) before changing anything; every change gives 
   445 → 87 ms; the tablet runs ~6–8× slower than that emulator. Exports, which must return every
   product, use a 16 MB window on API 28+ (the default 2 MB one runs the query again per window).
   The perf run now includes Android 10 (API 29): the store's tablet runs it.
+- **Category totals (v8).** Calibrated on the scenarios that did not change, the tablet runs ~11×
+  that emulator run: the month report would still be ~1.0 s (budget 1 s). Its notes showed the
+  categories as the larger half (every product row of the period joined to its product). Category
+  totals per day, month and year (`sum_*_category`, 0 = no category) are now kept like the product
+  totals, by the product's current category: `Summaries.apply` adds each sale there, and
+  `Summaries.recategorize` moves a product's sales from its old to its new category when it changes
+  — on a local edit (`ProductDao.update`), a synced edit, or when another till's product arrives
+  after its sales (`Importer`; until then its sales count under the category their rows were filed
+  under). The upgrade builds them by reading the product totals once (no rows rewritten: rewriting
+  the category of every row took 29 s at FULL size). A month's categories are ~24 rows a piece.
+  A bulk category change of products with long histories costs a few hundred row updates each.
 - **Popular tab** (on the selling screen): its ranking reads a month of sales, ~0.3 s at FULL on the
   tablet even after the above. The tab now shows the ranking kept in this till's `meta`
   (`dev.popular`) at once and makes a fresh one in the background when it is older than 10 minutes;
   only a ranking older than 3 days (or none) is waited for. Perf scenarios: `popular_ranking`
   (background, ≤ 1 s) and `popular_items` (the tab's tiles, ≤ 50 ms).
 - **Multi-word search**: only the id and sort key of the 2,000 FTS candidates are sorted; columns and
-  stock are read for the page of 50 (p95 −35%, same results).
+  stock are read for the page of 50 (p95 −35%, same results). Still 49 ms on the tablet (budget 50):
+  its slowest samples hold a one-letter word ("Julie's" → "julie s", "F&N" → "f n") and the FTS
+  index keeps 2- and 3-letter prefixes, so "s*" merged every word starting with s. With longer words
+  to search by, a one-letter word now filters their candidates (`' ' || name_key LIKE '% s%'`):
+  2.3–2.6× faster, same results (it matches names, not SKUs).
 - **Error reports of checks** keep their numbers (the performance report is the app's own text, no
   shop data; "sale_lines <number>" hid the scale).
 Rejected: product-ordered month table `(product_id, month)` (faster with one year of history, no

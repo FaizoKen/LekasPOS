@@ -53,6 +53,8 @@ object DerivedRebuild {
         tx.exec(Summaries.MONTHS_FROM_DAYS)
         tx.exec("DELETE FROM sum_year_product")
         tx.exec(Summaries.YEARS_FROM_MONTHS)
+        for (t in listOf("sum_day_category", "sum_month_category", "sum_year_category")) tx.exec("DELETE FROM $t")
+        for (s in Summaries.CATEGORIES_FROM_PRODUCTS) tx.exec(s)
         tx.exec("DELETE FROM sum_day_payment")
         tx.exec(
             "INSERT INTO sum_day_payment(day, method_id, kind, amount, count) " +

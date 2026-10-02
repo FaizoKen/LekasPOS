@@ -66,7 +66,8 @@ object QueryPlans {
     fun hotQueries(): List<Pair<String, String>> =
         ProductDao.HOT_QUERIES + SaleDao.HOT_QUERIES + SaleQueries.HOT_QUERIES + StockDao.HOT_QUERIES +
             ReportDao.HOT_QUERIES + AuditDao.HOT_QUERIES + PurchaseDao.HOT_QUERIES + SupplierDao.HOT_QUERIES +
-            CountSessionDao.HOT_QUERIES + StockHistoryDao.HOT_QUERIES + ShiftDao.HOT_QUERIES + CustomerDao.HOT_QUERIES
+            CountSessionDao.HOT_QUERIES + StockHistoryDao.HOT_QUERIES + ShiftDao.HOT_QUERIES + CustomerDao.HOT_QUERIES +
+            com.lekaspos.data.sale.Summaries.HOT_QUERIES
 
     fun maintenanceQueries(): List<Pair<String, String>> = DerivedRebuild.MAINTENANCE_QUERIES
 

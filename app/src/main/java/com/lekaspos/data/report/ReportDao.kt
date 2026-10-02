@@ -110,20 +110,17 @@ object ReportDao {
     /** After `GROUP BY product_id` over a period's rows: products whose totals are not all zero. */
     private const val NOT_ZERO = "HAVING SUM(qty) != 0 OR SUM(net_ex) != 0 OR SUM(tax) != 0 OR SUM(cost) != 0"
 
-    // A period's product rows (SummaryRange, D-058) are read twice, each time into a small result:
-    // the best sellers, then the categories straight from the rows. Returning every product's totals
-    // to the app (one reading) was the tablet's undoing: on Android 10 each row a query returns costs
-    // ~9 µs (0.6 µs on Android 16) — 0.4 s for a year of 50,000 products, more than the SQL itself.
-    // A category follows the product's current one, so a range read from days, months or years puts
-    // a product's sales under the same category; the category kept in a summary row (the first sale's
-    // of that day, month or year) is used only when there is no product row ("other items").
+    // A period's best sellers come from its product rows (SummaryRange, D-058) into a small result, its
+    // categories from the category totals (v8, by the product's current category). Returning every
+    // product's totals to the app (1.5.1) was the tablet's undoing: on Android 10 each row a query
+    // returns costs ~9 µs (0.6 µs on Android 16) — 0.4 s for a year of 50,000 products.
     private const val TOP_HEAD =
         "SELECT product_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, SUM(tax) AS tax, SUM(cost) AS cost FROM ("
     private const val TOP_BY_NET_TAIL = ") GROUP BY product_id $NOT_ZERO ORDER BY net_ex DESC, product_id LIMIT ?"
     private const val TOP_BY_QTY_TAIL = ") GROUP BY product_id $NOT_ZERO ORDER BY qty DESC, product_id LIMIT ?"
-    private const val CATEGORIES_HEAD =
-        "SELECT CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END, SUM(u.qty), SUM(u.net_ex), SUM(u.cost) FROM ("
-    private const val CATEGORIES_TAIL = ") u LEFT JOIN product p ON p.id = u.product_id GROUP BY 1"
+    // Categories from the category totals (v8): a few rows a day, month or year instead of every product's.
+    private const val CATEGORIES_HEAD = "SELECT category_id, SUM(qty), SUM(net_ex), SUM(cost) FROM ("
+    private const val CATEGORIES_TAIL = ") GROUP BY category_id"
 
     /** Products sold in a period (perf notes). */
     private const val COUNT_HEAD = "SELECT COUNT(*) FROM (SELECT product_id FROM ("
@@ -216,7 +213,8 @@ object ReportDao {
      * quantity ([byQty]); [topN] = Int.MAX_VALUE for every product sold, 0 for none.
      */
     fun summary(db: SQLiteDatabase, p: Period, topN: Int = 20, byQty: Boolean = false): ProductSummary {
-        val rows = SummaryRange.all(SummaryRange.plan(db, p))
+        val pieces = SummaryRange.plan(db, p)
+        val rows = SummaryRange.all(pieces)
         val top = ArrayList<ProductTotal>()
         if (topN > 0) {
             val raw = ArrayList<LongArray>() // product, qty, net_ex, tax, cost — best first
@@ -227,11 +225,12 @@ object ReportDao {
             raw.mapTo(top) { t -> ProductTotal(t[0], names[t[0]], t[1], t[2], t[3], t[4]) }
         }
         val cats = ArrayList<CategoryTotal>()
-        db.rawQuery(CATEGORIES_HEAD + rows.sql + CATEGORIES_TAIL, rows.args).use { c ->
+        val catRows = SummaryRange.categories(pieces)
+        db.rawQuery(CATEGORIES_HEAD + catRows.sql + CATEGORIES_TAIL, catRows.args).use { c ->
             while (c.moveToNext()) {
                 // A category whose products add up to nothing is left out, like every group that does (D-054).
                 if (c.getLong(1) == 0L && c.getLong(2) == 0L && c.getLong(3) == 0L) continue
-                cats.add(CategoryTotal(if (c.isNull(0)) null else c.getLong(0), null, c.getLong(1), c.getLong(2), c.getLong(3)))
+                cats.add(CategoryTotal(c.getLong(0).takeIf { it != 0L }, null, c.getLong(1), c.getLong(2), c.getLong(3)))
             }
         }
         val catNames = if (cats.isEmpty()) emptyMap() else categoryNames(db)
@@ -346,7 +345,7 @@ object ReportDao {
         // Built per period from SummaryRange's fragments: checked with every kind of piece.
         "report_has_sales" to SummaryRange.HAS_SALES,
         "report_top_products" to TOP_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + TOP_BY_NET_TAIL,
-        "report_categories" to CATEGORIES_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + CATEGORIES_TAIL,
+        "report_categories" to CATEGORIES_HEAD + SummaryRange.categories(SummaryRange.SAMPLE).sql + CATEGORIES_TAIL,
         "report_export_products" to EXPORT_HEAD + SummaryRange.all(SummaryRange.SAMPLE).sql + EXPORT_TAIL,
         "report_slow_movers" to SLOW_HEAD + SummaryRange.qty(SummaryRange.SAMPLE).sql + SLOW_TAIL,
         "report_product_names" to NAMES_PREFIX + "(?,?,?)",

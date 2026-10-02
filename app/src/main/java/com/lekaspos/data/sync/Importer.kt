@@ -15,6 +15,7 @@ import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.data.sale.Summaries
 import com.lekaspos.data.stock.StockDao
 
 /** One event of a sync segment: what the outbox row held on the till that wrote it. */
@@ -95,7 +96,7 @@ class Importer(private val db: SQLiteDatabase) {
                 "INSERT INTO $table(${names.joinToString(", ")}) VALUES(${names.joinToString(",") { "?" }})",
                 (listOf<Any?>(id) + values.values).toTypedArray(),
             )
-            after(tx, table, id, fields.keys)
+            after(tx, table, id, fields.keys, created = true)
             return true
         }
         val (base, versions) = current
@@ -107,14 +108,22 @@ class Importer(private val db: SQLiteDatabase) {
         bind.add(fver)
         bind.add(now)
         bind.add(id)
+        val oldCategory = if (table == "product" && "category_id" in winners) category(id) else null
         db.execSQL("UPDATE $table SET ${winners.joinToString(", ") { "$it = ?" }}, fver = ?, updated_at = ? WHERE id = ?", bind.toTypedArray())
-        after(tx, table, id, winners)
+        after(tx, table, id, winners, oldCategory = oldCategory)
         return true
     }
 
-    private fun after(tx: Db.Tx, table: String, id: Long, changed: Collection<String>) {
-        if (table == "product" && ("name" in changed || "sku" in changed || "deleted" in changed)) ProductDao.reindex(tx, id)
+    private fun after(tx: Db.Tx, table: String, id: Long, changed: Collection<String>, created: Boolean = false, oldCategory: Long? = null) {
+        if (table != "product") return
+        if ("name" in changed || "sku" in changed || "deleted" in changed) ProductDao.reindex(tx, id)
+        // Its sales follow it to its category in the reports' category totals — also sales that
+        // arrived before the product itself (D-058).
+        if (created || "category_id" in changed) Summaries.recategorize(tx, id, oldCategory, category(id), hadRow = !created)
     }
+
+    private fun category(productId: Long): Long? =
+        db.queryOne("SELECT category_id FROM product WHERE id = ?", args(productId)) { c -> if (c.isNull(0)) null else c.getLong(0) }
 
     private fun setting(tx: Db.Tx, p: Map<String, Any?>): Boolean {
         val key = p["key"] as String

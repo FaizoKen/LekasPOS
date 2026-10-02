@@ -431,6 +431,8 @@ object ProductDao {
         if (changes.isEmpty()) return emptySet()
         LwwWriter.update(tx, "product", Entity.PRODUCT, edited.id, changes, now)
         if ("name" in changes || "sku" in changes) reindex(tx, edited.id)
+        // Its sales follow it to the new category in the reports' category totals (D-058).
+        if ("category_id" in changes) com.lekaspos.data.sale.Summaries.recategorize(tx, edited.id, current.categoryId, edited.categoryId, hadRow = true)
         return changes.keys
     }
 
