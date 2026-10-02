@@ -22,7 +22,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
-| — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** — 1.5.2 test build published; waiting for the tablet's QUICK and FULL run |
+| — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 
 ## Open questions for the user
 
@@ -1124,7 +1124,8 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
       stock_value on Android 10 36.7 → 31.2 ms, Android 5 65 → 50 ms
 - [x] Test build **v1.5.2** (pre-release; build 101, release key, SHA-256 `bd0dc579…0efd`,
       `mapping-1.5.2.txt` attached); linked on #4 and #6. The public download stays v1.5.0
-- [ ] The owner runs QUICK and FULL on the tablet with 1.5.2
+- [x] The owner ran QUICK and FULL on the store's tablet with 1.5.2: **both passed**
+- [x] **Released** v1.5.2 as latest (2026-10-02); `PREV_APK_URL` → 1.5.2; #4 and #6 closed
 
 ### Needs real-device testing (1.5.2)
 
