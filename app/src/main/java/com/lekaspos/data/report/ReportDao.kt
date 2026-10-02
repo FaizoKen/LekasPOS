@@ -9,6 +9,7 @@ import com.lekaspos.core.report.DayTotals
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.db.args
+import com.lekaspos.data.db.long
 import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
@@ -116,8 +117,8 @@ object ReportDao {
     // under the same category; the category kept in a summary row (the first sale's of that day,
     // month or year) is used only when there is no product row ("other items").
     private const val PER_PRODUCT_HEAD =
-        "SELECT u.product_id, CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END, " +
-            "u.qty, u.net_ex, u.tax, u.cost FROM " +
+        "SELECT u.product_id AS product_id, CASE WHEN p.id IS NULL THEN u.category_id ELSE p.category_id END AS cat, " +
+            "u.qty AS qty, u.net_ex AS net_ex, u.tax AS tax, u.cost AS cost FROM " +
             "(SELECT product_id, MIN(category_id) AS category_id, SUM(qty) AS qty, SUM(net_ex) AS net_ex, " +
             "SUM(tax) AS tax, SUM(cost) AS cost FROM ("
     private const val PER_PRODUCT_TAIL = ") GROUP BY product_id $NOT_ZERO) u LEFT JOIN product p ON p.id = u.product_id"
@@ -208,10 +209,29 @@ object ReportDao {
     class ProductSummary(val categories: List<CategoryTotal>, val top: List<ProductTotal>)
 
     /**
+     * How [summary] reads a period: [AUTO] by Android version; the others for the perf suite's notes
+     * (D-058) — one reading in a big or the default cursor window, or two readings.
+     */
+    enum class Path { AUTO, ONE_BIG, ONE_DEFAULT, TWO }
+
+    /** Perf notes (D-058): the period's product rows, the SQL alone (ns), and how many rows one big window held. */
+    internal fun probe(db: SQLiteDatabase, p: Period): Triple<Long, Long, Int> {
+        val rows = SummaryRange.all(SummaryRange.plan(db, p))
+        val t = System.nanoTime()
+        val n = db.long("SELECT COUNT(*) + 0 * TOTAL(cat) FROM (" + PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL + ")", *rows.args)
+        val sqlNs = System.nanoTime() - t
+        val held = bigWindow(db.rawQuery(PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL, rows.args)).use { c ->
+            c.moveToFirst()
+            (c as? AbstractWindowedCursor)?.window?.numRows ?: -1
+        }
+        return Triple(n, sqlNs, held)
+    }
+
+    /**
      * The categories of [p] (most net sales first) and its [topN] best sellers by net sales, or by
      * quantity ([byQty]); [topN] = Int.MAX_VALUE for every product sold, 0 for none.
      */
-    fun summary(db: SQLiteDatabase, p: Period, topN: Int = 20, byQty: Boolean = false): ProductSummary {
+    fun summary(db: SQLiteDatabase, p: Period, topN: Int = 20, byQty: Boolean = false, path: Path = Path.AUTO): ProductSummary {
         val rows = SummaryRange.all(SummaryRange.plan(db, p))
         val cats = HashMap<Long, LongArray>() // category (or NO_CATEGORY) → qty, net_ex, cost
         // Best first: the larger measure, then the smaller id (the old SQL's ORDER BY … DESC, product_id).
@@ -220,10 +240,12 @@ object ReportDao {
             if (a[m] != b[m]) b[m].compareTo(a[m]) else a[0].compareTo(b[0])
         }
         val top = ArrayList<LongArray>() // product, qty, net_ex, tax, cost
-        if (Build.VERSION.SDK_INT >= 28) {
+        val one = if (path == Path.AUTO) Build.VERSION.SDK_INT >= 28 else path != Path.TWO
+        if (one) {
             // One reading: every product's totals with its current category, in one big cursor window.
             val kept = PriorityQueue(minOf(topN, 256) + 1, Comparator<LongArray> { a, b -> better.compare(b, a) }) // worst first
-            bigWindow(db.rawQuery(PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL, rows.args)).use { c ->
+            val cursor = db.rawQuery(PER_PRODUCT_HEAD + rows.sql + PER_PRODUCT_TAIL, rows.args)
+            (if (path == Path.ONE_DEFAULT) cursor else bigWindow(cursor)).use { c ->
                 while (c.moveToNext()) {
                     val t = longArrayOf(c.getLong(0), c.getLong(2), c.getLong(3), c.getLong(4), c.getLong(5))
                     val acc = cats.getOrPut(if (c.isNull(1)) NO_CATEGORY else c.getLong(1)) { LongArray(3) }

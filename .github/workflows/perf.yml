@@ -1,7 +1,7 @@
 # On-demand performance run (references/performance.md): data generation at the chosen scale,
 # the perf suite through instrumentation (query plans enforced) and through the release build's
-# in-app runner, plus cold start — on API 21 (1 GB) and API 36. Reports are uploaded as
-# artifacts and summarized on the run page. Start it from Actions → Performance → Run workflow.
+# in-app runner, plus cold start — on API 21 (1 GB), API 29 (the store tablet's Android 10) and API 36.
+# Reports are uploaded as artifacts and summarized on the run page. Start it from Actions → Performance → Run workflow.
 name: Performance
 
 on:
@@ -53,6 +53,9 @@ jobs:
         include:
           - api: 21
             ram: 1024M
+          # Android 10: SQLite 3.22 and that Android's cursor windows, as on the store's tablet (D-058).
+          - api: 29
+            ram: 2048M
           - api: 36
             ram: 2048M
     steps:

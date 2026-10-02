@@ -55,6 +55,8 @@ data class PerfReport(
     val counts: Map<String, Long>,
     val results: List<PerfResult>,
     val plans: List<PlanCheck>,
+    /** Where the time goes (D-058): measurements that explain the results; never pass or fail. */
+    val notes: List<String> = emptyList(),
 ) {
     val passed: Boolean get() = results.all { it.pass } && plans.all { it.violations.isEmpty() }
 
@@ -84,6 +86,10 @@ data class PerfReport(
         for (p in plans) {
             sb.append(if (p.violations.isEmpty()) "  ok   " else "  FAIL ").append(p.name).append('\n')
             for (v in p.violations) sb.append("         ").append(v).append('\n')
+        }
+        if (notes.isNotEmpty()) {
+            sb.append("\nNotes:\n")
+            for (n in notes) sb.append("  ").append(n).append('\n')
         }
         return sb.toString()
     }
@@ -127,6 +133,9 @@ data class PerfReport(
                 w.name("pass").value(r.pass)
                 w.endObject()
             }
+            w.endArray()
+            w.name("notes").beginArray()
+            for (n in notes) w.value(n)
             w.endArray()
             w.name("plans").beginArray()
             for (p in plans) {

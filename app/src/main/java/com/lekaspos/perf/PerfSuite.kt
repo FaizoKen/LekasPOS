@@ -10,6 +10,7 @@ import com.lekaspos.core.csv.ProductCsv
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.report.Period
+import com.lekaspos.core.report.RangePlan
 import com.lekaspos.core.escpos.PrinterProfile
 import com.lekaspos.core.id.Ids
 import com.lekaspos.core.model.Entity
@@ -46,6 +47,7 @@ import com.lekaspos.data.purchase.PurchaseIn
 import com.lekaspos.data.purchase.PurchaseLineIn
 import com.lekaspos.data.report.ReceiptRow
 import com.lekaspos.data.report.ReportDao
+import com.lekaspos.data.report.SummaryRange
 import com.lekaspos.data.sale.PaymentDraft
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sale.SaleDraft
@@ -86,6 +88,7 @@ class PerfSuite(
     fun run(generationMs: Long, progress: Progress = Progress { }, cancelled: () -> Boolean = { false }): PerfReport {
         val startedAt = System.currentTimeMillis()
         val results = ArrayList<PerfResult>()
+        val notes = ArrayList<String>()
         fun add(result: PerfResult) {
             results.add(result)
             if (cancelled()) throw PerfDataGenerator.Cancelled()
@@ -265,6 +268,38 @@ class PerfSuite(
         val lastYear = Period(yearStart, Days.fromYmd(Days.toYmd(today) / 10_000 * 10_000 + 101))
         add(measure("report_calendar_year", 3000.0, warmup = 1, n = 3) { ReportService.build(r, lastYear, 20) })
 
+        // Where a report's time goes on this phone (D-058): notes, never pass or fail. The SQL alone,
+        // one reading in a 16 MB and in the default 2 MB cursor window, and two readings.
+        progress.update("report notes")
+        for ((id, period) in listOf(
+            "report_month" to Period(today - 29, today + 1),
+            "report_year" to Period(today - 364, today + 1),
+            "report_calendar_year" to lastYear,
+        )) {
+            val (rows, sqlNs, held) = ReportDao.probe(r, period)
+            fun ms(path: ReportDao.Path): String {
+                val s = LongArray(3) {
+                    val t = System.nanoTime()
+                    ReportDao.summary(r, period, 20, path = path)
+                    System.nanoTime() - t
+                }
+                s.sort()
+                return (s[1] / 1_000_000L).toString()
+            }
+            val pieces = SummaryRange.plan(r, period).joinToString(" ") { x ->
+                (if (x.sign < 0) "-" else "+") + when (x.kind) {
+                    RangePlan.Kind.DAYS -> "d${x.to - x.from}"
+                    RangePlan.Kind.MONTH -> "m${x.key}"
+                    RangePlan.Kind.YEAR -> "y${x.key}"
+                }
+            }
+            notes.add(
+                "$id: $rows product rows ($pieces); SQL alone ${sqlNs / 1_000_000L} ms; one reading: 16 MB window " +
+                    "${ms(ReportDao.Path.ONE_BIG)} ms (held $held rows), 2 MB window ${ms(ReportDao.Path.ONE_DEFAULT)} ms; " +
+                    "two readings ${ms(ReportDao.Path.TWO)} ms",
+            )
+        }
+
         progress.update("stock reports")
         val month = Period(today - 29, today + 1)
         // The list and the count and value of all of them, in one reading (D-058).
@@ -374,6 +409,7 @@ class PerfSuite(
             counts = counts,
             results = results,
             plans = plans,
+            notes = notes,
         )
     }
 
