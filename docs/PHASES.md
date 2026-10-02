@@ -23,7 +23,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
-| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — built and tested locally; CI and the owner's phone tests next |
+| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — test build v1.6.0 published (CI, perf QUICK passed), v1.6.1 next; then the owner's phone tests |
 
 ## Open questions for the user
 
@@ -1165,9 +1165,15 @@ download checked against GitHub's SHA-256 and the release key; Android's install
       certificate) — the Android 5 path through the bundled roots
 - [x] Local: `:core` 221 and `:app` 37 JVM tests pass, lint 0 errors; release APK **1,423,396 bytes**
       (1,390 KB; 1.5.2 was 1,392,493 — +31 KB)
-- [ ] CI (API 21 and 36 incl. `AppUpdatesTest`, tablet, release smoke) and perf QUICK
-- [ ] Test build **v1.6.0** as a pre-release
-- [ ] The owner's phone tests below, then release 1.6.0 as latest
+- [x] CI on f22e775 (run 37026827976, build 104): **228/228 on API 21 and 36**, tablet, release smoke
+      (upgrade from 1.5.2), lint. `AppUpdatesTest` on Android 5: the phone's trust store refused
+      GitHub, the bundled roots took it — check and download OK; on Android 16 the download OK and the
+      check skipped (GitHub answered 403: 60 checks an hour per address, CI runners share theirs)
+- [x] Perf QUICK (run 37026891340): **PASS** on API 21, 29, 36; cold start median 613 / 800 / 554 ms
+- [x] Test build **v1.6.0** (pre-release; build 104, 1,391 KB — 1,424,038 bytes, release key,
+      SHA-256 `698d72df…286d`, `mapping-1.6.0.txt` attached); the public download stays v1.5.2
+- [ ] Test build **v1.6.1** (the same code, a higher version): the in-app update to see on the phone
+- [ ] The owner's phone tests below, then release 1.6.1 as latest
 
 ### Needs real-device testing (1.6.0)
 
@@ -1176,7 +1182,7 @@ The update itself can only be seen once a newer version than the phone's is publ
    settings still there.
 2. Settings → **App updates**: "This phone has LekasPOS 1.6.0 (build N)", "Look every day" on. Tap
    **Check now** → "Up to date" (1.5.2 is the latest release).
-3. Tick **Include test versions**, then I publish a **v1.6.1 test build** (a pre-release): Check now
+3. Tick **Include test versions** (**v1.6.1** is a test build, a pre-release): Check now
    → "Version 1.6.1 is ready…" / the offer shows What's new and the size; the selling screen shows
    **Update 1.6.1** (with no PIN login, or signed in as the owner; not as a cashier).
 4. With an item on the bill, Update now → "Finish or hold the bill first". Clear the bill.
