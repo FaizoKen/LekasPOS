@@ -1180,9 +1180,14 @@ download checked against GitHub's SHA-256 and the release key; Android's install
 - [x] The owner tested it on the phone (2026-10-03): the update from 1.6.0 to 1.6.1 inside the app
       works, and asked to release it: **v1.6.1 is the latest release** (2026-10-03; the website's
       Download link serves it, SHA-256 and version checked; public notes with What's new in English
-      and Malay); smoke baseline (`PREV_APK_URL`) v1.6.1. v1.6.0 stays a test build. Perf FULL was not
-      run for this release (no database or hot-path change; QUICK passed on API 21, 29 and 36).
+      and Malay); smoke baseline (`PREV_APK_URL`) v1.6.1. v1.6.0 stays a test build.
       Shops on 1.5.x install 1.6.1 by hand once; from 1.6.1 on, new releases are offered in the app
+- [x] Perf FULL after the release (run 37033268746, 9c04018): **PASS** on API 21, 29 and 36 — 47/47
+      scenarios and 95/95 plan checks each; cold start median 583 / 900 / 659 ms. API 36 as in 1.5.2
+      (×1.00–1.14). API 21 and 29 ×1.2–1.7 slower everywhere (sale commit ×2.5), and so was the
+      unchanged test-data generator (51 → 131 s, 39 → 184 s): slower CI machines that run, not the app
+      (1.6.x changes no database code). Still well inside budget: on API 21 sale commit p95 13 ms
+      (150), report_year 216 ms (3,000), report_month 118 ms (1,000), search p95 ≤ 7 ms (50)
 
 ### Needs real-device testing (1.6.0)
 
