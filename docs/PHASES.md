@@ -23,7 +23,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
-| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — test build v1.6.0 published (CI, perf QUICK passed), v1.6.1 next; then the owner's phone tests |
+| — | **1.6.0**: the app updates itself from GitHub releases (D-059) | **in progress** — test builds v1.6.0 and v1.6.1 published (CI, perf QUICK passed); the owner's phone tests next |
 
 ## Open questions for the user
 
@@ -1172,7 +1172,11 @@ download checked against GitHub's SHA-256 and the release key; Android's install
 - [x] Perf QUICK (run 37026891340): **PASS** on API 21, 29, 36; cold start median 613 / 800 / 554 ms
 - [x] Test build **v1.6.0** (pre-release; build 104, 1,391 KB — 1,424,038 bytes, release key,
       SHA-256 `698d72df…286d`, `mapping-1.6.0.txt` attached); the public download stays v1.5.2
-- [ ] Test build **v1.6.1** (the same code, a higher version): the in-app update to see on the phone
+- [x] Test build **v1.6.1** (the same code, a higher version: the in-app update to see on the phone).
+      CI on e226f82 (run 37030864881, build 105): **228/228 on API 21 and 36**, tablet, release smoke;
+      the GitHub check this time passed on both (Android 5 through the bundled roots). Pre-release;
+      1,424,032 bytes, release key, SHA-256 `56884ff0…d976`, `mapping-1.6.1.txt` attached. GitHub's
+      release list (what a phone with test versions on reads) shows v1.6.1 first with its digest
 - [ ] The owner's phone tests below, then release 1.6.1 as latest
 
 ### Needs real-device testing (1.6.0)
