@@ -1035,7 +1035,10 @@ once; reports go through a small relay to a **private** GitHub repository, one i
 - [x] Privacy policy (EN + MS), `docs/PLAY.md` data safety, D-057, architecture.md §9
 - [ ] The owner renames the workers.dev subdomain to `faizoken` and adds the two tokens
       (Cloudflare, GitHub) → the relay is deployed and answers
-- [ ] CI green (API 21 + 36 incl. the relay reached from Android 5), release smoke, test build
+- [x] CI green on 646cf2b (run 36980633138): **220/220 on API 21 and 36**, tablet, release smoke,
+      lint; release APK **1,378,310 bytes** (1,346 KB; 1.4.0 was 1,290,312 — +67 KB readable names,
+      +21 KB the feature). The relay test was skipped (its address does not resolve before the rename)
+- [ ] After the rename and tokens: re-run CI so Android 5 reaches the relay over HTTPS; test build
 
 ### Needs real-device testing (1.5.0)
 
