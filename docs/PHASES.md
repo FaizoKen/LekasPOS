@@ -22,7 +22,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
 | — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 |
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
-| — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** — 1.5.1 (test build) still missed three report budgets on the tablet |
+| — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **in progress** — 1.5.2 test build published; waiting for the tablet's QUICK and FULL run |
 
 ## Open questions for the user
 
@@ -1119,7 +1119,12 @@ its older SQLite (`shift_current`) and, at FULL, five budgets were missed (`repo
       Fixed in d9d6ab9 (category 0 stands for none; no update when the product has no sales)
 - [x] Stock value was the tablet's closest call (459 of 500 ms): grouped first, then the category
       names (one name lookup per category, not per product) — −28% on SQLite 3.22, same rows
-- [ ] 1.5.2: CI green, test build; the owner runs QUICK and FULL on the tablet again
+- [x] CI on 4579366 (build 101): **224/224 on API 21 and 36**, tablet, release smoke, lint; release
+      APK **1,392,493 bytes** (1,360 KB). Perf FULL (run 37012094791): **PASS** on API 21, 29, 36;
+      stock_value on Android 10 36.7 → 31.2 ms, Android 5 65 → 50 ms
+- [x] Test build **v1.5.2** (pre-release; build 101, release key, SHA-256 `bd0dc579…0efd`,
+      `mapping-1.5.2.txt` attached); linked on #4 and #6. The public download stays v1.5.0
+- [ ] The owner runs QUICK and FULL on the tablet with 1.5.2
 
 ### Needs real-device testing (1.5.2)
 
