@@ -168,7 +168,8 @@ class ProductDaoTest {
         assertEquals(listOf("Jacob's Cream Crackers", "Julie's Cream Crackers"), search("s cream"))
         assertEquals(listOf("F&N Orange 325ml"), search("f n ora"))
         assertEquals(emptyList(), search("julie x"))
-        assertEquals(listOf("Julie Sardin", "Julie's Cream Crackers", "Julie's Peanut Butter"), db.readBlocking { ProductDao.search(it, "julie s", 50, includeInactive = true) }.map { it.name })
+        // Name order: "julie s cream…" sorts before "julie sardin" (a space before a letter).
+        assertEquals(listOf("Julie's Cream Crackers", "Julie's Peanut Butter", "Julie Sardin"), db.readBlocking { ProductDao.search(it, "julie s", 50, includeInactive = true) }.map { it.name })
     }
 
     @Test

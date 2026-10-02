@@ -95,12 +95,15 @@ object Summaries {
     /** A product's rows per day, month and year. */
     private val ROWS = listOf("day", "month", "year").map { p -> "SELECT $p, qty, net_ex, cost FROM sum_${p}_product WHERE product_id = ?" }
 
-    /** A product's rows (per day, month, year) filed under another category than [to] (a product just arrived). */
+    /**
+     * A product's rows (per day, month, year) filed under another category than the target (a product
+     * just arrived). 0 = none, so no null is bound (rawQuery takes no null arguments).
+     */
     private val MOVED = listOf("day", "month", "year").map { p ->
-        "SELECT $p, category_id, qty, net_ex, cost FROM sum_${p}_product WHERE product_id = ? AND category_id IS NOT ?"
+        "SELECT $p, category_id, qty, net_ex, cost FROM sum_${p}_product WHERE product_id = ? AND COALESCE(category_id, 0) != ?"
     }
     private val MOVE = listOf("day", "month", "year").map { p ->
-        "UPDATE sum_${p}_product SET category_id = ? WHERE product_id = ? AND category_id IS NOT ?"
+        "UPDATE sum_${p}_product SET category_id = ? WHERE product_id = ? AND COALESCE(category_id, 0) != ?"
     }
     private val ROW_CATEGORY = listOf("day", "month", "year").map { p ->
         "SELECT category_id FROM sum_${p}_product WHERE $p = ? AND product_id = ?"
@@ -227,14 +230,15 @@ object Summaries {
                         addToCategory(tx, i, r[0], target, r[1], r[2], r[3])
                     }
             } else {
-                val bind = args(productId, to)
-                tx.db.queryList(MOVED[i], bind) { c ->
+                val moved = tx.db.queryList(MOVED[i], args(productId, target)) { c ->
                     longArrayOf(c.getLong(0), if (c.isNull(1)) 0L else c.getLong(1), c.getLong(2), c.getLong(3), c.getLong(4))
-                }.forEach { r ->
+                }
+                if (moved.isEmpty()) continue // the usual case: a new product, no sales yet
+                for (r in moved) {
                     addToCategory(tx, i, r[0], r[1], -r[2], -r[3], -r[4])
                     addToCategory(tx, i, r[0], target, r[2], r[3], r[4])
                 }
-                tx.db.execSQL(MOVE[i], arrayOf(to, productId, to))
+                tx.db.execSQL(MOVE[i], arrayOf<Any?>(to, productId, target))
             }
         }
     }
