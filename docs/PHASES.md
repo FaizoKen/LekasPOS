@@ -19,8 +19,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | 10 | Cashier-first UI polish: words on every control, in-place quantity, clear totals and payment, popular items | **done** — tested on the phone (2026-09-30, build v0.10.0-phase10-fix1) |
 | — | **Release 1.0.0** outside Google Play: public download, Google sign-in for every account (D-051) | **released** 2026-09-30 — https://faizoken.github.io/LekasPOS/#download |
 | — | **Release 1.3.0**: faster Drive backup, new logo and two bug hunts (D-052 to D-055) | **released** 2026-10-01 |
-| — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 — latest download |
-| — | **1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **test build published** 2026-10-02 (pre-release v1.4.0, build 84) — waiting for the owner's phone tests |
+| — | **Release 1.3.1**: the auto-lock after the phone's screen was off | **released** 2026-10-01 |
+| — | **Release 1.4.0**: third bug hunt — cross-cutting reviews, weak features (D-056) | **released** 2026-10-02 — latest download (phone tests passed) |
 
 ## Open questions for the user
 
@@ -945,7 +945,7 @@ lock screen stays and would block the next tests).
    power button), wait 2 minutes, wake it — the sign-in shows at once, without a tap.
 3. Wake it again within the minute: still signed in (no lock before the idle time).
 
-## 1.4.0 — third bug hunt: cross-cutting reviews, weak features (test build published)
+## 1.4.0 — third bug hunt: cross-cutting reviews, weak features (released 2026-10-02)
 
 The owner asked for a third, free-hand search for bugs and weak features (2026-10-02). Twelve
 read-only reviews took angles the earlier hunts had not (concurrency, money end to end, clocks,
@@ -962,6 +962,9 @@ shared a placeholder SKU into one product and imported "Nescaf�" from Excel fi
 - [x] Local: `:core` and `:app` JVM tests pass (197 + 37), lint 0 errors
 - [x] CI (API 21 and 36, tablet, release smoke) and perf FULL
 - [x] Test build published as a pre-release
+- [x] The owner tested it on the phone: all 15 checks below passed (2026-10-02), and asked to release
+      it: **v1.4.0 is the latest release** (the website's Download link serves it, SHA-256 and
+      version checked); smoke baseline v1.4.0
 
 Results (2026-10-02): CI **216/216 on API 21 and 36** (15 new tests), lint, tablet and release smoke
 green (run 36958602980); perf FULL **PASS** on both (83/83 plans; cold start API 21 545–609 ms,
@@ -972,8 +975,8 @@ of the whole change found four more (the store's first PIN closed the Staff scre
 recovery code showed; a long payment took the change off the screen; a delivery order's barcode
 scanned into Receive's reference field; dashed barcodes from older versions on import) — all fixed
 with tests (D-056). Test build **v1.4.0** (pre-release; build 84, 1,260 KB — 1,290,312 bytes, same
-release key as 1.3.1, SHA-256 `75f2a10f…5050`, `mapping-1.4.0.txt` attached); the public download
-stays v1.3.1 until the owner's OK.
+release key as 1.3.1, SHA-256 `75f2a10f…5050`, `mapping-1.4.0.txt` attached), made the latest
+release after the owner's phone tests.
 
 ### Needs real-device testing (1.4.0)
 
