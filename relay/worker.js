@@ -87,8 +87,11 @@ export async function file(gh, r) {
     return;
   }
   const label = 'fp:' + r.fp;
-  const found = await gh('GET', '/issues?state=all&per_page=1&labels=' + encodeURIComponent(label));
-  const issue = found && found[0];
+  const found = await gh('GET', '/issues?state=all&per_page=10&labels=' + encodeURIComponent(label));
+  // The oldest is the bug's issue. GitHub lists a new issue a moment late, so two tills reporting the
+  // same bug at once can file two: the extra ones are counted into it and closed.
+  const [issue, ...extra] = (found || []).sort((a, b) => a.number - b.number);
+  if (issue && extra.length > 0) issue.body = await absorb(gh, issue, extra, label);
   if (!issue) {
     const stats = add(null, r);
     await gh('POST', '/labels', { name: label, color: 'ededed' }, [422]); // already there: fine
@@ -102,7 +105,7 @@ export async function file(gh, r) {
   const old = readStats(issue.body);
   const stats = add(old, r);
   const newBuild = !old || !(buildKey(r) in old.builds);
-  const labels = issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
+  const labels = labelsOf(issue);
   // Closed as not the app's fault (a full phone, say): stays closed, only counted.
   const regression = issue.state === 'closed' && old && r.build > old.maxBuild && !labels.some((l) => STAY_CLOSED.includes(l));
   const body = old ? issue.body.replace(STATS, statsBlock(stats)) : statsBlock(stats) + '\n\n' + (issue.body || '');
@@ -120,6 +123,46 @@ export async function file(gh, r) {
     await gh('POST', `/issues/${issue.number}/comments`, { body: `First report from ${r.app} (build ${r.build}).\n\n` + details(r) });
   }
 }
+
+/** Closes [extra] issues of the same bug as [issue], their counts moved into it; [issue]'s new body. */
+async function absorb(gh, issue, extra, label) {
+  let stats = readStats(issue.body);
+  for (const d of extra) {
+    const s = readStats(d.body);
+    if (s) stats = stats ? merge(stats, s) : s;
+    await gh('PATCH', '/issues/' + d.number, {
+      state: 'closed',
+      state_reason: 'not_planned',
+      labels: labelsOf(d).filter((l) => l !== label).concat('duplicate'),
+    });
+    await gh('POST', `/issues/${d.number}/comments`, { body: `The same bug as #${issue.number} (filed at the same moment); counted there.` });
+  }
+  if (!stats) return issue.body;
+  const body = STATS.test(issue.body) ? issue.body.replace(STATS, statsBlock(stats)) : statsBlock(stats) + '\n\n' + (issue.body || '');
+  await gh('PATCH', '/issues/' + issue.number, { body });
+  return body;
+}
+
+/** Two issues' stats as one. */
+export function merge(a, b) {
+  const s = { ...a, builds: { ...a.builds }, tills: [...a.tills] };
+  s.count += b.count;
+  s.moreTills = (s.moreTills || 0) + (b.moreTills || 0);
+  for (const t of b.tills) {
+    if (s.tills.includes(t)) continue;
+    if (s.tills.length < MAX_TILLS) s.tills.push(t);
+    else s.moreTills += 1;
+  }
+  for (const [k, n] of Object.entries(b.builds)) {
+    if (k in s.builds || Object.keys(s.builds).length < MAX_BUILDS) s.builds[k] = (s.builds[k] || 0) + n;
+  }
+  s.maxBuild = Math.max(s.maxBuild, b.maxBuild);
+  s.first = Math.min(s.first, b.first);
+  s.last = Math.max(s.last, b.last);
+  return s;
+}
+
+const labelsOf = (issue) => issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
 
 /** [old] stats (or none) with report [r] counted. */
 export function add(old, r) {

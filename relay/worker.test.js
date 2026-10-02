@@ -36,7 +36,12 @@ function fakeGitHub() {
     calls.push(`${method} ${path.split('?')[0]}`);
     if (method === 'GET') {
       const label = decodeURIComponent(path.split('labels=')[1]);
-      return issues.filter((i) => i.labels.includes(label)).slice(0, 1).map((i) => ({ ...i, labels: i.labels.map((name) => ({ name })) }));
+      const perPage = Number(/per_page=(\d+)/.exec(path)[1]);
+      return issues
+        .filter((i) => i.labels.includes(label))
+        .sort((a, b) => b.number - a.number) // newest first, as GitHub lists them
+        .slice(0, perPage)
+        .map((i) => ({ ...i, labels: i.labels.map((name) => ({ name })) }));
     }
     if (method === 'POST' && path === '/labels') return null;
     if (method === 'POST' && path === '/issues') {
@@ -109,6 +114,28 @@ test('a bug closed as not the app\'s fault stays closed', async () => {
   await file(g.gh, clean(report({ build: 95, app: '1.5.1' })));
   assert.equal(g.issues[0].state, 'closed');
   assert.equal(readStats(g.issues[0].body).count, 2);
+});
+
+test('two issues filed at the same moment become one at the next report', async () => {
+  const g = fakeGitHub();
+  // Two tills at once: GitHub did not list the first issue yet when the second report came.
+  await file(g.gh, clean(report()));
+  const first = g.issues[0];
+  first.labels = first.labels.filter((l) => !l.startsWith('fp:'));
+  await file(g.gh, clean(report({ install: 'ffffffffffffffff' })));
+  first.labels.push('fp:0123456789abcdef');
+  assert.equal(g.issues.length, 2);
+  await file(g.gh, clean(report({ install: 'eeeeeeeeeeeeeeee' })));
+  assert.equal(g.issues.length, 2);
+  const s = readStats(g.issues[0].body);
+  assert.equal(s.count, 3);
+  assert.equal(s.tills.length, 3);
+  assert.equal(g.issues[1].state, 'closed');
+  assert.ok(g.issues[1].labels.includes('duplicate'));
+  assert.ok(!g.issues[1].labels.includes('fp:0123456789abcdef')); // found no more
+  assert.match(g.issues[1].comments[0], /The same bug as #1/);
+  await file(g.gh, clean(report()));
+  assert.equal(readStats(g.issues[0].body).count, 4);
 });
 
 test('a report sent by hand is always its own issue, with the note', async () => {

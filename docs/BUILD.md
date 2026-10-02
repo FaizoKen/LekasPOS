@@ -63,8 +63,9 @@ APK (`ErrorReports.URL`): keep it working.
 | `CLOUDFLARE_API_TOKEN` | secret | Cloudflare → My Profile → API Tokens → custom token: *Account · Workers Scripts · Edit* (+ *Account Settings · Read*), this account only |
 | `REPORTS_TOKEN` | secret | GitHub → Settings → Developer settings → fine-grained token: repository `FaizoKen/LekasPOS-reports` only, *Issues: Read and write*; it becomes the Worker's secret |
 
-Without the two secrets the workflow tests the relay but does not deploy it. Renew a token before
-it expires (then re-run the workflow). Locally: `cd relay; node --test`.
+Without the two secrets the workflow tests the relay but does not deploy it. The GitHub token was
+made without an expiry (2026-10-02); if either token is ever replaced, update its secret and re-run
+the workflow. Locally: `cd relay; node --test`.
 
 ## Everyday commands (repo root, PowerShell)
 
