@@ -617,14 +617,18 @@ class SyncMergeTest {
         syncAll(a, b)
         runBlocking {
             a.promotions.save(null, PromotionRow(0L, "Milo 3 for RM10", PromoKind.MULTI_PRICE, 3, 0, 1_000L, listOf(milo)))
-            a.sync.sync(provider)
-            val noCard = object : SyncProvider by provider {
-                override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
-                    if (name.startsWith("dev-")) throw java.io.IOException("connection lost")
-                    return provider.put(name, file, props, replace, fresh)
+            a.sync.sync(provider) // one file with the promotion
+            product(a, "Kopi", 250L)
+            a.sync.sync(provider) // and one after it
+            // B gets the first file, then the connection drops on the second.
+            var gets = 0
+            val dropsSecond = object : SyncProvider by provider {
+                override suspend fun get(remote: RemoteFile, dest: File) {
+                    if (++gets == 2) throw java.io.IOException("connection lost")
+                    provider.get(remote, dest)
                 }
             }
-            assertFailsWith<java.io.IOException> { b.sync.sync(noCard) }
+            assertFailsWith<java.io.IOException> { b.sync.sync(dropsSecond) }
             assertEquals(listOf("Milo 3 for RM10"), b.promotions.all().map { it.name })
         }
     }
@@ -953,6 +957,7 @@ class SyncMergeTest {
         enable(b, "Counter B")
         runBlocking { assertEquals("KQ-", b.db().read { Meta.get(it, Meta.RECEIPT_PREFIX) }) }
         sell(a, product(a, "Milo", 1_890L))
+        a.sync.republishCardNextRound() // as 15 minutes later: an unchanged card is re-sent that often
         runBlocking { a.sync.sync(provider) } // A's card is back
         listWholeFolderNext(a, b)
         syncAll(a, b)

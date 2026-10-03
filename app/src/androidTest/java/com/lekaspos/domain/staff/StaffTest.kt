@@ -366,6 +366,7 @@ class StaffTest {
         // The owner approving that one change: done.
         val once = assertNotNull(graph.permissions.approve(owner, "2468", Perm.MANAGE_STAFF).second)
         graph.staffAdmin.setPin(clerk, "0000", once)
+        Unit // a test returns nothing (JUnit refused the class)
     }
 
     @Test

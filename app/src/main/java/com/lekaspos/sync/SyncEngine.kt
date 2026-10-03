@@ -803,6 +803,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             count
         }
 
+    /** Tests: the next round publishes this till's card even if nothing about it changed. */
+    internal fun republishCardNextRound() {
+        cardKey = null
+    }
+
     /** When this process last read the other tills' cards (0: not yet). */
     @Volatile
     private var cardsCheckedAt = 0L
