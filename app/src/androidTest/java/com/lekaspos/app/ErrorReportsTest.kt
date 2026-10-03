@@ -8,6 +8,7 @@ import com.lekaspos.util.Log
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -19,9 +20,19 @@ class ErrorReportsTest {
 
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    /** Nothing waiting from earlier tests (their logged errors are reports too); never sent from here. */
+    /**
+     * Nothing waiting from earlier tests (their logged errors are reports too), then reports on: since
+     * D-060 nothing is kept while they are off. Never sent from here (only release-signed builds send
+     * on their own); off again afterwards for the other tests.
+     */
     @Before
-    fun noReportsWaiting() = ErrorReports.setConsent(ctx, false)
+    fun noReportsWaiting() {
+        ErrorReports.setConsent(ctx, false)
+        ErrorReports.setConsent(ctx, true)
+    }
+
+    @After
+    fun reportsOff() = ErrorReports.setConsent(ctx, false)
 
     /** Letters only: numbers in a message are taken out of its title. */
     private fun marker() = "reports test " + (1..10).map { ('a'..'z').random() }.joinToString("")
@@ -74,6 +85,11 @@ class ErrorReportsTest {
         ErrorReports.setConsent(ctx, false)
         assertTrue(waiting(m).isEmpty())
         assertEquals(ErrorReports.OFF, ErrorReports.consent(ctx))
+        // D-060: while off, nothing is kept (it went out when reports were turned on later).
+        val later = marker()
+        Log.e(later)
+        Thread.sleep(500L)
+        assertTrue(waiting(later).isEmpty())
     }
 
     /**
