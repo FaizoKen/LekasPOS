@@ -25,6 +25,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
+| — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | **in progress** — fixes and tests done; CI, test build and the owner's phone tests pending |
 
 ## Open questions for the user
 
@@ -1268,4 +1269,39 @@ after Back. Weak features added: **Settings → Payment methods** (DuitNow QR, T
    message says how much is free.
 10. Printer (when available): a copy of a voided sale has no e-invoice QR; a split payment where the
     e-wallet paid all but the rounding prints no "Cash 0.00".
+
+## 1.7.1 — fifth bug hunt (D-061)
+
+The owner asked for another bug hunt right after 1.7.0 (2026-10-03). Nine read-only reviews from new
+angles (regressions of 1.7.0, Android ending the app, threads, crafted files, battery and data, a new
+shop's first week, test gaps, accessibility, upgrades and mixed versions); every finding checked in the
+code. The most serious: 1.7.0 deleted older "Back up now" copies (reverted); a manager could put
+themselves in a wider role; hiding "Customer credit" paid credit refunds out in cash; a broken backup
+could lock the till out on every start; one unreadable sync event stopped all imports for good; a
+year-old store's sync used tens of MB a day per till; "50" typed for RM50 was quietly RM0.50 of the bill.
+
+- [x] Fixes and tests: see D-061
+- [ ] Local JVM tests, lint; CI (API 21 and 36, tablet, release smoke) and perf
+- [ ] Test build; the owner's phone tests
+
+### Needs real-device testing (1.7.1)
+
+1. Install over 1.7.0 (Settings → App updates → Include test versions): data, staff, settings still
+   there; your own "Back up now" copies are all still listed in Backup & restore.
+2. **Pay**: a bill of RM85, type 5 0 → Cash → it asks "Only RM0.50 in cash?" (cancel); 5 0 0 0 → change.
+   A product with price 0.00 asks for its price when scanned.
+3. **Large font** (phone Settings → Display → Font size largest), selling screen in portrait and
+   landscape: the bill total, a selected line's − / + / Remove / More, the payment amounts and the
+   change are whole and readable.
+4. **Payment methods**: "Customer credit" and "Cash" cannot be hidden; cash always opens the drawer;
+   renaming "E-wallet / QR" asks first.
+5. **Staff** (PIN login on, a role with "Manage staff" but not "Settings"): moving yourself to a role
+   with Settings is refused unless the owner approves.
+6. **Promotions**: a weighed product cannot be added to a promotion (message).
+7. **Products → Import** a CSV saved from Excel with columns "Item Name", "Selling Price (RM)", "Bar Code",
+   "SST" (Y/N) → it reads them; an .xlsx file says to save it as CSV. Close the app half-way through a
+   large import and import the same file again → it continues where it stopped.
+8. **Products**: type or scan a new barcode in the search → "Tap here to add it".
+9. Malay: the Hold button says "Tangguh", held bills "Bil ditangguh".
+10. Printer (when available): choose the printer, press Back without Save → it is kept.
 

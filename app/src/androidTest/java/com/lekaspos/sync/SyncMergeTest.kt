@@ -547,6 +547,62 @@ class SyncMergeTest {
     }
 
     /**
+     * 2026-10 review: one event this version could not read (a field of another type, as a newer or
+     * broken till could send) failed every round for good, and nothing after it was ever imported.
+     * It is set aside now; the rest of that till's files still arrive.
+     */
+    @Test
+    fun anUnreadableEventIsSetAsideAndTheRestStillArrives() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        val milo = product(a, "Milo", 390L)
+        sell(a, milo)
+        runBlocking {
+            // The sale's line total as text: Importer casts it to a number.
+            a.db().write(reserveIds = 0L) { tx ->
+                tx.db.execSQL("UPDATE outbox SET payload = REPLACE(payload, '\"net\":', '\"net\":\"x\",\"was_net\":') WHERE entity = ?", arrayOf<Any?>(Entity.SALE))
+            }
+        }
+        runBlocking { a.sync.sync(provider) }
+        sell(a, milo, 2_000L) // a later, sound sale
+        runBlocking {
+            a.sync.sync(provider)
+            b.sync.sync(provider) // does not throw
+            assertEquals(1L, b.db().read { it.long("SELECT COUNT(*) FROM sale") }) // the sound one
+            assertEquals(1L, b.db().read { it.long("SELECT COUNT(*) FROM sync_deferred") }) // the other waits aside
+            assertTrue(b.db().read { r -> r.long("SELECT COUNT(*) FROM product WHERE name = 'Milo'") } == 1L)
+            b.sync.sync(provider) // still fine the next round
+        }
+    }
+
+    /**
+     * 2026-10 review: built-in rows are made by every till in its own language at version (0, 0);
+     * a till set up in Malay kept "Tunai" and one in English "Cash" for good.
+     */
+    @Test
+    fun builtInRowsNamedInTwoLanguagesEndTheSame() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        runBlocking {
+            // As if B had been set up in Malay: its seed names, at the seed version.
+            b.db().write(reserveIds = 0L) { tx ->
+                tx.db.execSQL("UPDATE payment_method SET name = 'Tunai' WHERE id = ?", arrayOf<Any?>(Seed.Ids.PM_CASH))
+                tx.db.execSQL("UPDATE role SET name = 'Pengurus' WHERE id = ?", arrayOf<Any?>(Seed.Ids.ROLE_MANAGER))
+            }
+        }
+        enable(b, "Counter B", join = false)
+        syncAll(a, b)
+        for (t in listOf(a, b)) runBlocking {
+            assertEquals("Tunai", t.db().read { it.queryList("SELECT name FROM payment_method WHERE id = ?", arrayOf(Seed.Ids.PM_CASH.toString())) { c -> c.getString(0) } }.single())
+            assertEquals("Pengurus", t.db().read { it.queryList("SELECT name FROM role WHERE id = ?", arrayOf(Seed.Ids.ROLE_MANAGER.toString())) { c -> c.getString(0) } }.single())
+        }
+        assertConverged(a, b)
+    }
+
+    /**
      * 2026-10 review: a promotion imported in a round that then failed (here: publishing the
      * device card) was in the database but not in memory — the till kept the old deals until it
      * restarted, as the segment is never read again.

@@ -32,7 +32,7 @@
     <string name="sell_browse">Katalog</string>
     <string name="sell_camera">Imbas dengan kamera</string>
     <string name="sell_menu">Menu</string>
-    <string name="sell_hold">Simpan</string>
+    <string name="sell_hold">Tangguh</string>
     <string name="sell_discount">Diskaun</string>
     <string name="sell_pay_empty">Bayar</string>
     <plurals name="sell_items">
@@ -98,15 +98,15 @@
     <string name="discount_percent">Peratus</string>
     <string name="discount_none">Tiada diskaun</string>
 
-    <!-- Bil disimpan -->
-    <string name="held_title">Bil disimpan</string>
-    <string name="held_empty">Tiada bil disimpan.</string>
-    <string name="held_hold_title">Simpan bil ini</string>
+    <!-- Bil ditangguh (bukan "simpan": itu menyimpan, 2026-10) -->
+    <string name="held_title">Bil ditangguh</string>
+    <string name="held_empty">Tiada bil ditangguh.</string>
+    <string name="held_hold_title">Tangguh bil ini</string>
     <string name="held_label_hint">Nama (pilihan), cth. pelanggan</string>
     <string name="held_row">%1$s · %3$s · baris: %2$d</string>
-    <string name="held_delete_confirm">Padam bil yang disimpan ini?</string>
+    <string name="held_delete_confirm">Padam bil yang ditangguh ini?</string>
     <string name="held_delete_one">Padam bil…</string>
-    <string name="held_delete_which">Padam bil disimpan yang mana?</string>
+    <string name="held_delete_which">Padam bil ditangguh yang mana?</string>
 
     <!-- Batal bil -->
     <string name="clear_confirm_title">Batalkan bil ini?</string>
@@ -153,6 +153,7 @@
     <string name="products_search_hint">Cari nama, SKU atau kod bar</string>
     <string name="products_empty">Belum ada produk. Tekan + untuk menambah, atau imbas kod bar yang tidak dikenali di skrin jualan.</string>
     <string name="products_none_found">Tiada produk yang sepadan.</string>
+    <string name="products_add_barcode">Tiada produk dengan kod bar %1$s. Ketik di sini untuk menambahnya.</string>
     <string name="product_row_stock">Stok: %1$s</string>
     <string name="product_hidden">TERSEMBUNYI</string>
     <string name="product_new">Produk baru</string>

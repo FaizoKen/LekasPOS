@@ -88,8 +88,9 @@ class Form(private val ctx: Context) {
         hint: CharSequence? = null,
         lines: Int = 1,
     ): EditText {
-        label(label)
+        val l = label(label)
         return EditText(ctx).also {
+            labelFor(l, it)
             it.setText(value ?: "")
             it.hint = hint
             it.inputType = if (lines > 1) inputType or InputType.TYPE_TEXT_FLAG_MULTI_LINE else inputType
@@ -115,8 +116,9 @@ class Form(private val ctx: Context) {
     }
 
     fun choice(label: CharSequence, options: List<CharSequence>, selected: Int, onChange: ((Int) -> Unit)? = null): Spinner {
-        label(label)
+        val l = label(label)
         return Spinner(ctx).also {
+            labelFor(l, it)
             val adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_item, options)
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             it.adapter = adapter
@@ -175,10 +177,23 @@ class Form(private val ctx: Context) {
         return v
     }
 
-    private fun label(text: CharSequence) {
+    private fun label(text: CharSequence): TextView {
         val t = TextView(ctx, null, 0, R.style.Text_Lekas_Label)
         t.text = text
         column.addView(t, lp().apply { topMargin = dp(12) })
+        return t
+    }
+
+    /**
+     * TalkBack reads [label] with its [field]. labelFor needs an id, so the field gets a generated one;
+     * Android must still not keep the field's state itself ([save] and [restore] do): a generated id can
+     * belong to another kind of view in a form rebuilt after the app was ended, and restoring one view's
+     * state into another throws.
+     */
+    private fun labelFor(label: TextView, field: View) {
+        field.id = View.generateViewId()
+        field.isSaveEnabled = false
+        label.labelFor = field.id
     }
 
     private fun lp() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

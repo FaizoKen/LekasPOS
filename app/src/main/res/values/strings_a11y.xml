@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accessibility: what TalkBack reads where the screen shows no words. -->
+<resources>
+    <plurals name="a11y_pin_digits">
+        <item quantity="one">%d digit entered</item>
+        <item quantity="other">%d digits entered</item>
+    </plurals>
+</resources>

@@ -1,6 +1,7 @@
 package com.lekaspos.domain.sell
 
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.pricing.PricingEngine
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.product.ProductDao
@@ -39,6 +40,7 @@ class PriceCheck(private val graph: AppGraph) {
         if (q.isEmpty()) return emptyList()
         val templates = graph.settings.store.value.templates()
         val promos = graph.promotions.all()
+        val running = graph.promotions.active()
         val today = Days.epochDay(System.currentTimeMillis(), TimeZone.getDefault())
         return graph.db().read { r ->
             val products: List<SellableProduct> = when (val res = BarcodeLookup.resolve(r, q, templates)) {
@@ -51,7 +53,11 @@ class PriceCheck(private val graph: AppGraph) {
                 val packs = ProductDao.barcodes(r, p.id)
                     .filter { it.packQty != 1000L || it.packPrice != null }
                     .map { Pack(it.packQty, it.packPrice ?: PricingEngine.lineGross(p.price, it.packQty)) }
-                val deals = promos.filter { it.runsOn(today) && p.id in it.productIds }
+                // The deal the till really gives: products sold by the piece only, and of several
+                // running deals the one the pricing takes (the lowest id) — it listed deals that never
+                // applied (2026-10 review).
+                val winner = running.filter { p.id in it.productIds }.minOfOrNull { it.id }
+                val deals = if (p.sellMode != SellMode.UNIT) emptyList() else promos.filter { it.id == winner }
                 val stock = if (p.trackStock) StockDao.level(r, p.id) else null
                 Info(p.id, p.name, p.unit, p.sellMode, p.price, stock, packs, p.active, deals)
             }

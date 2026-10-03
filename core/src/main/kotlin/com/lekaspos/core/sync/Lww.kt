@@ -87,5 +87,9 @@ object Lww {
      * that wrote them (more than a day: its clock does not follow) would otherwise keep its edit
      * while every other till rejects it as older — the tills would disagree for good.
      */
-    fun stampAbove(now: Long, held: Long): Long = if (now > held) now else held + 1L
+    fun stampAbove(now: Long, held: Long): Long = when {
+        now > held -> now
+        held == Long.MAX_VALUE -> held // never wraps to the smallest value (2026-10 review)
+        else -> held + 1L
+    }
 }

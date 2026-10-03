@@ -6,7 +6,7 @@
     <string name="sell_total">Jumlah</string>
     <string name="sell_popular">Laris</string>
     <plurals name="held_pill">
-        <item quantity="other">%d disimpan</item>
+        <item quantity="other">%d ditangguh</item>
     </plurals>
     <string name="menu_manage">Urus kedai</string>
     <string name="sell_empty_title">Imbas barang untuk mula</string>
@@ -22,6 +22,8 @@
     <string name="result_received">Diterima %1$s · jumlah %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
     <string name="pay_cancel_split">%1$s telah dibayar untuk bil ini. Batalkan bayaran dan kosongkannya?</string>
+    <string name="pay_part_cash">Hanya %1$s tunai? Maka %2$s masih perlu dibayar dengan kaedah lain. (Untuk menaip RM50, tekan 5 0 0 0.)</string>
+    <string name="pay_part_cash_yes">Bayaran sebahagian</string>
     <string name="pay_cancel_yes">Batal bayaran</string>
     <!-- Kaedah bayaran (2026-10) -->
     <string name="pm_title">Kaedah bayaran</string>
@@ -40,4 +42,6 @@
     <string name="pm_active">Dipaparkan di kaunter</string>
     <string name="pm_hidden">disembunyikan</string>
     <string name="pm_error_name">Masukkan nama.</string>
+    <string name="pm_rename_used">Jualan yang sudah dibayar dengan “%1$s” juga akan menunjukkan “%2$s”: pada salinan resit, dalam laporan dan pada laporan syif yang telah ditutup. Untuk mengekalkan nama lama padanya, tambah kaedah bayaran baharu dan sembunyikan yang ini.</string>
+    <string name="pm_rename_yes">Tukar nama</string>
 </resources>

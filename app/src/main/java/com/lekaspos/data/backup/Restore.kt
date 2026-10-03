@@ -5,8 +5,10 @@ import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.id.Ids
 import com.lekaspos.core.time.DateText
+import com.lekaspos.data.db.DbOpenHelper
 import com.lekaspos.data.db.KeepDamagedDatabase
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.db.SeedNames
 import com.lekaspos.data.db.long
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.sale.ReceiptNumbers
@@ -52,9 +54,54 @@ object Restore {
     fun prepare(ctx: Context, input: InputStream, mode: Mode, by: Who? = null): BackupFiles.Header {
         cancelStaged(ctx)
         val h = BackupFiles.unpack(input, dir(ctx))
+        try {
+            trialOpen(ctx, BackupFiles.unpackedDb(dir(ctx)), mode)
+        } catch (e: Exception) {
+            cancelStaged(ctx)
+            throw e
+        }
         by?.let { byFile(ctx).writeText("${it.staffId}\n${it.approvedBy ?: ""}\n${DateText.dateTime(h.createdAt, java.util.TimeZone.getDefault())}") }
         prepared(ctx).writeText(mode.name)
         return h
+    }
+
+    /**
+     * The unpacked database opens, migrates and takes the restore's clean-up on a scratch copy, as
+     * it would at the next start. A backup with a broken schema (a version of 0, a missing table, a
+     * trigger that fails a migration) was put in place and then failed every start, with Backup &
+     * restore out of reach (2026-10 review). Throws [BackupFiles.Invalid] when it would not open;
+     * a full phone throws as it is.
+     */
+    private fun trialOpen(ctx: Context, db: File, mode: Mode) {
+        val name = TRIAL_DB
+        val scratch = ctx.getDatabasePath(name)
+        fun clean() {
+            for (suffix in listOf("", "-wal", "-shm", "-journal")) File(scratch.path + suffix).delete()
+        }
+        clean()
+        // A phone too full for a second copy still restores (often why it is needed): unchecked then.
+        if (com.lekaspos.util.Storage.freeBytes(ctx.filesDir) < db.length() + TRIAL_MARGIN) {
+            Log.w("Not enough free storage to test-open the backup: restored unchecked")
+            return
+        }
+        try {
+            scratch.parentFile?.mkdirs()
+            db.copyTo(scratch, overwrite = true)
+            val helper = DbOpenHelper(ctx.applicationContext, name, SeedNames())
+            try {
+                val sqlite = helper.writableDatabase
+                afterOpen(sqlite, mode, Carry())
+                if (Meta.getLong(sqlite, Meta.DEVICE_NO) == null) throw IllegalStateException("no till number")
+            } finally {
+                helper.close()
+            }
+        } catch (e: java.io.IOException) {
+            throw e
+        } catch (e: Exception) {
+            throw BackupFiles.Invalid("this app cannot open the database in the backup (${e.message ?: e.javaClass.simpleName})")
+        } finally {
+            clean()
+        }
     }
 
     /** Who restores a backup, for the audit entry the restored data gets (2026-10 review: there was none). */
@@ -99,6 +146,8 @@ object Restore {
      * thrown away.
      */
     fun applyIfStaged(ctx: Context, name: String): Mode? {
+        // The test copy of a check the app was ended during (a whole database).
+        for (suffix in listOf("", "-wal", "-shm", "-journal")) File(ctx.getDatabasePath(TRIAL_DB).path + suffix).delete()
         val marker = marker(ctx)
         if (marker.exists()) {
             val asked = runCatching { Mode.valueOf(marker.readText().trim()) }.getOrDefault(Mode.REPLACE)
@@ -406,6 +455,10 @@ object Restore {
     fun backupDir(ctx: Context): File = File(ctx.filesDir, "backups")
 
     const val REASON_REPLACED = "replaced"
+
+    /** The scratch database a backup is test-opened as before it is armed. */
+    private const val TRIAL_DB = "restore-check.db"
+    private const val TRIAL_MARGIN = 20L * 1024L * 1024L
 
     /** IDs skipped by a restored till that keeps its identity (see [continueAfter]): about a billion. */
     private const val ID_GAP = 1L shl 30

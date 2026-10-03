@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.lekaspos.R
+import com.lekaspos.core.csv.CsvInput
 import java.io.BufferedInputStream
 import java.io.BufferedWriter
 import java.io.File
@@ -14,10 +15,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.Reader
-import java.nio.ByteBuffer
-import java.nio.CharBuffer
 import java.nio.charset.Charset
-import java.nio.charset.CodingErrorAction
 
 /**
  * CSV files in and out (D-041): exports are written in the background either to a file the
@@ -28,8 +26,16 @@ object CsvFiles {
 
     const val MIME = "text/csv"
 
-    /** MIME types the import picker offers (spreadsheet apps and file managers disagree on CSV). */
-    val OPEN_TYPES = arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/csv", "application/vnd.ms-excel", "text/*")
+    /**
+     * MIME types the import picker offers (spreadsheet apps and file managers disagree on CSV).
+     * Excel and OpenDocument files can be picked too: the import then says how to save them as
+     * CSV, where the picker used to grey them out without a word (2026-10 review).
+     */
+    val OPEN_TYPES = arrayOf(
+        "text/csv", "text/comma-separated-values", "text/plain", "application/csv", "text/*",
+        "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.oasis.opendocument.spreadsheet",
+    )
 
     /** Writes a cache file for sharing. Blocking. */
     fun shareFile(ctx: Context, name: String): File = sharedFile(ctx, KIND_CSV, name)
@@ -89,44 +95,24 @@ object CsvFiles {
         .putExtra(Intent.EXTRA_MIME_TYPES, OPEN_TYPES)
 
     /**
-     * A reader for an imported file: UTF-16 when it starts with a UTF-16 BOM (Excel's "Unicode
-     * Text"), UTF-8 when the whole file is valid UTF-8 (with or without BOM), otherwise
-     * Windows-1252 (Excel's "CSV" on Windows saves that). The whole file is checked, in one pass
-     * of constant memory: judged by its first 32 KB, a file with "Nescafé" on row 700 was read as
-     * UTF-8 and the name imported as "Nescaf�" on every till (2026-10 review).
+     * A reader for an imported file, its character set judged from the whole file in one pass of
+     * constant memory ([CsvInput.detect]): UTF-16 when it starts with a UTF-16 BOM (Excel's
+     * "Unicode Text"), UTF-8 when (almost) all of it is valid UTF-8 — a few broken bytes are read as
+     * U+FFFD and the preview names their lines — otherwise Windows-1252 (Excel's "CSV" on Windows).
+     * Judged by its first 32 KB, a file with "Nescafé" on row 700 was read as UTF-8 and the name
+     * imported as "Nescaf�"; and one stray byte switched a whole UTF-8 file to Windows-1252 and
+     * garbled every name in it (2026-10 reviews).
+     *
+     * @throws CsvInput.SpreadsheetFile for an Excel (.xlsx, .xls) or OpenDocument file: it was read
+     * as text and refused as "Required columns are missing".
      */
     fun reader(ctx: Context, uri: Uri): Reader {
         fun open() = ctx.contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read $uri")
-        val charset = open().use { charsetOf(it) }
-        return InputStreamReader(BufferedInputStream(open(), 64 * 1024), charset)
+        val detected = open().use { CsvInput.detect(it) }
+        if (detected.spreadsheet) throw CsvInput.SpreadsheetFile()
+        return InputStreamReader(BufferedInputStream(open(), 64 * 1024), detected.charset)
     }
 
     /** The character set of a whole file read from [input] (see [reader]); [input] is read to its end. */
-    fun charsetOf(input: InputStream): Charset {
-        val buf = ByteBuffer.allocate(64 * 1024)
-        var read = input.read(buf.array(), 0, buf.capacity())
-        if (read <= 0) return Charsets.UTF_8
-        val a = buf.get(0).toInt() and 0xFF
-        val b = if (read > 1) buf.get(1).toInt() and 0xFF else -1
-        if (a == 0xFF && b == 0xFE) return Charsets.UTF_16LE // the CSV reader skips the BOM
-        if (a == 0xFE && b == 0xFF) return Charsets.UTF_16BE
-        val decoder = Charsets.UTF_8.newDecoder()
-            .onMalformedInput(CodingErrorAction.REPORT)
-            .onUnmappableCharacter(CodingErrorAction.REPORT)
-        val out = CharBuffer.allocate(buf.capacity()) // a byte never makes more than one character
-        buf.position(read)
-        while (read >= 0) {
-            buf.flip()
-            if (decoder.decode(buf, out, false).isError) return WINDOWS_1252
-            out.clear()
-            buf.compact() // a character cut off by the end of this chunk is finished by the next one
-            read = input.read(buf.array(), buf.position(), buf.remaining())
-            if (read > 0) buf.position(buf.position() + read)
-        }
-        buf.flip()
-        if (decoder.decode(buf, out, true).isError || decoder.flush(out).isError) return WINDOWS_1252
-        return Charsets.UTF_8
-    }
-
-    private val WINDOWS_1252: Charset get() = Charset.forName("windows-1252")
+    fun charsetOf(input: InputStream): Charset = CsvInput.detect(input).charset
 }

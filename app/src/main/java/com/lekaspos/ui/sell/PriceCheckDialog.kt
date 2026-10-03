@@ -84,13 +84,18 @@ class PriceCheckDialog(
         return true
     }
 
+    private var lookupJob: kotlinx.coroutines.Job? = null
+
     /** Looks up [query] (a scan or typed text) and shows what was found. */
     fun lookup(query: String) {
         val q = query.trim()
         if (q.isEmpty()) return
         field.setText(q)
         field.setSelection(q.length)
-        scope.launch {
+        // The newest lookup only: a slow search for one scan finished after a quick barcode hit for
+        // the next and showed the wrong product's price (2026-10 review).
+        lookupJob?.cancel()
+        lookupJob = scope.launch {
             val found = check.lookup(q)
             result.text = if (found.isEmpty()) {
                 a.getString(R.string.sell_no_results, q)

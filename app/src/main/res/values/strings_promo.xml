@@ -2,7 +2,7 @@
 <!-- Phase 8: promotions. -->
 <resources>
     <string name="promo_title">Promotions</string>
-    <string name="promo_help">Deals the till applies by itself: “3 for RM10”, a special price (1 for RM3.99) or “buy 1 get 1 free” on one or more products, from a start date to an end date if you like. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out.</string>
+    <string name="promo_help">Deals the till applies by itself: “3 for RM10”, a special price (1 for RM3.99) or “buy 1 get 1 free” on one or more products, from a start date to an end date if you like. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out. Tills on LekasPOS 1.6.1 or older do not apply a special price: update every till first.</string>
     <string name="promo_empty">No promotions yet. Tap + to add one.</string>
     <string name="promo_add">New promotion</string>
     <string name="promo_edit">Edit promotion</string>
@@ -39,6 +39,7 @@
     <string name="promo_error_price">Enter the price.</string>
     <string name="promo_error_products">Add at least one product.</string>
     <string name="promo_error_dates">The end date is before the start date.</string>
+    <string name="promo_error_piece_only">Promotions apply only to products sold by the piece. Weighed products and products priced at the till are left out.</string>
     <string name="promo_saved">Promotion saved.</string>
     <string name="promo_delete_confirm">Delete the promotion “%1$s”? Sales already made keep their prices.</string>
     <string name="audit_promotion">Promotion changed</string>

@@ -163,6 +163,10 @@ class CartSession(private val graph: AppGraph) {
                     p.sellMode == SellMode.WEIGHT && res.hit.packQty == 1000L && res.hit.packPrice == null ->
                         ScanResult.NeedsWeight(p, res.hit.code)
                     p.sellMode == SellMode.OPEN_PRICE -> ScanResult.NeedsPrice(p, res.hit.code)
+                    // No price yet (a product added in a hurry): the price is asked, it never sells free
+                    // with the normal beep (2026-10 review).
+                    p.sellMode == SellMode.UNIT && p.price == 0L && res.hit.packQty == 1000L && res.hit.packPrice == null ->
+                        ScanResult.NeedsPrice(p, res.hit.code)
                     else -> added(add(itemFor(res.hit)))
                 }
             }

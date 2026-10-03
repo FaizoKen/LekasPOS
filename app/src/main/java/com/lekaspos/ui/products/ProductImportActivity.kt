@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Switch
 import com.lekaspos.R
+import com.lekaspos.core.csv.ProductCsv
 import com.lekaspos.core.csv.ProductCsv.Column
 import com.lekaspos.core.csv.ProductCsv.Problem
 import com.lekaspos.core.model.Perm
@@ -81,12 +82,25 @@ class ProductImportActivity : ScreenActivity() {
         val currency = graph.settings.store.value.currency
         val f = Form(this)
         f.section(getString(R.string.import_file))
+        if (p.spreadsheet) {
+            // An .xlsx/.xls file: say how to make the CSV instead of "Required columns are missing".
+            f.info(getString(R.string.import_excel))
+            f.button(getString(R.string.cancel)) { finish() }
+            content.removeAllViews()
+            content.addView(f.view)
+            return
+        }
         if (p.malformed != null) f.info(getString(R.string.import_malformed, p.malformed))
         if (p.missing.isNotEmpty()) f.info(getString(R.string.import_missing, p.missing.joinToString(", ") { it.header }))
+        if (p.resumeFrom > 0) f.info(getString(R.string.import_resume, p.resumeFrom))
         f.row(getString(R.string.import_rows), p.rows.toString())
         f.row(getString(R.string.import_new), p.newProducts.toString(), bold = true)
         f.row(getString(R.string.import_updates), p.updates.toString(), bold = true)
         if (p.badRows > 0) f.row(getString(R.string.import_bad), p.badRows.toString(), bold = true)
+        if (p.tooManyRows) f.info(getString(R.string.import_too_many_rows, ProductCsv.MAX_ROWS))
+        if (p.examples > 0) f.info(getString(R.string.import_examples, p.examples))
+        if (p.unreadable > 0) f.info(getString(R.string.import_unreadable, p.unreadable, p.firstUnreadableLine))
+        if (p.taxUnmatched > 0) f.info(getString(R.string.import_tax_unmatched, p.taxUnmatched, p.taxUnmatchedNames.joinToString(", ")))
         if (p.unknown.isNotEmpty()) f.info(getString(R.string.import_unknown_columns, p.unknown.joinToString(", ")))
         if (p.newCategories.isNotEmpty()) f.info(getString(R.string.import_new_categories, p.newCategories.joinToString(", ")))
         if (p.issues.isNotEmpty()) {
@@ -106,23 +120,29 @@ class ProductImportActivity : ScreenActivity() {
         setStock = if (p.hasStock && p.updates > 0 && mayStock) f.switch(getString(R.string.import_set_stock), false) else null
         if (p.hasStock) f.info(getString(if (mayStock) R.string.import_stock_help else R.string.import_stock_no_permission))
         if (p.importable) {
-            f.button(getString(R.string.import_go, p.newProducts + p.updates), primary = true) { start() }
+            f.button(getString(R.string.import_go, p.newProducts + p.updates), primary = true) { start(resume = true) }
+        }
+        // The same file stopped part-way when the app was closed: continuing is the default above.
+        if (p.resumeFrom > 0 && p.malformed == null && p.missing.isEmpty()) {
+            f.info(getString(R.string.import_start_again_help))
+            f.button(getString(R.string.import_start_again)) { start(resume = false) }
         }
         f.button(getString(R.string.cancel)) { finish() }
         content.removeAllViews()
         content.addView(f.view)
     }
 
-    private fun start() {
+    private fun start(resume: Boolean) {
         val app = applicationContext
         val stock = setStock?.isChecked == true
         val source = uri.toString()
-        launchUi { graph.productCsv.startImport({ CsvFiles.reader(app, uri) }, stock, source) }
+        launchUi { graph.productCsv.startImport({ CsvFiles.reader(app, uri) }, stock, source, resume) }
     }
 
     private fun showDone(r: ProductCsvService.Result) {
         val f = Form(this)
         f.section(getString(R.string.import_done))
+        if (r.resumedFrom > 0) f.row(getString(R.string.import_resumed), r.resumedFrom.toString())
         f.row(getString(R.string.import_created), r.created.toString(), bold = true)
         f.row(getString(R.string.import_updated), r.updated.toString(), bold = true)
         if (r.skipped > 0) f.row(getString(R.string.import_skipped), r.skipped.toString())
@@ -137,23 +157,30 @@ class ProductImportActivity : ScreenActivity() {
     }
 
     private fun problemText(p: Problem, c: Column?): String {
-        val what = getString(
-            when (p) {
-                Problem.NAME_MISSING -> R.string.problem_name_missing
-                Problem.NAME_TOO_LONG -> R.string.problem_name_long
-                Problem.PRICE_MISSING -> R.string.problem_price_missing
-                Problem.PRICE_BAD, Problem.COST_BAD -> R.string.problem_amount
-                Problem.STOCK_BAD, Problem.LOW_STOCK_BAD -> R.string.problem_quantity
-                Problem.SOLD_BY_BAD -> R.string.problem_sold_by
-                Problem.YES_NO_BAD -> R.string.problem_yes_no
-                Problem.BARCODE_BAD -> R.string.problem_barcode
-                Problem.TAX_BAD, Problem.TAX_UNKNOWN -> R.string.problem_tax
-                Problem.BARCODE_TWICE -> R.string.problem_barcode_twice
-                Problem.BARCODE_TAKEN -> R.string.problem_barcode_taken
-                Problem.BARCODES_SPLIT -> R.string.problem_barcodes_split
-                Problem.SKU_TWICE -> R.string.problem_sku_twice
-            },
-        )
+        val what = when (p) {
+            Problem.NAME_MISSING -> getString(R.string.problem_name_missing)
+            Problem.NAME_TOO_LONG -> getString(R.string.problem_name_long)
+            Problem.PRICE_MISSING -> getString(R.string.problem_price_missing)
+            Problem.PRICE_BAD, Problem.COST_BAD -> getString(R.string.problem_amount)
+            Problem.STOCK_BAD, Problem.LOW_STOCK_BAD -> getString(R.string.problem_quantity)
+            Problem.SOLD_BY_BAD -> getString(R.string.problem_sold_by)
+            Problem.YES_NO_BAD -> getString(R.string.problem_yes_no)
+            Problem.BARCODE_BAD -> getString(R.string.problem_barcode)
+            Problem.TAX_BAD -> getString(R.string.problem_tax)
+            Problem.TOO_LONG -> getString(R.string.problem_too_long, ProductCsv.maxLength(c ?: Column.NAME))
+            Problem.TOO_LARGE -> getString(
+                R.string.problem_too_large,
+                if (c == Column.PRICE || c == Column.COST) {
+                    MoneyFormat.format(ProductCsv.MAX_AMOUNT, graph.settings.store.value.currency)
+                } else {
+                    MoneyFormat.formatQty(ProductCsv.MAX_QTY)
+                },
+            )
+            Problem.BARCODE_TWICE -> getString(R.string.problem_barcode_twice)
+            Problem.BARCODE_TAKEN -> getString(R.string.problem_barcode_taken)
+            Problem.BARCODES_SPLIT -> getString(R.string.problem_barcodes_split)
+            Problem.SKU_TWICE -> getString(R.string.problem_sku_twice)
+        }
         return if (c == null) what else "${c.header}: $what"
     }
 

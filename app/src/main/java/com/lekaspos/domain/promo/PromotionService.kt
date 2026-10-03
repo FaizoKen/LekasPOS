@@ -11,8 +11,13 @@ import com.lekaspos.data.promo.PromotionDao
 import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.domain.Approval
 import java.util.TimeZone
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Promotions (Phase 8, references/money.md §11). A shop has a handful, so they live in memory:
@@ -27,9 +32,14 @@ class PromotionService(private val graph: AppGraph) {
     private val _version = MutableStateFlow(0)
     val version: StateFlow<Int> = _version
 
+    /** One load at a time: a sync reload that read before an edit's commit published its older list last. */
+    private val loadLock = Mutex()
+
     suspend fun load() {
-        rows = graph.db().read { PromotionDao.list(it) }
-        _version.value++
+        loadLock.withLock {
+            rows = graph.db().read { PromotionDao.list(it) }
+            _version.update { it + 1 }
+        }
         graph.cart.reprice()
     }
 
@@ -48,6 +58,11 @@ class PromotionService(private val graph: AppGraph) {
         val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS, approval)
         require(toCore(p) != null) { "invalid promotion" }
         val now = System.currentTimeMillis()
+        // Write and reload together, also when the screen closes meanwhile (the till kept the old deal).
+        return withContext(NonCancellable) { saveNow(before, p, actor, now) }
+    }
+
+    private suspend fun saveNow(before: PromotionRow?, p: PromotionRow, actor: com.lekaspos.domain.Actor, now: Long): Long {
         val id = graph.db().write { tx ->
             val id = if (before == null) {
                 PromotionDao.insert(tx, p, now)
@@ -65,7 +80,7 @@ class PromotionService(private val graph: AppGraph) {
         return id
     }
 
-    suspend fun delete(id: Long, approval: Approval? = null) {
+    suspend fun delete(id: Long, approval: Approval? = null) = withContext(NonCancellable) {
         val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS, approval)
         graph.db().write { tx ->
             val now = System.currentTimeMillis()

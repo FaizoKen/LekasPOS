@@ -147,6 +147,12 @@ Streaming read/write only (`SegmentCodec`).
 
 Unknown kinds (v6, D-047): an event whose entity this version does not know is stored in LOCAL
 `sync_deferred` (not skipped) and applied at the start of a later round once an update knows it.
+An event of a known kind that cannot be applied (a field of another type, a value out of range —
+from a newer or broken till) is set aside there too, after its chunk is rolled back and applied one
+event at a time; it is reported (Log.e) and retried each round, one transaction each (D-061). A full
+disk or the network still stops the round. Built-in rows at version (0, 0) named differently on two
+tills take the larger name. Listings ask Drive for compact, gzip answers; the whole folder is listed
+weekly; a till's card is republished when its identity changes or every 15 min (D-061).
 
 Importer rules (`data/sync/Importer`): EVENT rows `INSERT OR IGNORE` by id, derived data only
 when new (a void before its sale is applied when the sale arrives; a purchase regenerates its

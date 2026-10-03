@@ -19,6 +19,7 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.catalog.PaymentMethodRow
+import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
@@ -101,17 +102,24 @@ class PaymentMethodsActivity : ScreenActivity() {
             col.addView(TextView(this, null, 0, R.style.Text_Lekas_Caption).apply { setText(R.string.pm_kind) })
             col.addView(kind)
         }
+        val isCash = m?.kind == PaymentKind.CASH
+        val isCredit = m?.kind == PaymentKind.CREDIT
+        // Cash always opens the drawer: this setting is the shop's, on every till (a till without a
+        // drawer has its own switch in Printer & drawer) — unticked, no till's drawer opened for cash.
         val drawer = CheckBox(this).apply {
             setText(R.string.pm_opens_drawer)
-            isChecked = m?.opensDrawer ?: false
+            isChecked = isCash || (m?.opensDrawer ?: false)
             minHeight = minTouch
+            isEnabled = !isCash
         }
         col.addView(drawer)
+        // Cash is always taken; customer credit has its own switch (Customers), and hidden here a credit
+        // sale's refund was paid out in cash while the debt stayed (2026-10 review).
         val shown = CheckBox(this).apply {
             setText(R.string.pm_active)
             isChecked = m?.active ?: true
             minHeight = minTouch
-            isEnabled = m?.kind != PaymentKind.CASH // the till always takes cash
+            isEnabled = !isCash && !isCredit
         }
         col.addView(shown)
         val d = AlertDialog.Builder(this)
@@ -129,25 +137,49 @@ class PaymentMethodsActivity : ScreenActivity() {
             }
             val k = if (fixedKind) m?.kind ?: PaymentKind.CASH else kinds[kind.selectedItemPosition.coerceIn(0, kinds.size - 1)]
             d.dismiss()
-            save(m, n, k, drawer.isChecked, shown.isChecked || m?.kind == PaymentKind.CASH)
+            val opens = isCash || drawer.isChecked
+            val active = isCash || isCredit || shown.isChecked
+            if (m != null && n != m.name) confirmRename(m, n, k, opens, active) else save(m, n, k, opens, active)
+        }
+    }
+
+    /**
+     * Sales paid with this method show its name as it is now (receipts, reports, closed shifts): a
+     * rename changes their name too (2026-10 review), so it is said first.
+     */
+    private fun confirmRename(m: PaymentMethodRow, name: String, kind: Int, opensDrawer: Boolean, active: Boolean) {
+        launchUi {
+            val used = graph.db().read { PaymentMethodDao.used(it, m.id) }
+            if (!used) {
+                save(m, name, kind, opensDrawer, active)
+                return@launchUi
+            }
+            val text = getString(R.string.pm_rename_used, m.name, name)
+            Dialogs.confirm(this@PaymentMethodsActivity, getString(R.string.pm_edit), text, getString(R.string.pm_rename_yes)) {
+                save(m, name, kind, opensDrawer, active)
+            }
         }
     }
 
     private fun save(before: PaymentMethodRow?, name: String, kind: Int, opensDrawer: Boolean, active: Boolean) {
-        val staffId = graph.staff.staffId
         launchUi {
+            // Checked here too, not only by the screen; a manager's approval is named in the activity log.
+            val actor = graph.permissions.actor(Perm.SETTINGS)
             graph.db().write(reserveIds = 4L) { tx ->
                 val now = System.currentTimeMillis()
                 val id = if (before == null) {
-                    PaymentMethodDao.insert(tx, name, kind, opensDrawer, now)
+                    PaymentMethodDao.insert(tx, name, kind, opensDrawer, now, active)
                 } else {
                     val after = before.copy(name = name, kind = kind, opensDrawer = opensDrawer, active = active)
                     PaymentMethodDao.update(tx, before, after, now)
                     before.id
                 }
-                val state = if (active) "shown" else "hidden"
+                val state = (if (active) "shown" else "hidden") + if (opensDrawer) ", opens the drawer" else ""
                 val was = before?.let { " (was ${it.name})" }.orEmpty()
-                AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, Entity.PAYMENT_METHOD, id, detail = "payment method $name, $state$was")
+                AuditDao.log(
+                    tx, AuditAction.SETTINGS_CHANGE, actor.staffId, now, Entity.PAYMENT_METHOD, id,
+                    detail = "payment method $name, $state$was", approvedBy = actor.approvedBy,
+                )
             }
             reload()
         }

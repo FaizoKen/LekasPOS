@@ -2,6 +2,7 @@ package com.lekaspos.domain
 
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.Perm
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.product.ProductDao
@@ -9,6 +10,7 @@ import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.DeviceSettings
 import com.lekaspos.data.settings.SettingsDao
 import com.lekaspos.data.settings.StoreSettings
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -42,8 +44,11 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         loaded = true
     }
 
-    /** Re-reads store settings after another till changed them (sync import). */
-    suspend fun reload() {
+    /**
+     * Re-reads store settings after another till changed them (sync import), under the load's lock:
+     * a reload that read before a save's commit published the older settings last (2026-10 review).
+     */
+    suspend fun reload() = loadLock.withLock {
         val db = graph.db()
         val store = db.read { r -> SettingsDao.all(r) }
         _store.value = StoreSettings.from(store, defaultLanguage)
@@ -57,9 +62,11 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
      * every till once this till joined), and every key another till changed while the screen was
      * open (2026-10 review).
      */
-    suspend fun saveStore(before: StoreSettings, after: StoreSettings) {
+    suspend fun saveStore(before: StoreSettings, after: StoreSettings) = withContext(NonCancellable) {
+        // Checked here, not only by the screen; a manager's approval is named in the activity log.
+        // NonCancellable: the screen closing meanwhile left the old tax mode or rounding in memory.
+        val actor = graph.permissions.actor(Perm.SETTINGS)
         val db = graph.db()
-        val staffId = graph.staff.staffId
         val old = before.toMap()
         val wanted = after.toMap().filter { (k, v) -> old[k] != v }
         if (wanted.isNotEmpty()) {
@@ -68,7 +75,12 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
                 val current = SettingsDao.all(tx.db)
                 val changed = wanted.keys.filter { current[it] != wanted[it] }.sorted()
                 SettingsDao.putChanged(tx, current, wanted, now)
-                if (changed.isNotEmpty()) AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, staffId, now, detail = changed.joinToString(", ").take(MAX_DETAIL))
+                if (changed.isNotEmpty()) {
+                    AuditDao.log(
+                        tx, AuditAction.SETTINGS_CHANGE, actor.staffId, now, detail = changed.joinToString(", ").take(MAX_DETAIL),
+                        approvedBy = actor.approvedBy,
+                    )
+                }
             }
         }
         // Keys this screen did not change keep what the database has now (another till's edit).

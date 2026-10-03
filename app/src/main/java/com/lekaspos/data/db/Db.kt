@@ -280,6 +280,12 @@ class Db private constructor(
                 val version = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY, KeepDamagedDatabase).use { it.version }
                 if (version <= 0 || version >= Schema.VERSION) return
                 val dir = Restore.backupDir(context).apply { mkdirs() }
+                // Already kept for this version in the last day: an upgrade that failed (a full phone)
+                // wrote another whole copy at every start and used the room it needed (2026-10 review).
+                val now0 = System.currentTimeMillis()
+                val recent = dir.listFiles { f -> f.name.startsWith("upgrade-v$version-") && f.name.endsWith(BackupFiles.EXT) }
+                    ?.any { now0 - it.lastModified() in 0 until 24L * 60L * 60L * 1000L } == true
+                if (recent) return
                 // Written under a temporary name and synced first: a full disk or a kill half-way
                 // left a cut-short file that counted as one of the three kept (2026-10 review).
                 val target = File(dir, "upgrade-v$version-${System.currentTimeMillis()}${BackupFiles.EXT}")
@@ -301,7 +307,12 @@ class Db private constructor(
                     ?.sortedByDescending { f -> f.lastModified().takeIf { it <= now } ?: Long.MIN_VALUE }
                     ?.drop(2)?.forEach { it.delete() }
             } catch (e: Exception) {
-                com.lekaspos.util.Log.e("Backup before upgrade failed", e) // never block opening the store
+                // Never blocks opening the store; a full phone is a warning, not an error report.
+                if (com.lekaspos.util.Storage.isFull(e)) {
+                    com.lekaspos.util.Log.w("Backup before upgrade failed: the storage is full", e)
+                } else {
+                    com.lekaspos.util.Log.e("Backup before upgrade failed", e)
+                }
             }
         }
 

@@ -19,6 +19,7 @@ import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.sale.ActionRefused
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 /**
@@ -37,10 +38,14 @@ class StaffService(private val graph: AppGraph) {
     suspend fun save(before: Staff?, name: String, roleId: Long, active: Boolean, approval: Approval? = null): Long {
         val actor = graph.permissions.actor(Perm.MANAGE_STAFF, approval)
         require(name.isNotBlank()) { "name required" }
-        val id = graph.db().write(reserveIds = 4L) { tx ->
+        val id = committed { graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             val role = RoleDao.get(tx.db, roleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (role.isOwner || before?.isOwner == true) requireOwner(tx, approval)
+            if (role.isOwner || before?.isOwner == true) {
+                requireOwner(tx, approval)
+            } else {
+                requireMayAssign(tx, Perm.effective(role.sysRole, role.perms) or (before?.perms ?: 0L), approval)
+            }
             val id: Long
             if (before == null) {
                 id = StaffDao.insert(tx, name.trim(), roleId, active, null, now)
@@ -52,15 +57,14 @@ class StaffService(private val graph: AppGraph) {
             }
             AuditDao.log(tx, AuditAction.STAFF_CHANGE, actor.staffId, now, Entity.STAFF, id, detail = describe(name, role, active), approvedBy = actor.approvedBy)
             id
-        }
-        graph.staff.reload()
+        } }
         return id
     }
 
     suspend fun delete(staffId: Long, approval: Approval? = null) {
         val actor = graph.permissions.actor(Perm.MANAGE_STAFF, approval)
         if (staffId == graph.staff.staffId) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
-        graph.db().write(reserveIds = 2L) { tx ->
+        committed { graph.db().write(reserveIds = 2L) { tx ->
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
@@ -68,8 +72,7 @@ class StaffService(private val graph: AppGraph) {
             checkOwnerRemains(all.filter { it.id != staffId })
             StaffDao.delete(tx, staffId, now)
             AuditDao.log(tx, AuditAction.STAFF_CHANGE, actor.staffId, now, Entity.STAFF, staffId, detail = "removed: ${s.name}", approvedBy = actor.approvedBy)
-        }
-        graph.staff.reload()
+        } }
     }
 
     /** Result of setting a PIN: [recoveryCode] is shown once, when an owner set the store's first PIN. */
@@ -85,11 +88,17 @@ class StaffService(private val graph: AppGraph) {
         val record = pin?.let { withContext(Dispatchers.Default) { PinHash.create(it) } }
         val wasRequired = graph.staff.state.value.loginRequired
         var code: String? = null
-        val staff = graph.db().write(reserveIds = 4L) { tx ->
+        // The owner who just typed the store's first PIN is the one using the till: signed in before
+        // the reload turns the PIN login on, so the till never looks locked in between (a screen
+        // leaves when the till locks: the recovery code was never shown — 2026-10 review).
+        val adopt: suspend (Staff) -> Unit = { s ->
+            if (!wasRequired && record != null && s.canSignIn && graph.staff.state.value.current == null) graph.staff.adopt(s)
+        }
+        committed(adopt) { graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             val all = StaffDao.list(tx.db)
             val s = all.firstOrNull { it.id == staffId } ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (s.isOwner) requireOwner(tx, approval)
+            if (s.isOwner) requireOwner(tx, approval) else requireMayAssign(tx, s.perms, approval)
             val after = all.map { if (it.id == staffId) it.copy(pin = record) else it }
             if (record != null && !s.isOwner && after.none { it.isOwner && it.canSignIn }) {
                 throw ActionRefused(ActionRefused.Reason.OWNER_PIN_FIRST)
@@ -106,12 +115,7 @@ class StaffService(private val graph: AppGraph) {
                 SettingsDao.put(tx, SettingKeys.OWNER_RECOVERY, PinHash.create(RecoveryCode.normalize(code ?: "")), now)
             }
             s.copy(pin = record)
-        }
-        // The owner who just typed the store's first PIN is the one using the till: signed in before
-        // the reload turns the PIN login on, so the till never looks locked in between (a screen
-        // leaves when the till locks: the recovery code was never shown — 2026-10 review).
-        if (!wasRequired && record != null && staff.canSignIn && graph.staff.state.value.current == null) graph.staff.adopt(staff)
-        graph.staff.reload()
+        } }
         return PinSet(code)
     }
 
@@ -156,16 +160,15 @@ class StaffService(private val graph: AppGraph) {
         val ok = withContext(Dispatchers.Default) { PinHash.verify(RecoveryCode.normalize(code), stored) }
         if (!ok) return false
         val record = withContext(Dispatchers.Default) { PinHash.create(newPin) }
-        val owner = graph.db().write(reserveIds = 2L) { tx ->
+        val owner = committed { graph.db().write(reserveIds = 2L) { tx ->
             val now = System.currentTimeMillis()
             val s = StaffDao.get(tx.db, ownerId)?.takeIf { it.isOwner && it.active } ?: throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
             StaffDao.setPin(tx, ownerId, record, now)
             graph.staff.clearFails(tx, ownerId) // the wait of a forgotten PIN ends with the recovery code
             AuditDao.log(tx, AuditAction.OWNER_PIN_RESET, ownerId, now, Entity.STAFF, ownerId)
             s.copy(pin = record)
-        }
-        graph.staff.reload()
-        graph.staff.adopt(owner)
+        } }
+        withContext(NonCancellable) { graph.staff.adopt(owner) }
         return true
     }
 
@@ -173,7 +176,7 @@ class StaffService(private val graph: AppGraph) {
     suspend fun saveRole(before: Role?, name: String, perms: Long, approval: Approval? = null): Long {
         val actor = graph.permissions.actor(Perm.MANAGE_STAFF, approval)
         require(name.isNotBlank()) { "name required" }
-        val id = graph.db().write(reserveIds = 4L) { tx ->
+        val id = committed { graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             requireMayGrant(tx, before, if (before?.isOwner == true) before.perms else perms, approval)
             val id = if (before == null) {
@@ -184,10 +187,22 @@ class StaffService(private val graph: AppGraph) {
             }
             AuditDao.log(tx, AuditAction.ROLE_CHANGE, actor.staffId, now, Entity.ROLE, id, perms, name.trim(), actor.approvedBy)
             id
-        }
-        graph.staff.reload()
+        } }
         return id
     }
+
+    /**
+     * [write], then the reload of who may do what (after [beforeReload]): both finished also when the
+     * screen that asked closes meanwhile — cancelled right after the commit, the reload never ran and
+     * a deactivated cashier, or a narrowed role, kept its permissions in memory (2026-10 review).
+     */
+    private suspend fun <T> committed(beforeReload: suspend (T) -> Unit = {}, write: suspend () -> T): T =
+        withContext(NonCancellable) {
+            write().also {
+                beforeReload(it)
+                graph.staff.reload()
+            }
+        }
 
     suspend fun deleteRole(role: Role, approval: Approval? = null) {
         val actor = graph.permissions.actor(Perm.MANAGE_STAFF, approval)
@@ -232,6 +247,20 @@ class StaffService(private val graph: AppGraph) {
             (approval?.let { a -> StaffDao.get(tx.db, a.staffId)?.takeIf { it.canSignIn }?.perms } ?: 0L)
         val ownRole = before != null && me != null && StaffDao.get(tx.db, me.id)?.roleId == before.id
         if (added and mine.inv() != 0L || (ownRole && added != 0L)) throw ActionRefused(ActionRefused.Reason.OWNER_ONLY)
+    }
+
+    /**
+     * Putting someone in a role, or setting their PIN, only within what the person doing it may do
+     * (their own role, or the one who approves this change): with "Manage staff" a manager moved
+     * themselves into a wider role, or set a wider colleague's PIN and signed in as them (2026-10 review).
+     */
+    private fun requireMayAssign(tx: Db.Tx, perms: Long, approval: Approval?) {
+        if (!graph.staff.state.value.loginRequired) return
+        val me = graph.staff.state.value.current
+        if (isOwner(tx, me?.id) || isOwner(tx, approval?.staffId)) return
+        val mine = (me?.let { StaffDao.get(tx.db, it.id)?.perms } ?: 0L) or
+            (approval?.let { a -> StaffDao.get(tx.db, a.staffId)?.takeIf { it.canSignIn }?.perms } ?: 0L)
+        if (perms and mine.inv() != 0L) throw ActionRefused(ActionRefused.Reason.OWNER_ONLY)
     }
 
     /** While anyone can sign in, an owner must be able to (else nobody could manage staff). */

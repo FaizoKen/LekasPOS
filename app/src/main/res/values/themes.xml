@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Platform Material theme (API 21+): no AppCompat/Material Components (D-002). -->
-    <style name="Theme.Lekas" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Platform Material theme (API 21+): no AppCompat/Material Components (D-002).
+         Everything is in the Base themes; Theme.Lekas and Theme.Lekas.Dialog only add what one
+         API level needs (values-v29: no force dark — the app is light only). -->
+    <style name="Base.Theme.Lekas" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:colorPrimary">@color/brand</item>
         <item name="android:colorPrimaryDark">@color/brand_dark</item>
         <item name="android:colorAccent">@color/brand</item>
@@ -13,10 +15,14 @@
         <item name="android:alertDialogTheme">@style/Theme.Lekas.Dialog</item>
     </style>
 
-    <style name="Theme.Lekas.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
+    <style name="Theme.Lekas" parent="Base.Theme.Lekas" />
+
+    <style name="Base.Theme.Lekas.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
         <item name="android:colorAccent">@color/brand</item>
         <item name="android:colorPrimary">@color/brand</item>
     </style>
+
+    <style name="Theme.Lekas.Dialog" parent="Base.Theme.Lekas.Dialog" />
 
     <style name="Widget.Lekas.Button" parent="android:Widget.Material.Button">
         <item name="android:minHeight">56dp</item>
@@ -26,19 +32,27 @@
         <item name="android:stateListAnimator">@null</item>
     </style>
 
+    <!-- Our button shapes have no padding of their own: without some, a label at a large font size
+         ran into the edges and broke inside a word or a number. -->
     <style name="Widget.Lekas.Button.Primary">
         <item name="android:background">@drawable/btn_primary</item>
         <item name="android:textColor">@color/text_on_brand</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
     </style>
 
     <style name="Widget.Lekas.Button.Secondary">
         <item name="android:background">@drawable/btn_secondary</item>
         <item name="android:textColor">@color/secondary_button_text</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
     </style>
 
     <style name="Widget.Lekas.Button.Danger">
         <item name="android:background">@drawable/btn_secondary</item>
         <item name="android:textColor">@color/danger</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
     </style>
 
     <!-- Keypad keys: big digits, no minimum width (4 across on a small phone). -->
@@ -71,15 +85,19 @@
         <item name="android:textColor">@color/danger</item>
     </style>
 
-    <!-- Selling screen tool: an icon over a word, so nobody has to guess what it does (D-049). -->
+    <!-- Selling screen tool: an icon over a word, so nobody has to guess what it does (D-049).
+         At least 56dp high, taller when a large font puts the word on two lines. -->
     <style name="Widget.Lekas.Tool" parent="">
         <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
         <item name="android:minWidth">60dp</item>
         <item name="android:orientation">vertical</item>
         <item name="android:gravity">center</item>
         <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingTop">4dp</item>
         <item name="android:paddingEnd">6dp</item>
+        <item name="android:paddingBottom">4dp</item>
         <item name="android:background">@drawable/icon_toggle_bg</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>

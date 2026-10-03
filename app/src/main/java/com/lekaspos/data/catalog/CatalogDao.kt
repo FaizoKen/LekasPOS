@@ -146,16 +146,24 @@ object PaymentMethodDao {
     fun get(db: SQLiteDatabase, id: Long): PaymentMethodRow? = db.queryOne("$ROW WHERE id = ?", args(id)) { row(it) }
 
     /** A new method after the others. */
-    fun insert(tx: Db.Tx, name: String, kind: Int, opensDrawer: Boolean, now: Long): Long {
+    fun insert(tx: Db.Tx, name: String, kind: Int, opensDrawer: Boolean, now: Long, active: Boolean = true): Long {
         val id = tx.nextId()
         val sort = tx.db.long("SELECT COALESCE(MAX(sort), 0) FROM payment_method") + 1L
-        LwwWriter.insert(
-            tx, "payment_method", Entity.PAYMENT_METHOD, id,
-            linkedMapOf("name" to name, "kind" to kind.toLong(), "opens_drawer" to if (opensDrawer) 1L else 0L, "sort" to sort, "active" to 1L),
-            now,
+        val fields = linkedMapOf<String, Any?>(
+            "name" to name, "kind" to kind.toLong(), "opens_drawer" to if (opensDrawer) 1L else 0L, "sort" to sort,
+            "active" to if (active) 1L else 0L,
         )
+        LwwWriter.insert(tx, "payment_method", Entity.PAYMENT_METHOD, id, fields, now)
         return id
     }
+
+    /** Some sale was paid with [id] (the day totals: small, unlike `payment`). */
+    fun used(db: SQLiteDatabase, id: Long): Boolean =
+        db.long("SELECT COUNT(*) FROM (SELECT 1 FROM sum_day_payment WHERE method_id = ? LIMIT 1)", id) > 0L
+
+    /** A method by id, hidden ones too, as the payment screens take it. */
+    fun method(db: SQLiteDatabase, id: Long): PaymentMethod? =
+        get(db, id)?.let { PaymentMethod(it.id, it.name, it.kind, it.opensDrawer, it.sort) }
 
     private fun fields(m: PaymentMethodRow): Map<String, Any?> = linkedMapOf(
         "name" to m.name, "kind" to m.kind.toLong(), "opens_drawer" to if (m.opensDrawer) 1L else 0L,

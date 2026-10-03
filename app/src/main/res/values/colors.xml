@@ -5,12 +5,16 @@
     <color name="bg">#F3F5F4</color>
     <color name="surface">#FFFFFF</color>
     <color name="divider">#DDE3E0</color>
-    <color name="field_stroke">#B9C5C0</color>
+    <!-- Field outline: at least 3:1 against white (non-text contrast). -->
+    <color name="field_stroke">#7D8A85</color>
     <color name="chip_bg">#E3ECE8</color>
     <color name="highlight">#FFF3CF</color>
     <color name="text_primary">#1C1F1E</color>
     <color name="text_secondary">#5B6461</color>
-    <color name="text_disabled">#9AA5A1</color>
+    <!-- Greyed text that must still be read (the amount still to pay, "Enter PIN"): 4.7:1 on white. -->
+    <color name="text_disabled">#6B7672</color>
+    <!-- A disabled primary button: white text on it stays readable (3.7:1). -->
+    <color name="button_disabled">#738A81</color>
     <color name="text_on_brand">#FFFFFF</color>
     <color name="ok">#2E7D32</color>
     <color name="danger">#C62828</color>

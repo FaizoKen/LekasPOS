@@ -341,6 +341,33 @@ class StaffTest {
         assertEquals("Siti Aminah", assertNotNull(graph.db().read { StaffDao.get(it, cashier) }).name)
     }
 
+    /**
+     * 2026-10 review: "Manage staff" put anyone in any role — a manager moved themselves into a wider
+     * one, or set a wider colleague's PIN and signed in as them.
+     */
+    @Test
+    fun staffArePutOnlyInRolesWithinWhatTheManagerMayDo() = runBlocking {
+        val (_, cashier) = team()
+        val supervisorRole = graph.staffAdmin.saveRole(null, "Supervisor", Perm.DEFAULT_MANAGER or Perm.MANAGE_STAFF)
+        val accounts = graph.staffAdmin.saveRole(null, "Accounts", Perm.SETTINGS or Perm.VIEW_AUDIT)
+        val supervisor = graph.staffAdmin.save(null, "Ah Kow", supervisorRole, true)
+        graph.staffAdmin.setPin(supervisor, "5656")
+        val clerk = graph.staffAdmin.save(null, "Mei", accounts, true)
+        graph.staff.lock()
+        assertIs<StaffSession.Check.Ok>(graph.staff.signIn(supervisor, "5656"))
+        val me = assertNotNull(graph.db().read { StaffDao.get(it, supervisor) })
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.save(me, me.name, accounts, true) }
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.save(null, "New", accounts, true) }
+        refused(ActionRefused.Reason.OWNER_ONLY) { graph.staffAdmin.setPin(clerk, "0000") }
+        assertEquals(supervisorRole, assertNotNull(graph.db().read { StaffDao.get(it, supervisor) }).roleId)
+        // Within the manager's own: fine.
+        graph.staffAdmin.setPin(cashier, "1212")
+        graph.staffAdmin.save(null, "Ali", Seed.Ids.ROLE_CASHIER, true)
+        // The owner approving that one change: done.
+        val once = assertNotNull(graph.permissions.approve(owner, "2468", Perm.MANAGE_STAFF).second)
+        graph.staffAdmin.setPin(clerk, "0000", once)
+    }
+
     @Test
     fun anOwnerWhoCanSignInAlwaysRemains() = runBlocking {
         val (manager, _) = team()

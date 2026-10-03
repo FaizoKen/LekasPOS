@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.PromoKind
+import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.time.DateText
@@ -253,8 +254,16 @@ class PromotionEditActivity : ScreenActivity() {
         if (requestCode != REQ_PICK || resultCode != RESULT_OK) return
         val id = data?.getLongExtra(ProductPickActivity.EXTRA_PRODUCT_ID, 0L) ?: 0L
         if (id == 0L || id in productIds) return
-        productIds.add(id)
         launchUi {
+            // Only products sold by the piece take part (whole units of the plain item): "chicken
+            // RM8.99/kg" was saved and shown at the price check, and the till charged the shelf price
+            // (2026-10 review).
+            val mode = graph.db().read { ProductDao.get(it, id)?.sellMode }
+            if (mode != null && mode != SellMode.UNIT) {
+                Dialogs.message(this@PromotionEditActivity, null, getString(R.string.promo_error_piece_only))
+                return@launchUi
+            }
+            productIds.add(id)
             loadNames()
             renderProducts()
         }
@@ -271,6 +280,8 @@ class PromotionEditActivity : ScreenActivity() {
             buyQty == null || buyQty < 1 || buyQty > 1_000 -> buy.also { it.error = getString(R.string.promo_error_qty) }
             !multi && (freeQty == null || freeQty < 1 || freeQty > 1_000) -> free.also { it.error = getString(R.string.promo_error_qty) }
             multi && (groupPrice == null || groupPrice < 0L) -> price.also { it.error = getString(R.string.promo_error_price) }
+            // A special price of 0.00 gives every unit away.
+            multi && buyQty == 1 && groupPrice == 0L -> price.also { it.error = getString(R.string.promo_error_price) }
             else -> null
         }
         if (problem != null) {

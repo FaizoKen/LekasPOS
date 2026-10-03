@@ -23,6 +23,8 @@
     <string name="result_received">Received %1$s · total %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
     <string name="pay_cancel_split">%1$s has already been paid on this bill. Cancel the payment and clear it?</string>
+    <string name="pay_part_cash">Only %1$s in cash? Then %2$s is still to pay with another method. (To type RM50, press 5 0 0 0.)</string>
+    <string name="pay_part_cash_yes">Part payment</string>
     <string name="pay_cancel_yes">Cancel payment</string>
     <!-- Payment methods (2026-10) -->
     <string name="pm_title">Payment methods</string>
@@ -41,4 +43,6 @@
     <string name="pm_active">Shown at the till</string>
     <string name="pm_hidden">hidden</string>
     <string name="pm_error_name">Enter a name.</string>
+    <string name="pm_rename_used">Sales already paid with “%1$s” will show “%2$s” too: on receipt copies, in reports and on closed shift reports. To keep the old name on them, add a new payment method and hide this one instead.</string>
+    <string name="pm_rename_yes">Rename</string>
 </resources>

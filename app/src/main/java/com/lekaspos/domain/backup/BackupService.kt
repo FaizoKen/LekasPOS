@@ -137,8 +137,9 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
                 // Keep every backup as it is: rotating would replace good copies by damaged ones.
                 val why = check.take(200)
                 Log.e("Database check failed: $why")
-                _protection.value = _protection.value.copy(state = Protection.State.DAMAGED, damage = why)
+                // Stored first, then shown: a refresh reading before the commit erased "Data problem".
                 runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.DB_PROBLEM, why) } }
+                _protection.value = _protection.value.copy(state = Protection.State.DAMAGED, damage = why)
                 return false
             }
             db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.DB_PROBLEM, null) }
@@ -146,8 +147,11 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         } else {
             null
         }
-        val folderDue = folderSet() && lastFolderCopy().let { it == null || !recent(it, now, DUE_MS) }
-        val toCopy = made ?: if (folderDue) latest else null
+        val lastCopy = lastFolderCopy()
+        val folderDue = folderSet() && lastCopy.let { it == null || !recent(it, now, DUE_MS) }
+        // Not the same backup again (a phone too full for a new one): the folder kept filling with
+        // copies of one old backup, and its older, different ones were pruned away (2026-10 review).
+        val toCopy = made ?: if (folderDue && latest != null && lastCopy != minOf(now, latest.lastModified())) latest else null
         if (toCopy != null && folderSet()) copyToFolder(toCopy)
         refreshProtection()
         return made != null
@@ -353,10 +357,9 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         // Newest first; files dated in the future (made before the clock was set back) count as oldest.
         val order = compareBy<File> { it.lastModified() > future }.thenByDescending { it.lastModified() }
         files.filter { it.name.startsWith(AUTO) }.sortedWith(order).drop(autoLeft).forEach { it.delete() }
-        // "Back up now" copies were never deleted: full copies of the database piling up on a small
-        // phone (2026-10 review). The newest few stay.
-        val manualLeft = if (keep?.name?.startsWith(MANUAL) == true) KEEP_MANUAL - 1 else KEEP_MANUAL
-        files.filter { it.name.startsWith(MANUAL) }.sortedWith(order).drop(manualLeft).forEach { it.delete() }
+        // "Back up now" copies are the owner's: never deleted by the app (1.7.0 kept the newest 5 and
+        // deleted older ones on its first daily backup — reverted in 1.7.1). On a full phone the
+        // "Storage almost full" message points to Backup & restore, where they can be deleted.
         files.filter { it.name.startsWith(Restore.REASON_REPLACED) }.sortedWith(order).drop(KEEP_REPLACED).forEach { it.delete() }
     }
 
@@ -378,7 +381,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         const val MANUAL = "manual-"
         const val KEEP_AUTO = 7
         const val KEEP_REPLACED = 3
-        const val KEEP_MANUAL = 5
+
         const val KEEP_FOLDER = 7
         const val DUE_MS = 20L * 60L * 60L * 1000L
         private const val OVERDUE_MS = 36L * 60L * 60L * 1000L

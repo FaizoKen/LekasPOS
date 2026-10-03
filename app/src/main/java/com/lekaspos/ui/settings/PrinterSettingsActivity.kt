@@ -192,6 +192,9 @@ class PrinterSettingsActivity : ScreenActivity() {
                 address = paired[i].address
                 printerName = paired[i].name
                 renderPrinter()
+                // Kept at once: Save sits below ten settings, and after Back the first sale said
+                // "No printer set up" (2026-10 review).
+                save(finishAfter = false)
             }
         }
     }

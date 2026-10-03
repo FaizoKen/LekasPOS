@@ -145,6 +145,8 @@ object ErrorReports {
         val ctx = context.applicationContext
         if (!ready) { // once per process: earlier runs ended before it started
             try {
+                // Kept while the shop said no by a version before 1.7.0: never sent (2026-10 review).
+                if (consent(ctx) == OFF) synchronized(lock) { pending(ctx).filter { !it.name.startsWith(MANUAL) }.forEach { it.delete() } }
                 prune(ctx)
                 if (Build.VERSION.SDK_INT >= 30) checkExits(ctx)
                 prefs(ctx).edit().putString(K_RUN_APP, BuildConfig.VERSION_NAME).putInt(K_RUN_BUILD, BuildConfig.VERSION_CODE).apply()

@@ -84,11 +84,26 @@ class ProductEditActivity : ScreenActivity() {
 
     private val currency get() = graph.settings.store.value.currency
 
+    /** What was typed before Android ended the app (another app opened to check a price), put back once loaded. */
+    private var typed: Bundle? = null
+
+    /** The form as first shown (before typing): only fields that differ from it are put back. */
+    private var shownForm: Bundle? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         productId = intent.getLongExtra(EXTRA_PRODUCT_ID, 0L)
+        typed = savedInstanceState?.getBundle(STATE_FORM)
+        shownForm = savedInstanceState?.getBundle(STATE_SHOWN)
         setScreen(getString(if (productId == 0L) R.string.product_new else R.string.product_edit))
         launchUi { load() }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val now = if (::form.isInitialized) form.save() else typed
+        now?.let { outState.putBundle(STATE_FORM, it) }
+        shownForm?.let { outState.putBundle(STATE_SHOWN, it) }
     }
 
     private suspend fun load() {
@@ -122,6 +137,29 @@ class ProductEditActivity : ScreenActivity() {
         scannedEarly.clear()
         build(data.product, data.stock, data.shared)
         shown = data.product?.let { formProduct() ?: it }
+        // After [shown]: it is what the screen first showed (the edit's "before"), the typed values are
+        // the edit. Only into the same fields (the form can differ, e.g. the opening stock field).
+        // A price typed here was lost when Android ended the app meanwhile (2026-10 review).
+        // Only what the user changed: a field another till changed meanwhile keeps that change.
+        val fresh = form.save()
+        val before = shownForm
+        val t = typed
+        if (t != null && before != null && t.size() == fresh.size()) {
+            for (k in t.keySet()) {
+                @Suppress("DEPRECATION") // Bundle.get: the form keeps strings, booleans and ints
+                val v = t.get(k)
+                @Suppress("DEPRECATION")
+                if (v == before.get(k)) continue
+                when (v) {
+                    is String -> fresh.putString(k, v)
+                    is Boolean -> fresh.putBoolean(k, v)
+                    is Int -> fresh.putInt(k, v)
+                }
+            }
+            form.restore(fresh)
+        }
+        typed = null
+        if (shownForm == null || t == null) shownForm = form.save()
     }
 
     private class Loaded(
@@ -317,11 +355,18 @@ class ProductEditActivity : ScreenActivity() {
         }
     }
 
+    /**
+     * The price field; empty is 0 for a product priced at the till (kuih, vegetables — D-050), which
+     * could not be saved without a made-up price (2026-10 review).
+     */
+    private fun enteredPrice(): Long? =
+        if (price.text.isBlank() && sellMode.selectedItemPosition == SellMode.OPEN_PRICE) 0L else MoneyFormat.parse(price.text.toString(), currency)
+
     // ------------------------------------------------------------------ save / delete
 
     /** The product the form's fields describe, or null while a money or quantity field does not parse. */
     private fun formProduct(): Product? {
-        val pr = MoneyFormat.parse(price.text.toString(), currency) ?: return null
+        val pr = enteredPrice() ?: return null
         val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency) ?: return null
         val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString()) ?: return null
         val mode = sellMode.selectedItemPosition.coerceIn(0, 2)
@@ -348,7 +393,7 @@ class ProductEditActivity : ScreenActivity() {
             return
         }
         val n = name.text.toString().trim()
-        val pr = MoneyFormat.parse(price.text.toString(), currency)
+        val pr = enteredPrice()
         val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency)
         val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString())
         val pluText = plu.text.toString().trim().trimStart('0')
@@ -499,6 +544,8 @@ class ProductEditActivity : ScreenActivity() {
     companion object {
         const val EXTRA_PRODUCT_ID = "product_id"
         const val EXTRA_BARCODE = "barcode"
+        private const val STATE_FORM = "product.form"
+        private const val STATE_SHOWN = "product.shown"
         private const val REQ_SCAN = 7
         private const val UNIT_PCS = "pcs" // unit symbols are data (printed on receipts), not UI text
         private const val UNIT_KG = "kg"

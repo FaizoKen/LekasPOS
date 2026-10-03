@@ -277,7 +277,7 @@ class SyncActivity : ScreenActivity() {
             }
             if (name != null) {
                 graph.sync.refreshStatus()
-                if (failure == null) com.lekaspos.app.Work.schedule(app)
+                if (failure == null) com.lekaspos.app.Work.schedule(app, again = true)
             }
             if (failure != null) {
                 screen.get()?.let { a ->
@@ -355,6 +355,14 @@ class SyncActivity : ScreenActivity() {
         launchUi {
             try {
                 onConnect(SyncProviders.finish(this@SyncActivity, data))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                graph.sync.notStarted()
+                throw e
+            } catch (e: java.io.IOException) {
+                // Offline right after Google's consent screen: said in words, as at "Turn on".
+                graph.sync.notStarted()
+                Log.w("Connecting to Google failed", e)
+                Dialogs.message(this@SyncActivity, getString(R.string.sync_title), failureText(this@SyncActivity, e))
             } catch (e: Exception) {
                 graph.sync.notStarted()
                 throw e

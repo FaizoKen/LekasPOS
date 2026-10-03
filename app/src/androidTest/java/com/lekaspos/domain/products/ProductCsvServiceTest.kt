@@ -2,7 +2,9 @@ package com.lekaspos.domain.products
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.csv.CsvInput
 import com.lekaspos.core.csv.CsvWriter
+import com.lekaspos.core.csv.ImportProgress
 import com.lekaspos.core.csv.ProductCsv
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.MovementKind
@@ -10,6 +12,7 @@ import com.lekaspos.core.model.SellMode
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.TaxRateDao
+import com.lekaspos.data.db.Meta
 import com.lekaspos.data.product.Barcode
 import com.lekaspos.data.product.Product
 import com.lekaspos.data.product.ProductDao
@@ -73,7 +76,7 @@ class ProductCsvServiceTest {
         val preview = g.productCsv.preview { StringReader(file) }
         assertEquals(4, preview.newProducts)
         assertEquals(1, preview.badRows) // the second "TEH"
-        val result = g.productCsv.import({ StringReader(file) }, setStock = false, staffId = null, approvedBy = null)
+        val result = g.productCsv.import({ StringReader(file) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(preview.newProducts, result.created)
         val names = g.db().read { r -> listOf("9556001000011", "9556002000010", "9556003000019").map { ProductDao.findByCode(r, listOf(it))?.product?.name } }
         assertEquals(listOf("Milo 1kg", "Gula 1kg", "Beras 5kg"), names)
@@ -93,7 +96,7 @@ class ProductCsvServiceTest {
         assertEquals(3, preview.newProducts)
         assertEquals(0, preview.badRows)
         assertEquals(listOf("Minuman"), preview.newCategories)
-        val result = b.productCsv.import({ StringReader(out.toString()) }, setStock = false, staffId = null, approvedBy = null)
+        val result = b.productCsv.import({ StringReader(out.toString()) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = true)
         assertEquals(3, result.created)
         assertEquals(1, result.categoriesCreated)
 
@@ -134,7 +137,7 @@ class ProductCsvServiceTest {
         val preview = g.productCsv.preview { StringReader(edited) }
         assertEquals(0, preview.newProducts)
         assertEquals(4, preview.updates)
-        val result = g.productCsv.import({ StringReader(edited) }, setStock = false, staffId = null, approvedBy = null)
+        val result = g.productCsv.import({ StringReader(edited) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(0, result.created)
         assertEquals(4, result.updated)
         val p = assertNotNull(db.read { ProductDao.get(it, leaves) })
@@ -153,28 +156,30 @@ class ProductCsvServiceTest {
             "Gula;abc;;;;;;",
             "Kicap;5.00;9556009999999;;;;;",
             "Bawang merah besar;9.00;;ONION1;;;;",
-            "Maggi;1.20;9556001000028|9556008888888;;;;SST 10%;",
+            "Maggi;1.20;9556008888888;;;;SST 10%;",
             ";2.00;;;;;;",
             "\"Teh \"\"Boh\"\"\";6.90;;BOH1;Minuman;5.00;6%;",
         ).joinToString("\r\n")
         val p = g.productCsv.preview { StringReader(csv) }
         assertEquals(8, p.rows)
         assertEquals(2, p.updates) // Milo by barcode, the onions by SKU
-        assertEquals(2, p.newProducts) // Susu, Teh
-        assertEquals(4, p.badRows)
+        assertEquals(3, p.newProducts) // Susu, Maggi, Teh
+        assertEquals(3, p.badRows)
         val problems = p.issues.map { it.line to it.problem }.toSet()
         assertTrue((4 to ProductCsv.Problem.PRICE_BAD) in problems)
         assertTrue((5 to ProductCsv.Problem.BARCODE_TWICE) in problems)
-        assertTrue((7 to ProductCsv.Problem.TAX_UNKNOWN) in problems)
         assertTrue((8 to ProductCsv.Problem.NAME_MISSING) in problems)
+        // No 10 % rate in this store: Maggi is imported without tax, and the preview says so.
+        assertEquals(1, p.taxUnmatched)
+        assertEquals(listOf("SST 10%"), p.taxUnmatchedNames)
         assertEquals(listOf("Tin"), p.newCategories)
         assertTrue(p.hasStock)
         assertTrue(p.importable)
 
-        val r = g.productCsv.import({ StringReader(csv) }, setStock = true, staffId = null, approvedBy = null)
-        assertEquals(2, r.created)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = true, staffId = null, approvedBy = null, stockAllowed = true)
+        assertEquals(3, r.created)
         assertEquals(2, r.updated)
-        assertEquals(4, r.skipped)
+        assertEquals(3, r.skipped)
         assertEquals(2, r.stockSet) // Milo: 24 → 30 (as a count); Susu: 12 opening stock
         val db = g.db()
         val milo = assertNotNull(db.read { ProductDao.get(it, ids.getValue("milo")) })
@@ -195,7 +200,8 @@ class ProductCsvServiceTest {
         val teh = assertNotNull(db.read { r -> ProductDao.bySku(r, "BOH1")?.let { ProductDao.get(r, it) } })
         assertEquals("Teh \"Boh\"", teh.name)
         assertEquals(ids["sst"], teh.taxRateId) // 6% matched by percentage
-        assertNull(db.read { ProductDao.ownerOf(it, "9556008888888") }) // Maggi was skipped
+        val maggi = assertNotNull(db.read { r -> ProductDao.ownerOf(r, "9556008888888")?.let { ProductDao.get(r, it) } })
+        assertNull(maggi.taxRateId)
     }
 
     /** 2026-10 review: a deleted category came back as a new one, a deleted tax rate back onto products. */
@@ -214,7 +220,7 @@ class ProductCsvServiceTest {
         assertEquals(3, g.productCsv.export(out))
         assertFalse(out.contains("Minuman"))
         assertFalse(out.contains("Service tax"))
-        val r = g.productCsv.import({ StringReader(out.toString()) }, setStock = false, staffId = null, approvedBy = null)
+        val r = g.productCsv.import({ StringReader(out.toString()) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(3, r.updated)
         assertEquals(0, r.categoriesCreated)
         assertEquals(emptyList(), db.read { CategoryDao.list(it) })
@@ -239,7 +245,7 @@ class ProductCsvServiceTest {
         val picked = assertNotNull(db.read { ProductDao.findByCode(it, listOf("9556001000011")) }).product.id
         assertEquals(twin, picked)
         val csv = "name,price,barcode\r\nMilo 1kg,19.90,9556001000011\r\n"
-        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(1, r.updated)
         assertEquals(1_990L, db.read { ProductDao.get(it, twin) }?.price)
         assertEquals(1_890L, db.read { ProductDao.get(it, ids.getValue("milo")) }?.price)
@@ -260,7 +266,7 @@ class ProductCsvServiceTest {
         }
         val csv = "name,price,barcode\r\nCoke 330ml,2.60,36000291452\r\nMints,1.60,1234565\r\n"
         assertEquals(2, g.productCsv.preview { StringReader(csv) }.updates)
-        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(0, r.created)
         assertEquals(2, r.updated)
         assertEquals(260L, db.read { ProductDao.get(it, coke) }?.price)
@@ -279,7 +285,7 @@ class ProductCsvServiceTest {
             m
         }
         val csv = "name,price,barcode\r\nMints,1.60,1234565\r\n"
-        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(0, r.created)
         assertEquals(1, r.updated)
         assertEquals(160L, db.read { ProductDao.get(it, mints) }?.price)
@@ -299,7 +305,7 @@ class ProductCsvServiceTest {
         }
         val csv = "name,price,barcode\r\nMilo,5.20,955-6001-234568\r\n"
         assertEquals(1, g.productCsv.preview { StringReader(csv) }.updates)
-        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
         assertEquals(0, r.created)
         assertEquals(1, r.updated)
         assertEquals(520L, db.read { ProductDao.get(it, milo) }?.price)
@@ -307,15 +313,26 @@ class ProductCsvServiceTest {
         assertEquals(setOf("955-6001-234568", "9556001234568"), db.read { ProductDao.barcodes(it, milo) }.map { it.code }.toSet())
     }
 
-    /** 2026-10 review: an import that stops part-way logs the chunks it committed. */
+    private val chunk = ProductCsvService.CHUNK
+
+    private suspend fun progress(g: AppGraph): ImportProgress? =
+        ImportProgress.parse(g.db().read { Meta.get(it, ProductCsvService.META_PROGRESS) })
+
+    private suspend fun importLogs(g: AppGraph) = g.db().read { AuditDao.byAction(it, AuditAction.PRODUCT_IMPORT, null) }
+
+    /**
+     * 2026-10 review: an import that stops part-way logs the chunks it committed; imported again,
+     * the same file continues after them instead of creating its keyless products twice.
+     */
     @Test
-    fun anImportThatStopsPartWayIsLogged() = runBlocking {
+    fun anImportThatStopsPartWayIsLoggedAndContinuesWhereItStopped() = runBlocking {
         val g = graph()
         val csv = buildString {
-            append("name,price\r\n")
-            for (i in 1..ProductCsvService.CHUNK + 50) append("Item $i,1.00\r\n")
+            append("name,price,stock\r\n")
+            for (i in 1..chunk + 50) append("Item $i,1.00,5\r\n")
         }
-        // The file can no longer be read after its last row (a card pulled out).
+        // The file can no longer be read after its last row (a card pulled out); the first read,
+        // which identifies the file, still worked.
         val failing = object : Reader() {
             private val inner = StringReader(csv)
 
@@ -327,12 +344,120 @@ class ProductCsvServiceTest {
 
             override fun close() = inner.close()
         }
-        assertFailsWith<IOException> { g.productCsv.import({ failing }, setStock = false, staffId = null, approvedBy = null) }
+        var opened = 0
+        val open = { if (opened++ == 0) StringReader(csv) else failing }
+        assertFailsWith<IOException> { g.productCsv.import(open, setStock = false, staffId = null, approvedBy = null, stockAllowed = true) }
         val db = g.db()
-        assertEquals(ProductCsvService.CHUNK.toLong(), db.read { ProductDao.count(it) }) // the first chunk stays
-        val log = db.read { AuditDao.byAction(it, AuditAction.PRODUCT_IMPORT, null) }.single()
-        assertTrue(log.detail.orEmpty().startsWith("created ${ProductCsvService.CHUNK}, "))
+        assertEquals(chunk.toLong(), db.read { ProductDao.count(it) }) // the first chunk stays
+        val log = importLogs(g).single()
+        assertTrue(log.detail.orEmpty().startsWith("created $chunk, "))
         assertTrue(log.detail.orEmpty().endsWith("stopped early"))
+        val record = assertNotNull(progress(g))
+        assertEquals(chunk, record.rows)
+        assertTrue(record.logged)
+
+        val p = g.productCsv.preview { StringReader(csv) }
+        assertEquals(chunk, p.resumeFrom)
+        assertEquals(chunk + 50, p.rows)
+        assertEquals(50, p.newProducts)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = true)
+        assertEquals(50, r.created)
+        assertEquals(chunk, r.resumedFrom)
+        assertEquals((chunk + 50).toLong(), db.read { ProductDao.count(it) }) // none twice, no opening stock twice
+        assertNull(progress(g))
+        val logs = importLogs(g)
+        assertEquals(2, logs.size)
+        assertEquals("created 50, updated 0, skipped 0, stock set 50, continued after row $chunk", logs.first().detail)
+    }
+
+    /**
+     * HIGH, 2026-10 review: Android ended the app during an import — no audit entry, and the next
+     * import of the file created every product without barcode, SKU or number again, with its
+     * opening stock. The progress record left in `meta` is audited once and the import continues.
+     */
+    @Test
+    fun anImportTheAppsEndStoppedIsAuditedOnceAndContinued() = runBlocking {
+        val g = graph()
+        val db = g.db()
+        val header = "name,price,stock\r\n"
+        val rows = (1..chunk + 30).map { "Item $it,1.00,2\r\n" }
+        val csv = header + rows.joinToString("")
+        // What the killed import left: its first chunk committed with its progress record, no audit entry.
+        val firstChunk = header + rows.take(chunk).joinToString("")
+        g.productCsv.import({ StringReader(firstChunk) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = true)
+        val hash = ImportProgress.sha256(StringReader(csv))
+        db.write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, ProductCsvService.META_PROGRESS, ImportProgress(hash, chunk, chunk, 0, 0, chunk, null, null).format())
+        }
+        assertEquals(1L, db.read { AuditDao.countByAction(it, AuditAction.PRODUCT_IMPORT) })
+
+        val p = g.productCsv.preview { StringReader(csv) }
+        assertEquals(chunk, p.resumeFrom)
+        assertEquals(30, p.newProducts)
+        assertEquals(0, p.updates)
+        assertEquals("created $chunk, updated 0, skipped 0, stock set $chunk, stopped early", importLogs(g).first().detail)
+        g.productCsv.preview { StringReader(csv) } // logged once only
+        assertEquals(2L, db.read { AuditDao.countByAction(it, AuditAction.PRODUCT_IMPORT) })
+
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = true)
+        assertEquals(30, r.created)
+        assertEquals(30, r.stockSet)
+        assertEquals((chunk + 30).toLong(), db.read { ProductDao.count(it) })
+        assertEquals(3L, db.read { AuditDao.countByAction(it, AuditAction.PRODUCT_IMPORT) })
+        assertNull(progress(g))
+    }
+
+    @Test
+    fun startingAgainOrAnotherFileIgnoresTheProgressRecord() = runBlocking {
+        val g = graph()
+        val db = g.db()
+        val csv = "name,price\r\nGula,2.80\r\nTeh,5.00\r\nKopi,6.00\r\n"
+        fun record(text: String) = ImportProgress(ImportProgress.sha256(StringReader(text)), 2, 2, 0, 0, 0, null, null, logged = true).format()
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, ProductCsvService.META_PROGRESS, record("name,price\r\nOther,1.00\r\n")) }
+        assertEquals(0, g.productCsv.preview { StringReader(csv) }.resumeFrom) // another file's record
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, ProductCsvService.META_PROGRESS, record(csv)) }
+        assertEquals(2, g.productCsv.preview { StringReader(csv) }.resumeFrom)
+        val r = g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false, resume = false)
+        assertEquals(3, r.created)
+        assertEquals(0, r.resumedFrom)
+        assertNull(progress(g))
+    }
+
+    /** 2026-10 review: "-", "N/A", "Exempt", Y/N tax cells skipped the row as "no tax rate with this name". */
+    @Test
+    fun taxPlaceholdersYesNoAndUnknownRatesAreImported() = runBlocking {
+        val g = graph()
+        val ids = seedCatalog(g) // one rate: "Service tax 6%", on Milo
+        val csv = listOf(
+            "name,price,sku,tax",
+            "A,1.00,A1,-", "B,1.00,B1,N/A", "C,1.00,C1,Exempt", "D,1.00,D1,0%", "E,1.00,E1,N",
+            "F,1.00,F1,Y", "G,1.00,G1,SST 10%", "H,1.00,H1,6%",
+            "Milo 1kg,18.90,MILO1,SST 10%",
+        ).joinToString("\r\n")
+        val p = g.productCsv.preview { StringReader(csv) }
+        assertEquals(8, p.newProducts)
+        assertEquals(1, p.updates)
+        assertEquals(0, p.badRows)
+        assertEquals(2, p.taxUnmatched)
+        assertEquals(listOf("SST 10%"), p.taxUnmatchedNames)
+        g.productCsv.import({ StringReader(csv) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
+        val db = g.db()
+        suspend fun tax(sku: String) = db.read { r -> ProductDao.bySku(r, sku)?.let { ProductDao.get(r, it) } }?.taxRateId
+        for (sku in listOf("A1", "B1", "C1", "D1", "E1", "G1")) assertNull(tax(sku), sku)
+        assertEquals(ids["sst"], tax("F1")) // "Y": the store's only rate
+        assertEquals(ids["sst"], tax("H1"))
+        assertEquals(ids["sst"], tax("MILO1")) // a tax the store does not have leaves its own
+    }
+
+    /** The import's stock permission fails closed: a caller that does not pass it sets no stock. */
+    @Test
+    fun withoutTheStockPermissionNoStockIsSet() = runBlocking {
+        val g = graph()
+        val r = g.productCsv.import({ StringReader("name,price,sku,stock\nGula,2.80,G1,10\n") }, setStock = true, staffId = null, approvedBy = null)
+        assertEquals(1, r.created)
+        assertEquals(0, r.stockSet)
+        val db = g.db()
+        assertEquals(0L, db.read { r2 -> ProductDao.bySku(r2, "G1")?.let { StockDao.level(r2, it) } })
     }
 
     @Test
@@ -344,10 +469,50 @@ class ProductCsvServiceTest {
         val broken = g.productCsv.preview { StringReader("name,price\n\"Gula,2.80\n") }
         assertNotNull(broken.malformed)
         assertFalse(broken.importable)
+        // A crafted line far longer than any product (64 KB) stops the read.
+        val huge = g.productCsv.preview { StringReader("name,price,note\nGula,2.80," + List(20) { "y".repeat(4_000) }.joinToString(",") + "\n") }
+        assertNotNull(huge.malformed)
+        // An Excel file says how to save it as CSV.
+        val excel = g.productCsv.preview { throw CsvInput.SpreadsheetFile() }
+        assertTrue(excel.spreadsheet)
+        assertFalse(excel.importable)
+    }
+
+    /** 2026-10 review: the template's examples were imported as real products below the owner's own. */
+    @Test
+    fun theTemplatesExamplesAreNeverImported() = runBlocking {
+        val g = graph()
         val template = StringBuilder()
         g.productCsv.template(template)
         val t = g.productCsv.preview { StringReader(template.toString()) }
-        assertEquals(2, t.newProducts)
+        assertEquals(0, t.newProducts)
+        assertEquals(2, t.examples)
         assertEquals(0, t.badRows)
+        assertFalse(t.importable)
+        val mine = template.toString() + "Gula 1kg,,,,,2.80\r\n"
+        val p = g.productCsv.preview { StringReader(mine) }
+        assertEquals(1, p.newProducts)
+        assertEquals(2, p.examples)
+        val r = g.productCsv.import({ StringReader(mine) }, setStock = false, staffId = null, approvedBy = null, stockAllowed = false)
+        assertEquals(1, r.created)
+        assertEquals(0, r.skipped)
+        val db = g.db()
+        assertEquals(1L, db.read { ProductDao.count(it) })
+        assertNull(db.read { ProductDao.ownerOf(it, "9556001234567") })
+    }
+
+    @Test
+    fun amountsTextAndUnreadableCharactersAreReported() = runBlocking {
+        val g = graph()
+        val csv = "name,price,sku\nGula,100000000.00,G1\nTeh,5.00,${"S".repeat(ProductCsv.MAX_NAME + 1)}\nNescaf�,6.00,K1\n"
+        val p = g.productCsv.preview { StringReader(csv) }
+        assertEquals(1, p.newProducts)
+        assertEquals(2, p.badRows)
+        val problems = p.issues.map { Triple(it.line, it.problem, it.column) }.toSet()
+        assertTrue(Triple(2, ProductCsv.Problem.TOO_LARGE, ProductCsv.Column.PRICE) in problems)
+        assertTrue(Triple(3, ProductCsv.Problem.TOO_LONG, ProductCsv.Column.SKU) in problems)
+        // A broken byte in a UTF-8 file is read as U+FFFD: the preview names the line.
+        assertEquals(1, p.unreadable)
+        assertEquals(4, p.firstUnreadableLine)
     }
 }

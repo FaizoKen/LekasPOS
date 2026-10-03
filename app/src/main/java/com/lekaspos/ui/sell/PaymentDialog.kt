@@ -178,11 +178,23 @@ class PaymentDialog(
                     finish(r.rounding)
                 }
                 is Settlement.Result.Partial -> {
-                    tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, 0L))
-                    remaining = r.remaining
-                    partAt = SystemClock.uptimeMillis()
-                    onTenders(ArrayList(tenders))
-                    refresh()
+                    val takePart = {
+                        tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, 0L))
+                        remaining = r.remaining
+                        partAt = SystemClock.uptimeMillis()
+                        onTenders(ArrayList(tenders))
+                        refresh()
+                    }
+                    // The keypad fills from the right: "50" typed for RM50 is RM0.50, and was taken at
+                    // once as part of the bill (2026-10 review). Cash as the first, partial payment asks.
+                    if (tenders.isEmpty()) {
+                        val text = activity.getString(R.string.pay_part_cash, money(given), money(r.remaining))
+                        Dialogs.confirm(activity, activity.getString(R.string.pay_title), text, activity.getString(R.string.pay_part_cash_yes)) {
+                            if (dialog.isShowing && tenders.isEmpty()) takePart()
+                        }
+                    } else {
+                        takePart()
+                    }
                 }
                 is Settlement.Result.Rejected -> error(activity.getString(R.string.pay_error_cash, money(r.minimum)))
             }
@@ -266,9 +278,12 @@ class PaymentDialog(
         val amounts = listOf(due) + QuickCash.amounts(due, currency.scale)
         val density = activity.resources.displayMetrics.density
         for ((i, a) in amounts.withIndex()) {
-            val b = Button(activity, null, 0, R.style.Widget_Lekas_Button_Secondary)
+            // One line that shrinks to fit: at large fonts "RM100" wrapped to "RM10" over "0" (2026-10 review).
+            val b = com.lekaspos.ui.common.FitButton(activity, null, 0, R.style.Widget_Lekas_Button_Secondary)
             b.text = if (i == 0) activity.getString(R.string.pay_exact) else wholeMoney(a)
             b.minWidth = 0 // four notes across a 5-inch phone
+            val side = (4 * density).toInt()
+            b.setPadding(side, b.paddingTop, side, b.paddingBottom)
             b.setOnClickListener {
                 keypad.set(a.toString())
                 pay(cash)

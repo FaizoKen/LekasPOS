@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="#221B7F5B">
-    <item>
+    <!-- Drawn 48dp high inside a 56dp touch target (selling screen). -->
+    <item
+        android:bottom="4dp"
+        android:top="4dp">
         <selector>
             <item android:state_selected="true">
                 <shape android:shape="rectangle">

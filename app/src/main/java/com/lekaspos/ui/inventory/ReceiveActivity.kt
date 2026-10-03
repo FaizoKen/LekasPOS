@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.inventory.ReceiveDraft
 import com.lekaspos.core.inventory.ReceiveLine
 import com.lekaspos.core.money.MoneyFormat
@@ -78,6 +79,7 @@ class ReceiveActivity : ScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        guard(Perm.MANAGE_STOCK) // its approval is asked again after Android ended the app (it was held by Inventory)
         val v = setScreen(getString(R.string.inv_receive), R.layout.activity_receive) ?: return
         addAction(R.drawable.ic_camera, R.string.sell_camera) {
             @Suppress("DEPRECATION")

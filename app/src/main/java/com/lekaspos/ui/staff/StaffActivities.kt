@@ -223,19 +223,31 @@ class StaffEditActivity : ScreenActivity() {
             if (before == null) {
                 // A new staff member needs a PIN to sign in: ask for it right away.
                 staffId = id
-                val created = graph.staffAdmin.staff().firstOrNull { it.id == id }
+                // Android may end the app while the PIN is asked: the screen comes back editing this
+                // person, not "Add staff" again (a second save made them twice, 2026-10 review).
+                intent = intent.putExtra(EXTRA_ID, id)
+                val all = graph.staffAdmin.staff()
+                val created = all.firstOrNull { it.id == id }
                 before = created
-                if (created != null) setPin(created) else finish()
+                when {
+                    created == null -> finish()
+                    // Their PIN would be refused until an owner has one: said before it is typed, not
+                    // after (both PIN entries were thrown away, 2026-10 review).
+                    !created.isOwner && all.none { it.isOwner && it.canSignIn } ->
+                        Dialogs.message(this, null, getString(R.string.error_owner_pin_first)).setOnDismissListener { finish() }
+                    // The owner's approval of this save also covers the PIN that follows (asked twice).
+                    else -> setPin(created, approval)
+                }
             } else {
                 finish()
             }
         }
     }
 
-    private fun setPin(s: Staff) {
+    private fun setPin(s: Staff, carried: com.lekaspos.domain.Approval? = null) {
         askNewPin(this, getString(R.string.pin_new_title, s.name)) { pin ->
             asOwnerIfRefused { approval ->
-                val result = graph.staffAdmin.setPin(s.id, pin, approval)
+                val result = graph.staffAdmin.setPin(s.id, pin, approval ?: carried)
                 toast(R.string.pin_changed)
                 val code = result.recoveryCode
                 if (code != null) {

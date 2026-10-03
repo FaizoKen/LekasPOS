@@ -43,6 +43,7 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val detail: TextView = v.findViewById(R.id.detail)
         val amount: TextView = v.findViewById(R.id.amount)
         val controls: View = v.findViewById(R.id.controls)
+        val qtyRow: View = v.findViewById(R.id.line_qty_row)
         val remove: View = v.findViewById(R.id.line_remove)
         val minus: View = v.findViewById(R.id.line_minus)
         val qty: TextView = v.findViewById(R.id.line_qty)
@@ -84,6 +85,7 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         h.amount.text = MoneyFormat.format(row.amount, currency, withSymbol = false)
         h.detail.text = detail(ctx, it, row.promo)
         h.itemView.setBackgroundResource(if (row.selected) R.drawable.row_highlight else R.drawable.row_ripple)
+        h.itemView.isSelected = row.selected // TalkBack says "selected", not only the highlight colour
         h.itemView.setOnClickListener { _ -> actions.select(it) }
         h.controls.visibility = if (row.selected) View.VISIBLE else View.GONE
         if (row.selected) bindControls(h, it)
@@ -94,7 +96,8 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val counted = !weighed && it.fixedGross == null
         h.minus.visibility = if (counted) View.VISIBLE else View.GONE
         h.plus.visibility = if (counted) View.VISIBLE else View.GONE
-        h.qty.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
+        // A label-price line has no quantity: its whole − quantity + row goes, not an empty row.
+        h.qtyRow.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
         h.qty.text = if (weighed) "${MoneyFormat.formatQty(it.qty)} ${it.unit ?: "kg"}" else MoneyFormat.formatQty(it.qty)
         // One is the least: taking the last one off is "Remove", never a tap too many on "−".
         val canLower = it.qty > ONE
@@ -190,6 +193,7 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         }
         val stock = p.stockQty
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
+        h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
         val q = onBill[p.id]
         h.itemView.isSelected = q != null
         h.inBill.visibility = if (q != null) View.VISIBLE else View.GONE

@@ -113,4 +113,15 @@
     <string name="problem_sku_twice">SKU ini juga ada pada baris sebelumnya (setiap produk perlu SKU sendiri, atau tiada)</string>
     <string name="problem_barcode_taken">kod bar milik produk lain daripada SKU</string>
     <string name="problem_barcodes_split">kod bar milik produk yang berlainan</string>
+    <string name="problem_too_long">terlalu panjang (maksimum %1$d aksara)</string>
+    <string name="problem_too_large">terlalu besar (maksimum %1$s)</string>
+    <string name="import_excel">Ini fail Excel. Buka fail dalam Excel atau Google Sheets dan pilih Save as / Download as CSV, kemudian import fail CSV itu.</string>
+    <string name="import_resume">%1$d baris produk pertama fail ini sudah diimport sebelum aplikasi ditutup. Import akan bersambung selepas baris itu (kiraan di bawah untuk baris selebihnya).</string>
+    <string name="import_start_again">Mula semula dari baris pertama</string>
+    <string name="import_start_again_help">Jika dimulakan semula, baris yang sudah diimport akan diimport sekali lagi: produk tanpa kod bar, SKU atau nombor akan dicipta dua kali.</string>
+    <string name="import_examples">%1$d baris contoh (nama bermula dengan EXAMPLE atau CONTOH) tidak diimport.</string>
+    <string name="import_tax_unmatched">%1$d produk menamakan cukai yang tiada dalam Kadar cukai (%2$s): produk ini diimport tanpa cukai itu, dan produk sedia ada kekal dengan cukainya. Untuk mengenakan cukai, tambah kadar itu dalam Kadar cukai dahulu, kemudian import semula.</string>
+    <string name="import_unreadable">%1$d baris mempunyai aksara yang tidak dapat dibaca (ditunjukkan sebagai �), yang pertama pada baris %2$d. Dalam Excel, simpan fail sebagai “CSV UTF-8” dan import semula untuk mengekalkannya.</string>
+    <string name="import_too_many_rows">Fail ini mempunyai lebih daripada %1$d baris produk: hanya %1$d baris pertama dibaca dan diimport. Letakkan selebihnya dalam fail lain.</string>
+    <string name="import_resumed">Diimport sebelum aplikasi ditutup (baris)</string>
 </resources>

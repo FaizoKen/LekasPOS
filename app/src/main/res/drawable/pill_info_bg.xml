@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Neutral information pill on the brand bar (e.g. held bills); warnings use pill_bg. -->
+<!-- Neutral information pill on the brand bar (e.g. held bills); warnings use pill_bg.
+     brand_dark, not a white wash: white text on it is easy to read (contrast 7.7:1). -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="#33FFFFFF">
-    <!-- Drawn 40dp high inside a 48dp touch target. -->
+    <!-- Drawn 40dp high inside a 56dp touch target. -->
     <item
-        android:bottom="4dp"
-        android:top="4dp">
+        android:bottom="8dp"
+        android:top="8dp">
         <shape android:shape="rectangle">
             <corners android:radius="16dp" />
-            <solid android:color="#33FFFFFF" />
+            <solid android:color="@color/brand_dark" />
         </shape>
     </item>
 </ripple>

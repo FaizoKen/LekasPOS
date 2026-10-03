@@ -157,6 +157,7 @@
     <string name="products_search_hint">Search name, SKU or barcode</string>
     <string name="products_empty">No products yet. Tap + to add one, or scan an unknown barcode on the selling screen.</string>
     <string name="products_none_found">No product matches.</string>
+    <string name="products_add_barcode">No product has the barcode %1$s. Tap here to add it.</string>
     <string name="product_row_stock">In stock: %1$s</string>
     <string name="product_hidden">HIDDEN</string>
     <string name="product_new">New product</string>

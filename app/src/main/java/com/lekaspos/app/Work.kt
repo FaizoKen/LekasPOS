@@ -36,7 +36,17 @@ object Work {
      * by hand). A release build once crashed here because R8 had removed a class WorkManager
      * needs (see proguard-rules.pro).
      */
-    fun schedule(context: Context) = safely("Scheduling background jobs failed") {
+    fun schedule(context: Context, again: Boolean = false) {
+        // Once per process (each selling-screen start rescheduled every job, 2026-10 review); [again]
+        // after sync was turned on.
+        if (scheduled && !again) return
+        scheduleNow(context)
+    }
+
+    @Volatile
+    private var scheduled = false
+
+    private fun scheduleNow(context: Context) = safely("Scheduling background jobs failed") {
         val wm = WorkManager.getInstance(context)
         // Not "storage not low": on a nearly full phone the backup then never ran and nobody knew
         // (2026-10 review). It checks the room it needs itself and the selling screen warns.
@@ -50,6 +60,7 @@ object Work {
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         wm.enqueueUniquePeriodicWork(SYNC, ExistingPeriodicWorkPolicy.KEEP, sync)
+        scheduled = true
     }
 
     /** A sync a couple of minutes after a sale (KEEP: a busy till is not postponed forever). Off the main thread. */
@@ -160,10 +171,15 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
 }
 
 /** Background sync (references/sync.md §10): retried with backoff; a needed sign-in stops it until the user acts. */
+/** The periodic sync skips a run within this time of a finished round when nothing waits (2026-10). */
+private const val RECENT_ROUND_MS = 15L * 60L * 1000L
+
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val graph = LekasApp.graph(applicationContext)
         val provider = graph.sync.provider() ?: return Result.success()
+        // Not a retry (a failed pull is tried again), and only right after a round ended.
+        if (runAttemptCount == 0 && graph.sync.recentlyDone(RECENT_ROUND_MS)) return Result.success()
         return try {
             graph.sync.sync(provider)
             Result.success()

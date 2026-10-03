@@ -100,7 +100,15 @@ class Importer(private val db: SQLiteDatabase) {
             return true
         }
         val (base, versions) = current
-        val winners = Lww.winningFields(fields.keys, incoming, base, versions)
+        val winners = Lww.winningFields(fields.keys, incoming, base, versions).toMutableList()
+        // Built-in rows (Cash, Owner, Manager …) are made by every till in its own language, all at
+        // version (0, 0): the same version never wins, so a till set up in English kept "Cash" and one
+        // in Malay "Tunai" for good (2026-10 review). At that tie the larger name wins on every till.
+        val theirs = fields["name"] as? String // only tables with a name column carry one
+        if (incoming == SEED && theirs != null && "name" !in winners && versions.of("name", base) == SEED) {
+            val ours = db.queryOne("SELECT name FROM $table WHERE id = ?", args(id)) { it.stringOrNull(0) }
+            if (ours != null && theirs > ours) winners.add("name")
+        }
         if (winners.isEmpty()) return false
         val fver = versions.with(winners, incoming).encode()
         val bind = ArrayList<Any?>(winners.size + 3)
@@ -113,6 +121,8 @@ class Importer(private val db: SQLiteDatabase) {
         after(tx, table, id, winners, oldCategory = oldCategory)
         return true
     }
+
+    private val SEED = Version(0L, 0)
 
     private fun after(tx: Db.Tx, table: String, id: Long, changed: Collection<String>, created: Boolean = false, oldCategory: Long? = null) {
         if (table != "product") return
@@ -199,6 +209,9 @@ class Importer(private val db: SQLiteDatabase) {
 
         /** Columns that are versions or local bookkeeping, never fields of a change. */
         val NOT_FIELDS = setOf("id", "ver_hlc", "ver_dev", "fver", "updated_at")
+
+        /** Every entity kind this version applies (the rest waits in `sync_deferred`). */
+        fun knownEntities(): Set<Int> = EVENT_ENTITIES + LWW_TABLES.keys
 
         /** Column order of `stock_movement` rows (as StockDao writes them). */
         val MOVE_COLS = arrayOf("id", "product_id", "kind", "qty", "unit_cost", "ref_id", "reason", "staff_id", "at", "hlc")

@@ -113,4 +113,15 @@
     <string name="problem_sku_twice">this SKU is also on an earlier line (each product needs its own SKU, or none)</string>
     <string name="problem_barcode_taken">the barcode belongs to another product than the SKU</string>
     <string name="problem_barcodes_split">the barcodes belong to different products</string>
+    <string name="problem_too_long">too long (%1$d characters at most)</string>
+    <string name="problem_too_large">too large (%1$s at most)</string>
+    <string name="import_excel">This is an Excel file. Open it in Excel or Google Sheets and Save as / Download as CSV, then import that file.</string>
+    <string name="import_resume">The first %1$d product lines of this file were already imported before the app was closed. The import continues after them (the counts below are for the rest).</string>
+    <string name="import_start_again">Start again from the first line</string>
+    <string name="import_start_again_help">Starting again imports the lines already done a second time: products without barcode, SKU or number are then created twice.</string>
+    <string name="import_examples">%1$d example lines (names starting with EXAMPLE or CONTOH) are not imported.</string>
+    <string name="import_tax_unmatched">%1$d products name a tax that is not in Tax rates (%2$s): they are imported without it, and existing products keep their tax. To tax them, add the rate under Tax rates first and import again.</string>
+    <string name="import_unreadable">%1$d lines have characters that could not be read (shown as �), the first on line %2$d. In Excel, save the file as “CSV UTF-8” and import it again to keep them.</string>
+    <string name="import_too_many_rows">This file has more than %1$d product lines: only the first %1$d are read and imported. Put the rest in another file.</string>
+    <string name="import_resumed">Imported before the app was closed (lines)</string>
 </resources>

@@ -93,6 +93,12 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
     private fun render() {
         dots.text = if (pin.isEmpty()) context.getString(R.string.pin_enter) else "●".repeat(pin.length)
         dots.setTextColor(context.colorOf(if (pin.isEmpty()) R.color.text_disabled else R.color.text_primary))
+        // TalkBack reads "3 digits entered", not "black circle" three times.
+        dots.contentDescription = if (pin.isEmpty()) {
+            null
+        } else {
+            context.resources.getQuantityString(R.plurals.a11y_pin_digits, pin.length, pin.length)
+        }
     }
 
     private fun build(): View {

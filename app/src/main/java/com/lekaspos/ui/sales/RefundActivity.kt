@@ -66,7 +66,13 @@ class RefundActivity : ScreenActivity() {
             }
             // Back onto the customer's account only for a sale that has a customer.
             val credit = data.header.customerId != null
-            methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
+            methods = graph.db().read { r ->
+                val shown = PaymentMethodDao.active(r).filter { it.kind != PaymentKind.CREDIT || credit }
+                // The way the sale was paid comes first even when that method was hidden since: a credit
+                // sale's refund went out as cash while the debt stayed (2026-10 review).
+                val usual = data.usualMethodId?.takeIf { id -> shown.none { it.id == id } }?.let { PaymentMethodDao.method(r, it) }
+                listOfNotNull(usual) + shown
+            }
             info = data
             build(data)
         }

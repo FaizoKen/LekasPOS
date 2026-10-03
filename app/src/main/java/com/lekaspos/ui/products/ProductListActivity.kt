@@ -79,7 +79,17 @@ class ProductListActivity : ScreenActivity() {
             val items = graph.db().read { r -> if (q.isBlank()) ProductDao.managePage(r, null, PAGE) else ProductDao.search(r, q, 100, includeInactive = true) }
             adapter.submit(items)
             end = q.isNotBlank() || items.size < PAGE
-            empty.setText(if (q.isBlank()) R.string.products_empty else R.string.products_none_found)
+            // A barcode scanned or typed that no product has: one tap adds it (it was "No product
+            // matches." only; scanning to add went through a bill that had to be cancelled — 2026-10 review).
+            val code = q.trim().takeIf { items.isEmpty() && it.length >= 6 && it.all(Char::isDigit) }
+            when {
+                q.isBlank() -> empty.setText(R.string.products_empty)
+                code != null -> empty.text = getString(R.string.products_add_barcode, code)
+                else -> empty.setText(R.string.products_none_found)
+            }
+            empty.setOnClickListener(if (code == null) null else View.OnClickListener {
+                requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this@ProductListActivity, barcode = code)) }
+            })
             empty.visible(items.isEmpty())
         }
     }

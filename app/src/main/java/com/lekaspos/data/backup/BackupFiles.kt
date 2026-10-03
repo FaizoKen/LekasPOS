@@ -50,6 +50,9 @@ object BackupFiles {
 
     class Invalid(message: String) : Exception(message)
 
+    /** Free storage an unpacked backup must leave on the phone. */
+    private const val UNPACK_MARGIN = 20L * 1024L * 1024L
+
     /** Writes a backup of the open [db] to [out]; [temp] is a scratch directory. */
     fun write(db: Db, out: OutputStream, temp: File, appVersion: String, reason: String) {
         temp.mkdirs()
@@ -111,13 +114,27 @@ object BackupFiles {
         dir.deleteRecursively()
         dir.mkdirs()
         var header: Header? = null
+        // No more than the phone can hold (less a margin for selling): a small crafted file that
+        // unpacks to many gigabytes filled the phone (2026-10 review).
+        var room = com.lekaspos.util.Storage.freeBytes(dir) - UNPACK_MARGIN
+        fun copy(z: ZipInputStream, to: File) = FileOutputStream(to).use { out ->
+            val input = CutShortGuard(z)
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                room -= n
+                if (room < 0L) throw Invalid("there is not enough free storage on this phone to unpack the backup")
+                out.write(buf, 0, n)
+            }
+        }
         readZip(input) { z ->
             while (true) {
                 val e = z.nextEntry ?: break
                 when (e.name) {
-                    HEADER -> header = parseHeader(CutShortGuard(z))
-                    DB -> FileOutputStream(File(dir, DB)).use { CutShortGuard(z).copyTo(it, 64 * 1024) }
-                    WAL -> FileOutputStream(File(dir, WAL)).use { CutShortGuard(z).copyTo(it, 64 * 1024) }
+                    HEADER -> if (header == null) header = parseHeader(CutShortGuard(z)) // the first one counts
+                    DB -> copy(z, File(dir, DB))
+                    WAL -> copy(z, File(dir, WAL))
                     else -> Unit // unknown parts of a newer format are ignored
                 }
             }
@@ -131,6 +148,7 @@ object BackupFiles {
             val check = r.pragma("PRAGMA quick_check")
             if (check != "ok") throw Invalid("the database in the backup is damaged ($check)")
             if (r.version > Schema.VERSION) throw Invalid("made by a newer version of the app")
+            if (r.version < 1) throw Invalid("not a LekasPOS database (version ${r.version})")
             if (Meta.get(r, Meta.DEVICE_UUID) == null || Meta.get(r, Meta.STORE_UUID) == null) throw Invalid("the backup has no store identity")
         }
         File(dir, WAL).delete()

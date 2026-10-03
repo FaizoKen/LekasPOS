@@ -10,6 +10,7 @@ import com.lekaspos.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
         val address = graph.settings.device.value.scannerAddress ?: return
         job = graph.appScope.launch(dispatcher) {
             var backoff = 2_000L
+            var failures = 0
             while (isActive) {
                 val adapter = Bluetooth.adapter(app)
                 if (adapter == null || !Bluetooth.hasPermission(app) || !adapter.isEnabled) {
@@ -62,6 +64,7 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                     if (!isActive) throw IOException("stopped")
                     _status.value = Status.CONNECTED
                     backoff = 2_000L
+                    failures = 0
                     read(l)
                 } catch (e: IOException) {
                     if (isActive) Log.w("SPP scanner: ${e.message}")
@@ -74,7 +77,10 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                 if (!isActive) break
                 _status.value = Status.ERROR
                 delay(backoff)
-                backoff = minOf(backoff * 2, 60_000L)
+                // A scanner that is off or asleep: after a few tries, once every 5 minutes. Each try pages
+                // for ~15 s (battery, and Bluetooth paging slows the shop's 2.4 GHz Wi-Fi) — every minute
+                // all day before (2026-10 review). Opening the selling screen tries again at once.
+                backoff = minOf(backoff * 2, if (++failures >= SLOW_AFTER) SLOW_RETRY_MS else 60_000L)
             }
             _status.value = Status.OFF
         }
@@ -83,7 +89,8 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
     fun stop() {
         job?.cancel()
         job = null
-        link?.close() // unblocks the reading thread
+        // Unblocks the reading thread; closing a Bluetooth socket is not for the main thread.
+        link?.let { l -> graph.appScope.launch(Dispatchers.IO) { l.close() } }
         _status.value = Status.OFF
     }
 
@@ -133,5 +140,7 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
 
     companion object {
         private const val POLL_MS = 20L
+        private const val SLOW_AFTER = 5
+        private const val SLOW_RETRY_MS = 5L * 60L * 1000L
     }
 }

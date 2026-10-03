@@ -418,8 +418,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun onDestroy() {
         // Rebuilt mid-payment (a tablet turned: Android 16 ignores the orientation lock on large
         // screens): the payment stays open with what was already taken, and the new screen shows
-        // it again (resumePayment). Otherwise closing it ends the payment (2026-10 review).
-        if (isChangingConfigurations) paymentDialog?.setOnDismissListener(null)
+        // it again (resumePayment). So also when Android destroys the screen to save memory while the
+        // cashier checks a transfer in a bank app (it lost the card and e-wallet parts taken, 2026-10
+        // review); only a screen that is finishing ends the payment.
+        if (isChangingConfigurations || !isFinishing) paymentDialog?.setOnDismissListener(null)
         paymentDialog?.dismiss()
         // Keep the outcome: after a rotation the new screen shows the same result again.
         outcomeDialog?.setOnDismissListener(null)
@@ -619,10 +621,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val pill: Pair<Int, () -> Unit>? = when {
             p.state == BackupService.Protection.State.DAMAGED ->
                 R.string.safety_pill_damaged to { open(BackupActivity::class.java) }
-            // Before sales stop being saved and while the daily backup has no room (2026-10 review).
-            p.storageLow -> R.string.storage_pill to { explainStorage(p.freeBytes) }
+            // Sync that stopped first: on a phone that stays nearly full for weeks the storage pill hid
+            // "Sign in" and the other tills stopped getting this till's sales unseen (2026-10 review).
             s.enabled && s.needsSignIn -> R.string.sync_pill_sign_in to { open(SyncActivity::class.java) }
             stale -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
+            // Before sales stop being saved and while the daily backup has no room (2026-10 review).
+            p.storageLow -> R.string.storage_pill to { explainStorage(p.freeBytes) }
             risk && s.enabled -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
             risk -> R.string.safety_pill_at_risk to { explainAtRisk() }
             else -> null
@@ -663,7 +667,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun spanCount(): Int {
         val width = resources.configuration.screenWidthDp * (if (twoPane) 0.6f else 1f)
-        return (width / 150f).toInt().coerceIn(2, 6)
+        // Fewer, wider tiles at a large font: names and prices were cut (2026-10 review).
+        val scale = resources.configuration.fontScale.coerceAtLeast(1f)
+        return (width / (150f * scale)).toInt().coerceIn(2, 6)
     }
 
     // ------------------------------------------------------------------ panels & back
@@ -1013,7 +1019,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
             when (p.sellMode) {
                 SellMode.WEIGHT -> askWeight(p, null)
                 SellMode.OPEN_PRICE -> askPrice(p, null)
-                else -> if (graph.cart.addProduct(p) != 0L) beeper?.ok() else beeper?.error()
+                // No price yet: asked, never sold free (2026-10 review).
+                else -> if (p.price == 0L) askPrice(p, null) else if (graph.cart.addProduct(p) != 0L) beeper?.ok() else beeper?.error()
             }
             hideKeyboard()
             search.clearFocus()

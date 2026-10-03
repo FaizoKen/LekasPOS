@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="#33FFFFFF">
-    <!-- Drawn 40dp high inside a 48dp touch target. -->
+    <!-- Drawn 40dp high inside a 56dp touch target. -->
     <item
-        android:bottom="4dp"
-        android:top="4dp">
+        android:bottom="8dp"
+        android:top="8dp">
         <shape android:shape="rectangle">
             <corners android:radius="16dp" />
             <solid android:color="@color/warning" />

@@ -68,7 +68,8 @@ class SettingsActivity : ScreenActivity() {
             // Both are the shop's choices like the other settings: a cashier turned the daily update
             // check or the error reports off (2026-10 review).
             Entry(R.string.update_settings_title, null, null, sub = { UpdateUi.subtitle(this, graph.updates.status.value) }) {
-                requireAccess(Perm.SETTINGS) { UpdateUi.settings(this, scope) }
+                // For this one change: a manager's PIN here no longer opened the rest of Settings too.
+                withApproval(Perm.SETTINGS) { UpdateUi.settings(this, scope) }
             },
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
             Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
@@ -118,7 +119,7 @@ class SettingsActivity : ScreenActivity() {
     }
 
     /** Error reports to the developer, on or off for this phone (D-057). */
-    private fun chooseReports() = requireAccess(Perm.SETTINGS) {
+    private fun chooseReports() = withApproval(Perm.SETTINGS) {
         ReportsChoice.ask(this) { on ->
             reports = if (on) ErrorReports.ON else ErrorReports.OFF
             adapter?.notifyItemChanged(reportsRow)

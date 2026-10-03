@@ -1009,6 +1009,81 @@ and "You saved" on receipts, a void slip, a "Rebuild report totals" repair in Di
 Rejected: answering error reports before filing them on the relay (`waitUntil`; the app takes 2xx as
 delivered); a size check on cloud folders (they may report the size only after upload).
 
+### D-061 — Fifth bug hunt: what 1.7.0 broke, killed apps, crafted files, data use, a first week (1.7.1, 2026-10-03)
+The owner asked for another bug hunt right after releasing 1.7.0. Nine read-only reviews took angles
+no hunt had: regressions of 1.7.0 in real use, Android ending the app mid-task, shared state across
+threads, crafted or damaged files (backups, CSV, sync), battery and mobile data, a new shop's first
+week, the test suite's gaps (some were code gaps), accessibility and large fonts, and upgrades and
+tills on mixed versions. Each finding was checked in the code; the accessibility layouts and the CSV
+import were done by two engineers in parallel on separate files, then the whole change was reviewed.
+Decisions that change behaviour:
+- **"Back up now" copies are never deleted by the app** (1.7.0 kept the newest 5 and deleted older
+  ones on its first daily backup after the update — reverted). The "Storage almost full" message
+  points to Backup & restore, where they can be deleted. Reports kept by an older version while the
+  shop said "Don't send" are deleted at start.
+- **Staff:** putting someone in a role, or setting their PIN, only within what the person doing it
+  may do (or with the approval of someone who may): a manager with "Manage staff" moved themselves
+  into a wider role, or set a wider colleague's PIN and signed in as them. Staff, role, promotion and
+  store-settings saves finish their reload even when the screen closes meanwhile (the till kept a
+  deactivated cashier's permissions, an old deal or tax mode in memory); store settings check the
+  Settings permission themselves and name the approving manager; promotion and settings reloads take
+  a lock (an older list could be published last).
+- **Payment methods (1.7.0):** cash always opens the drawer and is always shown; customer credit is
+  always shown (it has its own switch) and a credit sale's refund offers credit even when the method
+  is hidden (a refund was paid out in cash while the debt stayed); a new method's "Shown" is kept;
+  renaming a method that has payments says that old sales show the new name; the editor checks the
+  permission itself and names the approver. Settings → App updates and Error reports take a manager's
+  approval for that one change (it opened the rest of Settings too).
+- **Promotions:** only products sold by the piece can be added (a deal on a weighed product was shown
+  at the price check and never applied); the price check shows only the deal the till gives; a special
+  price of 0.00 is refused; the list says tills on 1.6.1 or older skip special prices.
+- **Selling:** a first cash amount below the bill asks "Only RM0.50 in cash?" before taking it as part
+  of the bill (the keypad fills from the right); a product with no price (0.00) asks for the price at
+  the till; a product priced at the till can be saved without a price; a split payment survives Android
+  destroying the selling screen to save memory; the printer chosen in Settings is kept at once.
+- **Restore:** a backup is opened, migrated and cleaned on a scratch copy before it can replace the
+  data (a broken schema failed every start, with Backup & restore out of reach); a version below 1 is
+  refused; unpacking stops before the phone is full (a small file could unpack to gigabytes).
+- **Sync:** an event this version cannot read is set aside (and reported) instead of failing every
+  round for good — the rest of that till's files still arrive; set-aside events are retried each
+  round. Built-in rows named in two languages ("Cash"/"Tunai") end the same on every till (the larger
+  name wins at version (0, 0)). The clock never wraps at its largest value and ignores times after 2100.
+- **Data and battery:** Drive answers compressed and compact (3–4× smaller); the whole-folder listing
+  weekly instead of daily (every round still lists new files; a gap still lists the whole folder); the
+  till's card updated every 15 minutes, not every round; the periodic sync skips a run within 25
+  minutes of a round when nothing waits; up to 5,000 files per till per round when catching up (each
+  round re-lists what is left); background jobs scheduled once per process; the Bluetooth scanner tries
+  every 5 minutes after 5 failures (it paged every minute all day) and is closed off the main thread.
+  A pre-upgrade backup is written at most once a day per version. Remote clean-up of old files and a
+  snapshot to start a new till from (sync.md §8) remain the real fixes for years of history.
+- **Killed apps:** the product form, Receive and Count (approval asked again), a new staff member (no
+  second one after a restart) keep what was there; a CSV import continues from the next row (each
+  chunk stores how far it got with the file's SHA-256), and a stopped one is audited.
+- **CSV import:** more column names ("Item Name", "Nama Barang", "Selling Price (RM)", "Bar Code" …);
+  tax placeholders ("-", "N/A", "Exempt", "Y"/"N") understood; a tax with no matching rate is imported
+  **without** tax and said so (an import never creates a tax rate: charging SST is a legal question,
+  and rates need the Settings permission); Excel files are recognised and explained; the template's
+  examples are "EXAMPLE – …" and skipped; limits on record length (64 KB), rows (100,000), text fields,
+  prices and quantities; a file almost all UTF-8 (95%) is read as UTF-8 with a warning; setting stock
+  needs the permission explicitly (it failed open).
+- **Crashes and races:** the price check shows the newest lookup only; "Data problem" is stored before
+  it is shown.
+- **Accessibility:** the selected bill line's controls in two rows (More was off-screen in two-pane);
+  totals, payment amounts, change and tile prices shrink to fit one line (`FitTextView`, platform
+  autosizing needs API 26) instead of losing digits; selling-screen targets 56dp; contrast of pills,
+  disabled text, the disabled Pay button and field borders raised to AA; TalkBack live regions and
+  labels; force-dark off (the app is light-only). Tile columns follow the font size. Malay "Simpan"
+  for Hold (also "Save") is "Tangguh". Products: a scanned barcode no product has can be added with
+  one tap.
+Not changed (for the owner, or later): a special price loses to an older multi-buy on the same
+product (lowest id wins); the last sale's change after Android ended the app (it is in Sales);
+dialog forms (customer, supplier) after the app was ended; the restore question shows the file's
+own claims; sync data size limits beyond the above; a warning for tills on very old versions;
+remote clean-up of segments. Weak features the reviews listed for the owner: "void and put back on
+the bill", "save and add next" / duplicate product, editing a product's price from the till, column
+matching for supplier lists, category ordering, sales list by item, a "no cost price" profit warning,
+quick refund reasons, quick keys, bulk price changes, percent-off and spend-threshold promotions.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

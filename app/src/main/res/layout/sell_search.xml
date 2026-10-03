@@ -21,7 +21,7 @@
         android:addStatesFromChildren="true"
         android:background="@drawable/field_bg"
         android:gravity="center_vertical"
-        android:minHeight="52dp"
+        android:minHeight="56dp"
         android:orientation="horizontal">
 
         <EditText
@@ -36,7 +36,7 @@
             android:imeOptions="actionSearch|flagNoExtractUi"
             android:importantForAutofill="no"
             android:inputType="text|textNoSuggestions"
-            android:minHeight="52dp"
+            android:minHeight="56dp"
             android:paddingStart="12dp"
             android:paddingEnd="4dp"
             android:singleLine="true" />
@@ -44,8 +44,8 @@
         <ImageButton
             android:id="@+id/search_clear"
             style="@style/Widget.Lekas.IconButton"
-            android:layout_width="48dp"
-            android:layout_height="52dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:contentDescription="@string/clear"
             android:src="@drawable/ic_close"
             android:visibility="gone" />
@@ -53,8 +53,8 @@
         <ImageButton
             android:id="@+id/btn_camera"
             style="@style/Widget.Lekas.IconButton"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:contentDescription="@string/sell_camera"
             android:src="@drawable/ic_camera"
             android:tint="@color/brand"
@@ -76,8 +76,10 @@
             style="@style/Text.Lekas.ToolLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="84dp"
-            android:singleLine="true"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxWidth="96dp"
+            android:maxLines="2"
             android:text="@string/price_check_title" />
     </LinearLayout>
 
@@ -95,8 +97,10 @@
             style="@style/Text.Lekas.ToolLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="84dp"
-            android:singleLine="true"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxWidth="96dp"
+            android:maxLines="2"
             android:text="@string/sell_tool_items" />
     </LinearLayout>
 </LinearLayout>

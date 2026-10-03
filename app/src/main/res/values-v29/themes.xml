@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app is light only (no night resources). Android 10+ "force dark" (a developer option,
+         and some phone makers' dark modes) must not invert it: brand colours, the yellow change
+         highlight and the greyed amounts would turn hard to read. Dialogs have a theme of their own
+         (on top of the screen's), so they need it too. Everything else is in the Base themes. -->
+    <style name="Theme.Lekas" parent="Base.Theme.Lekas">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <style name="Theme.Lekas.Dialog" parent="Base.Theme.Lekas.Dialog">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

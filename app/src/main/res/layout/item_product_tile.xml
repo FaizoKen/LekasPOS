@@ -27,32 +27,26 @@
             android:minLines="2"
             android:textSize="15sp" />
 
-        <LinearLayout
+        <!-- The price has the whole width and shrinks rather than lose digits; the stock count
+             (shown only when stock is tracked) has a line of its own below it. -->
+        <com.lekaspos.ui.common.FitTextView
+            android:id="@+id/price"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:gravity="bottom"
-            android:orientation="horizontal">
+            android:textColor="@color/brand"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/price"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="@color/brand"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/stock"
-                style="@style/Text.Lekas.Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:singleLine="true" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/stock"
+            style="@style/Text.Lekas.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="end"
+            android:singleLine="true"
+            android:visibility="gone" />
     </LinearLayout>
 
     <TextView

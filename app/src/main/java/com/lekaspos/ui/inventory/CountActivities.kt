@@ -15,6 +15,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.inventory.CostMath
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.time.DateText
@@ -60,6 +61,7 @@ class CountSessionsActivity : ScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        guard(Perm.MANAGE_STOCK) // its approval is asked again after Android ended the app (it was held by Inventory)
         val v = setScreen(getString(R.string.inv_count), R.layout.list_plain) ?: return
         addAction(R.drawable.ic_add, R.string.inv_count_new) { newSession() }
         empty = v.findViewById(R.id.list_empty)
@@ -152,6 +154,7 @@ class CountActivity : ScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        guard(Perm.MANAGE_STOCK) // its approval is asked again after Android ended the app (it was held by Inventory)
         sessionId = intent.getLongExtra(EXTRA_SESSION, 0L)
         val v = setScreen(getString(R.string.inv_count), R.layout.list_with_search) ?: return
         addAction(R.drawable.ic_more, R.string.inv_count_report) { startActivity(CountReportActivity.intent(this, sessionId)) }

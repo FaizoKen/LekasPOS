@@ -70,6 +70,16 @@ class HlcTest {
         assertTrue(restarted.now() > persisted)
     }
 
+    /** 2026-10 review: a crafted value at the very top wrapped to the bottom; one far ahead was followed in 24 h steps. */
+    @Test
+    fun theLargestValueNeverWrapsAndTimesPast2100AreIgnored() {
+        val top = Hlc({ wall }, Long.MAX_VALUE)
+        assertEquals(Long.MAX_VALUE, top.now())
+        assertEquals(Long.MAX_VALUE, com.lekaspos.core.sync.Lww.stampAbove(wall, Long.MAX_VALUE))
+        val walked = Hlc({ wall }, Hlc.pack(Hlc.MAX_PHYSICAL_MS, 0))
+        assertFalse(walked.observe(Hlc.pack(Hlc.MAX_PHYSICAL_MS + 1_000L, 0)))
+    }
+
     @Test
     fun counterOverflowCarriesIntoTheMillis() {
         val start = Hlc({ wall }, Hlc.pack(wall, 0xFFFF))

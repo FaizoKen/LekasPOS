@@ -118,6 +118,17 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     private val outDir = File(app.filesDir, "sync/out") // made by [seal]
     private val inDir get() = File(app.cacheDir, "sync-in").apply { mkdirs() }
 
+    /**
+     * A round finished less than [withinMs] ago and nothing waits to be sent: the periodic job has
+     * nothing to add (the till syncs after each sale). It ran anyway, every 30 minutes on every till,
+     * a Drive round each time (2026-10 review).
+     */
+    suspend fun recentlyDone(withinMs: Long, now: Long = System.currentTimeMillis()): Boolean {
+        val db = graph.db()
+        val (lastOk, pending) = db.read { r -> Meta.getLong(r, LAST_OK) to SyncDao.unsentEvents(r) }
+        return lastOk != null && now - lastOk in 0 until withinMs && pending == 0L
+    }
+
     /** Re-reads the stored parts of the status (pending changes, last success …); a running round's progress is kept. */
     suspend fun refreshStatus() {
         val db = graph.db()
@@ -393,12 +404,18 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             val got = import(db, provider, store, changed)
             var more = got.more
             val tillCards = got.cards
-            if (tillCards != null) { // the whole folder was listed: once a day, and on the first round
+            if (tillCards != null) { // the whole folder was listed: once a week, and on the first round
                 if (checkFolder(db, provider, store, got.ownLowest, uploadedBefore)) {
                     more = true // the next round publishes everything again
                 } else {
                     checkPrefix(db, tillCards)
                 }
+                cardsCheckedAt = SystemClock.elapsedRealtime()
+            } else if (SystemClock.elapsedRealtime() - cardsCheckedAt > CARDS_EVERY_MS || cardsCheckedAt == 0L) {
+                // The other tills' cards stay daily (a small listing): a receipt prefix two tills took at
+                // once is noticed within a day, not a week (2026-10 review).
+                checkPrefix(db, cards(provider, store))
+                cardsCheckedAt = SystemClock.elapsedRealtime()
             }
             step(PHASE_FINISH, 0L, 0L)
             putCard(db, provider, db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }) // moved by checkFolder?
@@ -680,16 +697,39 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     private suspend fun applyDeferred(db: Db, changed: MutableSet<Int>) {
         val waiting = db.read { SyncDao.deferred(it) }
         if (waiting.isEmpty()) return
-        db.write(reserveIds = 0L) { tx ->
-            val importer = Importer(tx.db)
-            for ((seq, e) in waiting) {
-                if (!importer.knows(e.entity)) continue
-                db.hlc.observe(e.hlc) // like any applied event (2026-10 review)
-                if (importer.apply(tx, e)) changed.add(e.entity)
-                SyncDao.dropDeferred(tx, seq)
+        // One transaction each: an event this version cannot apply stays waiting (it is retried, and
+        // an update of the app may read it) instead of failing every round. Unknown kinds wait without
+        // a transaction; a failure is logged once per process (a round runs after each sale).
+        val probe = Importer.knownEntities()
+        for ((seq, e) in waiting) {
+            if (e.entity !in probe) continue
+            try {
+                db.write(reserveIds = 0L) { tx ->
+                    val importer = Importer(tx.db)
+                    if (importer.knows(e.entity)) {
+                        db.hlc.observe(e.hlc) // like any applied event (2026-10 review)
+                        if (importer.apply(tx, e)) changed.add(e.entity)
+                        SyncDao.dropDeferred(tx, seq)
+                    }
+                }
+            } catch (x: Exception) {
+                if (!unreadable(x)) throw x
+                if (loggedStuck.add(seq)) Log.w("A waiting sync event still cannot be applied (entity ${e.entity}): ${x.javaClass.simpleName}")
             }
         }
     }
+
+    /** Waiting events already said to be stuck (by their seq), this process. */
+    private val loggedStuck = java.util.Collections.synchronizedSet(HashSet<Long>())
+
+    /**
+     * An event this version cannot apply (a field of another type or missing, a value out of range —
+     * from a newer or a broken till), not a failure of the phone (a full disk) or the network.
+     */
+    private fun unreadable(e: Exception): Boolean =
+        e is ClassCastException || e is NullPointerException || e is IllegalArgumentException ||
+            e is NumberFormatException || e is ArithmeticException || e is IndexOutOfBoundsException ||
+            e is android.database.sqlite.SQLiteConstraintException || e is android.database.sqlite.SQLiteDatatypeMismatchException
 
     /**
      * Applies one downloaded segment in short transactions (at most [IMPORT_CHUNK] events or about
@@ -703,23 +743,46 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             var max = 0L
             var count = 0
             var farAhead = false
+            fun applyOne(tx: Db.Tx, importer: Importer, e: SyncEvent) {
+                // Inside the transaction that applies it (2026-10 review): a local edit
+                // committed after it is stamped later, and the clock is stored with it.
+                if (!db.hlc.observe(e.hlc)) farAhead = true
+                if (!importer.knows(e.entity)) {
+                    SyncDao.defer(tx, e) // from a newer version: applied after this till is updated
+                } else if (importer.apply(tx, e)) {
+                    changed.add(e.entity)
+                }
+            }
             fun flush() {
                 var i = 0
                 while (i < batch.size) {
-                    db.writeBlocking(reserveIds = 0L) { tx ->
-                        val importer = Importer(tx.db)
-                        val start = System.nanoTime()
+                    val from = i
+                    try {
+                        db.writeBlocking(reserveIds = 0L) { tx ->
+                            val importer = Importer(tx.db)
+                            val start = System.nanoTime()
+                            while (i < batch.size) {
+                                applyOne(tx, importer, batch[i++])
+                                if (System.nanoTime() - start >= IMPORT_TX_MS * 1_000_000L) break
+                            }
+                        }
+                    } catch (x: Exception) {
+                        if (!unreadable(x)) throw x
+                        // An event this version cannot read stopped every round for good, for every till
+                        // after it in the plan (2026-10 review). The part rolled back is applied again one
+                        // event at a time, and the event that fails waits aside (with the unknown kinds),
+                        // retried each round: an update of the app may read it.
+                        i = from
                         while (i < batch.size) {
                             val e = batch[i++]
-                            // Inside the transaction that applies it (2026-10 review): a local edit
-                            // committed after it is stamped later, and the clock is stored with it.
-                            if (!db.hlc.observe(e.hlc)) farAhead = true
-                            if (!importer.knows(e.entity)) {
-                                SyncDao.defer(tx, e) // from a newer version: applied after this till is updated
-                            } else if (importer.apply(tx, e)) {
-                                changed.add(e.entity)
+                            try {
+                                db.writeBlocking(reserveIds = 0L) { tx -> applyOne(tx, Importer(tx.db), e) }
+                            } catch (y: Exception) {
+                                if (!unreadable(y)) throw y
+                                Log.e("Sync event from till $dev set aside: it cannot be applied (entity ${e.entity})", y)
+                                // Kept aside when it can be written back (a value JSON cannot hold is not): dropped otherwise.
+                                runCatching { db.writeBlocking(reserveIds = 0L) { tx -> SyncDao.defer(tx, e) } }
                             }
-                            if (System.nanoTime() - start >= IMPORT_TX_MS * 1_000_000L) break
                         }
                     }
                 }
@@ -740,6 +803,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             count
         }
 
+    /** When this process last read the other tills' cards (0: not yet). */
+    @Volatile
+    private var cardsCheckedAt = 0L
+
     /** Last card published by this process, and when: an unchanged card is re-sent only every [CARD_EVERY_MS]. */
     @Volatile
     private var cardKey: String? = null
@@ -754,7 +821,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val lastSeq = db.read { SyncDao.lastUploaded(it) }
         val cursors = db.read { SyncDao.cursors(it) }
         val from = db.read { fullFrom(it, db.deviceNo) }
-        val key = listOf(store, uuid, name, prefix, BuildConfig.VERSION_NAME, lastSeq, cursors, from).joinToString("|")
+        // Who this till is: a change goes out at once. Its last file and read positions only every
+        // [CARD_EVERY_MS]: the other tills read cards on the whole-folder listing, and a card updated
+        // in every round (one per sale) was a Drive request per sale (2026-10 review).
+        val key = listOf(store, uuid, name, prefix, BuildConfig.VERSION_NAME, from).joinToString("|")
         val now = SystemClock.elapsedRealtime()
         if (key == cardKey && now - cardAt < CARD_EVERY_MS) return // nothing new to tell the other tills
         putJson(provider, SyncNames.device(store, db.deviceNo), replace = true) { w ->
@@ -936,7 +1006,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         const val LIST_SLACK_MS = 15L * 60L * 1000L
 
         /** The whole folder is listed at least this often (and whenever a short listing shows a gap). */
-        const val FULL_LIST_EVERY_MS = 24L * 60L * 60L * 1000L
+        /**
+         * The whole folder is listed this often (a week; a day before 1.7.1): every round still lists
+         * the files created since the last one, and a gap in a till's numbers lists the whole folder
+         * at once. The whole listing grows with every file ever sent (2026-10 review).
+         */
+        const val FULL_LIST_EVERY_MS = 7L * 24L * 60L * 60L * 1000L
 
         /** An upload time this far past the phone's clock was stamped while the clock ran ahead. */
         private const val CLOCK_AHEAD_MS = 24L * 60L * 60L * 1000L
@@ -944,8 +1019,16 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** An unchanged device card is published at least this often (its "last seen" for the other tills). */
         const val CARD_EVERY_MS = 15L * 60L * 1000L
 
-        /** Other tills' files read in one round, per till: the rest waits for the next round (2026-10 review). */
-        const val FILES_PER_TILL = 1_000
+        /** The other tills' cards are read at least this often, between whole-folder listings. */
+        private const val CARDS_EVERY_MS = 24L * 60L * 60L * 1000L
+
+        /**
+         * Other tills' files read in one round, per till: the rest waits for the next round (2026-10
+         * review: a joining till held a year of listings in memory). 5,000 (1,000 before 1.7.1, ~2 MB of
+         * listing per till): each round lists the files still to read again, so a till joining a
+         * year-old store listed about 2 GB in 110 rounds; a snapshot to start from is the real fix (sync.md §8).
+         */
+        const val FILES_PER_TILL = 5_000
 
         /** This phone's clock this far from Google's is shown as wrong ([Status.clockOff]). */
         const val CLOCK_WARN_MS = 10L * 60L * 1000L

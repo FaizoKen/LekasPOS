@@ -71,7 +71,8 @@ class CsvWriter(private val out: Appendable, private val delimiter: Char = ',') 
 /**
  * Streaming CSV reader: one record at a time (files of any size, constant memory). Accepts
  * CRLF, LF or CR line ends, quoted fields with doubled quotes and line breaks, a leading
- * UTF-8 BOM, and a comma, semicolon or tab delimiter detected from the header line.
+ * UTF-8 BOM, and a comma, semicolon or tab delimiter detected from the header line. A record
+ * longer than [MAX_RECORD] characters (a crafted file, or a quote never closed) stops the read.
  */
 class CsvReader(reader: Reader, delimiter: Char? = null) {
 
@@ -106,8 +107,16 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
         }
     }
 
+    /** Characters of the record being read (fields and delimiters). */
+    private var recordChars = 0
+
+    private fun counted() {
+        if (++recordChars > MAX_RECORD) throw Malformed(recordLine, "line too long")
+    }
+
     private fun record(): List<String> {
         if (delim == '\u0000') delim = detect()
+        recordChars = 0
         val fields = ArrayList<String>(16)
         val sb = StringBuilder(32)
         while (true) {
@@ -133,12 +142,14 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
                 }
                 delim.code -> {
                     read()
+                    counted()
                     fields.add(sb.toString())
                     sb.setLength(0)
                     if (fields.size > MAX_FIELDS) throw Malformed(recordLine, "too many columns")
                 }
                 else -> {
                     read()
+                    counted()
                     sb.append(c.toChar())
                     if (sb.length > MAX_FIELD) throw Malformed(recordLine, "field too long")
                 }
@@ -171,6 +182,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
                 }
                 else -> sb.append(c.toChar())
             }
+            counted()
             if (sb.length > MAX_FIELD) throw Malformed(start, "field too long")
         }
     }
@@ -226,6 +238,9 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
 
     companion object {
         const val MAX_FIELD = 64 * 1024
+
+        /** Longest record (all its fields and delimiters), in characters. */
+        const val MAX_RECORD = 64 * 1024
         private const val BOM_CODE = 0xFEFF
         const val MAX_FIELDS = 512
         private const val LOOKAHEAD = 8 * 1024

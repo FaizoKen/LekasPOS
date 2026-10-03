@@ -293,6 +293,9 @@ restore that `Db.open` applies before opening the database (D-044).
 - Screens: `Dialogs.*` show nothing on a finishing/destroyed Activity (a job that ends after Back
   crashed with BadTokenException); `ScreenActivity` scopes have a `CoroutineExceptionHandler` like
   SellActivity's; catch-alls in coroutines rethrow `CancellationException` first (D-060).
+- Domain services check permissions themselves (store settings, payment methods, staff: roles and
+  PINs only within the actor's own permissions, D-061); a write followed by an in-memory reload runs
+  in `NonCancellable` so a closing screen cannot leave memory stale.
 - A full phone (`util.Storage.isFull`) is said in words and logged as a warning; the selling screen
   warns early ("Storage almost full", `Protection.storageLow`) and the daily backup checks its room
   itself instead of WorkManager's "storage not low" (D-060).

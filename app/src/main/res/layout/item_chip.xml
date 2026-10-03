@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Category chip: a 56dp touch target (selling screen); chip_bg draws it 48dp high. -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="48dp"
-    android:layout_margin="4dp"
+    android:layout_height="56dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
     android:background="@drawable/chip_bg"
     android:gravity="center"
     android:maxWidth="200dp"

@@ -89,7 +89,9 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         val out = ArrayList<RemoteFile>()
         var page: String? = null
         do {
-            val url = "$API/files?spaces=appDataFolder&pageSize=1000&fields=${enc("nextPageToken,files(id,name,size,appProperties,createdTime)")}" +
+            // prettyPrint=false and a gzip answer (see [open]): a listing is 3–4 times smaller.
+            val url = "$API/files?spaces=appDataFolder&pageSize=1000&prettyPrint=false" +
+                "&fields=${enc("nextPageToken,files(id,name,size,appProperties,createdTime)")}" +
                 "&q=${enc(q)}" + (page?.let { "&pageToken=${enc(it)}" } ?: "")
             val json = request("GET", url) { null }.let { String(it, Charsets.UTF_8) }
             @Suppress("UNCHECKED_CAST")
@@ -397,6 +399,10 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         c.connectTimeout = CONNECT_TIMEOUT_MS
         c.readTimeout = READ_TIMEOUT_MS
         c.setRequestProperty("Authorization", "Bearer $token")
+        // Google compresses its answers only for a User-Agent that says "gzip"; Android's
+        // HttpURLConnection asks for gzip and unpacks it by itself. The daily whole-folder listing
+        // grows with every file ever sent (2026-10 review: ~37 MB a day per till after a year).
+        c.setRequestProperty("User-Agent", "LekasPOS/${com.lekaspos.BuildConfig.VERSION_NAME} (gzip)")
         return c
     }
 

@@ -13,7 +13,9 @@ class Hlc(private val wallClock: () -> Long, initial: Long = 0L) {
     @Synchronized
     fun now(): Long {
         val physical = wallClock()
-        last = if (physical > physicalOf(last)) pack(physical, 0) else last + 1L
+        // Never past the largest value (a crafted backup or sync file once set it there): it wrapped
+        // to the smallest and every later edit lost to every earlier one (2026-10 review).
+        last = if (physical > physicalOf(last)) pack(physical, 0) else if (last == Long.MAX_VALUE) last else last + 1L
         return last
     }
 
@@ -27,6 +29,9 @@ class Hlc(private val wallClock: () -> Long, initial: Long = 0L) {
     @Synchronized
     fun observe(remote: Long): Boolean {
         if (physicalOf(remote) > maxOf(wallClock(), physicalOf(last)) + MAX_FUTURE_MS) return false
+        // A fixed bound too, the same on every till: one step of 24 h at a time, a crafted file could
+        // otherwise walk every till's clock as far ahead as it liked (2026-10 review).
+        if (physicalOf(remote) > MAX_PHYSICAL_MS) return false
         if (remote > last) last = remote
         return true
     }
@@ -36,6 +41,9 @@ class Hlc(private val wallClock: () -> Long, initial: Long = 0L) {
 
     companion object {
         const val MAX_FUTURE_MS = 24L * 60L * 60L * 1000L
+
+        /** 1 January 2100: no till's time is ever later. */
+        const val MAX_PHYSICAL_MS = 4_102_444_800_000L
         private const val COUNTER_BITS = 16
 
         fun pack(physicalMillis: Long, counter: Int): Long =

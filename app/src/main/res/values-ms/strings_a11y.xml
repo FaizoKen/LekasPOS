@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kebolehcapaian: apa yang TalkBack baca di tempat skrin tidak menunjukkan perkataan. -->
+<resources>
+    <plurals name="a11y_pin_digits">
+        <item quantity="other">%d digit dimasukkan</item>
+    </plurals>
+</resources>
