@@ -34,7 +34,7 @@ Google sign-in is public. Going on Play then means:
   suppliers, purchases and stock counts; staff with PINs and roles; shifts and cash; customers
   and credit. Reports for any period, CSV import and export, daily backups, and optional sync
   between the shop's tills through its own Google Drive. English and Bahasa Melayu.
-- **Category:** Business. **Contact:** a support e-mail is required by Play (owner to choose).
+- **Category:** Business. **Contact:** mail@faizo.net (also the privacy policy's contact).
 - **Privacy policy:** `https://faizoken.github.io/LekasPOS/privacy.html`
 - **Screenshots:** phone (selling screen, payment, reports, stock) and 10-inch tablet (two-pane
   selling screen), in both languages.

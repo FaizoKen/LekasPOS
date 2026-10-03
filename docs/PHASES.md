@@ -24,7 +24,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
-| — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **test build** v1.7.0 (pre-release, 2026-10-03) — CI and perf FULL green; waiting for the owner's phone tests |
+| — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 
 ## Open questions for the user
 
@@ -1238,7 +1238,11 @@ after Back. Weak features added: **Settings → Payment methods** (DuitNow QR, T
       4.2 ms (50); cold start API 21 ~400 ms usable
 - [x] Test build **v1.7.0** (pre-release; build 110, 1,441,717 bytes, release key — same certificate as 1.6.1,
       SHA-256 `ba848688…9007`, `mapping-1.7.0.txt` attached). The public download stays v1.6.1
-- [ ] The owner's phone tests (below), then release it as latest and point `PREV_APK_URL` at it
+- [x] The owner asked to release it (2026-10-03): **v1.7.0 is the latest release** (public notes with What's new
+      in English and Malay; the website's Download link serves it, SHA-256 and version checked); smoke baseline
+      (`PREV_APK_URL`) v1.7.0. Shops on 1.6.1 are offered it inside the app within a day. The privacy policy's
+      contact is now mail@faizo.net (the owner's choice). The checks below were not run on a phone before the
+      release: worth running on the shop's phone and tablet after the update
 
 ### Needs real-device testing (1.7.0)
 

@@ -1002,8 +1002,8 @@ till); a partial return of a multi-buy is refunded pro rata (re-pricing what is 
 rule to choose); copies of old receipts use today's store details and tax names (a header snapshot
 per sale is a schema change); a product not yet arrived from another till may be filed under
 different categories per day, month and year until it arrives (transient); the periodic sync job
-also starts on tills without sync (it returns at once); the privacy contact e-mail is the owner's to
-add. Weak features listed by the reviews for the owner to choose from: percent or amount-off
+also starts on tills without sync (it returns at once). The privacy policy's contact for private
+requests is mail@faizo.net (the owner's choice, at the release). Weak features listed by the reviews for the owner to choose from: percent or amount-off
 promotions and category-wide deals, a per-bill limit ("max 2"), spend thresholds, promotion reports
 and "You saved" on receipts, a void slip, a "Rebuild report totals" repair in Diagnostics.
 Rejected: answering error reports before filing them on the relay (`waitUntil`; the app takes 2xx as
