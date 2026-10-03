@@ -25,7 +25,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
-| — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | **in progress** — fixes and tests done; CI, test build and the owner's phone tests pending |
+| — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | **test build** v1.7.1 (pre-release, 2026-10-04) — CI and perf FULL green; waiting for the owner's phone tests |
 
 ## Open questions for the user
 
@@ -1281,8 +1281,14 @@ could lock the till out on every start; one unreadable sync event stopped all im
 year-old store's sync used tens of MB a day per till; "50" typed for RM50 was quietly RM0.50 of the bill.
 
 - [x] Fixes and tests: see D-061
-- [ ] Local JVM tests, lint; CI (API 21 and 36, tablet, release smoke) and perf
-- [ ] Test build; the owner's phone tests
+- [x] Local: `:core` 245 and `:app` 40 JVM tests pass, lint 0 errors; English and Malay strings match
+- [x] Perf FULL (run 37136972895, 5794a7c): **PASS** on API 21, 29 and 36
+- [x] CI on da6c5c8 (run 37138007378, build 114): **226/226 on API 21 and 36**, tablet, release smoke (upgrade
+      from 1.7.0), lint. The run before failed 2–3 tests per API: a new staff test returned a value (JUnit
+      refused the class) and two sync tests expected the till's card every round (now every 15 minutes)
+- [x] Test build **v1.7.1** (pre-release; build 114, 1,470,071 bytes — +28 KB, release key (same certificate),
+      SHA-256 `7a87e543…877e`, `mapping-1.7.1.txt` attached). The public download stays v1.7.0
+- [ ] The owner's phone tests (below), then release it as latest and point `PREV_APK_URL` at it
 
 ### Needs real-device testing (1.7.1)
 
