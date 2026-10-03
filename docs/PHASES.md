@@ -24,7 +24,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
-| — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **in progress** — fixes and tests done; CI, test build and the owner's phone tests pending |
+| — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **test build** v1.7.0 (pre-release, 2026-10-03) — CI and perf FULL green; waiting for the owner's phone tests |
 
 ## Open questions for the user
 
@@ -1229,8 +1229,16 @@ after Back. Weak features added: **Settings → Payment methods** (DuitNow QR, T
 - [x] Website, privacy policy (EN + MS), README, PLAY.md and the release checklist corrected
 - [x] Local: `:core` 227 and `:app` 40 JVM tests pass, lint 0 errors; relay 19/19 (`node --test`); release APK
       **1,439,881 bytes** (1,406 KB; 1.6.1 was 1,424,032 — +16 KB)
-- [ ] CI (API 21 and 36, tablet, release smoke) and perf
-- [ ] Test build published as a pre-release; the owner's phone tests
+- [x] CI on 56ebb80 (run 37122710829, build 110): **230/230 on API 21 and 36**, tablet, release smoke (upgrade
+      from 1.6.1), lint. The first run (ddee94d) failed 3 tests per API: ErrorReportsTest turned reports off and
+      expected errors to be kept — the old behaviour D-060 changes; the tests now turn reports on
+- [x] Relay: tests 19/19 and deployed by relay.yml (run 37121926625); website deployed (Pages)
+- [x] Perf FULL (run 37121963016, ddee94d): **PASS** on API 21, 29 and 36, every plan check ok; API 21 sale
+      commit p95 11.5 ms (150), report_month 74 ms (1,000), report_year 137 ms (3,000), multi-word search p95
+      4.2 ms (50); cold start API 21 ~400 ms usable
+- [x] Test build **v1.7.0** (pre-release; build 110, 1,441,717 bytes, release key — same certificate as 1.6.1,
+      SHA-256 `ba848688…9007`, `mapping-1.7.0.txt` attached). The public download stays v1.6.1
+- [ ] The owner's phone tests (below), then release it as latest and point `PREV_APK_URL` at it
 
 ### Needs real-device testing (1.7.0)
 
