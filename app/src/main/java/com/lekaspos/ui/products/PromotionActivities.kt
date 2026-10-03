@@ -30,14 +30,19 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.inventory.ProductPickActivity
 import com.lekaspos.ui.sell.visible
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
 
-/** "3 for RM10.00" / "Buy 1 get 1 free". */
+/** "3 for RM10.00" / "Special price RM3.99" / "Buy 1 get 1 free". */
 fun promoDeal(ctx: Context, p: PromotionRow, currency: CurrencySpec): String = when (p.kind) {
-    PromoKind.MULTI_PRICE -> ctx.getString(R.string.promo_deal_multi, p.buyQty, MoneyFormat.format(p.groupPrice, currency))
+    PromoKind.MULTI_PRICE -> if (p.buyQty == 1) {
+        ctx.getString(R.string.promo_deal_price, MoneyFormat.format(p.groupPrice, currency))
+    } else {
+        ctx.getString(R.string.promo_deal_multi, p.buyQty, MoneyFormat.format(p.groupPrice, currency))
+    }
     else -> ctx.getString(R.string.promo_deal_free, p.buyQty, p.freeQty)
 }
 
@@ -190,6 +195,9 @@ class PromotionEditActivity : ScreenActivity() {
     }
 
     private fun renderProducts() {
+        // A product picked before the form was built (Android ended the app meanwhile): kept in
+        // productIds, shown when the form is built.
+        if (!::productList.isInitialized) return
         productList.removeAllViews()
         val density = resources.displayMetrics.density
         for (id in productIds) {
@@ -235,6 +243,7 @@ class PromotionEditActivity : ScreenActivity() {
             renderDates()
         }
         d.show()
+        d.trackedBy(this) // closed with the screen; a scanner's Enter does not press its buttons
     }
 
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
@@ -259,8 +268,7 @@ class PromotionEditActivity : ScreenActivity() {
         val groupPrice = if (multi) MoneyFormat.parse(price.text.toString(), currency) else 0L
         val problem = when {
             n.isEmpty() -> name.also { it.error = getString(R.string.promo_error_name) }
-            buyQty == null || buyQty < (if (multi) 2 else 1) || buyQty > 1_000 ->
-                buy.also { it.error = getString(if (multi) R.string.promo_error_multi_qty else R.string.promo_error_qty) }
+            buyQty == null || buyQty < 1 || buyQty > 1_000 -> buy.also { it.error = getString(R.string.promo_error_qty) }
             !multi && (freeQty == null || freeQty < 1 || freeQty > 1_000) -> free.also { it.error = getString(R.string.promo_error_qty) }
             multi && (groupPrice == null || groupPrice < 0L) -> price.also { it.error = getString(R.string.promo_error_price) }
             else -> null

@@ -24,4 +24,21 @@
     <string name="tile_in_bill">×%1$s</string>
     <string name="pay_cancel_split">%1$s has already been paid on this bill. Cancel the payment and clear it?</string>
     <string name="pay_cancel_yes">Cancel payment</string>
+    <!-- Payment methods (2026-10) -->
+    <string name="pm_title">Payment methods</string>
+    <string name="settings_pm_sub">Cash, card, e-wallet / QR, and your own such as DuitNow or Touch ’n Go</string>
+    <string name="pm_add">New payment method</string>
+    <string name="pm_edit">Edit payment method</string>
+    <string name="pm_help">Each method is counted on its own in the shift and sales reports. Only cash is rounded to 5 sen; the others pay the exact amount.</string>
+    <string name="pm_name">Name (on the receipt)</string>
+    <string name="pm_kind">Kind</string>
+    <string name="pm_kind_cash">Cash</string>
+    <string name="pm_kind_card">Card (exact amount)</string>
+    <string name="pm_kind_ewallet">E-wallet or QR (exact amount)</string>
+    <string name="pm_kind_other">Other (exact amount)</string>
+    <string name="pm_kind_credit">Customer credit</string>
+    <string name="pm_opens_drawer">Opens the cash drawer</string>
+    <string name="pm_active">Shown at the till</string>
+    <string name="pm_hidden">hidden</string>
+    <string name="pm_error_name">Enter a name.</string>
 </resources>

@@ -33,7 +33,7 @@
     <string name="report_profit">Untung kasar</string>
     <string name="report_margin">Margin kasar</string>
     <string name="report_average">Purata jualan</string>
-    <string name="report_vs_previous">Perubahan berbanding tempoh sebelum (%1$s)</string>
+    <string name="report_vs_previous">Perubahan berbanding %1$s (%2$s)</string>
     <string name="report_by_day">Mengikut hari</string>
     <string name="report_by_week">Mengikut minggu</string>
     <string name="report_by_month">Mengikut bulan</string>

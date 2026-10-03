@@ -19,6 +19,7 @@
     <string name="backup_restore_file">Restore from a file…</string>
     <string name="backup_saved">Backup file saved.</string>
     <string name="backup_not_a_backup">This is not a LekasPOS backup file.</string>
+    <string name="backup_newer_app">This backup was made by a newer version of LekasPOS. Update the app first (Settings → App updates), then restore it.</string>
     <string name="backup_restore_title">Restore a backup</string>
     <string name="backup_restore_what">Backup of %1$s · %2$s · sales: %3$d · products: %4$d.</string>
     <string name="backup_other_store">This backup belongs to a different store than the data on this phone.</string>
@@ -74,6 +75,8 @@
     <string name="sync_state_error">The last sync did not finish: %1$s. It is tried again automatically.</string>
     <string name="sync_state_offline">No internet connection. This till syncs again as soon as it is online.</string>
     <string name="sync_state_corrupt">A sync file in Google Drive is damaged, so syncing has stopped. Please report this.</string>
+    <string name="sync_state_drive_full">The Google Drive of this store is full, so sync and the backup there have stopped. Free space in Google Drive (or buy more storage): it continues by itself.</string>
+    <string name="sync_state_drive_busy">Google Drive is busy right now. It is tried again automatically.</string>
     <string name="sync_state_ok">Everything is backed up.</string>
     <string name="sync_state_never">Not synced yet.</string>
     <string name="sync_sign_in">Sign in again</string>
@@ -88,6 +91,9 @@
     <string name="sync_error_clash">Another till in this store has the same till number. Make a backup, then restore it on this phone as a new till, and turn on sync again.</string>
     <string name="sync_old_copy">This phone holds an older copy of this till: newer records were already backed up from it (a backup was restored since). So that nothing is lost or mixed up, this phone continues as a new till. Restart the app, then turn the backup on again: everything that was backed up comes back.</string>
     <string name="sync_other_account">You signed in as %1$s, but this till syncs with %2$s. Sign in with %2$s, or turn sync off and on again to move the store to another account.</string>
+    <string name="sync_join_title">Join another shop?</string>
+    <string name="sync_join_other">This Google account already holds the backup of a shop with these tills: %1$s.\n\nJoining adds this phone\'s products, sales and customers to that shop on every till, and they cannot be separated again. To keep two shops apart, use a different Google account for each.</string>
+    <string name="sync_join_yes">Join this shop</string>
     <string name="sync_pill_sign_in">Backup: sign in</string>
     <string name="sync_pill_stale">Not backed up</string>
 </resources>

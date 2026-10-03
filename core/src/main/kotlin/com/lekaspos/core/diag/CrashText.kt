@@ -12,10 +12,17 @@ import java.security.MessageDigest
 object CrashText {
 
     const val APP_PACKAGE = "com.lekaspos."
+    private const val RENAMED_PACKAGE = "l."
 
     /** One `at` line of a stack trace. */
     data class Frame(val className: String, val method: String) {
         val inApp: Boolean get() = className.startsWith(APP_PACKAGE)
+
+        /**
+         * A library class R8 moved into the one-letter package `l` (`-repackageclasses`): renamed
+         * differently in every build, so it must not decide a fingerprint.
+         */
+        val renamed: Boolean get() = className.startsWith(RENAMED_PACKAGE)
 
         /** The frame without numbered lambda and synthetic classes, which R8 and Kotlin renumber. */
         val key: String get() = normalClass(className) + "." + method.replace(NUMBERED, "")
@@ -82,7 +89,9 @@ object CrashText {
         for (t in chain) {
             parts.add(t.className)
             val app = t.frames.filter { it.inApp }
-            (if (app.isNotEmpty()) app.take(3) else t.frames.take(2)).mapTo(parts) { it.key }
+            // Without app frames, the first stable ones (Android, Java); a crash inside a library
+            // was a new bug in every build (2026-10 review).
+            (if (app.isNotEmpty()) app.take(3) else t.frames.filter { !it.renamed }.take(2)).mapTo(parts) { it.key }
         }
         // The deepest cause names the problem; the first app frame (from the deepest cause out) says where.
         val root = chain.lastOrNull()
@@ -106,7 +115,7 @@ object CrashText {
     fun ofAnr(trace: String): Key {
         val frames = mainThread(trace)
         val app = frames.filter { it.inApp }
-        val used = if (app.isNotEmpty()) app.take(5) else frames.take(3)
+        val used = if (app.isNotEmpty()) app.take(5) else frames.filter { !it.renamed }.take(3)
         val title = "App not responding" + (app.firstOrNull()?.let { " in ${it.short}" } ?: frames.firstOrNull()?.let { " (${it.short})" } ?: "")
         return Key(fingerprint(listOf("anr") + used.map { it.key }), title)
     }
@@ -144,9 +153,23 @@ object CrashText {
 
     private val EMAIL = Regex("""[\w.+-]+@[\w-]+(\.[\w-]+)+""")
     private val MAC = Regex("""\b[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}\b""")
-    private val PATH = Regex("""(content://|file://|/storage/|/sdcard/|/mnt/)[^\s"')]*""")
+    /**
+     * To ": " (FileNotFoundException's "<path>: open failed"), a quote, a plain lower-case word after
+     * a space ("… failed", "… from pid=…") or the line's end: file and folder names hold spaces.
+     */
+    private val PATH = Regex(
+        """(content://|file://|/storage/|/sdcard/|/mnt/)[^\n"')]*?(?=:\s|["')]|\s+[a-z]+(?:[\s,;:]|$)|$)""",
+        RegexOption.MULTILINE,
+    )
     private val QUOTED = Regex(""""[^"\n]{1,200}"""")
+
+    /** 'Milo 1kg' (SQL text), not the apostrophes of "can't … hasn't". */
+    private val SINGLE_QUOTED = Regex("""(?<!\w)'[^'\n]{1,200}'(?!\w)""")
     private val LONG_NUMBER = Regex("""\d{7,}""")
+
+    /** "012-345 6789", "+60 12-345 6789", "900101-14-5678": digits in groups (counted below). */
+    private val GROUPED_NUMBER = Regex("""(?<![\w.])\+?\d+(?:[ -]\d+)+""")
+    private val DATE = Regex("""\d{4}-\d{2}-\d{2}( \d{1,2})?""")
     private val DIGITS = Regex("""\d+""")
 
     /**
@@ -160,6 +183,14 @@ object CrashText {
         .replace(MAC, "<bt-address>")
         .replace(PATH) { m -> m.groupValues[1] + "…" }
         .replace(QUOTED, "\"…\"")
+        // Not a method or class name ("Attempt to invoke virtual method 'int java.lang.String.length()'"):
+        // no shop data, and the best clue in a crash.
+        .replace(SINGLE_QUOTED) { m ->
+            val inner = m.value.substring(1, m.value.length - 1)
+            if ('(' in inner || (' ' !in inner && '.' in inner)) m.value else "'…'"
+        }
+        // Phone and IC numbers are written in groups (2026-10 review: they passed whole); a date stays.
+        .replace(GROUPED_NUMBER) { m -> if (m.value.count(Char::isDigit) >= 7 && !DATE.matches(m.value)) "<number>" else m.value }
         .replace(LONG_NUMBER, "<number>")
 
     /** The class without numbered parts: `Foo$bar$2` → `Foo$bar`, `Foo$$ExternalSyntheticLambda3` → `Foo`. */

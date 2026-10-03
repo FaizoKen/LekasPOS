@@ -40,6 +40,13 @@ class ReceiveActivity : ScreenActivity() {
     private var draft = ReceiveDraft()
     private var loaded = false
 
+    /**
+     * Reading the saved delivery. A picked or scanned item that came back before it finished (Android
+     * ended the app while the picker was open) was added to an empty delivery and saved over the
+     * stored one (2026-10 review): results wait for it.
+     */
+    private var loading: kotlinx.coroutines.Job? = null
+
     /** The delivery is being recorded: Save does nothing until it has finished or failed. */
     private var saving = false
     private var nextKey = 1L
@@ -92,7 +99,7 @@ class ReceiveActivity : ScreenActivity() {
         }
         save.setOnClickListener { confirmSave() }
         beeper = Beeper.create()
-        launchUi {
+        loading = launchUi {
             draft = graph.inventory.loadDraft()
             suppliers = graph.db().read { SupplierDao.list(it) }
             nextKey = (draft.lines.maxOfOrNull { it.key } ?: 0L) + 1L
@@ -144,6 +151,8 @@ class ReceiveActivity : ScreenActivity() {
     private fun addByCode(code: String, fromRef: Boolean = false) {
         if (saving) return
         launchUi {
+            loading?.join()
+            if (!loaded) return@launchUi
             val p = InventoryUi.resolve(graph, code)
             if (saving) return@launchUi
             if (p == null) {
@@ -259,6 +268,8 @@ class ReceiveActivity : ScreenActivity() {
                 val scanned = data.getLongExtra(ProductPickActivity.EXTRA_SCANNED_QTY, 0L)
                 if (id != 0L) {
                     launchUi {
+                        loading?.join()
+                        if (!loaded) return@launchUi
                         val p = InventoryUi.product(graph, id) ?: return@launchUi
                         add(p.copy(scannedQty = scanned))
                     }

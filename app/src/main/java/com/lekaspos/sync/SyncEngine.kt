@@ -9,7 +9,9 @@ import com.lekaspos.core.sync.Cursors
 import com.lekaspos.core.sync.SyncNames
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.ReceiptNumbers
+import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.sync.Backfill
 import com.lekaspos.data.sync.Importer
 import com.lekaspos.data.sync.Outbox
@@ -74,12 +76,20 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     )
 
     /** Why sync cannot run; shown to the user. */
-    class Problem(val reason: Reason, message: String) : Exception(message) {
+    class Problem(val reason: Reason, message: String, val tills: List<String> = emptyList()) : Exception(message) {
         enum class Reason {
             NOT_ENABLED, DEVICE_CLASH, CORRUPT,
 
             /** This phone holds an older copy of a till that has published since: it continues as a new till after a restart. */
             OLD_COPY,
+
+            /**
+             * The account already holds another store ([tills] are its tills) and this phone has
+             * products or sales of its own: joining adds them to that store on every till, for good.
+             * Asked first (2026-10 review: an owner with two shops on one Gmail merged them by turning
+             * on the backup); [enable] with `join = true` goes ahead.
+             */
+            OTHER_STORE,
         }
     }
 
@@ -165,21 +175,31 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         deviceName: String,
         account: String? = null,
         progress: (String, Long) -> Unit = { _, _ -> },
+        join: Boolean = false,
     ): Report = mutex.withLock {
         starting()
         try {
-            enableLocked(provider, deviceName, account, progress)
+            enableLocked(provider, deviceName, account, progress, join)
         } catch (e: Exception) {
             _status.update { it.copy(running = false, phase = null) }
             throw e
         }
     }
 
-    private suspend fun enableLocked(provider: SyncProvider, deviceName: String, account: String?, progress: (String, Long) -> Unit): Report {
+    private suspend fun enableLocked(
+        provider: SyncProvider,
+        deviceName: String,
+        account: String?,
+        progress: (String, Long) -> Unit,
+        join: Boolean,
+    ): Report {
         val db = graph.db()
         val (localStore, uuid) = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() to Meta.get(it, Meta.DEVICE_UUID).orEmpty() }
         val stores = stores(provider)
         val store = when {
+            // Confirmed after OTHER_STORE: the store every till settles on, even when this till wrote a
+            // store of its own a moment before (two turned on at once) — it would only move later.
+            join && stores.isNotEmpty() -> stores.first()
             localStore in stores -> localStore
             stores.isEmpty() -> {
                 putManifest(provider, db, localStore)
@@ -193,6 +213,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val cards = cards(provider, store, strict = true)
         if (cards.any { it.dev == db.deviceNo && it.uuid != uuid }) {
             throw Problem(Problem.Reason.DEVICE_CLASH, "another till uses device number ${db.deviceNo}")
+        }
+        if (store != localStore && !join && cards.any { it.uuid != uuid } && db.read { ProductDao.any(it) || SaleDao.any(it) }) {
+            _status.update { it.copy(running = false, phase = null) }
+            val tills = cards.filter { it.uuid != uuid }.map { it.name.ifBlank { "#${it.dev}" } }
+            throw Problem(Problem.Reason.OTHER_STORE, "the folder holds another store", tills)
         }
         // What this till has already published in this folder, against what this database knows of.
         var mine = 0L
@@ -335,6 +360,11 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             throw Problem(Problem.Reason.NOT_ENABLED, "sync is off")
         }
         step(PHASE_CONNECT, 0L, 0L)
+        // What the round imported, reloaded into memory even when the round fails after it: the
+        // segments are committed one by one and never read again, so a failure later in the round
+        // (the next download, the device card) left e.g. a promotion switched off on another till
+        // running here until the app restarted (2026-10 review).
+        val changed = HashSet<Int>()
         try {
             val store = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }
             if (db.read { Meta.get(it, BACKFILLED) } != store) {
@@ -360,7 +390,6 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             val uploadedBefore = db.read { SyncDao.lastUploaded(it) } // sent in earlier rounds
             val sealed = seal(db, store)
             val uploaded = upload(db, provider, store)
-            val changed = HashSet<Int>()
             val got = import(db, provider, store, changed)
             var more = got.more
             val tillCards = got.cards
@@ -374,9 +403,6 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             step(PHASE_FINISH, 0L, 0L)
             putCard(db, provider, db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }) // moved by checkFolder?
             cleanLocal(db)
-            if (Entity.SETTING in changed) graph.settings.reload()
-            if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
-            if (Entity.PROMOTION in changed) graph.promotions.load()
             val offset = provider.clockOffset
             val clockOff = offset != null && abs(offset) > CLOCK_WARN_MS
             if (clockOff) Log.w("This phone's clock is ${offset}ms away from the sync folder's")
@@ -403,6 +429,18 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, LAST_ERROR, msg) } }
             _status.update { it.copy(running = false, phase = null, lastError = msg, needsSignIn = msg == ERROR_SIGN_IN) }
             throw e
+        } finally {
+            if (changed.isNotEmpty()) withContext(NonCancellable) { reloadChanged(changed) }
+        }
+    }
+
+    private suspend fun reloadChanged(changed: Set<Int>) {
+        try {
+            if (Entity.SETTING in changed) graph.settings.reload()
+            if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
+            if (Entity.PROMOTION in changed) graph.promotions.load()
+        } catch (e: Exception) {
+            Log.w("Reloading what sync imported failed", e)
         }
     }
 
@@ -513,7 +551,14 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 provider.get(rf, tmp)
                 val expected = rf.props["sha256"]
                 if (expected != null && SegmentCodec.sha256(tmp) != expected) {
-                    throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq does not match its checksum")
+                    // Once more before calling it damaged: a download cut short on a poor connection
+                    // stopped every sync with "a file in Google Drive is damaged" (2026-10 review).
+                    Log.w("Segment $dev/$seq does not match its checksum: downloading it again")
+                    tmp.delete()
+                    provider.get(rf, tmp)
+                    if (SegmentCodec.sha256(tmp) != expected) {
+                        throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq does not match its checksum")
+                    }
                 }
                 events += applySegment(db, tmp, store, dev, seq, changed)
                 applied++
@@ -736,12 +781,15 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
      * last clean-up stopped, so a round never walks the whole history (and uploads go in order).
      */
     private suspend fun cleanLocal(db: Db) {
-        val cutoff = System.currentTimeMillis() - KEEP_LOCAL_MS
+        val now = System.currentTimeMillis()
+        val cutoff = now - KEEP_LOCAL_MS
         var done = db.read { Meta.getLong(it, Meta.SYNC_CLEANED_TO) } ?: 0L
         val start = done
         while (true) {
             val batch = db.read { SyncDao.segmentsAfter(it, done, CLEAN_BATCH) }
-            val old = batch.takeWhile { s -> s.uploadedAt.let { it != null && it < cutoff } }
+            // Sent "in the future" (the clock ran ahead then): old too. It stopped the clean-up at that
+            // file, and every later one stayed on the phone until the date caught up (2026-10 review).
+            val old = batch.takeWhile { s -> s.uploadedAt.let { it != null && (it < cutoff || it > now + CLOCK_AHEAD_MS) } }
             withContext(Dispatchers.IO) { for (s in old) localSegment(s.seq).delete() }
             if (old.isNotEmpty()) done = old.last().seq
             if (old.size < CLEAN_BATCH) break
@@ -853,6 +901,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             } catch (e: java.io.IOException) {
                 if (strict) throw e
                 Log.w("Unreadable device card ${f.name}", e)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // "Show tills" closed: the list must not open on a closed screen (it crashed the app)
             } catch (e: Exception) {
                 Log.w("Unreadable device card ${f.name}", e)
             } finally {
@@ -888,6 +938,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** The whole folder is listed at least this often (and whenever a short listing shows a gap). */
         const val FULL_LIST_EVERY_MS = 24L * 60L * 60L * 1000L
 
+        /** An upload time this far past the phone's clock was stamped while the clock ran ahead. */
+        private const val CLOCK_AHEAD_MS = 24L * 60L * 60L * 1000L
+
         /** An unchanged device card is published at least this often (its "last seen" for the other tills). */
         const val CARD_EVERY_MS = 15L * 60L * 1000L
 
@@ -917,14 +970,33 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         const val ERROR_OFFLINE = "offline"
         const val ERROR_CORRUPT = "corrupt"
 
-        /** Known failures are stored as codes the screens translate; anything else as its message. */
+        /** The store's Google Drive is full (its owner must free space or buy storage). */
+        const val ERROR_DRIVE_FULL = "drive-full"
+
+        /** Google limits or fails for now (too many requests, a server error): tried again later. */
+        const val ERROR_DRIVE_BUSY = "drive-busy"
+
+        /**
+         * Known failures are stored as codes the screens translate; anything else as its message.
+         * Drive's own reasons are read (2026-10 review: a full Google Drive showed "Drive HTTP 403:
+         * { "error": … }" and "It is tried again automatically"); a Wi-Fi that wants a login first
+         * (the TLS handshake fails) is "offline", so the till syncs once the network changes.
+         */
         fun errorCode(e: Exception): String = when (e) {
             is AuthNeeded -> ERROR_SIGN_IN
             is java.net.UnknownHostException, is java.net.ConnectException, is java.net.NoRouteToHostException,
-            is java.net.SocketTimeoutException -> ERROR_OFFLINE
+            is java.net.SocketTimeoutException, is javax.net.ssl.SSLHandshakeException -> ERROR_OFFLINE
+            is com.lekaspos.sync.drive.DriveProvider.HttpError -> when {
+                e.reason == "storageQuotaExceeded" -> ERROR_DRIVE_FULL
+                e.reason == "insufficientPermissions" || e.reason == "insufficientScopes" || e.reason == "authError" -> ERROR_SIGN_IN
+                e.code == 429 || e.code >= 500 || e.reason in BUSY_REASONS -> ERROR_DRIVE_BUSY
+                else -> e.message ?: e.javaClass.simpleName
+            }
             is Problem -> if (e.reason == Problem.Reason.CORRUPT) ERROR_CORRUPT else e.message ?: e.reason.name
             else -> e.message ?: e.javaClass.simpleName
         }
+
+        private val BUSY_REASONS = setOf("userRateLimitExceeded", "rateLimitExceeded", "dailyLimitExceeded", "backendError")
         const val PHASE_CONNECT = "connect"
         const val PHASE_PREPARE = "prepare"
         const val PHASE_SEND = "send"

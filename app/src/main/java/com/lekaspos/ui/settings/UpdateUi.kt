@@ -108,7 +108,15 @@ object UpdateUi {
             setText(R.string.update_tests)
             isChecked = s.testVersions
             minHeight = minTouch
-            setOnCheckedChangeListener { _, on -> scope.launch { guarded(a) { updates.setTestVersions(on) } } }
+            // Another list of releases: looked at at once (it waited for the next day's check).
+            setOnCheckedChangeListener { _, on ->
+                scope.launch {
+                    guarded(a) {
+                        updates.setTestVersions(on)
+                        updates.check()
+                    }
+                }
+            }
         }
         val help = TextView(a).apply {
             setText(R.string.update_settings_help)
@@ -131,7 +139,7 @@ object UpdateUi {
         fun render(now: AppUpdates.Status) {
             line.text = statusLine(a, now)
             d.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
-                setText(if (now.update != null) R.string.update_now else R.string.update_check_now)
+                setText(if (offered(now)) R.string.update_now else R.string.update_check_now)
                 isEnabled = !now.checking && !now.downloading
             }
         }
@@ -141,7 +149,7 @@ object UpdateUi {
         d.setOnShowListener {
             following.start()
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                if (updates.status.value.update != null) {
+                if (offered(updates.status.value)) {
                     d.dismiss()
                     offer(a, scope)
                     return@setOnClickListener
@@ -149,7 +157,7 @@ object UpdateUi {
                 scope.launch {
                     guarded(a) {
                         val after = updates.check()
-                        if (after.update != null && d.isShowing) {
+                        if (offered(after) && d.isShowing) {
                             d.dismiss()
                             offer(a, scope)
                         }
@@ -161,6 +169,9 @@ object UpdateUi {
         d.trackedBy(a)
     }
 
+    /** A newer version that can be installed here (one whose file failed the checks is not offered). */
+    private fun offered(s: AppUpdates.Status): Boolean = s.update != null && s.refused == null
+
     /** The Settings row's line: what is known, and "automatic check off" when it is. */
     fun subtitle(ctx: Context, s: AppUpdates.Status): String? {
         if (!s.loaded) return null
@@ -169,6 +180,7 @@ object UpdateUi {
         val main = when {
             s.checking -> ctx.getString(R.string.update_sub_checking)
             s.downloading && u != null -> ctx.getString(R.string.update_sub_downloading, u.version, s.progress)
+            u != null && s.refused != null -> problemText(ctx, s.refused)
             u != null -> ctx.getString(if (u.test) R.string.update_sub_available_test else R.string.update_sub_available, u.version)
             s.checkedAt > 0L -> ctx.getString(R.string.update_sub_up_to_date, ago(ctx, s.checkedAt))
             else -> ctx.getString(R.string.update_sub_never)
@@ -267,7 +279,14 @@ object UpdateUi {
                 .trackedBy(a)
             return
         }
-        val updates = LekasApp.graph(a).updates
+        val graph = LekasApp.graph(a)
+        // Checked again: a scan may have started a bill during the PIN, the download or Android's
+        // permission screen, and the installer closes the app (2026-10 review).
+        if (graph.cart.state.value.cart.items.isNotEmpty()) {
+            Dialogs.message(a, null, a.getString(R.string.update_bill_open))
+            return
+        }
+        val updates = graph.updates
         val intent = updates.installIntent()
         if (intent == null) {
             problem(a, updates.status.value.problem)
@@ -325,6 +344,7 @@ object UpdateUi {
         return when {
             s.checking -> ctx.getString(R.string.update_checking)
             s.problem != null -> problemText(ctx, s.problem)
+            u != null && s.refused != null -> problemText(ctx, s.refused)
             u != null -> ctx.getString(if (u.test) R.string.update_sub_available_test else R.string.update_sub_available, u.version)
             s.checkedAt > 0L -> ctx.getString(R.string.update_up_to_date)
             else -> ctx.getString(R.string.update_sub_never)
@@ -336,7 +356,7 @@ object UpdateUi {
         AppUpdates.Problem.SERVER -> ctx.getString(R.string.update_problem_server)
         AppUpdates.Problem.NO_SPACE -> ctx.getString(
             R.string.update_problem_no_space,
-            size(ctx, (LekasApp.graph(ctx).updates.status.value.update?.size ?: 0L) * 2),
+            size(ctx, AppUpdates.spaceNeeded(LekasApp.graph(ctx).updates.status.value.update?.size ?: 0L)),
         )
         AppUpdates.Problem.DOWNLOAD -> ctx.getString(R.string.update_problem_download)
         AppUpdates.Problem.DAMAGED -> ctx.getString(R.string.update_problem_damaged)

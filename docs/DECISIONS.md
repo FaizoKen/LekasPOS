@@ -912,6 +912,103 @@ relay (Cloudflare bandwidth for no gain); updating without asking (Android does 
 Play/device owners, and a till must not restart under a cashier); Google Play in-app updates (not on
 Play).
 
+### D-060 — Fourth bug hunt: new features, the outside world, long use (1.7.0, 2026-10-03)
+The owner asked for another free-hand search for bugs and weak features, fixing what is real. Nine
+read-only reviews took angles the earlier hunts had not: the self-update (D-059), error reports and the
+relay (D-057), report and category totals (D-058), promotions and money, years of use and a full phone,
+what the receipt says, a crash sweep of every screen, failures of Google Drive, folders and networks,
+and the website and privacy policy against what the app does. Every finding was checked in the code
+first (one was not a bug: a product whose category was deleted keeps it when the form is saved — the
+form's "before" shows "no category" too). Decisions that change behaviour:
+- **Backups.** The daily folder copy prunes only its own names (`lekaspos-<date>-<time>`): the owner's
+  saved backups in the same folder sorted above the daily copies by name, so the daily copies were
+  deleted, then the owner's oldest saves. A copy to the phone's storage, an SD card or USB drive is
+  synced to the card and its size read back; a cut-short one is deleted and reported. "Back up now"
+  copies on the phone keep the newest 5 (they were never deleted). The daily backup no longer waits
+  for Android's "storage not low" (it then never ran, silently): it checks the room it needs itself.
+  A backup made by a newer app version is refused before anything is unpacked ("update the app").
+- **Full phone.** A "Storage almost full" pill on the selling screen when the free storage is below
+  the database's size + 100 MB (at least 300 MB), with what stops working and what to delete; a sale
+  or screen action that fails for lack of room says so in words (not SQLite's English) and is a
+  warning, not an error report. The performance test deletes its test data (~400 MB at FULL) after the
+  run; a backup's work copy left by a killed app is deleted at start; old print jobs are purged daily
+  (only at the printer loop's start before); local sync files sent while the clock ran ahead no longer
+  stop the clean-up.
+- **Sync.** What a round imported is reloaded into memory even when the round fails later (a promotion
+  switched off on another till kept applying until a restart; also settings and staff). Turning on
+  Drive backup with an account that already holds **another shop**, on a till with products or sales of
+  its own, asks first ("Join another shop?", naming its tills) — an owner with two shops on one Gmail
+  merged them for good. Drive's reasons are read: a full Google Drive and a busy Google say so in words;
+  missing permissions ask to sign in again; a Wi-Fi that wants a login (TLS fails) counts as offline. A
+  downloaded file whose checksum is wrong is downloaded once more before it is called damaged. A
+  failed account lookup fails the connection (the different-account guard needs it). Category moves
+  of a product's summary rows read only the rows to move (an integer was compared with bound text).
+- **Self-update.** A download that fails the checks (another key, not installable, a tag that names
+  another version than the APK inside — now checked) is remembered by its SHA-256: not downloaded
+  again daily nor offered until GitHub lists another file. Settings → App updates and Settings → Error
+  reports need the Settings permission (a cashier could turn them off). The open bill is checked again
+  right before the installer opens. Ticking "Include test versions" looks at once. The "no space"
+  message names the space really needed.
+- **Error reports.** Nothing is kept while the shop said "Don't send" (those reports went out when
+  turned on later); the install id goes with "off" and a new one is made only when turned on; a full
+  queue makes room by dropping its oldest automatic report; the "sent" record is written at once (the
+  crash path). Scrubbing also takes out grouped numbers (phone and IC numbers with spaces or dashes),
+  single-quoted values and file paths with spaces. A crash inside a renamed library is grouped by its
+  stable frames (it was a new issue in every build). The consent question lists what a report holds.
+  The relay (relay/, 19 tests): builds above `MAX_BUILD` (default 10,000 — raise it in wrangler.toml
+  long before CI run numbers get there) are refused (one forged build stopped every real regression
+  from reopening its issue); each issue keeps its newest 30 builds and comments only on a new one
+  (after 30, every report commented); tills past the first 100 are counted once; "closed as not
+  planned" stays closed; mentions, issue references and bidi characters are neutralised in bodies and
+  titles; a body is read no further than 64 KB; at most `MAX_NEW_ISSUES` (30) new issues an hour, read
+  from the repository's newest issues (429: the app tries again later; Cloudflare's rate limits count
+  per minute and per location only).
+- **Promotions.** In "buy X get Y" across several products the set's saving is shared over its lines
+  by price (the free line held it all, so returning the paid items refunded their full price). A
+  promotion of **one** unit is a special price with dates ("now RM3.99"); older tills skip it (their
+  check refuses it — never applied wrongly). Refund lines keep the promotion's name.
+- **Receipts.** No e-invoice QR on a voided sale; no "Cash 0.00" line; line breaks in names print as
+  spaces; a price-labelled weighed item shows its weight alone (the weight is worked back from the
+  label, so "weight × price/kg" did not come to the amount).
+- **Crashes.** Dialogs never open on a closing screen (Back during a slow approval list, "Show tills",
+  closing a shift, a Drive timeout: BadTokenException); back-office screens log and show a failed job
+  instead of crashing; catch-alls no longer swallow cancellation (false error reports); a very tall
+  logo picture is sampled down; a product picked before a form loaded is kept; Receive waits for its
+  saved delivery before adding a picked item.
+- **Reports.** "Change vs …" compares a month or a year with the same days of the month or year before
+  ("this month" 1–3 Oct with 1–3 Sep; "this year" with the same days last year; it was the same number
+  of days just before) and names the dates; days and weeks as before.
+- **Payment methods** (Settings → Payment methods): the shop adds its own (DuitNow QR, Touch 'n Go,
+  bank transfer), renames and hides them; each is counted on its own in the shift and sales reports.
+  Only cash rounds; cash and customer credit keep their kind, cash stays at the till. Audited, synced
+  (the table was always synced; only the editor was missing).
+- **Review of these changes** (one more read-only review of the whole change): the "storage almost
+  full" pill also covers what the daily backup needs (a large store could skip it unwarned) and a
+  skipped backup still copies the last one to the folder; Drive's reason is read from its whole answer
+  (Google's long message came first and was cut off) and from the large-upload path too; "this year"
+  in January is compared with last year, not December; a tag "v1.8" matches an APK "1.8.0"; scrubbing
+  keeps method and class names in quotes and the words after a path ("… failed"); a join confirmed
+  after two tills made stores at once goes to the store every till settles on; a failed connection at
+  "Turn on" says "No internet" in words; a full phone in a screen job is a warning.
+- **Public material.** Privacy policy (EN + MS): backups and Drive files are not encrypted and hold
+  PIN records; what an error report holds; Cloudflare sees the address; delete Drive data only after
+  turning sync off on every till; "run at startup"; storage warning and join question. The unused
+  FOREGROUND_SERVICE permission WorkManager adds is removed. The privacy link opens the Malay page in
+  Malay. Website update steps (from 1.6.1; Android 5–7 "unknown sources"), README, PLAY.md, release
+  checklist (privacy and version checks).
+Not changed (for the owner, or later): cash refunds are rounded per refund (a sale returned one item
+at a time can pay out a few sen more than taken — each refund is its own cash transaction, as at any
+till); a partial return of a multi-buy is refunded pro rata (re-pricing what is kept is a business
+rule to choose); copies of old receipts use today's store details and tax names (a header snapshot
+per sale is a schema change); a product not yet arrived from another till may be filed under
+different categories per day, month and year until it arrives (transient); the periodic sync job
+also starts on tills without sync (it returns at once); the privacy contact e-mail is the owner's to
+add. Weak features listed by the reviews for the owner to choose from: percent or amount-off
+promotions and category-wide deals, a per-bill limit ("max 2"), spend thresholds, promotion reports
+and "You saved" on receipts, a void slip, a "Rebuild report totals" repair in Diagnostics.
+Rejected: answering error reports before filing them on the relay (`waitUntil`; the app takes 2xx as
+delivered); a size check on cloud folders (they may report the size only after upload).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

@@ -19,6 +19,7 @@
     <string name="backup_restore_file">Pulihkan daripada fail…</string>
     <string name="backup_saved">Fail sandaran disimpan.</string>
     <string name="backup_not_a_backup">Ini bukan fail sandaran LekasPOS.</string>
+    <string name="backup_newer_app">Sandaran ini dibuat oleh versi LekasPOS yang lebih baharu. Kemas kini aplikasi dahulu (Tetapan → Kemas kini aplikasi), kemudian pulihkan.</string>
     <string name="backup_restore_title">Pulihkan sandaran</string>
     <string name="backup_restore_what">Sandaran pada %1$s · %2$s · jualan: %3$d · produk: %4$d.</string>
     <string name="backup_other_store">Sandaran ini milik kedai yang berlainan daripada data dalam telefon ini.</string>
@@ -71,6 +72,8 @@
     <string name="sync_state_error">Segerak terakhir tidak selesai: %1$s. Ia dicuba semula secara automatik.</string>
     <string name="sync_state_offline">Tiada sambungan internet. Kaunter ini bersegerak semula sebaik sahaja dalam talian.</string>
     <string name="sync_state_corrupt">Satu fail segerak dalam Google Drive rosak, jadi penyegerakan dihentikan. Sila laporkan perkara ini.</string>
+    <string name="sync_state_drive_full">Google Drive kedai ini sudah penuh, jadi penyegerakan dan sandaran di sana terhenti. Kosongkan ruang dalam Google Drive (atau beli storan tambahan): ia bersambung dengan sendirinya.</string>
+    <string name="sync_state_drive_busy">Google Drive sedang sibuk. Ia dicuba semula secara automatik.</string>
     <string name="sync_state_ok">Semua sudah disandarkan.</string>
     <string name="sync_state_never">Belum bersegerak.</string>
     <string name="sync_sign_in">Log masuk semula</string>
@@ -85,6 +88,9 @@
     <string name="sync_error_clash">Kaunter lain dalam kedai ini mempunyai nombor kaunter yang sama. Buat sandaran, kemudian pulihkannya pada telefon ini sebagai kaunter baharu, dan hidupkan segerak semula.</string>
     <string name="sync_old_copy">Telefon ini menyimpan salinan lama kaunter ini: rekod yang lebih baharu telah disandarkan daripadanya (sandaran telah dipulihkan selepas itu). Supaya tiada yang hilang atau bercampur, telefon ini diteruskan sebagai kaunter baharu. Mulakan semula aplikasi, kemudian hidupkan sandaran semula: semua yang telah disandarkan akan kembali.</string>
     <string name="sync_other_account">Anda log masuk sebagai %1$s, tetapi kaunter ini bersegerak dengan %2$s. Log masuk dengan %2$s, atau matikan dan hidupkan semula segerak untuk memindahkan kedai ke akaun lain.</string>
+    <string name="sync_join_title">Sertai kedai lain?</string>
+    <string name="sync_join_other">Akaun Google ini sudah menyimpan sandaran sebuah kedai dengan kaunter berikut: %1$s.\n\nJika disertai, produk, jualan dan pelanggan telefon ini ditambah ke kedai itu pada setiap kaunter, dan tidak boleh dipisahkan semula. Untuk mengasingkan dua kedai, gunakan akaun Google yang berbeza bagi setiap kedai.</string>
+    <string name="sync_join_yes">Sertai kedai ini</string>
     <string name="sync_pill_sign_in">Sandaran: log masuk</string>
     <string name="sync_pill_stale">Tiada sandaran</string>
 </resources>

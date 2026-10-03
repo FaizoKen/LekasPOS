@@ -282,6 +282,8 @@ class SaleActions(private val graph: AppGraph) {
                         // (2026-10 review: profit left out every spoiled or broken item taken back).
                         taxRateId = l.taxRateId, taxBp = l.taxBp, cost = if (restock) -p.cost else 0L, barcode = l.barcode, unit = l.unit,
                         categoryId = l.categoryId, refLineId = l.id, trackStock = l.stockQty != 0L, restock = restock,
+                        // The deal's name on the refund receipt too (it said "Discount").
+                        promoId = l.promoId, promoName = l.promoName,
                     )
                 },
                 payments = listOf(PaymentDraft(method.id, method.kind, applied)),

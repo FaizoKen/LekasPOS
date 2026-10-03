@@ -46,6 +46,22 @@ class CrashTextTest {
         assertEquals(16, CrashText.ofThrowable(crash).fingerprint.length)
     }
 
+    /** 2026-10 review: a crash inside a renamed library (no app frame) was a new bug in every build. */
+    @Test
+    fun aCrashInsideALibraryKeepsItsFingerprintAcrossBuilds() {
+        val lib = """
+            java.lang.IllegalStateException: Not initialized
+            	at l.a.b(SourceFile:3)
+            	at l.c.d(SourceFile:9)
+            	at android.os.Handler.handleCallback(Handler.java:739)
+            	at android.os.Looper.loop(Looper.java:135)
+        """.trimIndent()
+        val later = lib.replace("l.a.b", "l.x.y").replace("l.c.d", "l.e.f")
+        assertEquals(CrashText.ofThrowable(lib).fingerprint, CrashText.ofThrowable(later).fingerprint)
+        val elsewhere = lib.replace("Handler.handleCallback", "Handler.dispatchMessage")
+        assertNotEquals(CrashText.ofThrowable(lib).fingerprint, CrashText.ofThrowable(elsewhere).fingerprint)
+    }
+
     @Test
     fun anotherPlaceIsAnotherBug() {
         val elsewhere = crash.replace("CartSession.commit(", "CartSession.hold(")
@@ -97,11 +113,34 @@ class CrashTextTest {
     fun personalDetailsAreTakenOut() {
         assertEquals("mail <email> now", CrashText.scrub("mail siti.aminah@gmail.com now"))
         assertEquals("printer <bt-address> off", CrashText.scrub("printer 00:11:22:AA:bb:CC off"))
+        // A path runs to ": ", a quote, a plain lower-case word or the line's end (names hold spaces).
         assertEquals("open content://… failed", CrashText.scrub("open content://com.android.externalstorage.documents/tree/primary%3AKedai%20Ali failed"))
-        assertEquals("no /storage/… here", CrashText.scrub("no /storage/emulated/0/Kedai Ali/backup.zip here".replace("Kedai Ali", "KedaiAli")))
+        assertEquals("no /storage/… here\nnext", CrashText.scrub("no /storage/emulated/0/Kedai Ali/backup.zip here\nnext"))
+        assertEquals("read /storage/…", CrashText.scrub("read /storage/emulated/0/Download/kedai ali.csv"))
+        assertEquals("uri content://… from pid=123", CrashText.scrub("uri content://com.x.documents/tree/Kedai from pid=123"))
+        assertEquals("copy \"…\" done", CrashText.scrub("copy \"/storage/emulated/0/Kedai Ali/b.zip\" done"))
         assertEquals("For input string: \"…\"", CrashText.scrub("For input string: \"Ali 012\""))
         assertEquals("call <number> or <number>", CrashText.scrub("call 0123456789 or 9556001234567"))
         assertEquals("line 12 at SourceFile:812", CrashText.scrub("line 12 at SourceFile:812")) // short numbers stay
+    }
+
+    /** 2026-10 review: these passed through whole. */
+    @Test
+    fun groupedNumbersQuotedTextAndPathsWithSpacesAreTakenOut() {
+        assertEquals("call <number> or <number>", CrashText.scrub("call 012-345 6789 or +60 12-345 6789"))
+        assertEquals("IC <number>.", CrashText.scrub("IC 900101-14-5678."))
+        assertEquals("WHERE name = '…'", CrashText.scrub("WHERE name = 'Milo 1kg'"))
+        val npe = "Attempt to invoke virtual method 'int java.lang.String.length()' on a null object reference"
+        assertEquals(npe, CrashText.scrub(npe)) // a method name is no shop data, and the best clue
+        assertEquals("cannot find 'com.lekaspos.Foo'", CrashText.scrub("cannot find 'com.lekaspos.Foo'"))
+        assertEquals("Can't create handler inside thread that hasn't called", CrashText.scrub("Can't create handler inside thread that hasn't called"))
+        assertEquals(
+            "java.io.FileNotFoundException: /storage/…: open failed: ENOENT",
+            CrashText.scrub("java.io.FileNotFoundException: /storage/emulated/0/Download/Kedai Ali Stok.csv: open failed: ENOENT"),
+        )
+        // What a log line and a trace need stays: the date and time, versions, short numbers.
+        assertEquals("2026-10-03 09:15 W [1.6.1 (105)] 12 34 56", CrashText.scrub("2026-10-03 09:15 W [1.6.1 (105)] 12 34 56"))
+        assertEquals("\tat com.lekaspos.A.b(SourceFile:812)", CrashText.scrub("\tat com.lekaspos.A.b(SourceFile:812)"))
     }
 
     @Test

@@ -22,4 +22,10 @@
     <string name="backup_folder_error">Salinan terakhir ke folder gagal: %1$s</string>
     <string name="backup_folder_done">Disalin ke folder.</string>
     <string name="backup_folder_failed">Tidak dapat menyalin ke folder. Adakah kad atau pemacu masih ada?</string>
+    <!-- Storan telefon (semakan 2026-10) -->
+    <string name="storage_pill">Storan hampir penuh</string>
+    <string name="storage_low_title">Storan telefon hampir penuh</string>
+    <string name="storage_low_message">Hanya %1$s ruang kosong pada telefon ini. Apabila penuh, jualan tidak dapat disimpan dan sandaran harian berhenti. Padam foto, video atau aplikasi yang tidak diperlukan, atau sandaran lama dalam Sandaran.</string>
+    <string name="error_storage_full">Storan telefon sudah penuh. Padam foto, video atau aplikasi yang tidak diperlukan, kemudian cuba lagi.</string>
+    <string name="pay_failed_storage">Jualan TIDAK disimpan dan tiada apa-apa dicaj: storan telefon sudah penuh. Padam foto, video atau aplikasi yang tidak diperlukan, kemudian tekan Bayar semula. Bil ini disimpan.</string>
 </resources>

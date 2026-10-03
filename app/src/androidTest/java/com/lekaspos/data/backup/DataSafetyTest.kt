@@ -101,6 +101,8 @@ class DataSafetyTest {
         for (d in 1..9) File(dir, "lekaspos-2020-01-0$d-0900.lekasbak").writeText("old")
         File(dir, "photo.jpg").writeText("not ours")
         File(dir, "lekaspos-notes.txt").writeText("not ours")
+        // Backups the owner saved here by hand: never deleted, and they do not push daily copies out.
+        val saved = (1..8).map { File(dir, "lekaspos-backup-2026-09-0$it.lekasbak").apply { writeText("owner's") } }
         service.folderForTests = FileBackupFolder(dir)
         assertTrue(service.copyToFolderNow())
         val names = ours().map { it.name }.sortedDescending()
@@ -109,6 +111,7 @@ class DataSafetyTest {
         assertEquals("lekaspos-2020-01-04-0900.lekasbak", names.last()) // the three oldest went
         assertTrue(File(dir, "photo.jpg").exists())
         assertTrue(File(dir, "lekaspos-notes.txt").exists())
+        assertTrue(saved.all { it.exists() }, "the owner's own backups stay")
     }
 
     @Test

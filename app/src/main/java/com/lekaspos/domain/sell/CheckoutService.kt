@@ -26,6 +26,7 @@ import com.lekaspos.domain.Actor
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +71,8 @@ class CheckoutService(private val graph: AppGraph) {
     /** Result of the last checkout until the selling screen acknowledges it (survives rotation). */
     sealed class Outcome {
         data class Completed(val done: Done) : Outcome()
-        data class Failed(val error: String) : Outcome()
+        /** [storageFull]: the phone has no room left (said in words, not as SQLite's English). */
+        data class Failed(val error: String, val storageFull: Boolean = false) : Outcome()
 
         /** Refused before anything was written (e.g. over the credit limit); the bill is unchanged. */
         data class Refused(val reason: ActionRefused.Reason) : Outcome()
@@ -100,8 +102,10 @@ class CheckoutService(private val graph: AppGraph) {
             } catch (e: ActionRefused) {
                 Outcome.Refused(e.reason)
             } catch (e: Exception) {
-                Log.e("Checkout failed", e)
-                Outcome.Failed(e.message ?: e.javaClass.simpleName)
+                val full = Storage.isFull(e)
+                // A full phone is no bug in the app: a warning, not an error report.
+                if (full) Log.w("Checkout failed: the storage is full", e) else Log.e("Checkout failed", e)
+                Outcome.Failed(e.message ?: e.javaClass.simpleName, storageFull = full)
             }
             outcomeAt = SystemClock.elapsedRealtime()
             _outcome.value = o

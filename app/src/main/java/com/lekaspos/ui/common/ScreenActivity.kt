@@ -26,7 +26,9 @@ import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.lang.ref.WeakReference
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +37,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 
 /**
@@ -48,8 +51,23 @@ abstract class ScreenActivity : Activity(), DialogHost {
 
     val graph: AppGraph get() = LekasApp.graph(this)
 
+    /**
+     * A job of this screen that fails outside [launchUi] (a list's page read on a damaged or full
+     * database, say) is logged and shown; it crashed the app (2026-10 review), like SellActivity's.
+     */
+    private val failures = CoroutineExceptionHandler { _, e ->
+        if (e is kotlinx.coroutines.CancellationException) return@CoroutineExceptionHandler
+        if (Storage.isFull(e)) Log.w("Screen job failed: the storage is full", e) else Log.e("Screen job failed", e)
+        runOnUiThread {
+            if (Dialogs.canShow(this)) {
+                val text = if (e is Exception) errorText(this, e) else getString(R.string.error_generic, e.javaClass.simpleName)
+                Dialogs.message(this, getString(R.string.error_title), text)
+            }
+        }
+    }
+
     /** Loads and saves started by this screen; cancelled when it is destroyed. */
-    val scope: CoroutineScope = MainScope()
+    val scope: CoroutineScope = MainScope() + failures
 
     /** Managers' approvals this screen holds (D-037), released when it closes. */
     private val elevations = ArrayList<Long>(2)
@@ -102,7 +120,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
 
     override fun onStart() {
         super.onStart()
-        val s = MainScope()
+        val s = MainScope() + failures
         startedScope = s
         if (graph.staff.screenStarted()) {
             // Idle too long while out of sight: the till locked; the selling screen shows the sign-in.
@@ -352,7 +370,12 @@ abstract class ScreenActivity : Activity(), DialogHost {
             throw e
         } catch (e: Exception) {
             // A refusal is the rule working (not allowed, over the limit ...), not a bug: no error report (D-057).
-            if (e is ActionRefused) Log.w("Screen action refused: ${e.reason}") else Log.e("Screen action failed", e)
+            // A picked file that is no good backup, or a full phone: not the app's bug either.
+            when {
+                e is ActionRefused -> Log.w("Screen action refused: ${e.reason}")
+                e is com.lekaspos.data.backup.BackupFiles.Invalid || Storage.isFull(e) -> Log.w("Screen action failed", e)
+                else -> Log.e("Screen action failed", e)
+            }
             Dialogs.message(this@ScreenActivity, getString(R.string.error_title), errorText(this@ScreenActivity, e))
         }
     }
@@ -386,7 +409,11 @@ abstract class ScreenActivity : Activity(), DialogHost {
                     ActionRefused.Reason.OWNER_ONLY -> R.string.error_owner_only
                 },
             )
-            else -> a.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName)
+            else -> if (Storage.isFull(e)) {
+                a.getString(R.string.error_storage_full)
+            } else {
+                a.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName)
+            }
         }
     }
 }

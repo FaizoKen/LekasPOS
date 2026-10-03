@@ -5,11 +5,15 @@
 
 A lightweight, offline-first point-of-sale app for small grocery stores and mini markets
 (Malaysia first: MYR, English and Bahasa Melayu). Native Android, runs on Android 5.0+ phones
-and tablets with 1–2 GB RAM. No backend: all data lives on the device; Google Drive is used
-only for background sync and backup between the devices of one store.
+and tablets with 1–2 GB RAM. No backend: all data lives on the device; the store's own Google
+Drive (optional) is used only for background sync and backup between the devices of one store.
+The only other connections: a daily update check against this repository's GitHub releases, and
+— only with the shop's consent — error reports, sent through a small Cloudflare Worker relay
+(`relay/`) to a private GitHub repository. No shop data goes to the developer.
 
-**Download:** version 1.5.0 — [faizoken.github.io/LekasPOS](https://faizoken.github.io/LekasPOS/#download)
-(install and update steps), or the latest [release](https://github.com/FaizoKen/LekasPOS/releases/latest).
+**Download:** [faizoken.github.io/LekasPOS](https://faizoken.github.io/LekasPOS/#download)
+(always the newest version; install and update steps), or the latest
+[release](https://github.com/FaizoKen/LekasPOS/releases/latest).
 Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
 [faizoken.github.io/LekasPOS/privacy.html](https://faizoken.github.io/LekasPOS/privacy.html).
 
@@ -111,7 +115,13 @@ modified version, you must share its source under the same license.
 
 ## Release steps
 
-1. Follow the checklist in [`docs/BUILD.md`](docs/BUILD.md#release-checklist-details-grow-with-each-phase).
-2. Build an App Bundle for Play (`.\gradlew.bat :app:bundleRelease`) signed with the upload key.
-3. Play Console: upload to an internal testing track first, fill in the Data Safety form
-   (answers are maintained with the privacy policy — Phase 7), then promote.
+Releases are published on GitHub (not on Google Play yet); the full list is the
+[release checklist](docs/BUILD.md#release-checklist) in `docs/BUILD.md`. In short:
+
+1. Bump `versionName`, push, and wait for CI to pass (including the release smoke test).
+2. Test builds: a GitHub **pre-release**. Public releases: a GitHub release marked **latest**
+   with the assets `LekasPOS.apk` (the website's Download link) and `LekasPOS-<version>.apk`
+   and a `### What's new` list in the notes. Publishing it updates every shop within a day (D-059).
+3. Re-check the privacy policy and the Data Safety answers if what the app stores or sends changed.
+
+Google Play (listing, Data Safety answers, the upload key) is prepared in [`docs/PLAY.md`](docs/PLAY.md).

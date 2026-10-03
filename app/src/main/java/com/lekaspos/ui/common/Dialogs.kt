@@ -9,8 +9,21 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import com.lekaspos.R
 
-/** Small platform AlertDialog helpers (no AppCompat, D-002). */
+/**
+ * Small platform AlertDialog helpers (no AppCompat, D-002). A screen that is closing or closed
+ * shows nothing: a job that ended after Back (a Drive timeout, a slow approval list, a shift saved
+ * while the cashier left) showed its answer on the closed screen and Android ended the app
+ * (BadTokenException, 2026-10 review). The dialog is still made and returned, never shown.
+ */
 object Dialogs {
+
+    /** False for an Activity that is finishing or destroyed (its window is gone). */
+    fun canShow(ctx: Context): Boolean {
+        val a = ctx as? android.app.Activity ?: return true
+        return !a.isFinishing && !a.isDestroyed
+    }
+
+    private fun AlertDialog.Builder.showIfOpen(ctx: Context): AlertDialog = create().also { if (canShow(ctx)) it.show() }
 
     /**
      * [content] in a scroll container, for a dialog's own view: a number pad or PIN pad is taller
@@ -23,7 +36,7 @@ object Dialogs {
     }
 
     fun message(ctx: Context, title: CharSequence?, message: CharSequence): AlertDialog =
-        AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).show().trackedBy(ctx)
+        AlertDialog.Builder(ctx).setTitle(title).setMessage(message).setPositiveButton(R.string.ok, null).showIfOpen(ctx).trackedBy(ctx)
 
     fun confirm(ctx: Context, title: CharSequence, message: CharSequence?, yes: CharSequence, onYes: () -> Unit): AlertDialog =
         AlertDialog.Builder(ctx)
@@ -31,7 +44,7 @@ object Dialogs {
             .setMessage(message)
             .setPositiveButton(yes) { _, _ -> onYes() }
             .setNegativeButton(R.string.cancel, null)
-            .show()
+            .showIfOpen(ctx)
             .trackedBy(ctx)
 
     /** A text prompt. [onOk] gets the trimmed text; returning false keeps the dialog open. */
@@ -66,7 +79,7 @@ object Dialogs {
                 if (onOk(field.text.toString().trim())) d.dismiss()
             }
         }
-        d.show()
+        if (canShow(ctx)) d.show()
         d.trackedBy(ctx)
         field.requestFocus()
         return d
@@ -82,7 +95,7 @@ object Dialogs {
         } else {
             b.setItems(items.toTypedArray()) { _, which -> onPick(which) }
         }
-        return b.setNegativeButton(R.string.cancel, null).show().trackedBy(ctx)
+        return b.setNegativeButton(R.string.cancel, null).showIfOpen(ctx).trackedBy(ctx)
     }
 
     /** Wraps [v] with the standard dialog content padding. */

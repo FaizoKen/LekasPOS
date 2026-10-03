@@ -4,8 +4,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.core.model.BarcodeKind
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
+import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.sync.FieldVersions
 import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.long
@@ -50,6 +52,24 @@ class LwwWriteTest {
         val p = Product(id = tx.nextId(), name = name, price = price)
         ProductDao.create(tx, p, listOf(Barcode(tx.nextId(), p.id, code, BarcodeKind.BARCODE)), System.currentTimeMillis())
         p
+    }
+
+    /** 2026-10: the shop's own payment methods (DuitNow QR …) are synced like the other master data. */
+    @Test
+    fun aShopsOwnPaymentMethodIsAddedHiddenAndSynced() {
+        val id = db.writeBlocking { tx -> PaymentMethodDao.insert(tx, "DuitNow QR", PaymentKind.EWALLET, false, System.currentTimeMillis()) }
+        val added = db.readBlocking { PaymentMethodDao.all(it) }
+        val m = added.single { it.id == id }
+        assertEquals(PaymentKind.EWALLET, m.kind)
+        assertEquals(added.filter { it.id != id }.maxOf { it.sort } + 1, m.sort) // after the seed methods
+        assertTrue(db.readBlocking { PaymentMethodDao.active(it) }.any { it.id == id && it.name == "DuitNow QR" })
+        assertEquals(Entity.PAYMENT_METHOD to EventOp.LWW, outbox().last().let { it.first to it.second })
+        // Hidden: no longer offered at the till, still named in old reports.
+        db.writeBlocking { tx -> PaymentMethodDao.update(tx, m, m.copy(active = false), System.currentTimeMillis()) }
+        assertTrue(db.readBlocking { PaymentMethodDao.active(it) }.none { it.id == id })
+        assertEquals("DuitNow QR", db.readBlocking { PaymentMethodDao.names(it) }[id])
+        val hide = outbox().last()
+        assertTrue(hide.third.contains("\"active\":0") && !hide.third.contains("\"name\""), hide.third) // only the changed field
     }
 
     @Test

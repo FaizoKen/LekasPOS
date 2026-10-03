@@ -20,6 +20,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.visible
+import com.lekaspos.util.Log
 import java.lang.ref.WeakReference
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
@@ -180,6 +181,8 @@ class SyncActivity : ScreenActivity() {
         s.needsSignIn -> getString(R.string.sync_state_sign_in)
         s.lastError == SyncEngine.ERROR_OFFLINE -> getString(R.string.sync_state_offline)
         s.lastError == SyncEngine.ERROR_CORRUPT -> getString(R.string.sync_state_corrupt)
+        s.lastError == SyncEngine.ERROR_DRIVE_FULL -> getString(R.string.sync_state_drive_full)
+        s.lastError == SyncEngine.ERROR_DRIVE_BUSY -> getString(R.string.sync_state_drive_busy)
         s.lastError != null -> getString(R.string.sync_state_error, s.lastError)
         // A wrong date puts this till's changes out of order with the others' (2026-10 review).
         s.clockOff -> getString(R.string.sync_clock_wrong)
@@ -224,6 +227,14 @@ class SyncActivity : ScreenActivity() {
         launchUi {
             try {
                 onConnect(SyncProviders.connect(this@SyncActivity, account))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                graph.sync.notStarted()
+                throw e
+            } catch (e: java.io.IOException) {
+                // Offline, a timeout, Google refusing: said in words like a failed sync round.
+                graph.sync.notStarted()
+                Log.w("Connecting to Google failed", e)
+                Dialogs.message(this@SyncActivity, getString(R.string.sync_title), failureText(this@SyncActivity, e))
             } catch (e: Exception) {
                 graph.sync.notStarted()
                 throw e
@@ -245,7 +256,7 @@ class SyncActivity : ScreenActivity() {
         }
     }
 
-    private fun connected(provider: SyncProvider, account: String?) {
+    private fun connected(provider: SyncProvider, account: String?, join: Boolean = false) {
         val name = pendingName
         val known = graph.sync.status.value.account
         if (name == null && account != null && known != null && !account.equals(known, ignoreCase = true)) {
@@ -259,7 +270,7 @@ class SyncActivity : ScreenActivity() {
         val screen = WeakReference(this) // the first sync may outlive this screen
         graph.appScope.launch {
             val failure: Exception? = try {
-                if (name != null) graph.sync.enable(provider, name, account) else graph.sync.sync(provider)
+                if (name != null) graph.sync.enable(provider, name, account, join = join) else graph.sync.sync(provider)
                 null
             } catch (e: Exception) {
                 e
@@ -278,6 +289,12 @@ class SyncActivity : ScreenActivity() {
                         if (failure is SyncEngine.Problem && failure.reason == SyncEngine.Problem.Reason.OLD_COPY) {
                             // The new till number is taken at the next start (also without this restart).
                             Dialogs.confirm(a, a.getString(R.string.sync_title), error, a.getString(R.string.backup_restart_now)) { graph.backups.restart(a) }
+                        } else if (failure is SyncEngine.Problem && failure.reason == SyncEngine.Problem.Reason.OTHER_STORE) {
+                            // Another shop's data in this account: joined only when the owner says so.
+                            Dialogs.confirm(a, a.getString(R.string.sync_join_title), error, a.getString(R.string.sync_join_yes)) {
+                                graph.sync.starting()
+                                a.connected(provider, account, join = true)
+                            }
                         } else {
                             Dialogs.message(a, a.getString(R.string.sync_title), error)
                         }
@@ -370,10 +387,13 @@ class SyncActivity : ScreenActivity() {
         fun failureText(ctx: Context, e: Exception): String = when ((e as? SyncEngine.Problem)?.reason) {
             SyncEngine.Problem.Reason.DEVICE_CLASH -> ctx.getString(R.string.sync_error_clash)
             SyncEngine.Problem.Reason.OLD_COPY -> ctx.getString(R.string.sync_old_copy)
+            SyncEngine.Problem.Reason.OTHER_STORE -> ctx.getString(R.string.sync_join_other, (e as SyncEngine.Problem).tills.joinToString(", "))
             else -> when (SyncEngine.errorCode(e)) {
                 SyncEngine.ERROR_OFFLINE -> ctx.getString(R.string.sync_state_offline)
                 SyncEngine.ERROR_CORRUPT -> ctx.getString(R.string.sync_state_corrupt)
                 SyncEngine.ERROR_SIGN_IN -> ctx.getString(R.string.sync_state_sign_in)
+                SyncEngine.ERROR_DRIVE_FULL -> ctx.getString(R.string.sync_state_drive_full)
+                SyncEngine.ERROR_DRIVE_BUSY -> ctx.getString(R.string.sync_state_drive_busy)
                 else -> ctx.getString(R.string.sync_state_error, e.message ?: e.javaClass.simpleName)
             }
         }

@@ -44,9 +44,15 @@ object SyncProviders {
         var provider = drive(ctx.applicationContext, token, known)
         val account = try {
             provider.accountEmail()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
+            // Not "ready" without knowing which account: the check against signing in with another
+            // account than the till's needs it, and a till that synced once into the wrong account's
+            // empty folder left a gap the other tills never read past (2026-10 review). The screen
+            // says why (offline …) and the user tries again.
             Log.w("Cannot read the Google account name", e)
-            null
+            throw e
         }
         if (account != null && known == null) provider = drive(ctx.applicationContext, token, account)
         return Connect.Ready(provider, account ?: known)

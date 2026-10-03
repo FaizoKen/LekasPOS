@@ -2,11 +2,12 @@
 <!-- Fasa 8: promosi. -->
 <resources>
     <string name="promo_title">Promosi</string>
-    <string name="promo_help">Tawaran yang digunakan sendiri oleh kaunter: “3 untuk RM10” atau “beli 1 percuma 1” bagi satu atau lebih produk. Hanya unit penuh produk yang dijual mengikut unit dikira; baris dengan diskaun manual atau harga yang diubah tidak termasuk.</string>
+    <string name="promo_help">Tawaran yang digunakan sendiri oleh kaunter: “3 untuk RM10”, harga istimewa (1 untuk RM3.99) atau “beli 1 percuma 1” bagi satu atau lebih produk, dari tarikh mula hingga tarikh tamat jika mahu. Hanya unit penuh produk yang dijual mengikut unit dikira; baris dengan diskaun manual atau harga yang diubah tidak termasuk.</string>
     <string name="promo_empty">Belum ada promosi. Ketik + untuk menambah.</string>
     <string name="promo_add">Promosi baharu</string>
     <string name="promo_edit">Sunting promosi</string>
     <string name="promo_deal_multi">%1$d untuk %2$s</string>
+    <string name="promo_deal_price">Harga istimewa %1$s</string>
     <string name="promo_deal_free">Beli %1$d percuma %2$d</string>
     <string name="promo_products_count">produk: %1$d</string>
     <string name="promo_state_off">dimatikan</string>
@@ -17,7 +18,7 @@
     <string name="promo_name">Nama (dipaparkan pada bil dan resit)</string>
     <string name="promo_name_hint">Contoh: Milo 3 untuk RM10</string>
     <string name="promo_kind">Jenis</string>
-    <string name="promo_kind_multi">Harga beli banyak</string>
+    <string name="promo_kind_multi">Harga beli banyak atau harga istimewa</string>
     <string name="promo_kind_free">Beli X percuma Y</string>
     <string name="promo_buy_qty">Bilangan dibeli</string>
     <string name="promo_free_qty">Bilangan percuma</string>
@@ -34,7 +35,6 @@
     <string name="promo_no_date">Tiada tarikh</string>
     <string name="promo_active">Berjalan</string>
     <string name="promo_error_name">Masukkan nama.</string>
-    <string name="promo_error_multi_qty">Sekurang-kurangnya 2.</string>
     <string name="promo_error_qty">Masukkan nombor dari 1.</string>
     <string name="promo_error_price">Masukkan harga.</string>
     <string name="promo_error_products">Tambah sekurang-kurangnya satu produk.</string>

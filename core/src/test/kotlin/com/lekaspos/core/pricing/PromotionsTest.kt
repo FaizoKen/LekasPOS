@@ -54,12 +54,38 @@ class PromotionsTest {
     @Test
     fun buyTwoGetOneTheCheapestIsFree() {
         val p = bogo(1, 2, 1, 10, 11, 12)
-        assertEquals(listOf(0L, 0L, 400L), savings(listOf(line(10, 1, 600), line(11, 1, 500), line(12, 1, 400)), p))
-        // Six units: sets (600, 600, 500) and (500, 400, 400) → one 500 and one 400 free.
+        // The 400 is free; the saving is shared by price (400 × 600/1500, 500/1500, 400/1500).
+        assertEquals(listOf(160L, 133L, 107L), savings(listOf(line(10, 1, 600), line(11, 1, 500), line(12, 1, 400)), p))
+        // Six units: sets (600, 600, 500) and (500, 400, 400) → one 500 and one 400 free, 900 in all:
+        // 500 over 1200 + 500 → 353 + 147; 400 over 500 + 800 → 154 + 246.
         assertEquals(
-            listOf(0L, 500L, 400L),
+            listOf(353L, 301L, 246L),
             savings(listOf(line(10, 2, 600), line(11, 2, 500), line(12, 2, 400)), p),
         )
+    }
+
+    /**
+     * 2026-10 review: with the whole saving on the free line, returning the paid items refunded
+     * their full price and the customer kept the free one. Shared by price, each line's refund
+     * carries its part of the deal.
+     */
+    @Test
+    fun aFreeItemsSavingIsSharedSoReturningThePaidItemsIsFair() {
+        val p = bogo(1, 2, 1, 10, 11, 12)
+        val lines = listOf(line(10, 1, 450), line(11, 1, 420), line(12, 1, 400))
+        val s = savings(lines, p)
+        assertEquals(400L, s.sum())
+        assertEquals(listOf(142L, 132L, 126L), s)
+        // Returning the two paid items gives back 870 − 274 = 596, not 870.
+        assertEquals(596L, (450L - s[0]) + (420L - s[1]))
+    }
+
+    /** A special price with dates ("now RM3.99"): a deal of one unit. */
+    @Test
+    fun aSpecialPriceIsADealOfOne() {
+        val p = multi(1, 1, 399, 10)
+        assertEquals(listOf(102L), savings(listOf(line(10, 2, 450)), p)) // 2 × (4.50 − 3.99)
+        assertEquals(listOf(0L), savings(listOf(line(10, 1, 350)), p)) // the shelf price is lower already
     }
 
     @Test
@@ -88,7 +114,7 @@ class PromotionsTest {
 
     @Test
     fun invalidPromotionsAreRefused() {
-        assertFailsWith<IllegalArgumentException> { multi(1, 1, 100, 10) }
+        assertFailsWith<IllegalArgumentException> { multi(1, 0, 100, 10) }
         assertFailsWith<IllegalArgumentException> { bogo(1, 0, 1, 10) }
         assertFailsWith<IllegalArgumentException> { bogo(1, 1, 0, 10) }
         assertFailsWith<IllegalArgumentException> { Promotion(1, "x", 9, 2, productIds = setOf(1L)) }

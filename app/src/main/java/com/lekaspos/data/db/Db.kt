@@ -268,6 +268,8 @@ class Db private constructor(
 
         private fun deleteUnfinishedBackups(context: Context) {
             Restore.backupDir(context).listFiles { f -> f.name.endsWith(".part") }?.forEach { it.delete() }
+            // The work copy of a backup the app was ended during (a full copy of the database).
+            java.io.File(context.cacheDir, "backup-tmp").listFiles()?.forEach { it.delete() }
         }
 
         /** Keeps a backup of a database about to be migrated to a newer schema (kept: the last 3). */

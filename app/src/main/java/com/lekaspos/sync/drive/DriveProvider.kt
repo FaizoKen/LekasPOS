@@ -33,7 +33,30 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
 
     override val id: String = com.lekaspos.sync.SyncProviders.GDRIVE
 
-    class HttpError(val code: Int, message: String) : IOException("Drive HTTP $code: $message")
+    class HttpError(val code: Int, message: String, body: String = message) : IOException("Drive HTTP $code: $message") {
+        /**
+         * Google's reason ("storageQuotaExceeded", "userRateLimitExceeded" …) when the answer names
+         * one: read from the whole answer (its long "message" comes first and was cut off).
+         */
+        val reason: String? = REASON.find(body)?.groupValues?.get(1)
+
+        companion object {
+            private val REASON = Regex(""""reason"\s*:\s*"([A-Za-z]+)"""")
+
+            /** From an error answer's body: the reason from all of it, the message from its start. */
+            fun of(code: Int, body: String): HttpError = HttpError(code, body.take(300), body)
+        }
+    }
+
+    /** An error answer's body, at most 8 KB. */
+    private fun errorBody(c: HttpURLConnection): String = try {
+        c.errorStream?.use { s ->
+            val bytes = s.readBytes()
+            String(if (bytes.size > MAX_ERROR_BODY) bytes.copyOf(MAX_ERROR_BODY) else bytes, Charsets.UTF_8)
+        }.orEmpty()
+    } catch (e: IOException) {
+        ""
+    }
 
     @Volatile
     private var offset: Long? = null
@@ -239,7 +262,10 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
                 start.setRequestProperty("X-Upload-Content-Length", length.toString())
                 start.outputStream.use { it.write(meta) }
                 noteClock(start)
-                start.responseCode to start.getHeaderField("Location")
+                val code = start.responseCode
+                // A refusal says why (a full Drive): the resumable path lost it (2026-10 review).
+                if (code !in 200..299 && code != 401) throw HttpError.of(code, errorBody(start))
+                code to start.getHeaderField("Location")
             } finally {
                 start.disconnect()
             }
@@ -354,9 +380,7 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
             if (refresh) throw DriveAuth.SignInNeeded()
             return null // an expired token: once more with a fresh one
         }
-        if (code !in 200..299) {
-            throw HttpError(code, c.errorStream?.use { String(it.readBytes().take(300).toByteArray()) } ?: "")
-        }
+        if (code !in 200..299) throw HttpError.of(code, errorBody(c))
         return c.inputStream.use { it.readBytes() }
     }
 
@@ -408,6 +432,7 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         private const val UPLOAD = "https://www.googleapis.com/upload/drive/v3"
         private const val MULTIPART_MAX = 5L * 1024L * 1024L
         private const val RESUME_TRIES = 5
+        private const val MAX_ERROR_BODY = 8192
         private const val CONNECT_TIMEOUT_MS = 15_000
         private const val READ_TIMEOUT_MS = 30_000
 

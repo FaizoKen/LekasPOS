@@ -15,6 +15,7 @@ import com.lekaspos.core.inventory.ReceiveDraft
 import com.lekaspos.testing.TestDb
 import kotlinx.coroutines.runBlocking
 import com.lekaspos.ui.catalog.CategoriesActivity
+import com.lekaspos.ui.catalog.PaymentMethodsActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.inventory.CountActivity
 import com.lekaspos.ui.inventory.CountReportActivity
@@ -95,6 +96,7 @@ class ScreensSmokeTest {
     fun secondaryScreensOpen() {
         for (cls in listOf(
             ProductListActivity::class.java, CategoriesActivity::class.java, TaxRatesActivity::class.java,
+            PaymentMethodsActivity::class.java,
             SalesActivity::class.java, SettingsActivity::class.java, StoreSettingsActivity::class.java,
             PrinterSettingsActivity::class.java, ScannerSettingsActivity::class.java, AuditLogActivity::class.java, BackupActivity::class.java, SyncActivity::class.java, SetupActivity::class.java,
             PromotionsActivity::class.java, PromotionEditActivity::class.java,

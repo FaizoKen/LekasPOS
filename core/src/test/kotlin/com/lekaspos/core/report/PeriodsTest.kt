@@ -26,6 +26,35 @@ class PeriodsTest {
         assertEquals(202609, Months.key(today))
     }
 
+    /** 2026-10 review: a period was always compared with the same number of days just before it. */
+    @Test
+    fun aPeriodIsComparedWithTheSameDaysOfTheMonthOrYearBefore() {
+        // This month so far (1–3 Oct) → 1–3 Sep; last month (September) → the whole of August.
+        assertEquals(Period(d(20260901), d(20260904)), Period(d(20261001), d(20261004)).sameDaysBefore())
+        assertEquals(Period(d(20260801), d(20260901)), Period(d(20260901), d(20261001)).sameDaysBefore())
+        // 1–30 March → the whole of February (it has no 29th or 30th in 2026).
+        assertEquals(Period(d(20260201), d(20260301)), Period(d(20260301), d(20260331)).sameDaysBefore())
+        // This year so far → the same days last year; last year → the year before.
+        assertEquals(Period(d(20250101), d(20251004)), Period(d(20260101), d(20261004)).sameDaysBefore())
+        assertEquals(Period(d(20240101), d(20250101)), Period(d(20250101), d(20260101)).sameDaysBefore())
+        // January alone is a month: compared with December.
+        assertEquals(Period(d(20251201), d(20260101)), Period(d(20260101), d(20260201)).sameDaysBefore())
+        // A quarter → the quarter before.
+        assertEquals(Period(d(20260401), d(20260701)), Period(d(20260701), d(20261001)).sameDaysBefore())
+        // Not starting on the 1st: the same number of days just before.
+        assertEquals(Period(d(20260921), d(20260928)), Period(d(20260928), d(20261005)).sameDaysBefore())
+        // By preset: "today" and "this week" on the 1st of a month are still compared with the days just before.
+        val first = d(20260601) // a Monday
+        assertEquals(Period(first - 1, first), Preset.TODAY.comparison(Preset.TODAY.period(first)))
+        assertEquals(Period(first - 7, first), Preset.THIS_WEEK.comparison(Period(first, first + 7)))
+        assertEquals(Period(d(20260501), d(20260502)), Preset.THIS_MONTH.comparison(Preset.THIS_MONTH.period(first)))
+        // "This year" in January: the same days last year, not December.
+        val jan15 = d(20270115)
+        assertEquals(Period(d(20260101), d(20260116)), Preset.THIS_YEAR.comparison(Preset.THIS_YEAR.period(jan15)))
+        // A leap day: 29 Feb 2028 → 28 Feb 2027.
+        assertEquals(Period(d(20270101), d(20270301)), Preset.THIS_YEAR.comparison(Period(d(20280101), d(20280301))))
+    }
+
     @Test
     fun bucketsIncludeEmptyOnesAndClipToThePeriod() {
         val p = Period(d(20260924), d(20261006)) // Thursday 24 Sep – Monday 5 Oct

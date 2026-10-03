@@ -22,13 +22,28 @@ Pembangun tidak pernah menerima sebarang data ini.</strong> Jika anda membenarka
 pembangun menerima butiran teknikal tentang masalah dalam aplikasi, bukan data kedai anda.</p>
 
 <h2>Apa yang disimpan oleh aplikasi</h2>
-<p>Semua yang anda masukkan atau rekodkan semasa menjalankan kedai: produk, harga dan stok;
-jualan, bayaran balik dan bayaran; pembekal dan pembelian; nama, peranan dan PIN kakitangan;
-pelanggan (nama, nombor telefon, baki kredit); syif, pergerakan tunai, tetapan dan log audit bagi
-tindakan sensitif. PIN disimpan hanya sebagai nilai cincang bergaram, bukan digit PIN itu
-sendiri.</p>
-<p>Data ini disimpan dalam storan peribadi aplikasi di telefon. Anda (kedai) menentukan apa yang
-dimasukkan dan bertanggungjawab atas butiran pelanggan dan kakitangan yang anda rekodkan.</p>
+<p>Semua yang anda masukkan atau rekodkan semasa menjalankan kedai: butiran kedai (nama, alamat,
+telefon, e-mel, nombor pendaftaran perniagaan, nombor SST dan nombor pengenalan cukai (TIN)) dan
+logo resit; produk, harga dan stok; jualan, bayaran balik dan bayaran; pembekal (bersama butiran
+hubungan mereka) dan pembelian; nama, peranan dan PIN kakitangan; pelanggan (nama, nombor telefon,
+alamat e-mel dan alamat pos, nombor cukai, nota dan baki kredit); syif, pergerakan tunai, tetapan
+dan log audit bagi tindakan sensitif. Setiap telefon juga menyimpan alamat Bluetooth pencetak dan
+pengimbas yang dipilih dalam aplikasi dan, jika sandaran Google Drive dihidupkan, alamat e-mel
+akaun Google (untuk menunjukkan akaun yang digunakan dan untuk menyambung semula ke akaun yang
+sama).</p>
+<p>PIN kakitangan disimpan hanya sebagai nilai cincang bergaram, bukan digit PIN itu sendiri.
+Tetapi PIN hanya ada 4–6 digit, jadi sesiapa yang memegang salinan data kedai masih boleh
+mengetahuinya dengan mencuba setiap nombor.</p>
+<p>Data ini disimpan dalam storan peribadi aplikasi di telefon. Aplikasi memberi amaran apabila
+storan telefon hampir penuh, kerana jualan tidak dapat disimpan apabila telefon penuh. Anda (kedai)
+menentukan apa yang dimasukkan dan bertanggungjawab atas butiran pelanggan dan kakitangan yang anda
+rekodkan.</p>
+<p><strong>Fail sandaran dan fail segerak tidak disulitkan oleh aplikasi.</strong> Fail sandaran
+(<code>.lekasbak</code>, termasuk salinan harian dalam kad SD atau pemacu USB) dan fail segerak
+dalam Google Drive mengandungi semua data kedai, termasuk pelanggan dan rekod PIN kakitangan.
+Sesiapa yang mendapat salinannya boleh membacanya. Simpan fail sandaran secara peribadi, kongsikan
+hanya dengan orang yang anda percayai, dan lindungi akaun Google kedai dengan kata laluan yang
+kukuh dan Pengesahan 2 Langkah.</p>
 
 <h2>Apa yang keluar dari telefon</h2>
 <ul>
@@ -36,7 +51,7 @@ dimasukkan dan bertanggungjawab atas butiran pelanggan dan kakitangan yang anda 
 kami, tiada analitik dan tiada iklan. Ia berfungsi sepenuhnya tanpa internet. Satu-satunya
 sambungan yang dibuatnya sendiri ialah semakan kemas kini di bawah.</li>
 <li><strong>Semakan kemas kini.</strong> Sekali sehari aplikasi bertanya kepada GitHub, tempat
-LekasPOS diterbitkan, sama ada versi baharu ada, dan memuat turunnya dari situ jika ada (boleh
+LekasPOS diterbitkan, sama ada terdapat versi baharu, dan memuat turunnya dari situ jika ada (boleh
 ditukar bila-bila masa di Tetapan → Kemas kini aplikasi). Permintaan itu hanya mengandungi versi
 aplikasi dan versi Android; GitHub melihat alamat internet telefon, seperti mana-mana laman web
 (<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">kenyataan
@@ -48,8 +63,12 @@ data aplikasi tersembunyi</em> akaun itu di Google Drive, supaya semua kaunter k
 data yang sama. Aplikasi hanya meminta akses kepada folder ini daripada Google (kebenaran
 <code>drive.appdata</code>): ia tidak dapat melihat atau mengubah fail Drive anda yang lain, dan
 aplikasi lain tidak dapat membaca foldernya. Fail dihantar terus antara telefon anda dan Google
-melalui sambungan yang disulitkan (HTTPS). Aplikasi membaca alamat e-mel akaun itu hanya untuk
-menunjukkan akaun yang digunakan. <a href="https://policies.google.com/privacy?hl=ms">Dasar
+melalui sambungan yang disulitkan (HTTPS); fail itu sendiri tidak disulitkan oleh aplikasi (lihat
+di atas). Aplikasi menyimpan alamat e-mel akaun itu dalam telefon hanya untuk menunjukkan akaun
+yang digunakan dan untuk menyambung semula ke akaun yang sama. Jika akaun itu sudah menyimpan data
+kedai lain, aplikasi bertanya dahulu sebelum telefon ini menyertai kedai itu (menyertai menambah
+produk, jualan dan pelanggan telefon ini kepada kedai itu pada setiap kaunter).
+<a href="https://policies.google.com/privacy?hl=ms">Dasar
 privasi Google</a> terpakai kepada data dalam Google Drive. Log masuk menggunakan perkhidmatan
 Google Play.</li>
 <li><strong>Salinan harian ke folder (pilihan).</strong> Jika anda memilih folder (contohnya dalam
@@ -65,18 +84,29 @@ anda pilih.</li>
 <li><strong>Laporan ralat (hanya jika anda membenarkannya).</strong> Aplikasi bertanya sekali sama ada
 ia boleh menghantar laporan ralat kepada pembangun LekasPOS (tukar bila-bila masa di Tetapan →
 Laporan ralat). Jika dibenarkan, laporan dihantar apabila aplikasi berhenti, tersekat, merekod
-ralat atau gagal sesuatu semakan. Laporan mengandungi apa yang tidak kena (ralat teknikal dan log
-ralat sebelumnya), versi aplikasi, versi Android, model telefon, memori dan storan kosongnya, saiz
-data aplikasi, bahasa aplikasi dan satu nombor rawak bagi pemasangan ini (nombor baharu setiap kali
-laporan dihidupkan). Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, pekerja,
-PIN atau akaun Google anda; alamat e-mel, nombor panjang dan nama fail dalam mesej teknikal dibuang
-terlebih dahulu. Laporan dihantar melalui sambungan yang disulitkan (HTTPS) menerusi geganti kecil
+ralat atau gagal dalam sesuatu semakan. Laporan mengandungi:
+<ul>
+<li>apa yang tidak kena: jenis masalah (berhenti, tersekat, ralat atau semakan gagal), tajuk
+ringkas, ralat teknikal (mesej, <i>stack trace</i> dan nama <i>thread</i>) dan baris log ralat
+sejurus sebelumnya;</li>
+<li>bila ia berlaku dan berapa kali;</li>
+<li>versi aplikasi, nombor binaan dan kunci yang menandatanganinya; versi Android; jenama dan model
+telefon, memori (RAM) dan storan kosongnya; saiz pangkalan data aplikasi; bahasa aplikasi;</li>
+<li>satu nombor rawak bagi pemasangan ini (nombor baharu setiap kali laporan dihidupkan).</li>
+</ul>
+Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau akaun
+Google anda; alamat e-mel, nombor panjang dan nama fail dalam mesej teknikal dibuang terlebih
+dahulu. Laporan dihantar melalui sambungan yang disulitkan (HTTPS) menerusi pelayan perantara kecil
 di Cloudflare dan disimpan dalam penjejak isu peribadi pembangun di GitHub selagi ia membantu
-membaiki masalah. Mematikan laporan memadam laporan yang belum dihantar.</li>
+membaiki masalah. Cloudflare melihat alamat internet telefon, seperti mana-mana laman web; pelayan
+perantara itu menggunakannya hanya untuk mengehadkan bilangan laporan dari satu alamat, dan tidak
+menyimpannya bersama laporan. Semasa laporan dimatikan, tiada apa-apa disimpan untuk dihantar, dan
+mematikan laporan memadam laporan yang sedang menunggu untuk dihantar (laporan yang anda hantar
+sendiri tetap dihantar).</li>
 <li><strong>Laporan yang anda hantar sendiri.</strong> Tetapan → Diagnostik → "Hantar laporan kepada
-pembangun" menghantar log ralat bersama apa yang anda taip, termasuk nombor telefon atau alamat
-e-mel jika anda memilih untuk meninggalkannya untuk dibalas. Ia dihantar dan disimpan dengan cara
-yang sama seperti laporan ralat.</li>
+pembangun" menghantar log ralat dan butiran telefon yang sama seperti laporan ralat, bersama apa
+yang anda taip, termasuk nombor telefon atau alamat e-mel jika anda memilih untuk meninggalkannya
+untuk dibalas. Ia dihantar dan disimpan dengan cara yang sama seperti laporan ralat.</li>
 </ul>
 
 <h2>Kebenaran</h2>
@@ -90,22 +120,26 @@ tidak disimpan atau dihantar ke mana-mana.</li>
 dan, jika anda membenarkannya, laporan ralat.</li>
 <li><strong>Pasang aplikasi</strong> — untuk memasang kemas kini LekasPOS sendiri. Android meminta
 anda mengesahkan setiap satu; aplikasi tidak memasang apa-apa yang lain.</li>
-<li><strong>Kekal berjaga</strong> — supaya sandaran dan segerak dapat diselesaikan di latar
-belakang.</li>
+<li><strong>Halang telefon daripada tidur</strong> — supaya sandaran dan segerak dapat diselesaikan
+di latar belakang.</li>
+<li><strong>Jalankan semasa permulaan</strong> — supaya sandaran harian, segerak dan semakan kemas
+kini bersambung semula selepas telefon dimulakan semula.</li>
 </ul>
 
 <h2>Memadam data anda</h2>
 <ul>
 <li>Menyahpasang aplikasi, atau Tetapan Android → Apl → LekasPOS → Kosongkan storan, memadam data
 dalam telefon itu (termasuk sandaran yang disimpan di dalamnya).</li>
-<li>Mematikan segerak menghentikan penghantaran data. Untuk memadam fail yang telah disegerakkan,
-buka Google Drive di web → Tetapan → Urus apl → LekasPOS → Pilihan → Padam data apl
-tersembunyi.</li>
+<li>Mematikan segerak menghentikan penghantaran data; fail yang sudah ada dalam Google Drive kekal
+di situ. Untuk memadamnya, mula-mula matikan segerak pada <em>setiap</em> kaunter (Tetapan →
+Sandaran Google Drive → Matikan segerak): kaunter yang masih bersegerak akan menghantar semula
+semua datanya. Kemudian buka Google Drive di web → Tetapan → Urus apl → LekasPOS → Pilihan → Padam
+data apl tersembunyi.</li>
 <li>Fail sandaran yang disalin ke folder yang anda pilih (kad SD, pemacu USB) tidak dipadam bersama
 aplikasi; padamkannya dengan pengurus fail.</li>
-<li>Fail sandaran dan CSV yang anda simpan di tempat lain adalah milik anda untuk dipadam.</li>
-<li>Untuk memadam laporan ralat, buka isu (di bawah) dengan model telefon dan anggaran bila masalah
-itu berlaku (laporan tidak menyatakan siapa anda).</li>
+<li>Fail sandaran dan CSV yang anda simpan di tempat lain boleh anda padam sendiri.</li>
+<li>Untuk memadam laporan ralat, hubungi pembangun (di bawah) dengan model telefon dan anggaran bila
+masalah itu berlaku (laporan tidak menyatakan siapa anda).</li>
 </ul>
 
 <h2>Kanak-kanak</h2>
@@ -119,7 +153,9 @@ sumber</a>.</p>
 
 <h2>Hubungi</h2>
 <p>Soalan tentang privasi: buka isu di
-<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.</p>
+<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.
+Isu di situ boleh dilihat oleh umum, jadi untuk permintaan peribadi (contohnya memadam laporan
+ralat), hantar e-mel ke [CONTACT EMAIL — owner to add].</p>
 </main>
 </body>
 </html>

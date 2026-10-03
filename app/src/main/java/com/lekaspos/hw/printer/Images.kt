@@ -63,6 +63,7 @@ object Images {
 
     private const val LOGO_FILE = "receipt_logo.png"
     private const val LOGO_MAX_WIDTH = 576
+    private const val LOGO_MAX_PIXELS = 2_000_000L
 
     fun logoFile(context: Context): File = File(context.filesDir, LOGO_FILE)
 
@@ -76,9 +77,19 @@ object Images {
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: throw IOException("cannot open image")
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("not an image")
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= LOGO_MAX_WIDTH) sample *= 2
-        val decoded = resolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+        // By the width and by the pixel count: a long screenshot (1080 × 20,000) picked as the logo
+        // was decoded whole (~86 MB) and ended the app (2026-10 review).
+        while (bounds.outWidth / (sample * 2) >= LOGO_MAX_WIDTH ||
+            (bounds.outWidth.toLong() / sample) * (bounds.outHeight.toLong() / sample) > LOGO_MAX_PIXELS
+        ) {
+            sample *= 2
+        }
+        val decoded = try {
+            resolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+            }
+        } catch (e: OutOfMemoryError) {
+            throw IOException("the image is too large", e)
         } ?: throw IOException("cannot decode image")
         val scaled = if (decoded.width > LOGO_MAX_WIDTH) {
             Bitmap.createScaledBitmap(decoded, LOGO_MAX_WIDTH, decoded.height * LOGO_MAX_WIDTH / decoded.width, true)

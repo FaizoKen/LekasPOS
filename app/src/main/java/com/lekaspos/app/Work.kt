@@ -38,10 +38,13 @@ object Work {
      */
     fun schedule(context: Context) = safely("Scheduling background jobs failed") {
         val wm = WorkManager.getInstance(context)
+        // Not "storage not low": on a nearly full phone the backup then never ran and nobody knew
+        // (2026-10 review). It checks the room it needs itself and the selling screen warns.
+        // UPDATE: phones that have the old job get the new constraints (its schedule stays).
         val backup = PeriodicWorkRequestBuilder<BackupWorker>(24, TimeUnit.HOURS)
-            .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).setRequiresStorageNotLow(true).build())
+            .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .build()
-        wm.enqueueUniquePeriodicWork(BACKUP, ExistingPeriodicWorkPolicy.KEEP, backup)
+        wm.enqueueUniquePeriodicWork(BACKUP, ExistingPeriodicWorkPolicy.UPDATE, backup)
         val sync = PeriodicWorkRequestBuilder<SyncWorker>(30, TimeUnit.MINUTES)
             .setConstraints(online())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)

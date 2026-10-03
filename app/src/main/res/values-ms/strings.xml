@@ -404,8 +404,9 @@
     <string name="diag_log_empty">Tiada masalah berlaku pada telefon ini lagi: log ralat kosong.</string>
     <!-- Laporan ralat kepada pembangun (D-057) -->
     <string name="error_reports_title">Laporan ralat</string>
+    <string name="privacy_url">https://faizoken.github.io/LekasPOS/privasi.html</string>
     <string name="error_reports_ask_title">Bantu baiki masalah?</string>
-    <string name="error_reports_ask_message">Apabila berlaku masalah dalam LekasPOS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun LekasPOS supaya ia dibaiki.\n\nLaporan hanya menyatakan apa yang tidak kena, versi aplikasi dan model telefon. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, pekerja, PIN atau akaun Google anda.\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
+    <string name="error_reports_ask_message">Apabila berlaku masalah dalam LekasPOS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun LekasPOS supaya ia dibaiki.\n\nLaporan mengandungi apa yang tidak kena (bersama baris log terakhir aplikasi sebelumnya), bila dan berapa kerap, versi aplikasi, model telefon, versi Android, memori dan storan kosong, saiz data aplikasi, bahasa aplikasi dan satu nombor rawak bagi telefon ini. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau akaun Google anda. Laporan dihantar melalui Cloudflare ke halaman GitHub peribadi (lihat dasar privasi).\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
     <string name="error_reports_yes">Hantar laporan</string>
     <string name="error_reports_no">Jangan hantar</string>
     <string name="error_reports_on">Hidup: dihantar kepada pembangun LekasPOS</string>

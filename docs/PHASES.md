@@ -24,6 +24,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.0**: error reports to the developer, with the shop's consent (D-057) | **released** 2026-10-02 — the relay is live |
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
+| — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **in progress** — fixes and tests done; CI, test build and the owner's phone tests pending |
 
 ## Open questions for the user
 
@@ -1206,3 +1207,53 @@ The update itself can only be seen once a newer version than the phone's is publ
 6. The internet off: Check now → "No internet connection…"; nothing else changes, selling works.
 7. Untick "Include test versions": the 1.6.1 offer is gone when the phone has 1.6.0.
 8. On the store's tablet (Android 10) the same once, if possible.
+
+## 1.7.0 — fourth bug hunt: new features, the outside world, long use (D-060)
+
+The owner asked for another free-hand search for bugs and weak features (2026-10-03). Nine read-only
+reviews took angles the earlier hunts had not (the self-update, error reports and the relay, report and
+category totals, promotions and money, years of use and a full phone, what the receipt says, a crash
+sweep of every screen, Google Drive / folder / network failures, the website and privacy policy against
+the app); every finding was checked in the code first, then fixed, most with a test (D-060). The most
+serious: the daily SD/USB folder copy deleted the owner's own saved backups (and its own daily copies);
+turning on Drive backup with a Google account that holds another shop merged the two shops for good; a
+promotion switched off on another till kept applying after a sync round that failed later; "buy X get Y"
+put the whole saving on the free item, so returning the paid items refunded their full price; a full
+Google Drive showed raw JSON and was "tried again" for ever; a nearly full phone silently stopped its
+daily backup and then failed sales with SQLite's English; a refused update was downloaded again every
+day; reports were kept while the shop had said "Don't send"; several screens crashed when a job finished
+after Back. Weak features added: **Settings → Payment methods** (DuitNow QR, Touch 'n Go, bank transfer
+— each counted on its own) and **special prices with dates** (a promotion of one unit).
+
+- [x] Fixes and tests: see D-060
+- [x] Website, privacy policy (EN + MS), README, PLAY.md and the release checklist corrected
+- [x] Local: `:core` 227 and `:app` 40 JVM tests pass, lint 0 errors; relay 19/19 (`node --test`); release APK
+      **1,439,881 bytes** (1,406 KB; 1.6.1 was 1,424,032 — +16 KB)
+- [ ] CI (API 21 and 36, tablet, release smoke) and perf
+- [ ] Test build published as a pre-release; the owner's phone tests
+
+### Needs real-device testing (1.7.0)
+
+1. Install over 1.6.1 from inside the app (Settings → App updates → Include test versions): data,
+   staff, settings, backup still there.
+2. **Payment methods**: Settings → Payment methods → + "DuitNow QR" (E-wallet or QR) → it shows in Pay;
+   pay a bill with it; the shift report and Reports list it on its own line. Hide it → gone from Pay,
+   still named in old reports. Cash cannot be hidden.
+3. **Special price**: Promotions → new → Multi-buy or special price, "How many to buy" 1, price RM3.99,
+   end date tomorrow → a RM4.50 product rings up at 3.99; the receipt names the promotion.
+4. **Buy 2 get 1** on three different products (4.50, 4.20, 4.00): total 8.70; refund the 4.50 item
+   alone → the refund is 3.08, not 4.50.
+5. **Folder backup** (SD card or USB): save a backup by hand into the same folder ("lekaspos-backup-…"),
+   then Copy now a few times → the hand-saved file stays.
+6. **Second shop on one account** (spare phone with a few products): turn on Google Drive backup with the
+   store's account → "Join another shop?" naming the store's tills; Cancel leaves it off.
+7. **Reports**: This month → "Change vs 1/9/2026 – 3/9/2026 (…)"; This year → the same days last year;
+   Today → yesterday.
+8. **Error reports** off → make an error happen (e.g. pick a non-backup file to restore) → turn reports on
+   → nothing old is sent. A cashier (PIN login) cannot change Settings → Error reports or App updates
+   without the manager's PIN.
+9. **Storage** (only if a phone is nearly full): the selling screen shows "Storage almost full" and the
+   message says how much is free.
+10. Printer (when available): a copy of a voided sale has no e-invoice QR; a split payment where the
+    e-wallet paid all but the rounding prints no "Cash 0.00".
+

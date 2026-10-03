@@ -97,6 +97,7 @@ import com.lekaspos.ui.staff.LockActivity
 import com.lekaspos.ui.staff.changeOwnPin
 import com.lekaspos.ui.staff.withApproval
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.util.TimeZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -402,7 +403,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun renderUpdate(u: AppUpdates.Status, staff: StaffSession.State) {
         val update = u.update
         updatePill.text = update?.let { getString(R.string.update_pill, it.version) }
-        updatePill.visible(update != null && u.selfUpdate && maySetUp(staff))
+        updatePill.visible(update != null && u.refused == null && u.selfUpdate && maySetUp(staff))
     }
 
     override fun onStop() {
@@ -616,9 +617,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val stale = s.enabled && !s.running && s.pending > 0L && quiet
         val risk = p.state == BackupService.Protection.State.AT_RISK
         val pill: Pair<Int, () -> Unit>? = when {
-            s.enabled && s.needsSignIn -> R.string.sync_pill_sign_in to { open(SyncActivity::class.java) }
             p.state == BackupService.Protection.State.DAMAGED ->
                 R.string.safety_pill_damaged to { open(BackupActivity::class.java) }
+            // Before sales stop being saved and while the daily backup has no room (2026-10 review).
+            p.storageLow -> R.string.storage_pill to { explainStorage(p.freeBytes) }
+            s.enabled && s.needsSignIn -> R.string.sync_pill_sign_in to { open(SyncActivity::class.java) }
             stale -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
             risk && s.enabled -> R.string.sync_pill_stale to { open(SyncActivity::class.java) }
             risk -> R.string.safety_pill_at_risk to { explainAtRisk() }
@@ -630,6 +633,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun open(target: Class<*>) = startActivity(Intent(this, target))
+
+    /** The phone is nearly full: what stops working, and what to delete. */
+    private fun explainStorage(free: Long) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.storage_low_title)
+            .setMessage(getString(R.string.storage_low_message, Storage.text(free)))
+            .setPositiveButton(R.string.ok, null)
+            .setNeutralButton(R.string.backup_title) { _, _ -> open(BackupActivity::class.java) }
+            .show()
+            .trackedBy(this)
+    }
 
     /** The shop's data is only on this phone: what that means and the two ways to fix it. */
     private fun explainAtRisk() {
@@ -1316,7 +1330,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             is CheckoutService.Outcome.Failed -> {
                 val d = AlertDialog.Builder(this)
                     .setTitle(R.string.pay_failed_title)
-                    .setMessage(getString(R.string.pay_failed, o.error))
+                    .setMessage(if (o.storageFull) getString(R.string.pay_failed_storage) else getString(R.string.pay_failed, o.error))
                     .setPositiveButton(R.string.ok, null)
                     .create()
                 // A scanner's Enter must not press OK: the message would be gone unread (2026-10 review).

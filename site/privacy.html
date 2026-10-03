@@ -22,12 +22,25 @@ any of it.</strong> If you allow error reports, the developer receives technical
 problems in the app, never your shop's data.</p>
 
 <h2>What the app stores</h2>
-<p>Everything you enter or record while running your shop: products, prices and stock; sales,
-refunds and payments; suppliers and purchases; staff names, roles and PINs; customers (names,
-phone numbers, credit balances); shifts, cash movements, settings and an audit log of sensitive
-actions. PINs are stored only as salted, hashed values, never as the digits themselves.</p>
-<p>This data is kept in the app's private storage on the phone. You (the shop) decide what is
-entered and are responsible for the customer and staff details you record.</p>
+<p>Everything you enter or record while running your shop: the store's details (name, address,
+phone, e-mail, business registration, SST and tax identification (TIN) numbers) and receipt logo;
+products, prices and stock; sales, refunds and payments; suppliers (with their contact details) and
+purchases; staff names, roles and PINs; customers (names, phone numbers, e-mail and postal
+addresses, tax numbers, notes and credit balances); shifts, cash movements, settings and an audit
+log of sensitive actions. Each phone also keeps the Bluetooth addresses of the printer and scanner
+chosen in the app and, if Google Drive backup is on, the Google account's e-mail address (to show
+which account is in use and to connect to the same account again).</p>
+<p>Staff PINs are stored only as salted, hashed values, never as the digits themselves. But a PIN
+has only 4–6 digits, so someone with a copy of the shop's data could still work it out by trying
+every number.</p>
+<p>This data is kept in the app's private storage on the phone. The app warns when the phone's
+storage is almost full, because sales cannot be saved on a full phone. You (the shop) decide what
+is entered and are responsible for the customer and staff details you record.</p>
+<p><strong>Backup files and sync files are not encrypted by the app.</strong> Backup files
+(<code>.lekasbak</code>, including the daily copies on an SD card or USB drive) and the sync files
+in Google Drive hold all of the shop's data, including customers and the staff PIN records. Anyone
+who gets a copy can read it. Keep backup files private, share them only with people you trust, and
+protect the shop's Google account with a strong password and 2-Step Verification.</p>
 
 <h2>What leaves the phone</h2>
 <ul>
@@ -46,8 +59,11 @@ Google Drive backup) and sign in with a Google account, the app stores its sync 
 account's <em>hidden app data folder</em> in Google Drive, so the shop's tills share the same data. The app asks Google only for
 this folder (the <code>drive.appdata</code> permission): it cannot see or change any of your
 other Drive files, and other apps cannot read its folder. The files travel directly between
-your phones and Google over an encrypted connection (HTTPS). The app reads the account's e-mail
-address only to show you which account is in use. Google's
+your phones and Google over an encrypted connection (HTTPS); the files themselves are not
+encrypted by the app (see above). The app keeps the account's e-mail address on the phone only to
+show you which account is in use and to connect to the same account again. If the account
+already holds another shop's data, the app asks before this phone joins that shop (joining adds
+this phone's products, sales and customers to that shop on every till). Google's
 <a href="https://policies.google.com/privacy">privacy policy</a> applies to data kept in Google
 Drive. Sign-in uses Google Play services.</li>
 <li><strong>Daily copy to a folder (optional).</strong> If you pick a folder (for example on an SD
@@ -61,18 +77,29 @@ if you send it yourself from Settings → Diagnostics, to whoever you choose.</l
 <li><strong>Error reports (only if you allow them).</strong> The app asks once whether it may send
 error reports to the LekasPOS developer (change it any time in Settings → Error reports). If you
 allow them, a report is sent when the app stops, freezes, logs an error or fails a check. A report
-holds what went wrong (the technical error and the error log before it), the app version, the
-Android version, the phone model, its memory and free storage, the size of the app's data, the
-app's language and a random
-number for this installation (a new one each time reports are turned on). It never holds your
-sales, products, prices, customers, staff, PINs or Google account; e-mail addresses, long numbers
-and file names that appear in technical messages are removed first. Reports travel over an
-encrypted connection (HTTPS) through a small relay run on Cloudflare and are kept in the
-developer's private issue tracker on GitHub as long as they help fix the problem. Turning reports
-off deletes the ones not yet sent.</li>
+holds:
+<ul>
+<li>what went wrong: the kind of problem (stopped, froze, error or failed check), a short title,
+the technical error (its message, stack trace and thread name) and the lines of the error log just
+before it;</li>
+<li>when it happened and how many times;</li>
+<li>the app's version, build number and which key signed it; the Android version; the phone's make
+and model, its memory (RAM) and free storage; the size of the app's database; the app's
+language;</li>
+<li>a random number for this installation (a new one each time reports are turned on).</li>
+</ul>
+It never holds your sales, products, prices, customers, staff, PINs or Google account; e-mail
+addresses, long numbers and file names that appear in technical messages are removed first.
+Reports travel over an encrypted connection (HTTPS) through a small relay run on Cloudflare and
+are kept in the developer's private issue tracker on GitHub as long as they help fix the problem.
+Cloudflare sees the phone's internet address, as for any website; the relay uses it only to limit
+how many reports one address can send, and does not keep it with the report. While reports are
+off, nothing is kept for sending, and turning them off deletes the reports waiting to be sent (a
+report you send by hand still goes).</li>
 <li><strong>A report you send by hand.</strong> Settings → Diagnostics → "Send a report to the
-developer" sends the error log with what you type, including a phone number or e-mail address if
-you choose to leave one for a reply. It is sent and kept the same way as error reports.</li>
+developer" sends the error log and the same phone details as an error report, with what you type,
+including a phone number or e-mail address if you choose to leave one for a reply. It is sent and
+kept the same way as error reports.</li>
 </ul>
 
 <h2>Permissions</h2>
@@ -86,19 +113,23 @@ allow them, error reports.</li>
 <li><strong>Install apps</strong> — to install LekasPOS's own updates. Android asks you to confirm
 each one; the app installs nothing else.</li>
 <li><strong>Keep awake</strong> — so backups and sync can finish in the background.</li>
+<li><strong>Run at startup</strong> — so the daily backup, sync and update checks resume after the
+phone restarts.</li>
 </ul>
 
 <h2>Deleting your data</h2>
 <ul>
 <li>Uninstalling the app, or Android Settings → Apps → LekasPOS → Clear storage, deletes the data
 on that phone (including the backups kept on it).</li>
-<li>Turning off sync stops sending data. To delete the synced files, open Google Drive on the web
-→ Settings → Manage apps → LekasPOS → Options → Delete hidden app data.</li>
+<li>Turning off sync stops sending data; the files already in Google Drive stay there. To delete
+them, first turn off sync on <em>every</em> till (Settings → Google Drive backup → Turn off sync):
+a till that still syncs puts all its data back. Then open Google Drive on the web → Settings →
+Manage apps → LekasPOS → Options → Delete hidden app data.</li>
 <li>Backup files copied to a folder you picked (SD card, USB drive) are not deleted with the app;
 delete them in a file manager.</li>
 <li>Backup and CSV files you saved elsewhere are yours to delete.</li>
-<li>To have error reports deleted, open an issue (below) with the phone model and roughly when the
-problem happened (reports do not say who you are).</li>
+<li>To have error reports deleted, contact the developer (below) with the phone model and roughly
+when the problem happened (reports do not say who you are).</li>
 </ul>
 
 <h2>Children</h2>
@@ -112,7 +143,9 @@ repository</a>.</p>
 
 <h2>Contact</h2>
 <p>Questions about privacy: open an issue at
-<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.</p>
+<a href="https://github.com/FaizoKen/LekasPOS/issues">github.com/FaizoKen/LekasPOS/issues</a>.
+Issues are public, so for a private request (for example to have error reports deleted), e-mail
+[CONTACT EMAIL — owner to add] instead.</p>
 </main>
 </body>
 </html>

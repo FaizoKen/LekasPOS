@@ -276,8 +276,9 @@ restore that `Db.open` applies before opening the database (D-044).
   30+) ANRs / the app ended by Android become report files in `files/reports` (one per fingerprint,
   `core.diag.CrashText`; ≤ 20, 14 days), sent by the `ReportWorker` job to the relay (`relay/`, a
   Cloudflare Worker that files them as issues in the private `FaizoKen/LekasPOS-reports`) only when
-  the shop said yes (asked once on the selling screen; Settings → Error reports; per phone, in a
-  preferences file) and only from release-signed builds; ≤ 10 a day, each bug once a day; a crash is
+  the shop said yes (asked once on the selling screen; Settings → Error reports, Settings permission;
+  per phone, in a preferences file; nothing is queued while it is "off", D-060) and only from
+  release-signed builds; ≤ 10 a day, each bug once a day; a crash is
   also tried once at once (≤ 2.5 s). Diagnostics → "Send a report" sends one by hand. Reports hold no
   shop data; free text goes through `CrashText.scrub`. Never call `Log.e` from the reporting path
   (a report about reports): it logs with `android.util.Log`. R8 keeps the app's own class names so
@@ -289,6 +290,12 @@ restore that `Db.open` applies before opening the database (D-044).
   `NonCancellable`: the screen that asked may be closing (D-056).
 - Money/sale writes are atomic transactions; nothing is printed or shown as "paid" until the
   commit returns.
+- Screens: `Dialogs.*` show nothing on a finishing/destroyed Activity (a job that ends after Back
+  crashed with BadTokenException); `ScreenActivity` scopes have a `CoroutineExceptionHandler` like
+  SellActivity's; catch-alls in coroutines rethrow `CancellationException` first (D-060).
+- A full phone (`util.Storage.isFull`) is said in words and logged as a warning; the selling screen
+  warns early ("Storage almost full", `Protection.storageLow`) and the daily backup checks its room
+  itself instead of WorkManager's "storage not low" (D-060).
 
 ## 9a. App updates (D-059)
 
@@ -300,7 +307,9 @@ restore that `Db.open` applies before opening the database (D-044).
   `file://` below). Settings and what is known live in the `lekas_updates` preferences file.
 - `UpdateWorker` (daily, online) checks and downloads; only release-signed builds, never a copy
   installed by Google Play. `atStart` (selling screen, background) schedules it and says once
-  "updated to …" after an update.
+  "updated to …" after an update. A download refused by the checks (another key, not installable,
+  an APK whose `versionName` is not the release's tag) is remembered by SHA-256 (`refused`): not
+  downloaded again nor offered until the release's file changes (D-060).
 - UI: `ui.settings.UpdateUi` — the "Update 1.6.0" pill on the selling screen (Settings permission),
   Settings → App updates, the offer with "What's new" (`ReleaseNotes`), the download dialog, Android
   8+'s install permission (screens forward `onActivityResult` to `UpdateUi.onResult`). Updating needs

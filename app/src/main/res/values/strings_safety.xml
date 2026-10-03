@@ -22,4 +22,10 @@
     <string name="backup_folder_error">The last copy to the folder failed: %1$s</string>
     <string name="backup_folder_done">Copied to the folder.</string>
     <string name="backup_folder_failed">Could not copy to the folder. Is the card or drive still there?</string>
+    <!-- Phone storage (2026-10 review) -->
+    <string name="storage_pill">Storage almost full</string>
+    <string name="storage_low_title">Phone storage almost full</string>
+    <string name="storage_low_message">Only %1$s is free on this phone. When it is full, sales cannot be saved and the daily backup stops. Delete photos, videos or apps you do not need, or old backups in Backup &amp; restore.</string>
+    <string name="error_storage_full">The phone\'s storage is full. Delete photos, videos or apps you do not need, then try again.</string>
+    <string name="pay_failed_storage">The sale was NOT saved and nothing was charged: the phone\'s storage is full. Delete photos, videos or apps you do not need, then press Pay again. The bill is kept.</string>
 </resources>

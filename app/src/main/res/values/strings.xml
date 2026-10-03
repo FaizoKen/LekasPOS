@@ -408,8 +408,10 @@
     <string name="diag_log_empty">Nothing has gone wrong on this phone yet: the error log is empty.</string>
     <!-- Error reports to the developer (D-057) -->
     <string name="error_reports_title">Error reports</string>
+    <!-- The privacy policy in the app’s language. -->
+    <string name="privacy_url">https://faizoken.github.io/LekasPOS/privacy.html</string>
     <string name="error_reports_ask_title">Help fix problems?</string>
-    <string name="error_reports_ask_message">When something goes wrong in LekasPOS (the app stops, freezes or shows an error), this phone can send a short error report to the LekasPOS developer, so it gets fixed.\n\nA report says only what went wrong, the app version and the phone model. It never holds your sales, products, prices, customers, staff, PINs or Google account.\n\nYou can change this any time in Settings → Error reports.</string>
+    <string name="error_reports_ask_message">When something goes wrong in LekasPOS (the app stops, freezes or shows an error), this phone can send a short error report to the LekasPOS developer, so it gets fixed.\n\nA report holds what went wrong (with the app’s last log lines before it), when and how often, the app version, the phone model, Android version, memory and free storage, the size of the app’s data, the app language and a random number for this phone. It never holds your sales, products, prices, customers, staff, PINs or Google account. Reports go through Cloudflare to a private GitHub page (see the privacy policy).\n\nYou can change this any time in Settings → Error reports.</string>
     <string name="error_reports_yes">Send reports</string>
     <string name="error_reports_no">Don’t send</string>
     <string name="error_reports_on">On: sent to the LekasPOS developer</string>

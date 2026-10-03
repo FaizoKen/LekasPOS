@@ -6,6 +6,7 @@ import com.lekaspos.core.text.SearchText
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.bool
+import com.lekaspos.data.db.long
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.db.queryOne
 import com.lekaspos.data.db.stringOrNull
@@ -115,11 +116,59 @@ object TaxRateDao {
     fun delete(tx: Db.Tx, id: Long, now: Long): Boolean = LwwWriter.delete(tx, "tax_rate", Entity.TAX_RATE, id, now)
 }
 
-/** LWW table `payment_method` (seed rows: cash, card, e-wallet, customer credit). */
+/** A payment method as Settings → Payment methods edits it (hidden ones included). */
+data class PaymentMethodRow(
+    val id: Long,
+    val name: String,
+    val kind: Int,
+    val opensDrawer: Boolean,
+    val sort: Int,
+    val active: Boolean,
+)
+
+/**
+ * LWW table `payment_method` (seed rows: cash, card, e-wallet, customer credit). The shop adds its
+ * own (DuitNow QR, Touch 'n Go, bank transfer …): each is counted on its own in the shift and sales
+ * reports (2026-10).
+ */
 object PaymentMethodDao {
     fun active(db: SQLiteDatabase): List<PaymentMethod> = db.queryList(
         "SELECT id, name, kind, opens_drawer, sort FROM payment_method WHERE deleted = 0 AND active = 1 ORDER BY sort, id",
     ) { c -> PaymentMethod(c.getLong(0), c.getString(1), c.getInt(2), c.bool(3), c.getInt(4)) }
+
+    private const val ROW = "SELECT id, name, kind, opens_drawer, sort, active FROM payment_method"
+
+    private fun row(c: android.database.Cursor) = PaymentMethodRow(c.getLong(0), c.getString(1), c.getInt(2), c.bool(3), c.getInt(4), c.bool(5))
+
+    /** Every method, hidden ones too, in till order. */
+    fun all(db: SQLiteDatabase): List<PaymentMethodRow> = db.queryList("$ROW WHERE deleted = 0 ORDER BY sort, id") { row(it) }
+
+    fun get(db: SQLiteDatabase, id: Long): PaymentMethodRow? = db.queryOne("$ROW WHERE id = ?", args(id)) { row(it) }
+
+    /** A new method after the others. */
+    fun insert(tx: Db.Tx, name: String, kind: Int, opensDrawer: Boolean, now: Long): Long {
+        val id = tx.nextId()
+        val sort = tx.db.long("SELECT COALESCE(MAX(sort), 0) FROM payment_method") + 1L
+        LwwWriter.insert(
+            tx, "payment_method", Entity.PAYMENT_METHOD, id,
+            linkedMapOf("name" to name, "kind" to kind.toLong(), "opens_drawer" to if (opensDrawer) 1L else 0L, "sort" to sort, "active" to 1L),
+            now,
+        )
+        return id
+    }
+
+    private fun fields(m: PaymentMethodRow): Map<String, Any?> = linkedMapOf(
+        "name" to m.name, "kind" to m.kind.toLong(), "opens_drawer" to if (m.opensDrawer) 1L else 0L,
+        "sort" to m.sort.toLong(), "active" to if (m.active) 1L else 0L,
+    )
+
+    /** Writes the fields the user changed from [before] that also differ from the row as stored now. */
+    fun update(tx: Db.Tx, before: PaymentMethodRow, after: PaymentMethodRow, now: Long): Boolean {
+        require(before.id == after.id)
+        val current = get(tx.db, after.id) ?: return false
+        val changes = lwwChanges(fields(before), fields(after), fields(current))
+        return LwwWriter.update(tx, "payment_method", Entity.PAYMENT_METHOD, after.id, changes, now)
+    }
 
     /** Every method's name, including removed ones (old reports still show them). */
     fun names(db: SQLiteDatabase): Map<Long, String> {

@@ -117,14 +117,19 @@ object ErrorReports {
     fun consent(context: Context): Int = prefs(context).getInt(K_CONSENT, UNASKED)
 
     /**
-     * The shop's answer. Off: what is waiting is deleted (except a report sent by hand). On: a new
-     * random install id, and what is waiting goes out. Blocking.
+     * The shop's answer. Off: what is waiting is deleted (except a report sent by hand), nothing new
+     * is kept, and the install id goes. On (from unasked or off): a new random install id, and what
+     * is waiting goes out. Blocking.
      */
+    @SuppressLint("ApplySharedPref") // blocking by contract (called off the main thread): the answer is kept at once
     fun setConsent(context: Context, on: Boolean) {
         val ctx = context.applicationContext
-        val edit = prefs(ctx).edit().putInt(K_CONSENT, if (on) ON else OFF)
-        if (on) edit.putString(K_INSTALL, newId())
-        edit.apply()
+        val p = prefs(ctx)
+        val edit = p.edit().putInt(K_CONSENT, if (on) ON else OFF)
+        // A new id only when reports are turned on: answering "Send reports" again counted the till twice.
+        if (on && p.getInt(K_CONSENT, UNASKED) != ON) edit.putString(K_INSTALL, newId())
+        if (!on) edit.remove(K_INSTALL)
+        edit.commit()
         if (on) {
             trigger(ctx, force = true)
         } else {
@@ -339,12 +344,20 @@ object ErrorReports {
 
     // ---- the queue -----------------------------------------------------------------------------
 
-    /** Kept as `<fingerprint>.json`; the same bug again counts in the waiting report. */
+    /**
+     * Kept as `<fingerprint>.json`; the same bug again counts in the waiting report. Nothing is kept
+     * while the shop said no: those reports went out when reports were turned on later (2026-10
+     * review). With [MAX_PENDING] waiting, the oldest automatic one makes room (a new crash was lost).
+     */
     private fun queue(ctx: Context, r: ErrorReport) = synchronized(lock) {
+        if (consent(ctx) == OFF) return@synchronized
         val d = dir(ctx)
         val f = File(d, r.fingerprint + EXT)
         val old = if (f.exists()) read(f) else null
-        if (old == null && (d.list()?.size ?: 0) >= MAX_PENDING) return@synchronized // enough waiting
+        if (old == null && (d.list()?.size ?: 0) >= MAX_PENDING) {
+            val oldest = pending(ctx).firstOrNull { !it.name.startsWith(MANUAL) } ?: return@synchronized
+            oldest.delete()
+        }
         write(f, old?.again(r.at) ?: r)
     }
 
@@ -379,9 +392,12 @@ object ErrorReports {
         return sent.size < MAX_PER_DAY && sent.none { it.first == fp }
     }
 
+    @SuppressLint("ApplySharedPref") // see below: the crash path
     private fun noteSent(ctx: Context, fp: String) {
         val list = sentRecently(ctx) + (fp to System.currentTimeMillis())
-        prefs(ctx).edit().putString(K_SENT, list.joinToString(";") { "${it.first}:${it.second}" }).apply()
+        // commit: on the crash path the process ends right after, and apply() could lose it (a crash
+        // at every start was then sent at every start).
+        prefs(ctx).edit().putString(K_SENT, list.joinToString(";") { "${it.first}:${it.second}" }).commit()
     }
 
     private fun sentRecently(ctx: Context): List<Pair<String, Long>> {

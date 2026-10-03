@@ -43,7 +43,9 @@ object ReceiptBuilder {
             taxes.add(ReceiptTax(name, v.first, v.second))
         }
 
-        val qr = if (store.einvoiceQr && store.einvoiceUrl.isNotBlank() && h.kind == SaleKind.SALE) {
+        // Not on a voided sale: a copy of it asked the customer to request an e-invoice for a sale
+        // that no longer exists (2026-10 review).
+        val qr = if (store.einvoiceQr && store.einvoiceUrl.isNotBlank() && h.kind == SaleKind.SALE && !h.voided) {
             store.einvoiceUrl
                 .replace("{receipt}", h.receiptNo)
                 .replace("{total}", MoneyFormat.plain(h.total, store.currency.decimals))
@@ -62,8 +64,8 @@ object ReceiptBuilder {
             customer = h.customerId?.let { CustomerDao.name(db, it) },
             items = lines.map {
                 ReceiptItem(
-                    name = it.name, qty = it.qty, unit = it.unit, weighed = it.qty % 1000L != 0L, unitPrice = it.unitPrice,
-                    gross = it.gross, discount = it.discount, promo = it.promoName,
+                    name = oneLine(it.name), qty = it.qty, unit = it.unit?.let(::oneLine), weighed = it.qty % 1000L != 0L,
+                    unitPrice = it.unitPrice, gross = it.gross, discount = it.discount, promo = it.promoName?.let(::oneLine),
                 )
             },
             subtotal = h.subtotal,
@@ -74,9 +76,12 @@ object ReceiptBuilder {
             pricesIncludeTax = h.pricesInclTax,
             rounding = h.rounding,
             total = h.total,
-            payments = pays.map { ReceiptPayment(it.name ?: kindName(it.kind), it.amount, it.tendered, it.change) },
+            // A cash part of 0.00 (e-wallet paid all but the 2 sen the rounding took) is no payment:
+            // "Cash 0.00" under the rounding line only puzzled customers.
+            payments = pays.filter { it.amount != 0L || it.tendered != 0L || it.change != 0L }
+                .map { ReceiptPayment(it.name ?: kindName(it.kind), it.amount, it.tendered, it.change) },
             change = h.change,
-            note = if (h.kind == SaleKind.REFUND) h.note else null,
+            note = if (h.kind == SaleKind.REFUND) h.note?.let(::oneLine) else null,
             qrData = qr,
             voided = h.voided,
             reprint = copy,
@@ -89,6 +94,13 @@ object ReceiptBuilder {
     /** True when some text cannot be printed in [mode] (e.g. Tamil, or Chinese on a Latin printer). */
     fun needsImage(lines: List<PrintLine>, mode: TextMode): Boolean =
         lines.any { it is PrintLine.Text && !EscPosText.canEncode(it.text, mode) }
+
+    /**
+     * Line breaks, tabs and other control characters as spaces: text mode dropped them ("Milo\nTin"
+     * printed "MiloTin") and picture mode drew boxes.
+     */
+    internal fun oneLine(s: String): String =
+        if (s.none { it < ' ' || it == '\u007F' }) s else s.map { if (it < ' ' || it == '\u007F') ' ' else it }.joinToString("").trim()
 
     private fun kindName(kind: Int) = when (kind) {
         PaymentKind.CASH -> "Cash"

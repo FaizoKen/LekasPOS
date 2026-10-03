@@ -16,9 +16,11 @@ import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.backup.TreeBackupFolder
 import com.lekaspos.data.db.KeepDamagedDatabase
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.db.Schema
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -57,6 +59,9 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         val folderName: String? = null,
         val folderError: String? = null,
         val damage: String? = null,
+        /** The phone's free storage is too low for the daily backup (and soon for sales): the shop is told. */
+        val storageLow: Boolean = false,
+        val freeBytes: Long = Long.MAX_VALUE,
     ) {
         enum class State { NO_DATA, PROTECTED, AT_RISK, DAMAGED }
     }
@@ -113,7 +118,13 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         // quiet moment — but never past OVERDUE_MS since the last one (2026-10 review: it ran right
         // when the till was switched on in the morning, and Pay hung with the first customer).
         if (due && latest != null && recent(latest.lastModified(), now, OVERDUE_MS) && busy(now)) throw Postponed()
-        val made = if (due) {
+        // Not enough room for the copy: tried again tomorrow, and the selling screen says the phone
+        // is full ([Storage.lowBelow] covers what the backup needs). It used to fail after pausing
+        // sales for the copy, or never ran (2026-10 review). The folder copy of the last backup
+        // needs no room on the phone: it still goes.
+        val noRoom = due && withContext(Dispatchers.IO) { Storage.freeBytes(app.filesDir) < Storage.backupNeeds(dbBytes()) }
+        if (noRoom) Log.w("Daily backup skipped: not enough free storage")
+        val made = if (due && !noRoom) {
             val db = graph.db()
             val check = integrityForTests ?: KeepDamagedDatabase.problem ?: try {
                 db.read { BackupFiles.integrity(it) }
@@ -223,6 +234,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
             val folder = Meta.getLong(r, Meta.BACKUP_FOLDER_OK)
             val last = listOfNotNull(drive, folder, Meta.getLong(r, Meta.BACKUP_EXPORT_OK)).maxOrNull()
             val damage = Meta.get(r, Meta.DB_PROBLEM) ?: KeepDamagedDatabase.problem
+            val free = Storage.freeBytes(app.filesDir)
             val state = when {
                 damage != null -> Protection.State.DAMAGED
                 !hasData -> Protection.State.NO_DATA
@@ -236,6 +248,8 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
                 folderName = Meta.get(r, Meta.BACKUP_FOLDER)?.let { Meta.get(r, Meta.BACKUP_FOLDER_NAME) ?: "" },
                 folderError = Meta.get(r, Meta.BACKUP_FOLDER_ERROR),
                 damage = damage,
+                storageLow = dbBytes().let { free < maxOf(Storage.lowBelow(it), Storage.backupNeeds(it)) },
+                freeBytes = free,
             )
         }
         _protection.value = p
@@ -243,6 +257,8 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     }
 
     // ------------------------------------------------------------------ files and restore
+
+    private fun dbBytes(): Long = app.getDatabasePath(Schema.FILE_NAME).length()
 
     /** Backups on this phone, newest first. */
     suspend fun list(): List<Entry> = withContext(Dispatchers.IO) {
@@ -337,6 +353,10 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         // Newest first; files dated in the future (made before the clock was set back) count as oldest.
         val order = compareBy<File> { it.lastModified() > future }.thenByDescending { it.lastModified() }
         files.filter { it.name.startsWith(AUTO) }.sortedWith(order).drop(autoLeft).forEach { it.delete() }
+        // "Back up now" copies were never deleted: full copies of the database piling up on a small
+        // phone (2026-10 review). The newest few stay.
+        val manualLeft = if (keep?.name?.startsWith(MANUAL) == true) KEEP_MANUAL - 1 else KEEP_MANUAL
+        files.filter { it.name.startsWith(MANUAL) }.sortedWith(order).drop(manualLeft).forEach { it.delete() }
         files.filter { it.name.startsWith(Restore.REASON_REPLACED) }.sortedWith(order).drop(KEEP_REPLACED).forEach { it.delete() }
     }
 
@@ -358,6 +378,7 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         const val MANUAL = "manual-"
         const val KEEP_AUTO = 7
         const val KEEP_REPLACED = 3
+        const val KEEP_MANUAL = 5
         const val KEEP_FOLDER = 7
         const val DUE_MS = 20L * 60L * 60L * 1000L
         private const val OVERDUE_MS = 36L * 60L * 60L * 1000L

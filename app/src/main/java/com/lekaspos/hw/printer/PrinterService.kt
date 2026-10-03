@@ -1,6 +1,7 @@
 package com.lekaspos.hw.printer
 
 import android.content.Context
+import android.os.SystemClock
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.escpos.MonoImage
 import com.lekaspos.core.escpos.ReceiptEncoder
@@ -138,7 +139,14 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         graph.settings.load()
         val db = graph.db()
         db.write(reserveIds = 0) { tx -> PrintJobDao.purge(tx, System.currentTimeMillis() - PURGE_AFTER_MS) }
+        var purgedAt = SystemClock.elapsedRealtime()
         while (true) {
+            // Also once a day: a till that is never restarted kept every job (~600 a day), and the
+            // "first receipt printed?" check reads that table inside each sale (2026-10 review).
+            if (SystemClock.elapsedRealtime() - purgedAt > PURGE_EVERY_MS) {
+                purgedAt = SystemClock.elapsedRealtime()
+                db.write(reserveIds = 0) { tx -> PrintJobDao.purge(tx, System.currentTimeMillis() - PURGE_AFTER_MS) }
+            }
             val cfg = graph.settings.device.value
             _pending.value = db.read { PrintJobDao.pendingCount(it) }.toInt()
             val address = cfg.printerAddress
@@ -381,6 +389,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         private const val DRAWER_MAX_AGE_MS = 120_000L
         private const val RECEIPT_MAX_AGE_MS = 10L * 60_000L
         private const val PURGE_AFTER_MS = 7L * 24 * 3600 * 1000
+        private const val PURGE_EVERY_MS = 24L * 3600 * 1000
         private const val MAX_AUTO_RETRIES = 10
         private val BACKOFF_MS = longArrayOf(2_000L, 5_000L, 10_000L, 30_000L, 60_000L)
         private const val CHUNK_BYTES = 1024

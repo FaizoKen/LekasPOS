@@ -57,6 +57,15 @@ class ReceiptLayoutTest {
         }
     }
 
+    /** 2026-10 review: a price label's weight is worked back from its price; "x price/kg" did not add up. */
+    @Test
+    fun aPriceLabelledWeighedItemShowsItsWeightAlone() {
+        val labelled = doc().copy(items = listOf(ReceiptItem(name = "Ayam", qty = 388L, unit = "kg", weighed = true, unitPrice = 1290L, gross = 500L)))
+        val t = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.EN, kl).layout(labelled)).map { it.text }
+        assertTrue(row("  0.388 kg", "5.00") in t, "$t")
+        assertTrue(t.none { "12.90/kg" in it })
+    }
+
     @Test
     fun layoutOn58mmPaper() {
         val lines = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.EN, kl).layout(doc()))

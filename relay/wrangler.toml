@@ -10,6 +10,13 @@ preview_urls = false
 REPORTS_REPO = "FaizoKen/LekasPOS-reports"
 # Not a secret (it is in every APK): it only keeps stray requests out. Must match ErrorReports.KEY.
 REPORT_KEY = "8b0c2e4f6f096ab8b1cb5d90"
+# Optional (the defaults are in worker.js); set them here, as a deploy replaces dashboard variables.
+# The highest build (versionCode = CI run number) taken; higher is refused (400) as made up. Raise it
+# well before the app's builds get near it, or their reports are dropped. Default 10000.
+# MAX_BUILD = "10000"
+# New issues (new bugs and reports sent by hand) in an hour; past it the relay answers 429 and the
+# tills send again later. 1-100, default 30.
+# MAX_NEW_ISSUES = "30"
 
 # At most 20 reports a minute from one address (each till sends a few a day at most).
 [[ratelimits]]

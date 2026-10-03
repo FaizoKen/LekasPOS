@@ -3,6 +3,7 @@ package com.lekaspos.core.receipt
 import com.lekaspos.core.money.Checked
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.PricingEngine
 import com.lekaspos.core.text.TextWidth
 import com.lekaspos.core.time.DateText
 import java.util.TimeZone
@@ -85,7 +86,15 @@ class ReceiptLayout(
             val qty = MoneyFormat.formatQty(item.qty)
             val price = money(item.unitPrice)
             val unit = item.unit.nonBlank()
-            val detail = if (item.weighed && unit != null) "  $qty $unit x $price/$unit" else "  $qty x $price"
+            // A price-labelled pack from the scale: its weight is worked back from the label's price
+            // and today's price per kg, so "weight x price/kg" would not come to the amount (0.388 kg
+            // x 12.90/kg is 5.01, the label says 5.00) — the weight alone (2026-10 review).
+            val labelled = item.weighed && PricingEngine.lineGross(item.unitPrice, item.qty) != item.gross
+            val detail = when {
+                labelled -> "  $qty${unit?.let { " $it" }.orEmpty()}"
+                item.weighed && unit != null -> "  $qty $unit x $price/$unit"
+                else -> "  $qty x $price"
+            }
             twoCol(detail, amount, out)
         }
         if (item.discount != 0L) twoCol("  ${item.promo ?: t.discount}", money(Checked.neg(item.discount)), out)

@@ -14,11 +14,63 @@ data class Period(val from: Long, val to: Long) {
 
     /** The period of the same length just before this one (for comparisons). */
     fun previous(): Period = Period(from - days, from)
+
+    /**
+     * The same days of the month(s) or year before, for a period that starts on the 1st of a month
+     * ("this month", 1–3 Oct → 1–3 Sep; "last month" → the whole month before; one that starts on
+     * 1 January and is longer than a month → the same days a year before), else [previous]. "This
+     * year" was compared with April to December, "last month" (September) with 2–31 August
+     * (2026-10 review).
+     */
+    fun sameDaysBefore(): Period {
+        val ymd = Days.toYmd(from)
+        if (ymd % 100 != 1) return previous()
+        val lastYmd = Days.toYmd(to - 1)
+        val months = (lastYmd / 10_000 - ymd / 10_000) * 12 + (lastYmd / 100 % 100 - ymd / 100 % 100) + 1
+        return monthsBefore(if (ymd / 100 % 100 == 1 && months > 1) (months + 11) / 12 * 12 else months)
+    }
+
+    /** The same days a year before ("this year" in January too: 1–15 Jan → 1–15 Jan last year). */
+    fun sameDaysYearBefore(): Period = monthsBefore(12)
+
+    /** This period [back] months earlier. */
+    private fun monthsBefore(back: Int): Period {
+        val ymd = Days.toYmd(from)
+        val lastYmd = Days.toYmd(to - 1)
+        // Ending with a whole month: the comparison ends with a whole month too (September → all of
+        // August, not 1–30 August); else on the same day of the month, or that month's last day.
+        val endYmd = Days.toYmd(to)
+        val end = if (endYmd % 100 == 1) {
+            Days.fromYmd(shiftMonths(endYmd, back))
+        } else {
+            Days.fromYmd(shiftMonths(lastYmd, back)) + 1
+        }
+        return Period(Days.fromYmd(shiftMonths(ymd, back)), end)
+    }
+
+    private companion object {
+        /** [ymd] [months] earlier; a day the month does not have becomes its last day (31 Mar → 28 Feb). */
+        fun shiftMonths(ymd: Int, months: Int): Int {
+            val index = (ymd / 10_000) * 12 + (ymd / 100 % 100 - 1) - months
+            val year = index / 12
+            val month = index % 12 + 1
+            val first = Days.fromYmd(year * 10_000 + month * 100 + 1)
+            val length = (Days.nextMonthStart(first) - first).toInt()
+            return year * 10_000 + month * 100 + minOf(ymd % 100, length)
+        }
+    }
 }
 
 /** Ready-made periods; weeks start on Monday. "This …" periods run up to and including today. */
 enum class Preset {
     TODAY, YESTERDAY, THIS_WEEK, LAST_WEEK, THIS_MONTH, LAST_MONTH, THIS_YEAR, LAST_YEAR;
+
+    /** What a report of this preset is compared with: months and years the same days before, days and weeks the ones just before. */
+    fun comparison(p: Period): Period = when (this) {
+        THIS_MONTH, LAST_MONTH -> p.sameDaysBefore()
+        THIS_YEAR, LAST_YEAR -> p.sameDaysYearBefore()
+        else -> p.previous()
+    }
 
     fun period(today: Long): Period = when (this) {
         TODAY -> Period(today, today + 1)

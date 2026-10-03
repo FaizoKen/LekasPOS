@@ -22,6 +22,7 @@ import com.lekaspos.core.time.Days
 import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.backup.Restore
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.db.Schema
 import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.Dialogs
@@ -251,6 +252,11 @@ class BackupActivity : ScreenActivity() {
     private fun confirmRestore(h: BackupFiles.Header?, open: () -> InputStream) {
         if (h == null) {
             Dialogs.message(this, null, getString(R.string.backup_not_a_backup))
+            return
+        }
+        if (h.schema > Schema.VERSION) {
+            // Said before anything is unpacked (it was refused only after, with an English error).
+            Dialogs.message(this, null, getString(R.string.backup_newer_app))
             return
         }
         requireAccess(Perm.SETTINGS) {

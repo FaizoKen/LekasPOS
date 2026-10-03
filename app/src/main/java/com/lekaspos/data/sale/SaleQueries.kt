@@ -61,6 +61,7 @@ data class SaleLineFull(
     val stockQty: Long,
     /** The promotion that gave this line its discount (name as it was when sold). */
     val promoName: String? = null,
+    val promoId: Long? = null,
 )
 
 data class PaymentRow(
@@ -93,7 +94,7 @@ object SaleQueries {
 
     fun lines(db: SQLiteDatabase, saleId: Long): List<SaleLineFull> = db.queryList(
         "SELECT id, line_no, product_id, ref_line_id, name, barcode, unit, category_id, qty, base_qty, unit_price, " +
-            "gross, discount, bill_discount, net, tax_rate_id, tax_bp, tax, cost, price_overridden, stock_qty, promo_name " +
+            "gross, discount, bill_discount, net, tax_rate_id, tax_bp, tax, cost, price_overridden, stock_qty, promo_name, promo_id " +
             "FROM sale_line WHERE sale_id = ? ORDER BY line_no",
         args(saleId),
     ) { c ->
@@ -103,7 +104,7 @@ object SaleQueries {
             qty = c.getLong(8), baseQty = c.getLong(9), unitPrice = c.getLong(10), gross = c.getLong(11),
             discount = c.getLong(12), billDiscount = c.getLong(13), net = c.getLong(14), taxRateId = c.longOrNull(15),
             taxBp = c.getInt(16), tax = c.getLong(17), cost = c.getLong(18), priceOverridden = c.bool(19),
-            stockQty = c.getLong(20), promoName = c.stringOrNull(21),
+            stockQty = c.getLong(20), promoName = c.stringOrNull(21), promoId = c.longOrNull(22),
         )
     }
 

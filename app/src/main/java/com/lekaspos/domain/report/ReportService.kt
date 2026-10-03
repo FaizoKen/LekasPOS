@@ -37,7 +37,7 @@ class ReportService(private val graph: AppGraph) {
     data class Report(
         val period: Period,
         val totals: Totals,
-        /** The same-length period just before, for the change in sales. */
+        /** The totals of [compare], for the change in sales. */
         val previous: Totals,
         val granularity: Granularity,
         val buckets: List<Bucket>,
@@ -45,6 +45,7 @@ class ReportService(private val graph: AppGraph) {
         val staff: List<StaffTotal>,
         val categories: List<CategoryTotal>,
         val topProducts: List<ProductTotal>,
+        val compare: Period = period.previous(),
     ) {
         val marginBp: Int? get() = ReportMath.marginBp(totals.netEx, totals.cost)
         val averageSale: Long get() = ReportMath.average(totals.total + totals.refundTotal, totals.saleCount)
@@ -55,9 +56,10 @@ class ReportService(private val graph: AppGraph) {
 
     enum class Export { SUMMARY, DAILY, PRODUCTS, RECEIPTS }
 
-    suspend fun build(p: Period, topN: Int = 20): Report {
+    /** [compare]: the period the totals are compared with ([Preset.comparison] for a preset). */
+    suspend fun build(p: Period, topN: Int = 20, compare: Period = p.previous()): Report {
         graph.permissions.actor(Perm.REPORTS)
-        return graph.db().read { r -> build(r, p, topN) }
+        return graph.db().read { r -> build(r, p, topN, compare) }
     }
 
     suspend fun slowMovers(p: Period, limit: Int = 200): Pair<List<SlowMover>, Pair<Long, Long>> {
@@ -109,13 +111,14 @@ class ReportService(private val graph: AppGraph) {
         private const val PAGE = 500
         private const val OTHER = "(other items)"
 
-        fun build(r: SQLiteDatabase, p: Period, topN: Int): Report {
+        fun build(r: SQLiteDatabase, p: Period, topN: Int, compare: Period = p.previous()): Report {
             val g = Granularity.forPeriod(p)
             val products = ReportDao.summary(r, p, topN) // categories and best sellers in one reading (D-058)
             return Report(
                 period = p,
                 totals = ReportDao.totals(r, p.from, p.to),
-                previous = ReportDao.totals(r, p.previous().from, p.previous().to),
+                previous = ReportDao.totals(r, compare.from, compare.to),
+                compare = compare,
                 granularity = g,
                 buckets = Buckets.of(ReportDao.days(r, p.from, p.to), p, g),
                 payments = ReportDao.byPayment(r, p.from, p.to),

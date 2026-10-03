@@ -2,9 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Keeps the CPU awake during long local jobs (performance test now; backup/sync later
-         through WorkManager, which needs it too). Install-time permission, no user prompt. -->
+    <!-- Keeps the CPU awake during long local jobs (the performance test; backup, sync and update
+         checks through WorkManager, which needs it too). Install-time permission, no user prompt. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- WorkManager asks for this; no job here runs as a foreground service (2026-10 review: an
+         unused permission the privacy policy did not explain). Its "run at startup" permission stays:
+         the daily backup, sync and update checks resume after the phone restarts. -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE"
+        tools:node="remove" />
 
     <!-- Bluetooth receipt printers and serial scanners, chosen from paired devices only
          (D-027): no discovery, so no location or scan permission on any Android version. -->
@@ -82,6 +89,10 @@
             android:exported="false" />
         <activity
             android:name=".ui.catalog.TaxRatesActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="false" />
+        <activity
+            android:name=".ui.catalog.PaymentMethodsActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:exported="false" />
         <activity

@@ -1,8 +1,9 @@
 # Google Play: what to fill in when publishing
 
-Prepared in Phase 7 (2026-09-30). The app is **not** being published yet (owner's decision);
-this page makes the first upload quick. Everything here must be re-checked against the app at
-upload time — the answers describe what the app does as of version 0.7.
+Prepared in Phase 7 (2026-09-30), updated for 1.6.1 (2026-10-03). The app is **not** being
+published yet (owner's decision); this page makes the first upload quick. Everything here must be
+re-checked against the app at upload time — the answers describe what the app does as of version
+1.6.1.
 
 ## Before the first upload (owner only)
 
@@ -56,29 +57,42 @@ Google sign-in is public. Going on Play then means:
 Key facts: no analytics/ads/crash SDKs. Data leaves the device only when the user turns on
 **Google Drive sync** (to their own Drive app folder, over HTTPS), allows **error reports** (D-057:
 asked once, off unless allowed; to the developer through the relay), or shares a file themselves.
+The daily **update check** asks GitHub for the latest release (app and Android version only, no
+user data); the Play build drops it (D-059, see Permissions below). Sync files and `.lekasbak`
+backup files are not encrypted by the app (only in transit, by HTTPS) — the privacy policy says so.
 
 - **Does the app collect or share user data?** Google counts data sent off the device as
   "collected" even when it goes to the user's own cloud account, so answer **Yes, collected**
-  for the data that sync sends — conservative and accurate:
-  - Personal info: *Name*, *Phone number* (customers and staff entered by the shop) —
-    optional, app functionality.
-  - Financial info: *Purchase history* (the shop's sales records) — optional, app functionality.
-  - Personal info: *Email address* (the Google account, read to show which account syncs) —
-    optional, app functionality.
+  for the data that sync sends — conservative and accurate. Everything the shop enters is
+  collected only into the shop's own storage and its own Google Drive; none of it reaches the
+  developer, and none of it is shared:
+  - Personal info: *Name* (customers and staff, entered by the shop), *Phone number*, *Email
+    address*, *Address* (customers' details, entered by the shop) — optional, app functionality.
+  - Personal info: *Email address* (the Google account, kept on the phone to show which account
+    syncs and to connect to the same account again) — optional, app functionality.
+  - Financial info: *Purchase history* (the shop's sales records) and *Other financial info*
+    (customers' credit balances) — optional, app functionality.
+  - App activity: *Other actions* (the audit log of sensitive staff actions) — optional, app
+    functionality.
   - App info and performance: *Crash logs* and *Diagnostics* (error reports, D-057) — optional
     (the user allows them), purpose *Analytics* (finding and fixing bugs); not shared. A report sent
     by hand from Diagnostics may hold an *Email address* or *Phone number* the user types for a reply
     — optional, purpose *Developer communications*.
-  - Device or other IDs: none (the reports' install id is random, reset when reports are turned
-    on again, and linked to nothing — Play counts it under Diagnostics, not as a device ID).
-    Location: none.
+  - Device or other IDs: the error reports' random install id (a new one each time reports are
+    turned on, deleted when they are turned off; not linked to the user's identity or any device
+    ID) — optional, purposes *App functionality* and *Analytics* (counting how many tills a bug
+    affects); not shared.
+  - Location: none.
 - **Shared with third parties:** no (Google Drive stores the user's own data on their behalf;
-  Cloudflare and GitHub carry and store error reports as the developer's service providers).
+  Cloudflare and GitHub carry and store error reports as the developer's service providers; the
+  relay uses the phone's IP address only to rate-limit and does not store it).
 - **Processed ephemerally:** no. **Required or optional:** optional (sync is off by default).
 - **Encrypted in transit:** yes (HTTPS to Google and to the report relay).
-- **Users can request deletion:** yes — uninstall / clear storage deletes local data; Drive →
-  Settings → Manage apps → LekasPOS → Delete hidden app data deletes synced data (explained in
-  the privacy policy).
+- **Users can request deletion:** yes — uninstall / clear storage deletes local data; for synced
+  data, first turn off sync on every till (Settings → Google Drive backup → Turn off sync — a till
+  still syncing publishes everything again), then Drive on the web → Settings → Manage apps →
+  LekasPOS → Options → Delete hidden app data (explained in the privacy policy). Error reports:
+  on request (the privacy policy's contact).
 
 Re-check before submitting: if a later version changes what error reports hold, adds a server, or
 any SDK that sends data, these answers and the privacy policy change first.
@@ -88,10 +102,16 @@ any SDK that sends data, these answers and the privacy policy change first.
 - `BLUETOOTH_CONNECT` (and `BLUETOOTH` ≤ API 30): paired receipt printers and serial scanners;
   no scanning, no location.
 - `CAMERA`: optional barcode scanning, frames processed on the device.
-- `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync, and error reports when the shop allows them.
+- `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync, error reports when the shop allows them,
+  and (downloaded builds only) the daily update check against GitHub releases — the Play build
+  drops the update check (D-059, next item).
 - `REQUEST_INSTALL_PACKAGES`: **must not be in the Play build.** The downloaded app updates itself
   from GitHub (D-059); Play forbids apps that update themselves outside Play and allows this
   permission only for apps whose core purpose is installing apps. Before the first upload, make the
   Play build leave it out (`tools:node="remove"` in a Play-only manifest) and turn the update check
   off there; a copy installed by Play already never updates itself (`AppUpdates.selfUpdate`).
-- `WAKE_LOCK` (and WorkManager's foreground-service entry): background backups and sync.
+- `WAKE_LOCK`: background backups and sync can finish with the screen off.
+- `RECEIVE_BOOT_COMPLETED` (from WorkManager's manifest): the daily backup, sync and update-check
+  jobs are scheduled again after the phone restarts.
+- No foreground service: the app declares no `FOREGROUND_SERVICE` permission, so Play's
+  foreground-service declaration does not apply (check the merged manifest of the Play build).

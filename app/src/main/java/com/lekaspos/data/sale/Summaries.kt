@@ -97,10 +97,13 @@ object Summaries {
 
     /**
      * A product's rows (per day, month, year) filed under another category than the target (a product
-     * just arrived). 0 = none, so no null is bound (rawQuery takes no null arguments).
+     * just arrived). 0 = none, so no null is bound (rawQuery takes no null arguments). rawQuery binds
+     * text, and COALESCE(…) has no affinity to convert it: an integer is never equal to text, so every
+     * row of the product came back and was moved out and in again (2026-10 review) — hence the CAST.
      */
     private val MOVED = listOf("day", "month", "year").map { p ->
-        "SELECT $p, category_id, qty, net_ex, cost FROM sum_${p}_product WHERE product_id = ? AND COALESCE(category_id, 0) != ?"
+        "SELECT $p, category_id, qty, net_ex, cost FROM sum_${p}_product " +
+            "WHERE product_id = ? AND COALESCE(category_id, 0) != CAST(? AS INTEGER)"
     }
     private val MOVE = listOf("day", "month", "year").map { p ->
         "UPDATE sum_${p}_product SET category_id = ? WHERE product_id = ? AND COALESCE(category_id, 0) != ?"

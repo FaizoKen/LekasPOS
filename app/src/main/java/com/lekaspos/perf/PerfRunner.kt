@@ -81,6 +81,9 @@ class PerfRunner(private val context: Context, private val scope: CoroutineScope
                 android.util.Log.i(LOG_TAG, "DONE ERROR $t")
                 mutableState.value = State.Failed(t.toString())
             } finally {
+                // The test data (up to ~400 MB at FULL) is made again for every run: it stayed on the
+                // shop's phone after the report, out of sight (2026-10 review).
+                runCatching { PerfDataGenerator.delete(context) }
                 if (wakeLock.isHeld) wakeLock.release()
             }
         }

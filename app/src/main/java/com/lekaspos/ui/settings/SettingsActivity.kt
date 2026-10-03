@@ -11,7 +11,9 @@ import com.lekaspos.BuildConfig
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.ErrorReports
+import com.lekaspos.core.model.Perm
 import com.lekaspos.ui.catalog.CategoriesActivity
+import com.lekaspos.ui.catalog.PaymentMethodsActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
@@ -57,13 +59,16 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.shift_title, R.string.settings_shift_sub, ShiftActivity::class.java),
             Entry(R.string.customers_title, R.string.settings_customers_sub, CustomersActivity::class.java),
             Entry(R.string.menu_tax_rates, null, TaxRatesActivity::class.java),
+            Entry(R.string.pm_title, R.string.settings_pm_sub, PaymentMethodsActivity::class.java),
             Entry(R.string.menu_categories, null, CategoriesActivity::class.java),
             Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),
             Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
             Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
             Entry(R.string.error_reports_title, null, null, sub = { reportsLine() }) { chooseReports() },
+            // Both are the shop's choices like the other settings: a cashier turned the daily update
+            // check or the error reports off (2026-10 review).
             Entry(R.string.update_settings_title, null, null, sub = { UpdateUi.subtitle(this, graph.updates.status.value) }) {
-                UpdateUi.settings(this, scope)
+                requireAccess(Perm.SETTINGS) { UpdateUi.settings(this, scope) }
             },
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
             Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
@@ -113,7 +118,7 @@ class SettingsActivity : ScreenActivity() {
     }
 
     /** Error reports to the developer, on or off for this phone (D-057). */
-    private fun chooseReports() {
+    private fun chooseReports() = requireAccess(Perm.SETTINGS) {
         ReportsChoice.ask(this) { on ->
             reports = if (on) ErrorReports.ON else ErrorReports.OFF
             adapter?.notifyItemChanged(reportsRow)
@@ -137,7 +142,7 @@ class SettingsActivity : ScreenActivity() {
             .setTitle(R.string.app_name)
             .setMessage(text)
             .setPositiveButton(R.string.about_website) { _, _ -> open(WEBSITE_URL) }
-            .setNeutralButton(R.string.about_privacy) { _, _ -> open(PRIVACY_URL) }
+            .setNeutralButton(R.string.about_privacy) { _, _ -> open(getString(R.string.privacy_url)) } // privasi.html in Malay
             .setNegativeButton(R.string.ok, null)
             .show()
             .trackedBy(this)
@@ -171,7 +176,6 @@ class SettingsActivity : ScreenActivity() {
     }
 
     private companion object {
-        const val PRIVACY_URL = "https://faizoken.github.io/LekasPOS/privacy.html"
         const val WEBSITE_URL = "https://faizoken.github.io/LekasPOS/"
     }
 }

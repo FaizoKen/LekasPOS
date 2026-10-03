@@ -36,6 +36,7 @@ import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import com.lekaspos.util.Log
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -177,6 +178,8 @@ class LockActivity : Activity(), DialogHost {
                     staff.size == 1 -> select(staff[0])
                     else -> showList()
                 }
+            } catch (e: CancellationException) {
+                throw e // rotated or closed while loading: nothing to show (it crashed on the old screen)
             } catch (e: Exception) {
                 Log.e("Loading staff failed", e)
                 Dialogs.message(this@LockActivity, getString(R.string.error_title), getString(R.string.error_generic, e.message ?: e.javaClass.simpleName))
@@ -217,6 +220,8 @@ class LockActivity : Activity(), DialogHost {
         scope.launch {
             val wait = try {
                 graph.staff.waitMs(s.id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("Reading the PIN wait failed", e)
                 0L
@@ -237,6 +242,8 @@ class LockActivity : Activity(), DialogHost {
         scope.launch {
             val c = try {
                 graph.staff.signIn(s.id, pin)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("Sign-in failed", e)
                 StaffSession.Check.NotAllowed
@@ -297,6 +304,8 @@ class LockActivity : Activity(), DialogHost {
                 scope.launch {
                     val ok = try {
                         graph.staffAdmin.recover(owner.id, code, pin)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Log.e("Recovery failed", e)
                         false

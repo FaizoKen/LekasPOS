@@ -23,4 +23,21 @@
     <string name="tile_in_bill">×%1$s</string>
     <string name="pay_cancel_split">%1$s telah dibayar untuk bil ini. Batalkan bayaran dan kosongkannya?</string>
     <string name="pay_cancel_yes">Batal bayaran</string>
+    <!-- Kaedah bayaran (2026-10) -->
+    <string name="pm_title">Kaedah bayaran</string>
+    <string name="settings_pm_sub">Tunai, kad, e-dompet / QR, dan kaedah anda sendiri seperti DuitNow atau Touch ’n Go</string>
+    <string name="pm_add">Kaedah bayaran baharu</string>
+    <string name="pm_edit">Sunting kaedah bayaran</string>
+    <string name="pm_help">Setiap kaedah dikira berasingan dalam laporan syif dan jualan. Hanya tunai dibundarkan kepada 5 sen; yang lain dibayar dengan jumlah tepat.</string>
+    <string name="pm_name">Nama (pada resit)</string>
+    <string name="pm_kind">Jenis</string>
+    <string name="pm_kind_cash">Tunai</string>
+    <string name="pm_kind_card">Kad (jumlah tepat)</string>
+    <string name="pm_kind_ewallet">E-dompet atau QR (jumlah tepat)</string>
+    <string name="pm_kind_other">Lain-lain (jumlah tepat)</string>
+    <string name="pm_kind_credit">Kredit pelanggan</string>
+    <string name="pm_opens_drawer">Membuka laci tunai</string>
+    <string name="pm_active">Dipaparkan di kaunter</string>
+    <string name="pm_hidden">disembunyikan</string>
+    <string name="pm_error_name">Masukkan nama.</string>
 </resources>

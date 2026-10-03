@@ -40,6 +40,8 @@ fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () ->
             try {
                 graph.shifts.open(float)
                 opened()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // the screen closed: not an error to report
             } catch (e: Exception) {
                 Log.e("Opening the shift failed", e)
                 Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
@@ -64,6 +66,8 @@ class ShiftActivity : ScreenActivity() {
             try {
                 graph.shifts.load()
                 names = graph.db().read { StaffDao.names(it) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("Loading the shift failed", e)
             }

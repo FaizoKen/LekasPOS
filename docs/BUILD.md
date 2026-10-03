@@ -67,6 +67,14 @@ Without the two secrets the workflow tests the relay but does not deploy it. The
 made without an expiry (2026-10-02); if either token is ever replaced, update its secret and re-run
 the workflow. Locally: `cd relay; node --test`.
 
+The report key is in every APK, so the relay guards against made-up reports with two optional
+settings, `[vars]` in `relay/wrangler.toml` (not the Cloudflare dashboard: a deploy replaces those):
+
+| Name | Default | What |
+|---|---|---|
+| `MAX_BUILD` | 10000 | the highest build (`versionCode`, the CI run number) taken; a higher one is refused (400, the app drops it). **Raise it well before the app's builds get near it.** Lowering it also makes issues forget builds above it. |
+| `MAX_NEW_ISSUES` | 30 | new issues (new bugs and reports sent by hand) in an hour, counted from the reports repository's newest issues; past it the relay answers 429 and tills send again later. 1–100. |
+
 ## Everyday commands (repo root, PowerShell)
 
 ```powershell
@@ -155,7 +163,12 @@ the existing Android OAuth client keeps working.
 1. Set `versionName` in `app/build.gradle.kts` (the CI run number is the `versionCode`).
 2. Push; CI green (unit, lint, instrumented API 21 + 36, tablet, release smoke); perf FULL run.
 3. Record APK size and results in `docs/PHASES.md`.
-4. GitHub release `v<version>` on the CI build's commit, marked **latest** (not pre-release),
+4. Privacy: if the release changes what the app stores, sends, asks permission for or connects to
+   (a new permission, a new connection, new fields, what error reports hold), update the privacy
+   policy in **both** languages before publishing — `site/privacy.html` and `site/privasi.html`
+   say the same thing and carry the same "Last updated" date — and the Data Safety answers and
+   permission notes in `docs/PLAY.md`.
+5. GitHub release `v<version>` on the CI build's commit, marked **latest** (not pre-release),
    assets `LekasPOS.apk` (the website's "Download" link always takes the latest release's file of
    that name) and `LekasPOS-<version>.apk`; SHA-256 in the notes. **Publishing it updates every
    shop** (D-059): from 1.6.0 the app finds the latest release within a day and offers it. So the
@@ -163,9 +176,12 @@ the existing Android OAuth client keeps working.
    must be uploaded before the release is marked latest, and the notes need a `### What's new`
    heading with a `-` list (the app shows it; an optional `### Apa yang baharu` list is shown in
    Malay). Test builds stay **pre-releases**: only phones with "Include test versions" on see them.
-5. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
-6. Attach the CI build's `mapping.txt` (artifact `mapping`, kept 90 days) to the release as
+6. Point `PREV_APK_URL` in `ci.yml` at the new release (the smoke test upgrades from it).
+7. Attach the CI build's `mapping.txt` (artifact `mapping`, kept 90 days) to the release as
    `mapping-<version>.txt`, for reading crash traces (`retrace`). Error reports (D-057) are retraced
    from there by the reports repository's "Readable trace" workflow, so attach it to pre-releases too.
-7. Google sign-in: the Android OAuth client in project `lekaspos` matches `com.lekaspos.app` +
+8. Google sign-in: the Android OAuth client in project `lekaspos` matches `com.lekaspos.app` +
    the release key's SHA-1 (see README); the consent screen is "In production" (D-051).
+9. Version numbers in public text: the website (`site/index.html`, the English and Malay "From
+   version …" / "Version … or older" update steps) and `README.md` must still be right for the new
+   release; update them if the release changes how installing or updating works.

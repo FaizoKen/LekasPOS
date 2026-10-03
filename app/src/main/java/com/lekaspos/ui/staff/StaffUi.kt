@@ -90,6 +90,8 @@ object ApprovalDialog {
         scope.launch {
             val approvers = try {
                 graph.db().read { StaffDao.approvers(it, perm) }.filter { !ownersOnly || it.isOwner }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // the screen closed: no "not allowed" on it (it crashed the app)
             } catch (e: Exception) {
                 Log.e("Loading approvers failed", e)
                 emptyList()
@@ -122,6 +124,8 @@ object ApprovalDialog {
                 scope.launch {
                     val (check, approval) = try {
                         graph.permissions.approve(who.id, pin, perm)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Log.e("Approval failed", e)
                         StaffSession.Check.NotAllowed to null

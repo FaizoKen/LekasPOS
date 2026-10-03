@@ -12,7 +12,7 @@ data class Promotion(
     val id: Long,
     val name: String,
     val kind: Int,
-    /** MULTI_PRICE: units per group. BUY_GET_FREE: units bought per set. */
+    /** MULTI_PRICE: units per group (1: a special price for each unit). BUY_GET_FREE: units bought per set. */
     val buyQty: Int,
     /** BUY_GET_FREE: units free per set. */
     val freeQty: Int = 0,
@@ -23,7 +23,9 @@ data class Promotion(
     init {
         when (kind) {
             PromoKind.MULTI_PRICE -> {
-                require(buyQty >= 2) { "a multi-buy needs at least 2 units" }
+                // 1: a special price with dates ("now RM3.99"), 2026-10. Older tills ignore it (their
+                // check refused it: such a promotion was skipped, never applied wrongly).
+                require(buyQty >= 1) { "a multi-buy needs at least 1 unit" }
                 require(groupPrice >= 0L) { "group price must be >= 0" }
             }
             PromoKind.BUY_GET_FREE -> require(buyQty >= 1 && freeQty >= 1) { "buy X get Y needs X >= 1 and Y >= 1" }
@@ -48,7 +50,7 @@ data class AppliedPromo(val promotionId: Long, val name: String, val discount: L
  *  - only [PromoLine.eligible] lines count, in whole units (qty 1000 = one unit);
  *  - a product in several promotions takes the one with the lowest id;
  *  - units are grouped dearest first (the customer gets the best deal); for "buy X get Y" the
- *    cheapest units of each set are the free ones;
+ *    cheapest units of each set are the free ones, and their price is the set's saving;
  *  - a group never costs more than its regular price (the saving is never negative);
  *  - a group's saving is shared over its units by price (largest remainder), so every line's
  *    saving is at most its own gross.
@@ -154,13 +156,25 @@ object Promotions {
                 sets -= k
                 continue
             }
-            // A set across lines, dearest first: the last `free` units are the cheapest.
+            // A set across lines, dearest first: the last `free` units are the cheapest. Their price is
+            // the set's saving, shared over the set's lines by price like a multi-buy: kept whole on
+            // the free line, a return of the paid lines refunded their full price and the customer
+            // kept the free item for nothing (2026-10 review).
+            val parts = c.take(size)
             var paid = buy
-            for ((r, count) in c.take(size)) {
+            var saving = 0L
+            for ((r, count) in parts) {
                 val charged = minOf(paid, count)
                 paid -= charged
-                val freeHere = count - charged
-                if (freeHere > 0L) discount[r.line] = Checked.add(discount[r.line], Checked.mul(freeHere, r.price))
+                saving = Checked.add(saving, Checked.mul(count - charged, r.price))
+            }
+            if (saving > 0L) {
+                val weights = LongArray(parts.size) { Checked.mul(parts[it].first.price, parts[it].second) }
+                val shares = Rounding.allocate(saving, weights)
+                for ((i, part) in parts.withIndex()) {
+                    val line = part.first.line
+                    discount[line] = Checked.add(discount[line], shares[i])
+                }
             }
             sets--
         }

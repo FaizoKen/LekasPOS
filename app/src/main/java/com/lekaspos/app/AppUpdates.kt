@@ -24,8 +24,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
-import java.net.ConnectException
+
 import java.net.HttpURLConnection
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
@@ -101,6 +102,12 @@ class AppUpdates(
         val checkedAt: Long = 0L,
         /** Why the last check or download failed; null after a good one. */
         val problem: Problem? = null,
+        /**
+         * The known update's file failed the checks ([Problem.WRONG_APP], [Problem.NOT_INSTALLABLE]):
+         * it is not offered nor downloaded again until GitHub lists another file. Downloaded again
+         * every day, it used the shop's data and kept "Update" on the screen for ever (2026-10 review).
+         */
+        val refused: Problem? = null,
         /** The daily check on this phone (the shop can turn it off). */
         val automatic: Boolean = true,
         /** Pre-releases count too (testers). */
@@ -242,9 +249,13 @@ class AppUpdates(
                 .putString(K_SHA, update.sha256).putBoolean(K_TEST, update.test).putString(K_NOTES, update.notes)
         }
         if (!same) e.remove(K_READY)
+        val stillRefused = update != null && prefs().getString(K_REFUSED, null) == update.sha256
+        if (!stillRefused) e.remove(K_REFUSED).remove(K_REFUSED_WHY)
         e.apply()
         if (!same) clearFiles(keep = null)
-        state.update { it.copy(update = update, ready = same && it.ready, checkedAt = now) }
+        state.update {
+            it.copy(update = update, ready = same && it.ready, checkedAt = now, refused = if (stillRefused) it.refused else null)
+        }
     }
 
     // ---- download -------------------------------------------------------------------------------
@@ -255,15 +266,24 @@ class AppUpdates(
             loadBlocking()
             val u = state.value.update ?: return@withContext state.value
             if (state.value.ready && apkFile(u).length() == u.size) return@withContext state.value
+            val known = state.value.refused
+            if (known != null) {
+                state.update { it.copy(problem = known) }
+                return@withContext state.value
+            }
             state.update { it.copy(downloading = true, progress = 0, problem = null) }
             val problem = try {
                 val apk = apkFile(u)
-                fetch(u, apk) ?: verify(apk).also { if (it != null) apk.delete() }
+                fetch(u, apk) ?: verify(apk, u.version).also { if (it != null) apk.delete() }
             } finally {
                 state.update { it.copy(downloading = false) }
             }
-            if (problem == null) prefs().edit().putString(K_READY, u.sha256).apply()
-            state.update { it.copy(ready = problem == null, problem = problem) }
+            val refused = problem?.takeIf { it == Problem.WRONG_APP || it == Problem.NOT_INSTALLABLE }
+            when {
+                problem == null -> prefs().edit().putString(K_READY, u.sha256).apply()
+                refused != null -> prefs().edit().putString(K_REFUSED, u.sha256).putString(K_REFUSED_WHY, refused.name).apply()
+            }
+            state.update { it.copy(ready = problem == null, problem = problem, refused = refused) }
             state.value
         }
     }
@@ -281,7 +301,7 @@ class AppUpdates(
         } catch (e: IllegalArgumentException) {
             0L
         }
-        if (free < u.size * 2 + SPARE_BYTES) return Problem.NO_SPACE // the file, and Android's copy while installing
+        if (free < spaceNeeded(u.size)) return Problem.NO_SPACE
         val part = File(dir, into.name + ".part")
         val sha = MessageDigest.getInstance("SHA-256")
         var c: HttpURLConnection? = null
@@ -338,7 +358,7 @@ class AppUpdates(
      */
     @SuppressLint("PackageManagerGetSignatures") // every signer is compared, not only the first
     @Suppress("DEPRECATION") // getPackageInfo(String, Int): the flags overload is API 33+
-    internal fun verify(apk: File): Problem? {
+    internal fun verify(apk: File, version: String? = null): Problem? {
         val pm = app.packageManager
         val archive = archiveInfo(apk)
         if (archive == null) {
@@ -348,6 +368,13 @@ class AppUpdates(
         if (archive.packageName != app.packageName) {
             Log.w("Update: the download is ${archive.packageName}, this app is ${app.packageName}")
             return Problem.WRONG_APP
+        }
+        if (version != null && !sameVersion(archive.versionName.orEmpty(), version)) {
+            // A release whose tag names another version than the app inside (versionName not raised):
+            // once installed it still called itself the old version, so "Update" came back for ever
+            // and installed the same build again (2026-10 review). The release went wrong.
+            Log.e("Update: release $version holds version ${archive.versionName}")
+            return Problem.NOT_INSTALLABLE
         }
         val build = versionCode(archive)
         if (build <= BuildConfig.VERSION_CODE) {
@@ -364,6 +391,13 @@ class AppUpdates(
             return Problem.WRONG_APP
         }
         return null
+    }
+
+    /** "1.8" and "1.8.0" (or "v1.8") are one version: compared number by number, missing ones as 0. */
+    private fun sameVersion(a: String, b: String): Boolean {
+        val x = Releases.version(a) ?: return false
+        val y = Releases.version(b) ?: return false
+        return Releases.compare(x, y) == 0
     }
 
     /** The downloaded app's package details with its signers, or null when Android cannot read it. */
@@ -429,7 +463,7 @@ class AppUpdates(
             when {
                 s.problem == Problem.OFFLINE -> false
                 s.problem != null -> true // GitHub busy or limiting: tomorrow
-                s.update != null && !s.ready -> download().problem.let { it != Problem.OFFLINE && it != Problem.DOWNLOAD }
+                s.update != null && !s.ready && s.refused == null -> download().problem.let { it != Problem.OFFLINE && it != Problem.DOWNLOAD }
                 else -> true
             }
         }
@@ -455,11 +489,17 @@ class AppUpdates(
             }
             if (u == null) clearFiles(keep = null)
             val ready = u != null && p.getString(K_READY, null) == u.sha256 && apkFile(u).length() == u.size
+            val refused = if (u != null && p.getString(K_REFUSED, null) == u.sha256) {
+                p.getString(K_REFUSED_WHY, null)?.let { why -> Problem.values().firstOrNull { it.name == why } }
+            } else {
+                null
+            }
             state.update {
                 it.copy(
                     loaded = true,
                     update = u,
                     ready = ready,
+                    refused = refused,
                     checkedAt = p.getLong(K_CHECKED, 0L),
                     automatic = p.getBoolean(K_AUTO, true),
                     testVersions = p.getBoolean(K_TESTS, false),
@@ -473,6 +513,7 @@ class AppUpdates(
     /** No update known (and nothing downloaded for it). */
     private fun forget(e: SharedPreferences.Editor) {
         e.remove(K_VERSION).remove(K_URL).remove(K_SIZE).remove(K_SHA).remove(K_TEST).remove(K_NOTES).remove(K_READY)
+            .remove(K_REFUSED).remove(K_REFUSED_WHY)
     }
 
     private fun savedUpdate(p: SharedPreferences): Update? {
@@ -509,7 +550,8 @@ class AppUpdates(
 
     /** The phone could not reach GitHub at all (no internet, no name, timed out) or something else failed. */
     private fun networkProblem(e: IOException): Problem =
-        if (e is UnknownHostException || e is ConnectException || e is SocketTimeoutException) Problem.OFFLINE else Problem.SERVER
+        // SocketException (ConnectException among them): the connection broke or the network went away.
+        if (e is UnknownHostException || e is SocketException || e is SocketTimeoutException) Problem.OFFLINE else Problem.SERVER
 
     /** HTTPS only, redirects followed by hand (GitHub sends downloads to another host), at most [MAX_REDIRECTS]. */
     private fun connect(url: String, accept: String, etag: String?): HttpURLConnection {
@@ -558,6 +600,8 @@ class AppUpdates(
         private const val K_NOTES = "notes"
         private const val K_READY = "ready_sha256"
         private const val K_LAST_BUILD = "last_build"
+        private const val K_REFUSED = "refused_sha256"
+        private const val K_REFUSED_WHY = "refused_why"
 
         private val REDIRECTS = setOf(301, 302, 303, 307, 308)
         private const val MAX_REDIRECTS = 5
@@ -566,6 +610,9 @@ class AppUpdates(
         private const val BUFFER = 16 * 1024
         private const val SPARE_BYTES = 16L * 1024 * 1024
         private const val DAY_MS = 24L * 3600 * 1000
+
+        /** Free storage a download of [size] bytes needs: the file, Android's copy while installing, a margin. */
+        fun spaceNeeded(size: Long): Long = size * 2 + SPARE_BYTES
 
         @Suppress("DEPRECATION")
         private val SIGNATURE_FLAGS = if (Build.VERSION.SDK_INT >= 28) {

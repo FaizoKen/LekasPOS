@@ -2,11 +2,12 @@
 <!-- Phase 8: promotions. -->
 <resources>
     <string name="promo_title">Promotions</string>
-    <string name="promo_help">Deals the till applies by itself: “3 for RM10” or “buy 1 get 1 free” on one or more products. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out.</string>
+    <string name="promo_help">Deals the till applies by itself: “3 for RM10”, a special price (1 for RM3.99) or “buy 1 get 1 free” on one or more products, from a start date to an end date if you like. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out.</string>
     <string name="promo_empty">No promotions yet. Tap + to add one.</string>
     <string name="promo_add">New promotion</string>
     <string name="promo_edit">Edit promotion</string>
     <string name="promo_deal_multi">%1$d for %2$s</string>
+    <string name="promo_deal_price">Special price %1$s</string>
     <string name="promo_deal_free">Buy %1$d get %2$d free</string>
     <string name="promo_products_count">products: %1$d</string>
     <string name="promo_state_off">off</string>
@@ -17,7 +18,7 @@
     <string name="promo_name">Name (shown on the bill and the receipt)</string>
     <string name="promo_name_hint">For example: Milo 3 for RM10</string>
     <string name="promo_kind">Type</string>
-    <string name="promo_kind_multi">Multi-buy price</string>
+    <string name="promo_kind_multi">Multi-buy or special price</string>
     <string name="promo_kind_free">Buy X get Y free</string>
     <string name="promo_buy_qty">How many to buy</string>
     <string name="promo_free_qty">How many free</string>
@@ -34,7 +35,6 @@
     <string name="promo_no_date">No date</string>
     <string name="promo_active">Running</string>
     <string name="promo_error_name">Enter a name.</string>
-    <string name="promo_error_multi_qty">At least 2.</string>
     <string name="promo_error_qty">Enter a number from 1.</string>
     <string name="promo_error_price">Enter the price.</string>
     <string name="promo_error_products">Add at least one product.</string>

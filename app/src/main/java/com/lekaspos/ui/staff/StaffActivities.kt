@@ -147,6 +147,8 @@ fun changeOwnPin(a: Activity, graph: AppGraph, scope: CoroutineScope) {
                 val text = try {
                     val c = graph.staffAdmin.changeOwnPin(old, pin)
                     if (c is StaffSession.Check.Ok) a.getString(R.string.pin_changed) else checkMessage(a, c)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e("Changing the PIN failed", e)
                     ScreenActivity.errorText(a, e)

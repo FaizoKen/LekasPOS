@@ -161,7 +161,9 @@ the creation fills; products are re-indexed for search.
   uuid; every card must download — an unreadable one fails the enable), take a free receipt
   prefix if ours is used by another card, publish this till's card, then backfill + sync. After
   creating a manifest the folder is listed again: two tills that created stores at once settle
-  on the lowest id. A till joining a different existing store yields its own store settings
+  on the lowest id. A till with products or sales of its own whose account holds **another** store
+  is refused with `OTHER_STORE` (its tills named) until the owner confirms the join (`enable(join =
+  true)`, D-060): two shops on one Google account were merged for good. A till joining a different existing store yields its own store settings
   (`setting.ver_hlc = 0`), so a new till's first-run Setup never overwrites the store's receipt
   header, BRN or tax switch (D-055). Before that (D-054):
   - the folder already holds **more** of this till's files (or its card a higher `lastSeq`) than

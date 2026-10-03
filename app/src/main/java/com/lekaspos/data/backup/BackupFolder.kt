@@ -11,8 +11,8 @@ import java.io.OutputStream
 /**
  * A folder outside the app's own storage where the automatic backup is copied every day
  * (D-048): an SD card, a USB drive, or a folder the owner picked. It survives uninstalling the
- * app, and — kept apart from the phone — losing it. Only files named `lekaspos-*.lekasbak` are
- * ever listed or deleted.
+ * app, and — kept apart from the phone — losing it. Only the daily copies' own names
+ * (`lekaspos-<date>-<time>.lekasbak`) are ever listed or deleted.
  */
 interface BackupFolder {
 
@@ -29,7 +29,16 @@ interface BackupFolder {
     companion object {
         const val PREFIX = "lekaspos-"
 
-        fun isOurs(name: String) = name.startsWith(PREFIX) && name.endsWith(BackupFiles.EXT)
+        /** `lekaspos-2026-10-03-0915.lekasbak`; a folder app may add " (1)" when the name is taken. */
+        private val DAILY = Regex("""lekaspos-\d{4}-\d{2}-\d{2}-\d{4}( \(\d+\))?\.lekasbak""")
+
+        /**
+         * A daily copy written by this feature. Backups the owner saved by hand into the same
+         * folder ("lekaspos-backup-<date>.lekasbak") are not: they sorted above every daily copy by
+         * name, so the pruning kept them and deleted the daily ones, then the owner's oldest saves
+         * (2026-10 review).
+         */
+        fun isOurs(name: String) = DAILY.matches(name)
     }
 }
 
@@ -69,11 +78,60 @@ class TreeBackupFolder(private val resolver: ContentResolver, private val tree: 
         val doc = DocumentsContract.createDocument(resolver, dir, MIME, name)
             ?: throw IOException("cannot create $name")
         try {
-            val out = resolver.openOutputStream(doc, "w") ?: throw IOException("cannot write $name")
-            out.use(body)
+            // On the card itself (fsync) and the whole of it (its size read back): a card or drive pulled
+            // right after "Copied" left a cut-short copy that counted as a backup (2026-10 review).
+            val fd = try {
+                resolver.openFileDescriptor(doc, "w")
+            } catch (e: java.io.FileNotFoundException) {
+                null // a provider without file descriptors (a cloud folder): its own stream
+            }
+            var written = 0L
+            if (fd != null) {
+                fd.use {
+                    val out = Counting(FileOutputStream(it.fileDescriptor))
+                    body(out)
+                    out.flush()
+                    try {
+                        it.fileDescriptor.sync()
+                    } catch (e: java.io.SyncFailedException) {
+                        // A pipe, not a file: nothing more to do here.
+                    }
+                    written = out.count
+                }
+            } else {
+                val out = Counting(resolver.openOutputStream(doc, "w") ?: throw IOException("cannot write $name"))
+                out.use(body)
+                written = out.count
+            }
+            // Read back on the phone's own storage, SD cards and USB drives only: cloud folders may
+            // report the size only once uploaded.
+            val stored = if (tree.authority == LOCAL_STORAGE) size(doc) else null
+            if (stored != null && stored != written) throw IOException("$name holds $stored of $written bytes")
         } catch (e: Exception) {
             runCatching { DocumentsContract.deleteDocument(resolver, doc) } // no half-written backup left behind
             throw e
+        }
+    }
+
+    /** The document's size as its provider reports it, or null when it does not say. */
+    private fun size(doc: android.net.Uri): Long? =
+        resolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+        }
+
+    /** Counts what goes through. */
+    private class Counting(out: OutputStream) : java.io.FilterOutputStream(out) {
+        var count = 0L
+            private set
+
+        override fun write(b: Int) {
+            out.write(b)
+            count++
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            out.write(b, off, len)
+            count += len
         }
     }
 
@@ -101,5 +159,6 @@ class TreeBackupFolder(private val resolver: ContentResolver, private val tree: 
 
     private companion object {
         const val MIME = "application/octet-stream"
+        const val LOCAL_STORAGE = "com.android.externalstorage.documents"
     }
 }

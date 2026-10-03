@@ -33,7 +33,7 @@
     <string name="report_profit">Gross profit</string>
     <string name="report_margin">Gross margin</string>
     <string name="report_average">Average sale</string>
-    <string name="report_vs_previous">Change vs the period before (%1$s)</string>
+    <string name="report_vs_previous">Change vs %1$s (%2$s)</string>
     <string name="report_by_day">By day</string>
     <string name="report_by_week">By week</string>
     <string name="report_by_month">By month</string>

@@ -138,7 +138,8 @@ Bill level:
 `:core` `Promotions.apply` (pure), called by `Cart.price(inclTax, promotions)` before
 `PricingEngine`. Two kinds (`PromoKind`), each on a set of products (any mix counts):
 
-- **MULTI_PRICE** "N for P": every group of N units costs P (N ≥ 2, P ≥ 0).
+- **MULTI_PRICE** "N for P": every group of N units costs P (N ≥ 1, P ≥ 0; N = 1 is a special
+  price per unit, "now RM3.99" — added 2026-10, older tills skip such a promotion).
 - **BUY_GET_FREE** "buy X get Y": in every set of X + Y units, the Y cheapest are free.
 
 Rules:
@@ -148,8 +149,10 @@ Rules:
 - A product in several running promotions takes the one with the **lowest id**.
 - Units are sorted **dearest first** (ties by line order) and grouped in that order, so mixed
   prices give the customer the bigger saving; for buy-get-free the last Y of each set are free.
-- A group's saving = regular − P, **never negative**; it is shared over the group's lines by
-  price with largest remainder (§2), so a line never saves more than its gross.
+- A group's saving = regular − P, **never negative**; for buy-get-free a set's saving is the
+  price of its free units. Either is shared over the group's lines by price with largest
+  remainder (§2), so a line never saves more than its gross and a return of part of a deal
+  refunds that part's share (the free line no longer holds the whole saving — 2026-10).
 - The saving becomes the line's `Discount.Amount`, so bill discounts, tax, cash rounding and
   refunds (net per unit, §6) work unchanged. The sale line stores `promo_id` and the name at the
   time (`promo_name`); receipts print that name instead of "Discount".
@@ -160,6 +163,6 @@ Rules:
 | 3 for RM10 | 4 × 390 / 6 × 390 | 170 / 340 |
 | mix and match 3 for RM10 | 2 × 390 + 2 × 350 | group 390+390+350: saving 130 → 90 and 40 |
 | buy 1 get 1 | 2 / 3 / 4 × 500 | 500 / 500 / 1000 |
-| buy 2 get 1 | 600 + 500 + 400 | 400 free |
+| buy 2 get 1 | 600 + 500 + 400 | 400 free, shared 160 / 133 / 107 |
 | deal dearer than shelf | 3 × 300 for 1000 | no saving |
 | in the bill (6% inclusive) | 3 × 390 promo + 350 | net 1000 + 350, tax 57 on the promo line |

@@ -86,7 +86,8 @@ class SyncMergeTest {
 
     private fun till(): AppGraph = TestGraph.create().also { tills.add(it) }
 
-    private fun enable(t: AppGraph, name: String = "Till") = runBlocking { t.sync.enable(provider, name) }
+    /** [join]: the owner said yes to "join another shop?" (asked when the till has data of its own). */
+    private fun enable(t: AppGraph, name: String = "Till", join: Boolean = true) = runBlocking { t.sync.enable(provider, name, join = join) }
 
     /** Everyone syncs, twice (the second round spreads what the first brought in). */
     private fun syncAll(vararg ts: AppGraph) = runBlocking {
@@ -168,7 +169,13 @@ class SyncMergeTest {
         val b = till()
         val roti = product(b, "Roti", 350L) // B was used on its own before joining
         sell(b, roti, 2_000L)
-        enable(b, "Counter B")
+        // 2026-10 review: its own products and sales would join A's store for good, so it asks first
+        // (two shops on one Google account were merged); nothing changed yet.
+        val asked = assertFailsWith<SyncEngine.Problem> { enable(b, "Counter B", join = false) }
+        assertEquals(SyncEngine.Problem.Reason.OTHER_STORE, asked.reason)
+        assertEquals(listOf("Counter A"), asked.tills)
+        runBlocking { assertTrue(!b.db().syncEnabled) }
+        enable(b, "Counter B", join = true)
         syncAll(a, b)
         assertConverged(a, b)
         runBlocking {
@@ -195,7 +202,7 @@ class SyncMergeTest {
         sell(a, kopi, 2_000L)
         enable(a, "Counter A")
         val b = till()
-        enable(b, "Counter B")
+        enable(b, "Counter B", join = false) // a new till has nothing of its own: nothing to ask
         syncAll(a, b)
         // B moves Kopi to the snacks and sells it again; A changed nothing.
         runBlocking {
@@ -536,6 +543,33 @@ class SyncMergeTest {
         runBlocking {
             val name = a.db().read { r -> r.queryList("SELECT promo_name FROM sale_line WHERE product_id = ?", arrayOf(milo.toString())) { it.getString(0) } }
             assertEquals(listOf("Milo 3 for RM10"), name)
+        }
+    }
+
+    /**
+     * 2026-10 review: a promotion imported in a round that then failed (here: publishing the
+     * device card) was in the database but not in memory — the till kept the old deals until it
+     * restarted, as the segment is never read again.
+     */
+    @Test
+    fun aPromotionImportedByARoundThatFailsLaterStillApplies() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val milo = product(a, "Milo", 390L)
+        syncAll(a, b)
+        runBlocking {
+            a.promotions.save(null, PromotionRow(0L, "Milo 3 for RM10", PromoKind.MULTI_PRICE, 3, 0, 1_000L, listOf(milo)))
+            a.sync.sync(provider)
+            val noCard = object : SyncProvider by provider {
+                override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
+                    if (name.startsWith("dev-")) throw java.io.IOException("connection lost")
+                    return provider.put(name, file, props, replace, fresh)
+                }
+            }
+            assertFailsWith<java.io.IOException> { b.sync.sync(noCard) }
+            assertEquals(listOf("Milo 3 for RM10"), b.promotions.all().map { it.name })
         }
     }
 

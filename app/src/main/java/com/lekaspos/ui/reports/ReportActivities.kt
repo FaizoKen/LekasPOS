@@ -143,8 +143,11 @@ class ReportsActivity : ScreenActivity() {
     private fun load() {
         job?.cancel()
         val p = period
+        // A month or a year with the same days before; a custom range of more than a week that starts
+        // on the 1st too (it reads as months); days and weeks with the days just before.
+        val compare = preset?.comparison(p) ?: if (p.days > 7L) p.sameDaysBefore() else p.previous()
         job = launchUi {
-            val rep = graph.reports.build(p)
+            val rep = graph.reports.build(p, compare = compare)
             val stock = graph.reports.stock()
             render(rep, stock)
         }
@@ -175,7 +178,7 @@ class ReportsActivity : ScreenActivity() {
         if (prev != 0L) {
             val change = ReportMath.changeBp(t.total, prev)
             val text = change?.let { (if (it > 0L) "+" else "") + percent(it) } ?: "-"
-            f.row(getString(R.string.report_vs_previous, money(prev)), text)
+            f.row(getString(R.string.report_vs_previous, periodText(rep.compare), money(prev)), text)
         }
 
         if (rep.buckets.isNotEmpty() && rep.period.days > 1L) {
