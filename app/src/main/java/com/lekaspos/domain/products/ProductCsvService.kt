@@ -86,6 +86,9 @@ class ProductCsvService(private val graph: AppGraph) {
          * the rows after them, where the import continues.
          */
         val resumeFrom: Int = 0,
+        /** Where and why the file could not be read ([malformed]), for the screen to say in its language. */
+        val malformedLine: Int = 0,
+        val malformedReason: com.lekaspos.core.csv.CsvReader.Malformed.Reason? = null,
     ) {
         val importable: Boolean get() = malformed == null && !spreadsheet && missing.isEmpty() && newProducts + updates > 0
     }
@@ -104,7 +107,8 @@ class ProductCsvService(private val graph: AppGraph) {
         object Idle : State()
         data class Running(val rows: Int) : State()
         data class Done(val result: Result) : State()
-        data class Failed(val error: String) : State()
+        /** [storageFull]: the phone ran out of room (said in words, not SQLite's English). */
+        data class Failed(val error: String, val storageFull: Boolean = false) : State()
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -251,7 +255,7 @@ class ProductCsvService(private val graph: AppGraph) {
                 tooMany = rows.capped
             }
         } catch (e: CsvReader.Malformed) {
-            return@withContext result(e.message)
+            return@withContext result(e.message).copy(malformedLine = e.line, malformedReason = e.reason)
         } catch (e: CsvInput.SpreadsheetFile) {
             return@withContext Preview(0, 0, 0, 0, emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), false, spreadsheet = true)
         }
@@ -280,10 +284,13 @@ class ProductCsvService(private val graph: AppGraph) {
                 State.Done(import(open, setStock, actor.staffId, actor.approvedBy, stockAllowed = stockAllowed, resume = resume))
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Any failure, an Error too (out of memory): left "Running", the screen said "Importing…"
+                // and refused every new import until the app restarted (2026-10 review).
                 Log.e("Product import failed", e)
-                State.Failed(e.message ?: e.javaClass.simpleName)
+                State.Failed(e.message ?: e.javaClass.simpleName, storageFull = com.lekaspos.util.Storage.isFull(e))
             }
+            graph.catalogChanged() // a failed import may have saved some rows too
         }
     }
 

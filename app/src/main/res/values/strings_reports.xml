@@ -76,6 +76,12 @@
     <string name="import_reading">Reading the file…</string>
     <string name="import_file">File</string>
     <string name="import_malformed">The file cannot be read: %1$s</string>
+    <string name="import_malformed_at">line %1$d: %2$s</string>
+    <string name="csv_line_too_long">a line is too long</string>
+    <string name="csv_text_after_quote">text after a closing quote</string>
+    <string name="csv_too_many_columns">too many columns</string>
+    <string name="csv_field_too_long">a cell is too long</string>
+    <string name="csv_quote_not_closed">a quote is never closed</string>
     <string name="import_missing">Required columns are missing: %1$s. The first line of the file must name the columns (at least name and price).</string>
     <string name="import_rows">Lines with products</string>
     <string name="import_new">New products</string>
@@ -119,9 +125,18 @@
     <string name="import_resume">The first %1$d product lines of this file were already imported before the app was closed. The import continues after them (the counts below are for the rest).</string>
     <string name="import_start_again">Start again from the first line</string>
     <string name="import_start_again_help">Starting again imports the lines already done a second time: products without barcode, SKU or number are then created twice.</string>
-    <string name="import_examples">%1$d example lines (names starting with EXAMPLE or CONTOH) are not imported.</string>
-    <string name="import_tax_unmatched">%1$d products name a tax that is not in Tax rates (%2$s): they are imported without it, and existing products keep their tax. To tax them, add the rate under Tax rates first and import again.</string>
-    <string name="import_unreadable">%1$d lines have characters that could not be read (shown as �), the first on line %2$d. In Excel, save the file as “CSV UTF-8” and import it again to keep them.</string>
+    <plurals name="import_examples">
+        <item quantity="one">%1$d example line (a name starting with EXAMPLE or CONTOH) is not imported.</item>
+        <item quantity="other">%1$d example lines (names starting with EXAMPLE or CONTOH) are not imported.</item>
+    </plurals>
+    <plurals name="import_tax_unmatched">
+        <item quantity="one">%1$d product names a tax that is not in Tax rates (%2$s): it is imported without it, and an existing product keeps its tax. To tax it, add the rate under Tax rates first and import again.</item>
+        <item quantity="other">%1$d products name a tax that is not in Tax rates (%2$s): they are imported without it, and existing products keep their tax. To tax them, add the rate under Tax rates first and import again.</item>
+    </plurals>
+    <plurals name="import_unreadable">
+        <item quantity="one">%1$d line has characters that could not be read (shown as �), on line %2$d. In Excel, save the file as “CSV UTF-8” and import it again to keep them.</item>
+        <item quantity="other">%1$d lines have characters that could not be read (shown as �), the first on line %2$d. In Excel, save the file as “CSV UTF-8” and import it again to keep them.</item>
+    </plurals>
     <string name="import_too_many_rows">This file has more than %1$d product lines: only the first %1$d are read and imported. Put the rest in another file.</string>
     <string name="import_resumed">Imported before the app was closed (lines)</string>
 </resources>

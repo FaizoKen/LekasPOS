@@ -32,6 +32,7 @@ import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.PinPad
 import com.lekaspos.ui.common.RowAdapter
+import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import com.lekaspos.util.Log
@@ -245,8 +246,12 @@ class LockActivity : Activity(), DialogHost {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Said as it is (a full phone, say): "This person cannot sign in" sent the owner looking
+                // for a fault in their PIN (2026-10 review).
                 Log.e("Sign-in failed", e)
-                StaffSession.Check.NotAllowed
+                pinPad.setEnabled(true)
+                pinPad.setMessage(ScreenActivity.errorText(this@LockActivity, e))
+                return@launch
             }
             pinPad.setEnabled(true)
             when (c) {
@@ -307,8 +312,10 @@ class LockActivity : Activity(), DialogHost {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Not "That recovery code is not right": the owner thought the code was lost (2026-10 review).
                         Log.e("Recovery failed", e)
-                        false
+                        Dialogs.message(this@LockActivity, null, ScreenActivity.errorText(this@LockActivity, e))
+                        return@launch
                     }
                     if (ok) {
                         finish()

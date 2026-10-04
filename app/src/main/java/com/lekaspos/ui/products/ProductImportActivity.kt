@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Switch
 import com.lekaspos.R
+import com.lekaspos.core.csv.CsvReader
 import com.lekaspos.core.csv.ProductCsv
 import com.lekaspos.core.csv.ProductCsv.Column
 import com.lekaspos.core.csv.ProductCsv.Problem
@@ -48,8 +49,11 @@ class ProductImportActivity : ScreenActivity() {
                     ProductCsvService.State.Idle -> if (preview == null) loadPreview() else showPreview()
                     is ProductCsvService.State.Running -> showMessage(getString(R.string.import_running, st.rows))
                     is ProductCsvService.State.Done -> if (mine) showDone(st.result) else graph.productCsv.acknowledge()
-                    is ProductCsvService.State.Failed ->
-                        if (mine) showMessage(getString(R.string.error_generic, st.error), done = true) else graph.productCsv.acknowledge()
+                    is ProductCsvService.State.Failed -> if (mine) {
+                        showMessage(if (st.storageFull) getString(R.string.error_storage_full) else getString(R.string.error_generic, st.error), done = true)
+                    } else {
+                        graph.productCsv.acknowledge()
+                    }
                 }
             }
         }
@@ -90,7 +94,21 @@ class ProductImportActivity : ScreenActivity() {
             content.addView(f.view)
             return
         }
-        if (p.malformed != null) f.info(getString(R.string.import_malformed, p.malformed))
+        if (p.malformed != null) {
+            // In the screen's language: "Fail tidak dapat dibaca: line 3: quote not closed" (2026-10 review).
+            val why = p.malformedReason?.let { r ->
+                getString(R.string.import_malformed_at, p.malformedLine, getString(
+                    when (r) {
+                        CsvReader.Malformed.Reason.LINE_TOO_LONG -> R.string.csv_line_too_long
+                        CsvReader.Malformed.Reason.TEXT_AFTER_QUOTE -> R.string.csv_text_after_quote
+                        CsvReader.Malformed.Reason.TOO_MANY_COLUMNS -> R.string.csv_too_many_columns
+                        CsvReader.Malformed.Reason.FIELD_TOO_LONG -> R.string.csv_field_too_long
+                        CsvReader.Malformed.Reason.QUOTE_NOT_CLOSED -> R.string.csv_quote_not_closed
+                    },
+                ))
+            } ?: p.malformed
+            f.info(getString(R.string.import_malformed, why))
+        }
         if (p.missing.isNotEmpty()) f.info(getString(R.string.import_missing, p.missing.joinToString(", ") { it.header }))
         if (p.resumeFrom > 0) f.info(getString(R.string.import_resume, p.resumeFrom))
         f.row(getString(R.string.import_rows), p.rows.toString())
@@ -98,9 +116,11 @@ class ProductImportActivity : ScreenActivity() {
         f.row(getString(R.string.import_updates), p.updates.toString(), bold = true)
         if (p.badRows > 0) f.row(getString(R.string.import_bad), p.badRows.toString(), bold = true)
         if (p.tooManyRows) f.info(getString(R.string.import_too_many_rows, ProductCsv.MAX_ROWS))
-        if (p.examples > 0) f.info(getString(R.string.import_examples, p.examples))
-        if (p.unreadable > 0) f.info(getString(R.string.import_unreadable, p.unreadable, p.firstUnreadableLine))
-        if (p.taxUnmatched > 0) f.info(getString(R.string.import_tax_unmatched, p.taxUnmatched, p.taxUnmatchedNames.joinToString(", ")))
+        if (p.examples > 0) f.info(resources.getQuantityString(R.plurals.import_examples, p.examples, p.examples))
+        if (p.unreadable > 0) f.info(resources.getQuantityString(R.plurals.import_unreadable, p.unreadable, p.unreadable, p.firstUnreadableLine))
+        if (p.taxUnmatched > 0) {
+            f.info(resources.getQuantityString(R.plurals.import_tax_unmatched, p.taxUnmatched, p.taxUnmatched, p.taxUnmatchedNames.joinToString(", ")))
+        }
         if (p.unknown.isNotEmpty()) f.info(getString(R.string.import_unknown_columns, p.unknown.joinToString(", ")))
         if (p.newCategories.isNotEmpty()) f.info(getString(R.string.import_new_categories, p.newCategories.joinToString(", ")))
         if (p.issues.isNotEmpty()) {

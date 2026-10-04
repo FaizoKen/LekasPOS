@@ -33,6 +33,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -86,6 +87,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
     protected fun setScreen(title: CharSequence, layout: Int? = null): View? {
         setContentView(R.layout.screen)
         Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
+        KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
         findViewById<View>(R.id.back).setOnClickListener { finish() }
         titleView = findViewById(R.id.title)
         titleView.text = title
@@ -134,6 +136,8 @@ abstract class ScreenActivity : Activity(), DialogHost {
         s.launch(Dispatchers.Main.immediate) {
             try {
                 whenLoaded()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // the screen stopped meanwhile (Home pressed): not a failure, and no jump home
             } catch (e: Exception) {
                 // The database cannot be read (full disk, damage): the selling screen says why,
                 // instead of this screen taking the app down at every start (2026-10 review).
@@ -157,8 +161,34 @@ abstract class ScreenActivity : Activity(), DialogHost {
                 graph.staff.state.first { it.locked }
                 goHome()
             }
+            // A serial (SPP) scanner's codes, on the screens that take scans: they reached the selling
+            // screen only, and a count or a delivery scanned with one lost every code (2026-10 review).
+            serialScans()?.let { take ->
+                graph.sppScanner.hold(this@ScreenActivity)
+                launch {
+                    graph.sppScanner.codes.collect { code ->
+                        when {
+                            graph.staff.activity() -> goHome()
+                            // Not under a dialog (a quantity being typed), as a keyboard scanner's code does not reach
+                            // the screen then; not while closing (the screen below takes it).
+                            hasWindowFocus() && !isFinishing -> take(code)
+                        }
+                    }
+                }
+            }
             enter(s)
         }
+    }
+
+    private val starts = LaunchGuard()
+
+    /**
+     * Every screen this one opens goes through here: the same screen asked for twice within a moment
+     * (a double tap) opens once. Two Refund screens of one sale each refunded the same return, and a
+     * second Receive screen wrote its empty draft over the first one's lines (2026-10 review).
+     */
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        if (starts.allow(intent)) super.startActivityForResult(intent, requestCode, options)
     }
 
     /** Runs [onStarted] when the user may use this screen; otherwise asks for a manager's approval once. */
@@ -188,12 +218,19 @@ abstract class ScreenActivity : Activity(), DialogHost {
             goHome()
             return true
         }
-        return super.dispatchKeyEvent(event)
+        return screenKey(event) || super.dispatchKeyEvent(event)
     }
+
+    /**
+     * A screen's own keys (a keyboard-wedge scanner's), after the idle check: true when taken.
+     * Screens that took them before it never counted a scan as use — a count scanned without
+     * touching the screen locked half-way — and a scan after the idle time still acted (2026-10 review).
+     */
+    protected open fun screenKey(event: KeyEvent): Boolean = false
 
     /** The till is locked: back to the selling screen, which shows the sign-in. */
     private fun goHome() {
-        startActivity(Intent(this, SellActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+        startActivity(Intent(this, SellActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
         finish()
     }
 
@@ -335,11 +372,15 @@ abstract class ScreenActivity : Activity(), DialogHost {
         startedScope?.cancel()
         startedScope = null
         graph.staff.screenStopped()
+        graph.sppScanner.release(this)
         super.onStop()
     }
 
     /** Collect state flows here; [scope] is cancelled in onStop. */
     protected open fun onStarted(scope: CoroutineScope) {}
+
+    /** Where a serial (SPP) scanner's codes go while this screen is in front; null: it takes none. */
+    protected open fun serialScans(): ((String) -> Unit)? = null
 
     override fun onDestroy() {
         if (isFinishing) for (t in elevations) graph.permissions.release(t)
@@ -347,6 +388,29 @@ abstract class ScreenActivity : Activity(), DialogHost {
         dialogs.dismissAll()
         scope.cancel()
         super.onDestroy()
+    }
+
+    /**
+     * Runs [block] in the app scope (leaving this screen cannot cut it off half-way) and waits for it
+     * here. A failure after this screen stopped waiting (Back, the idle lock) is logged and said with a
+     * toast: it went unseen, a refund or delivery silently not made (2026-10 review).
+     */
+    suspend fun <T> outlivingScreen(block: suspend () -> T): T {
+        val app = applicationContext
+        val job = graph.appScope.async(Dispatchers.Main) { block() }
+        try {
+            return job.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            if (job.isActive) {
+                job.invokeOnCompletion { t ->
+                    if (t == null || t is kotlinx.coroutines.CancellationException) return@invokeOnCompletion
+                    Log.e("A job of a closed screen failed", t)
+                    val text = if (t is ActionRefused) app.getString(R.string.not_allowed) else app.getString(R.string.error_generic, t.message ?: t.javaClass.simpleName)
+                    Toast.makeText(app, text, Toast.LENGTH_LONG).show()
+                }
+            }
+            throw e
+        }
     }
 
     /** Keeps the phone's screen (and so its CPU) on while a long job of this screen runs. */
@@ -407,6 +471,15 @@ abstract class ScreenActivity : Activity(), DialogHost {
                     ActionRefused.Reason.WRONG_PIN -> R.string.pin_wrong_plain
                     ActionRefused.Reason.MORE_THAN_OWED -> R.string.error_more_than_owed
                     ActionRefused.Reason.OWNER_ONLY -> R.string.error_owner_only
+                },
+            )
+            // A picked file that is no sound backup: said in the screen's language, not the English message.
+            is com.lekaspos.data.backup.BackupFiles.Invalid -> a.getString(
+                when (e.kind) {
+                    com.lekaspos.data.backup.BackupFiles.Invalid.Kind.NOT_A_BACKUP -> R.string.backup_not_a_backup
+                    com.lekaspos.data.backup.BackupFiles.Invalid.Kind.NEWER_APP -> R.string.backup_newer_app
+                    com.lekaspos.data.backup.BackupFiles.Invalid.Kind.NO_ROOM -> R.string.error_storage_full
+                    com.lekaspos.data.backup.BackupFiles.Invalid.Kind.DAMAGED -> R.string.backup_file_damaged
                 },
             )
             else -> if (Storage.isFull(e)) {

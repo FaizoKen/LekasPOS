@@ -48,13 +48,22 @@ object BackupFiles {
         val products: Long,
     )
 
-    class Invalid(message: String) : Exception(message)
+    /**
+     * A file that is no sound backup this app can restore. [kind] is what the screens say (in their
+     * language: the English [message] showed on Malay screens, 2026-10 review); [message] is for logs.
+     */
+    class Invalid(message: String, val kind: Kind = Kind.DAMAGED) : Exception(message) {
+        enum class Kind { NOT_A_BACKUP, NEWER_APP, DAMAGED, NO_ROOM }
+    }
 
     /** Free storage an unpacked backup must leave on the phone. */
     private const val UNPACK_MARGIN = 20L * 1024L * 1024L
 
-    /** Writes a backup of the open [db] to [out]; [temp] is a scratch directory. */
-    fun write(db: Db, out: OutputStream, temp: File, appVersion: String, reason: String) {
+    /**
+     * Writes a backup of the open [db] to [out]; [temp] is a scratch directory. [beforeCopy] runs
+     * once writes wait, before anything is copied: it may throw to give up.
+     */
+    fun write(db: Db, out: OutputStream, temp: File, appVersion: String, reason: String, beforeCopy: () -> Unit = {}) {
         temp.mkdirs()
         val dbCopy = File(temp, "copy.db")
         val walCopy = File(temp, "copy.db-wal")
@@ -67,6 +76,7 @@ object BackupFiles {
             // The copies go in the finally below also when copying fails: a half copy left by a
             // full disk filled the phone, and the next sale failed (2026-10 review).
             val header = db.onWriterThread { sqlite ->
+                beforeCopy()
                 val complete = checkpoint(sqlite)
                 copy(db.file, dbCopy, sync = false)
                 val wal = File(db.file.path + "-wal")
@@ -124,32 +134,46 @@ object BackupFiles {
                 val n = input.read(buf)
                 if (n < 0) break
                 room -= n
-                if (room < 0L) throw Invalid("there is not enough free storage on this phone to unpack the backup")
+                if (room < 0L) throw Invalid("there is not enough free storage on this phone to unpack the backup", Invalid.Kind.NO_ROOM)
                 out.write(buf, 0, n)
             }
         }
-        readZip(input) { z ->
-            while (true) {
-                val e = z.nextEntry ?: break
-                when (e.name) {
-                    HEADER -> if (header == null) header = parseHeader(CutShortGuard(z)) // the first one counts
-                    DB -> copy(z, File(dir, DB))
-                    WAL -> copy(z, File(dir, WAL))
-                    else -> Unit // unknown parts of a newer format are ignored
+        // A file cut short or no ZIP at all is a bad file the user picked (said so in words, no error
+        // report): the raw ZipException or EOFException showed before (2026-10 review).
+        try {
+            readZip(input) { z ->
+                while (true) {
+                    val e = z.nextEntry ?: break
+                    when (e.name) {
+                        HEADER -> if (header == null) header = parseHeader(CutShortGuard(z)) // the first one counts
+                        DB -> copy(z, File(dir, DB))
+                        WAL -> copy(z, File(dir, WAL))
+                        else -> Unit // unknown parts of a newer format are ignored
+                    }
                 }
             }
+        } catch (e: java.util.zip.ZipException) {
+            throw Invalid("not a readable backup file (${e.message})", Invalid.Kind.DAMAGED)
+        } catch (e: java.io.EOFException) {
+            throw Invalid("the backup file is cut short", Invalid.Kind.DAMAGED)
         }
-        val h = header ?: throw Invalid("not a LekasPOS backup")
+        val h = header ?: throw Invalid("not a LekasPOS backup", Invalid.Kind.NOT_A_BACKUP)
         val file = File(dir, DB)
-        if (!file.exists()) throw Invalid("the backup has no database")
-        if (h.schema > Schema.VERSION) throw Invalid("made by a newer version of the app (schema ${h.schema})")
+        if (!file.exists()) throw Invalid("the backup has no database", Invalid.Kind.NOT_A_BACKUP)
+        if (h.schema > Schema.VERSION) throw Invalid("made by a newer version of the app (schema ${h.schema})", Invalid.Kind.NEWER_APP)
         // Opening read-write folds the WAL into the file; closing leaves one self-contained file.
-        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE, KeepDamagedDatabase).use { r ->
-            val check = r.pragma("PRAGMA quick_check")
-            if (check != "ok") throw Invalid("the database in the backup is damaged ($check)")
-            if (r.version > Schema.VERSION) throw Invalid("made by a newer version of the app")
-            if (r.version < 1) throw Invalid("not a LekasPOS database (version ${r.version})")
-            if (Meta.get(r, Meta.DEVICE_UUID) == null || Meta.get(r, Meta.STORE_UUID) == null) throw Invalid("the backup has no store identity")
+        try {
+            SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE, KeepDamagedDatabase).use { r ->
+                val check = r.pragma("PRAGMA quick_check")
+                if (check != "ok") throw Invalid("the database in the backup is damaged ($check)")
+                if (r.version > Schema.VERSION) throw Invalid("made by a newer version of the app", Invalid.Kind.NEWER_APP)
+                if (r.version < 1) throw Invalid("not a LekasPOS database (version ${r.version})", Invalid.Kind.NOT_A_BACKUP)
+                if (Meta.get(r, Meta.DEVICE_UUID) == null || Meta.get(r, Meta.STORE_UUID) == null) throw Invalid("the backup has no store identity", Invalid.Kind.NOT_A_BACKUP)
+            }
+        } catch (e: android.database.sqlite.SQLiteException) {
+            // Not a database, or one too damaged to open: no backup this app can restore.
+            if (com.lekaspos.util.Storage.isFull(e)) throw e
+            throw Invalid("the database in the backup cannot be opened (${e.message})", Invalid.Kind.DAMAGED)
         }
         File(dir, WAL).delete()
         File(dir, "$DB-shm").delete()
@@ -283,7 +307,7 @@ object BackupFiles {
             }
         }
         r.endObject()
-        if (format < 1) throw Invalid("unknown backup format")
+        if (format < 1) throw Invalid("unknown backup format", Invalid.Kind.NOT_A_BACKUP)
         return Header(format, createdAt, reason, store, device, deviceNo, schema, app, name, sales, products)
     }
 

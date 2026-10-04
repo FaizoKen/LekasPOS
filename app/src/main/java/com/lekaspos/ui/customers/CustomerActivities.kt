@@ -52,7 +52,10 @@ class CustomersActivity : ScreenActivity() {
     private val adapter = RowAdapter<CustomerItem>(
         bind = { h, c ->
             val currency = graph.settings.store.value.currency
-            h.set(c.name, c.phone, if (c.balance != 0L) MoneyFormat.format(c.balance, currency) else null)
+            h.set(
+                c.name, c.phone, if (c.balance != 0L) MoneyFormat.format(c.balance, currency) else null,
+                if (c.removed) getString(R.string.customer_removed_tag) else null,
+            )
         },
         onClick = { c ->
             if (pick) {
@@ -113,7 +116,8 @@ class CustomersActivity : ScreenActivity() {
         val q = search.text.toString()
         job = launchUi {
             if (debounce) delay(200L)
-            val items = graph.customers.page(q, null)
+            // Removed customers still owing come first (to settle), never when picking one for a bill.
+            val items = graph.customers.page(q, null, withRemoved = !pick)
             adapter.submit(items)
             end = items.size < PAGE
             empty.setText(if (q.isBlank()) R.string.customers_empty else R.string.customers_none_found)
@@ -148,6 +152,9 @@ class CustomerActivity : ScreenActivity() {
     private var customerId = 0L
     private var customer: Customer? = null
     private var balance = 0L
+
+    /** Deleted (here or on another till): only the balance can be settled (2026-10 review). */
+    private var removed = false
     private lateinit var header: TextView
     private lateinit var empty: TextView
     private var job: Job? = null
@@ -196,10 +203,12 @@ class CustomerActivity : ScreenActivity() {
             val loaded = graph.customers.get(customerId) ?: return@launchUi finish()
             customer = loaded.first
             balance = loaded.second
+            removed = graph.customers.isRemoved(customerId)
             val c = loaded.first
             val currency = graph.settings.store.value.currency
             setScreenTitle(c.name)
             val lines = ArrayList<String>(4)
+            if (removed) lines.add(getString(R.string.customer_removed_line))
             lines.add(getString(R.string.customer_owes, MoneyFormat.format(balance, currency)))
             if (c.creditLimit > 0L) {
                 lines.add(getString(R.string.customer_limit_line, MoneyFormat.format(c.creditLimit, currency), MoneyFormat.format(CreditMath.available(balance, c.creditLimit) ?: 0L, currency)))
@@ -225,7 +234,11 @@ class CustomerActivity : ScreenActivity() {
 
     private fun actions() {
         val c = customer ?: return
-        val items = listOf(R.string.credit_receive, R.string.credit_adjust_title, R.string.customer_edit, R.string.delete)
+        val items = if (removed) {
+            listOf(R.string.credit_receive, R.string.credit_adjust_title) // settle only
+        } else {
+            listOf(R.string.credit_receive, R.string.credit_adjust_title, R.string.customer_edit, R.string.delete)
+        }
         Dialogs.choose(this, c.name, items.map { getString(it) }) { i ->
             when (items[i]) {
                 R.string.credit_receive -> receive(c)

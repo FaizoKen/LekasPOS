@@ -22,6 +22,7 @@ import com.lekaspos.hw.printer.Images
 import com.lekaspos.hw.printer.ReceiptRenderer
 import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -68,8 +69,10 @@ object ReceiptShare {
                 }
             } catch (e: Exception) {
                 Log.e("Sharing a receipt failed", e)
-                val t = a.takeIf { !it.isFinishing && !it.isDestroyed } ?: app // the app's language, if the screen is there
-                Toast.makeText(app, t.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                // In the screen's language when it is there; a full phone said as such.
+                val alive = a.takeIf { !it.isFinishing && !it.isDestroyed }
+                val text = if (alive != null) ScreenActivity.errorText(alive, e) else app.getString(R.string.error_generic, e.message ?: e.javaClass.simpleName)
+                Toast.makeText(app, text, Toast.LENGTH_LONG).show()
             } catch (e: OutOfMemoryError) {
                 // A very long receipt as a picture on a small phone: said, not silent (2026-10 review).
                 Log.e("Sharing a receipt failed", e)
@@ -113,7 +116,13 @@ object ReceiptShare {
             val logo = if (logoWanted) Images.logo(ctx, width) else null
             val bmp = ReceiptRenderer(COLS, width).bitmap(lines, logo, qrFor(lines, width / 2), Bitmap.Config.RGB_565)
             try {
-                FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                // false, not an exception, when the file cannot be written (a full phone): a broken
+                // picture was shared (2026-10 review).
+                val written = FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                if (!written) {
+                    f.delete()
+                    throw java.io.IOException("the picture could not be written")
+                }
                 f
             } finally {
                 bmp.recycle()

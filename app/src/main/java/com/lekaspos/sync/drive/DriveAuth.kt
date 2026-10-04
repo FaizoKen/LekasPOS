@@ -9,6 +9,8 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.security.ProviderInstaller
 import com.google.android.gms.tasks.Tasks
@@ -51,7 +53,7 @@ object DriveAuth {
     fun playServicesAvailable(ctx: Context): Boolean =
         GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ctx) == ConnectionResult.SUCCESS
 
-    /** Blocks on Play Services: never call on the main thread. */
+    /** Blocks on Play Services: never call on the main thread. Throws an IOException when Google cannot be reached. */
     suspend fun authorize(ctx: Context, account: String? = null): Result = withContext(Dispatchers.IO) {
         if (!playServicesAvailable(ctx)) return@withContext Result.Unavailable("Google Play services are not available")
         if (!securityChecked) {
@@ -75,9 +77,19 @@ object DriveAuth {
                 else -> Result.Unavailable("no access token")
             }
         } catch (e: Exception) {
+            // No network, or Play services did not answer in time: thrown as the network failure it is,
+            // so the screens say "offline" and a round is retried like any other without internet (it
+            // showed Google's "7: " or "TimeoutException", 2026-10 review).
+            if (unreachable(e)) throw java.net.ConnectException("Google could not be reached").apply { initCause(e) }
             Log.w("Google authorization failed", e)
             Result.Unavailable(e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    private fun unreachable(e: Exception): Boolean {
+        val cause = (e as? java.util.concurrent.ExecutionException)?.cause ?: e
+        return cause is java.util.concurrent.TimeoutException || cause is IOException ||
+            (cause is ApiException && (cause.statusCode == CommonStatusCodes.NETWORK_ERROR || cause.statusCode == CommonStatusCodes.TIMEOUT))
     }
 
     /** The token from the consent screen's result. */

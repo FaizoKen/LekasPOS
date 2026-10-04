@@ -18,6 +18,7 @@ import com.lekaspos.hw.printer.PrinterService
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.CoroutineScope
@@ -77,7 +78,11 @@ class PrinterSettingsActivity : ScreenActivity() {
         PrinterService.Status.Connecting -> getString(R.string.status_connecting)
         PrinterService.Status.Printing -> getString(R.string.status_printing)
         PrinterService.Status.Ready -> getString(R.string.status_ready)
-        is PrinterService.Status.Offline -> if (s.gaveUp) getString(R.string.status_offline_gave_up) else getString(R.string.status_offline, s.error)
+        is PrinterService.Status.Offline -> when {
+            s.gaveUp -> getString(R.string.status_offline_gave_up)
+            s.error == PrinterService.STALLED -> getString(R.string.status_stalled)
+            else -> getString(R.string.status_offline, s.error)
+        }
     }
 
     private fun build(d: DeviceSettings) {
@@ -123,8 +128,12 @@ class PrinterSettingsActivity : ScreenActivity() {
         drawerPin = f.choice(getString(R.string.drawer_pin), listOf(getString(R.string.drawer_pin2), getString(R.string.drawer_pin5)), d.drawerPin)
 
         f.button(getString(R.string.save), primary = true) { save(finishAfter = true) }
-        f.button(getString(R.string.printer_test)) { testPrint() }
-        f.button(getString(R.string.printer_open_drawer)) { openDrawer() }
+        // A double tap printed two test pages, or gave two drawer pulses with two audit entries.
+        // One guard per button: opening the drawer right after the test page is meant.
+        val testOnce = TapOnce()
+        val drawerOnce = TapOnce()
+        f.button(getString(R.string.printer_test)) { testOnce.run { testPrint() } }
+        f.button(getString(R.string.printer_open_drawer)) { drawerOnce.run { openDrawer() } }
         clearQueue = f.button(getString(R.string.printer_clear_queue, 0)) { clearQueue() }
         clearQueue.visible(false)
         content.removeAllViews()

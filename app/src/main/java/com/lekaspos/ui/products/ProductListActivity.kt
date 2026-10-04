@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
@@ -18,7 +19,9 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.ui.common.CsvFiles
+import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.RowAdapter
+import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
 import com.lekaspos.ui.sell.visible
@@ -49,10 +52,35 @@ class ProductListActivity : ScreenActivity() {
         onClick = { startActivity(ProductEditActivity.newIntent(this, productId = it.id)) },
     )
 
+    /** A scan replaces what the search held: added to it ("milo9556001234567") it found nothing (2026-10 review). */
+    private val fieldScan = FieldScan { showCode(it) }
+    private val scanInput = ScanInput(onScan = { showCode(it) }, onTyped = { text, _ -> showCode(text) })
+
+    override fun screenKey(event: KeyEvent): Boolean =
+        ::search.isInitialized && if (search.hasFocus()) fieldScan.onKey(event, search) else scanInput.onKey(event)
+
+    override fun serialScans(): (String) -> Unit = { showCode(it) }
+
+    private fun showCode(code: String) {
+        search.setText(code)
+        search.setSelection(code.length)
+        search.requestFocus()
+    }
+
+    override fun onStop() {
+        scanInput.clear()
+        fieldScan.clear()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.products_title), R.layout.list_with_search) ?: return
-        addAction(R.drawable.ic_add, R.string.products_add) { startActivity(ProductEditActivity.newIntent(this)) }
+        // A manager's approval is taken here, where it is held while products are added one after
+        // another: asked on the form, each "Save and add another" asked for the PIN again.
+        addAction(R.drawable.ic_add, R.string.products_add) {
+            requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this, series = true)) }
+        }
         lateinit var more: ImageButton
         more = addAction(R.drawable.ic_more, R.string.sell_menu) { csvMenu(more) }
         search = v.findViewById(R.id.list_search)
@@ -88,7 +116,7 @@ class ProductListActivity : ScreenActivity() {
                 else -> empty.setText(R.string.products_none_found)
             }
             empty.setOnClickListener(if (code == null) null else View.OnClickListener {
-                requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this@ProductListActivity, barcode = code)) }
+                requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this@ProductListActivity, barcode = code, series = true)) }
             })
             empty.visible(items.isEmpty())
         }

@@ -41,10 +41,13 @@ class StaffService(private val graph: AppGraph) {
         val id = committed { graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             val role = RoleDao.get(tx.db, roleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
-            if (role.isOwner || before?.isOwner == true) {
+            // The person as stored now, not as the screen loaded them: made an owner on another till
+            // meanwhile, a manager's open screen demoted them with "Manage staff" alone (2026-10 review).
+            val current = before?.let { StaffDao.get(tx.db, it.id) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND) }
+            if (role.isOwner || before?.isOwner == true || current?.isOwner == true) {
                 requireOwner(tx, approval)
             } else {
-                requireMayAssign(tx, Perm.effective(role.sysRole, role.perms) or (before?.perms ?: 0L), approval)
+                requireMayAssign(tx, Perm.effective(role.sysRole, role.perms) or (before?.perms ?: 0L) or (current?.perms ?: 0L), approval)
             }
             val id: Long
             if (before == null) {
@@ -178,14 +181,23 @@ class StaffService(private val graph: AppGraph) {
         require(name.isNotBlank()) { "name required" }
         val id = committed { graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
-            requireMayGrant(tx, before, if (before?.isOwner == true) before.perms else perms, approval)
-            val id = if (before == null) {
-                RoleDao.insert(tx, name.trim(), perms, now)
+            val id: Long
+            val written: Long
+            if (before == null) {
+                requireMayGrant(tx, null, perms, approval)
+                id = RoleDao.insert(tx, name.trim(), perms, now)
+                written = perms
             } else {
-                RoleDao.update(tx, before, name.trim(), if (before.isOwner) before.perms else perms, now)
-                before.id
+                // Against the role as stored now, and only the switches changed on this screen: the
+                // whole bitmask as the screen loaded it put back a permission the owner had taken
+                // away on another till meanwhile — a manager widened their own role that way (2026-10 review).
+                val current = RoleDao.get(tx.db, before.id) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+                written = if (current.isOwner) current.perms else Perm.merge(before.perms, perms, current.perms)
+                requireMayGrant(tx, current, written, approval)
+                RoleDao.update(tx, current, if (name.trim() != before.name) name.trim() else current.name, written, now)
+                id = before.id
             }
-            AuditDao.log(tx, AuditAction.ROLE_CHANGE, actor.staffId, now, Entity.ROLE, id, perms, name.trim(), actor.approvedBy)
+            AuditDao.log(tx, AuditAction.ROLE_CHANGE, actor.staffId, now, Entity.ROLE, id, written, name.trim(), actor.approvedBy)
             id
         } }
         return id

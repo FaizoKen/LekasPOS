@@ -66,6 +66,11 @@
     <string name="price_check_no_stock">Stock not tracked</string>
     <string name="price_check_hidden">Hidden from the selling screen</string>
     <string name="price_check_promo">Promotion: %1$s (%2$s)</string>
+    <string name="price_check_change">Change price</string>
+    <string name="price_check_new_title">New price: %1$s</string>
+    <string name="price_check_now">Now %1$s. Items already on the bill keep their price.</string>
+    <string name="price_check_cost">Cost %1$s (margin at the price now: %2$s).</string>
+    <string name="price_check_saved">%1$s now %2$s</string>
     <string name="setup_title">Welcome to LekasPOS</string>
     <string name="setup_intro">Let\'s get your shop ready. You can change all of this later in Settings.</string>
     <string name="setup_shop">Your shop</string>
@@ -192,6 +197,8 @@
     <string name="product_stock_now">In stock now: %1$s</string>
     <string name="product_active">Show in search and catalogue</string>
     <string name="product_saved">Product saved</string>
+    <string name="product_save_next">Save and add another</string>
+    <string name="product_barcode_added">Barcode %1$s added</string>
     <string name="product_deleted">Product deleted</string>
     <string name="product_delete_confirm">Delete %1$s? Past sales keep their lines.</string>
     <string name="product_duplicate_title">Barcode already used</string>
@@ -321,6 +328,7 @@
     <string name="status_ready">connected</string>
     <string name="status_offline">offline (%1$s), retrying</string>
     <string name="status_offline_gave_up">offline, tap Retry</string>
+    <string name="status_stalled">not printing: check the paper and the cover (retrying)</string>
     <string name="printer_retry">Retry</string>
     <string name="printer_section_device">Printer</string>
     <string name="printer_none">No printer chosen.</string>
@@ -361,7 +369,10 @@
     <string name="printer_queue_cleared">Print queue cleared</string>
 
     <!-- Scanner settings -->
-    <string name="scanner_hid_info">Keyboard-mode scanners (USB, or Bluetooth HID) need no setup: pair or plug them in and scan on the selling screen. Nothing has to be selected first.</string>
+    <string name="scanner_hid_info">Keyboard-mode scanners (USB, or Bluetooth HID) need no setup: pair or plug them in and scan on the selling screen. Nothing has to be selected first. While one is connected, Android may hide the on-screen keyboard: turn on “Use on-screen keyboard” (or “Show virtual keyboard”) in the phone\'s keyboard settings to type names.</string>
+    <string name="keyboard_tip_title">No keyboard?</string>
+    <string name="keyboard_tip">A barcode scanner connected as a keyboard makes Android hide the on-screen keyboard. To type here while it is connected, turn on “Use on-screen keyboard” (or “Show virtual keyboard”) in the keyboard settings.</string>
+    <string name="keyboard_tip_settings">Keyboard settings</string>
     <string name="scanner_test">Test a scanner</string>
     <string name="scanner_test_hint">Tap here and scan</string>
     <string name="scanner_test_result">Received “%1$s” (length: %2$d)</string>

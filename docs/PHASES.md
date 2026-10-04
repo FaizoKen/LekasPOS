@@ -26,6 +26,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | **test build** v1.7.1 (pre-release, 2026-10-04) — CI and perf FULL green; waiting for the owner's phone tests |
+| — | **1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **local** (2026-10-04) — JVM tests pass; waiting for the owner's go-ahead to push for CI and publish the test build |
 
 ## Open questions for the user
 
@@ -1310,4 +1311,58 @@ year-old store's sync used tens of MB a day per till; "50" typed for RM50 was qu
 8. **Products**: type or scan a new barcode in the search → "Tap here to add it".
 9. Malay: the Hold button says "Tangguh", held bills "Bil ditangguh".
 10. Printer (when available): choose the printer, press Back without Save → it is kept.
+
+## 1.8.0 — sixth bug hunt: double taps, a till left on all day, two tills, scanners everywhere (D-062)
+
+The owner asked for another free-hand hunt for bugs and weak features (2026-10-04). Read-only reviews
+from new angles (a till that never leaves the selling screen, double taps and slow phones, two tills
+editing the same things, a new till joining a store, stock counts across tills and clocks, Malay
+receipts, printers and scanners, what becomes an error report, D-061's weak features); every finding
+checked in the code, then the whole change reviewed again by three independent reviews, whose findings
+were fixed too (among them: this hunt's own stock-count change would have shown every count as "no
+loss", a UPC-E scan missed products saved with 13 digits, and the new tile refresh could crash on a
+phone whose product grid was hidden). The most
+serious: a double tap on Pay opened two payments; the selling screen's tiles kept the morning's stock
+and prices all day; tapping the app's icon closed a half-typed product or refund; a role edited on two
+tills lost one edit; a stock count's "expected" ignored the other till's sales; a printer out of paper
+froze the queue at "printing" until it was switched off; a serial scanner worked only on the selling
+screen; a new till joining a store kept its own PINs, so the store's staff could not sign in on it.
+Weak features added: **change a price from the price check**, **count the drawer by note and coin**,
+**"Save and add another"** and scanning on the product form.
+
+- [x] Fixes and tests: see D-062
+- [x] Local: `:core` 259 and `:app` 42 JVM tests pass, the instrumented tests compile (not run: CI), lint
+      0 errors; release APK **1,500,841 bytes** (1,466 KB; 1.7.1's CI build was 1,470,071 — about +31 KB)
+- [ ] With the owner's go-ahead: commit, push (CI on API 21 and 36, release smoke), perf FULL, then the
+      test build **v1.8.0** as a pre-release
+- [ ] The owner's phone tests (below)
+
+### Needs real-device testing (1.8.0)
+
+1. Install over 1.7.1 (Settings → App updates → Include test versions): data, staff, settings still there.
+2. **Price check → Change price**: scan a product → Change price → type the new price (a cashier is asked
+   for the manager's PIN) → the tile shows the new price; Settings → Activity log names it "(price check)".
+3. **Products → +**: with the cursor in the name field, scan the product → the barcode is added (not typed
+   into the name). "Save and add another" → a new form with the same category and tax. In the Products
+   list, search "milo", then scan a barcode → the search holds only the barcode.
+4. **Shift**: Open shift → Count cash → notes and coins → the total fills the amount. Close the shift with a
+   count that matches → the note lists the notes and coins.
+5. **Pay**: the amount shown when the cash dialog opens is grey; typing 5 0 gives RM50.00 (not added on).
+   Double-tap Pay quickly → one payment. Double-tap Print on the result → one receipt.
+6. **Tiles**: sell a product that tracks stock → its tile shows the lower stock at once. With two tills:
+   change a price on one → within a sync round the other's tile shows it, without leaving the screen.
+7. **App icon**: Products → + → type half a product → Home → tap the app's icon → the form is still there.
+8. **Two tills**: Settings → Staff → Roles: on till A switch on one permission, on till B another, sync →
+   both are on. Count a product on A while B sells it offline → after sync the count's "expected" includes
+   B's earlier sales.
+9. **New till** (spare phone, fresh install, a PIN set, never sold): turn on Google Drive with the store's
+   account → it says the till now uses the shop's staff and PINs; the store's staff sign in with their PINs.
+10. **Customers**: remove a customer who still owes → still listed as "removed" → Receive payment works;
+    editing is refused.
+11. Malay receipt (Settings → Receipt language Malay): payments print "Tunai", "Kad", "E-dompet", tax
+    "Cukai", rounding "Pembundaran".
+12. Printer (when available): take the paper out while a long receipt prints → within ~10 s the printer
+    status says it is not taking data; put paper back → the job prints after a retry.
+13. Serial (SPP) scanner (when available): Stock → Count → scan → the product's count opens; Receive →
+    scan → the line is added; back on the selling screen the scanner is still connected.
 

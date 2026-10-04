@@ -18,6 +18,7 @@ import com.lekaspos.core.pricing.Discount
 import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.core.time.DateText
 import com.lekaspos.domain.sell.CartSession
+import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Keypad
@@ -40,6 +41,11 @@ private fun Activity.display(): TextView = TextView(this, null, 0, R.style.Text_
 
 private fun matchWrap() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
+/** An amount shown to be kept or typed over (Keypad.replacing) is grey, like the payment's "still to pay". */
+internal fun TextView.replacing(on: Boolean) {
+    setTextColor(context.colorOf(if (on) R.color.text_disabled else R.color.text_primary))
+}
+
 /** "1.253" style weight with all three decimals while typing. */
 fun weightText(milli: Long): String {
     val frac = (milli % 1000L).toString().padStart(3, '0')
@@ -56,9 +62,18 @@ class AmountDialog(
     private val initial: Long = 0L,
     private val message: CharSequence? = null,
     private val allowZero: Boolean = false,
+    /**
+     * A button beside OK for money ([Kind.MONEY]): its action gets a way to put an amount in, which
+     * the cashier then confirms with OK (counting the drawer by notes and coins).
+     */
+    private val extra: Pair<CharSequence, (setAmount: (Long) -> Unit) -> Unit>? = null,
     private val onOk: (Long) -> Unit,
 ) {
     enum class Kind { MONEY, PIECES, WEIGHT, PERCENT }
+
+    init {
+        require(extra == null || kind == Kind.MONEY) { "only money takes an amount from elsewhere" }
+    }
 
     private val display = activity.display()
     /** Digits the keypad takes: no bill line is ever 100,000 pieces or 100,000 kg (CartSession.MAX_QTY). */
@@ -91,6 +106,7 @@ class AmountDialog(
             Kind.WEIGHT -> weightText(v) + (unit?.let { " $it" } ?: "")
             Kind.PERCENT -> ReceiptLayout.percent(v.toInt())
         }
+        display.replacing(keypad.replacing)
     }
 
     fun show(): AlertDialog {
@@ -105,6 +121,7 @@ class AmountDialog(
             .setView(Dialogs.scrolling(col))
             .setPositiveButton(R.string.ok, null)
             .setNegativeButton(R.string.cancel, null)
+            .apply { if (extra != null) setNeutralButton(extra.first, null) }
             .create()
         d.keys { e -> keypad.onKey(e) }
         d.setOnShowListener {
@@ -115,13 +132,21 @@ class AmountDialog(
                     onOk(v)
                 }
             }
+            // The extra button keeps this dialog open: the amount it brings is confirmed with OK.
+            if (extra != null) {
+                d.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
+                    // Only what the keypad can hold (9 digits): a longer amount would be cut, not refused.
+                    extra.second { amount -> if (d.isShowing && amount in 0L..999_999_999L) keypad.preset(amount.toString()) }
+                }
+            }
         }
         val start = when (kind) {
             Kind.MONEY, Kind.WEIGHT -> if (initial > 0L) initial.toString() else ""
             Kind.PIECES -> if (initial >= 1000L && initial % 1000L == 0L) (initial / 1000L).toString() else ""
             Kind.PERCENT -> if (initial > 0L) (initial / 100L).toString() else ""
         }
-        keypad.set(start)
+        keypad.preset(start) // the amount now: OK keeps it, the first key replaces it
+        render(keypad.digits)
         d.show()
         d.trackedBy(activity)
         return d
@@ -169,6 +194,7 @@ class DiscountDialog(
             percent -> "0%"
             else -> MoneyFormat.format(0L, currency)
         }
+        display.replacing(keypad.replacing)
     }
 
     fun show(): AlertDialog {
@@ -209,7 +235,7 @@ class DiscountDialog(
                 }
             }
         }
-        keypad.set(initialDigits)
+        keypad.preset(initialDigits) // the discount now: OK keeps it, the first key replaces it
         render()
         d.show()
         d.trackedBy(activity)

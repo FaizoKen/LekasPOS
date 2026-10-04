@@ -170,6 +170,7 @@ class SettingsActivity : ScreenActivity() {
         Dialogs.choose(this, getString(R.string.settings_language), codes.map { languageName(it) }, current) { i ->
             if (i != current) {
                 AppLanguage.set(this, codes[i])
+                graph.settings.languageChanged() // receipts in the new language too, unless the store chose one
                 val restart = Intent(this, SellActivity::class.java)
                 startActivity(restart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
             }

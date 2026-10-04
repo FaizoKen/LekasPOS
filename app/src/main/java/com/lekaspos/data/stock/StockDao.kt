@@ -7,6 +7,7 @@ import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.core.sync.Lww
+import com.lekaspos.core.time.Hlc
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.long
@@ -53,9 +54,26 @@ object StockDao {
         if (delta == 0L) return
         if (tx.update(APPLY, delta, productId, hlc, hlc, dev) == 0) {
             // No row yet → create it. If the row exists, the movement predates the last count
-            // and is already reflected in it, so INSERT OR IGNORE correctly does nothing.
-            tx.insert(INSERT_IF_MISSING, productId, delta)
+            // and is already reflected in it, so INSERT OR IGNORE correctly does nothing — but the
+            // level the first count after it expected changes ([countExpectedMoved]).
+            if (tx.insert(INSERT_IF_MISSING, productId, delta) == -1L) countExpectedMoved(tx, productId, delta, hlc, dev)
         }
+    }
+
+    // The first count at or after (hlc, dev): device order through the id's top bits (`id >= dev << 41`),
+    // a typed comparison with the INTEGER id (a text-bound `(id >> 41) > ?` is always true).
+    private const val FIRST_COUNT_FROM =
+        "SELECT id FROM stock_count WHERE product_id = ? AND hlc >= ? AND (hlc > ? OR id >= ?) ORDER BY hlc, id LIMIT 1"
+    private const val EXPECTED_ADD = "UPDATE stock_count SET expected = expected + ? WHERE id = ?"
+
+    /**
+     * An event stamped (hlc, dev) arrived after a count it comes before (another till's sale, made
+     * before the count but synced after it): the level that count expected changes by [delta]. The
+     * count report said "lost 3" for good for a shelf that was right (2026-10 review).
+     */
+    private fun countExpectedMoved(tx: Db.Tx, productId: Long, delta: Long, hlc: Long, dev: Int) {
+        val countId = tx.db.longOrNull(FIRST_COUNT_FROM, productId, hlc, hlc, dev.toLong() shl Ids.SEQ_BITS) ?: return
+        tx.update(EXPECTED_ADD, delta, countId)
     }
 
     fun level(db: SQLiteDatabase, productId: Long): Long =
@@ -74,15 +92,26 @@ object StockDao {
         return Lww.stampAbove(now, floor)
     }
 
-    /** The timestamp a new local count of [productId] gets: after everything known about its stock (see [stampAfterCounts]). */
+    /**
+     * The timestamp a new local count of [productId] gets: after everything known about its stock (see
+     * [stampAfterCounts]) — except sales and movements stamped more than [Hlc.MAX_FUTURE_MS] ahead of
+     * [now]: one sale from a till whose date was a year ahead stamped every later count a year ahead,
+     * and those counts then swallowed the other tills' sales made after them but not yet synced (the
+     * shelf said 30, every till 50), spreading to each product sold on one bill with it (2026-10
+     * review). Such an event now counts after the count: the error stays with the broken till's own sale.
+     */
     fun stampAfterEverything(db: SQLiteDatabase, now: Long, productId: Long): Long {
-        val floor = maxOf(db.long(COUNT_HLC, productId), db.long(LAST_SALE_HLC, productId), db.long(LAST_MOVE_HLC, productId))
+        val countHlc = db.long(COUNT_HLC, productId)
+        // Never below what [stampAfterCounts] put just above the last count (every sale after a count
+        // from a clock far ahead): a recount stamped level with those sales took some of them twice.
+        val bound = maxOf(Hlc.pack(Hlc.physicalOf(now) + Hlc.MAX_FUTURE_MS, 0), countHlc + 2)
+        val floor = maxOf(countHlc, db.long(LAST_SALE_HLC, productId, bound), db.long(LAST_MOVE_HLC, productId, bound))
         return Lww.stampAbove(now, floor)
     }
 
     private const val COUNT_HLC = "SELECT count_hlc FROM stock_level WHERE product_id = ?"
-    private const val LAST_SALE_HLC = "SELECT MAX(hlc) FROM sale_line WHERE product_id = ?"
-    private const val LAST_MOVE_HLC = "SELECT MAX(hlc) FROM stock_movement WHERE product_id = ?"
+    private const val LAST_SALE_HLC = "SELECT MAX(hlc) FROM sale_line WHERE product_id = ? AND hlc < ?"
+    private const val LAST_MOVE_HLC = "SELECT MAX(hlc) FROM stock_movement WHERE product_id = ? AND hlc < ?"
 
     private const val LAST_COUNT =
         "SELECT qty, hlc, id FROM stock_count WHERE product_id = ? ORDER BY hlc DESC, (id >> 41) DESC LIMIT 1"
@@ -96,6 +125,55 @@ object StockDao {
         "SELECT SUM(l.stock_qty) FROM sale_line l JOIN sale s ON s.id = l.sale_id " +
             "WHERE l.product_id = ? AND l.hlc >= ? AND (l.hlc > ? OR (l.id >> 41) > ?) " +
             "AND s.status = ${SaleStatus.COMPLETED}"
+
+    // "Before (count hlc, count device)" and "between two counts": the same order as [rebuild], with an
+    // index range on (product_id, hlc) first. COUNT_BEFORE's arguments are bound as text (rawQuery): the
+    // device is compared through the INTEGER id (`id < dev << 41`), as `(id >> 41) < '3'` is always true.
+    private const val COUNT_BEFORE =
+        "SELECT qty, hlc, id FROM stock_count WHERE product_id = ? AND hlc <= ? AND (hlc < ? OR id < ?) " +
+            "ORDER BY hlc DESC, id DESC LIMIT 1"
+    private const val MOVES_BETWEEN =
+        "SELECT SUM(qty) FROM stock_movement WHERE product_id = ? AND hlc >= ? AND hlc <= ? " +
+            "AND (hlc > ? OR (id >> 41) > ?) AND (hlc < ? OR (id >> 41) < ?)"
+    private const val SALES_BETWEEN =
+        "SELECT SUM(l.stock_qty) FROM sale_line l JOIN sale s ON s.id = l.sale_id " +
+            "WHERE l.product_id = ? AND l.hlc >= ? AND l.hlc <= ? AND (l.hlc > ? OR (l.id >> 41) > ?) " +
+            "AND (l.hlc < ? OR (l.id >> 41) < ?) AND s.status = ${SaleStatus.COMPLETED}"
+
+    /**
+     * The stock of [productId] just before its count stamped ([hlc], [dev]), as this till's events say
+     * now: the count before it (by hlc, then device) plus what came between. Reads every event between
+     * the two counts: used when a count arrives from another till ([countImported]), never per row of a
+     * list (a first count of a busy product reads its whole history).
+     */
+    fun levelBefore(db: SQLiteDatabase, productId: Long, hlc: Long, dev: Int): Long {
+        val prev = db.queryOne(COUNT_BEFORE, args(productId, hlc, hlc, dev.toLong() shl Ids.SEQ_BITS)) {
+            Triple(it.getLong(0), it.getLong(1), Ids.deviceOf(it.getLong(2)))
+        }
+        val base = prev?.first ?: 0L
+        val fromHlc = prev?.second ?: 0L
+        val fromDev = prev?.third ?: -1
+        val moves = db.longOrNull(MOVES_BETWEEN, productId, fromHlc, hlc, fromHlc, fromDev, hlc, dev) ?: 0L
+        val sales = db.longOrNull(SALES_BETWEEN, productId, fromHlc, hlc, fromHlc, fromDev, hlc, dev) ?: 0L
+        return base + moves + sales
+    }
+
+    private const val NEXT_COUNT =
+        "SELECT id, hlc FROM stock_count WHERE product_id = ? AND hlc >= ? AND (hlc > ? OR id > ?) ORDER BY hlc, id LIMIT 1"
+    private const val EXPECTED_SET = "UPDATE stock_count SET expected = ? WHERE id = ?"
+
+    /**
+     * A count arrived from another till: the level it expected is worked out from this till's events
+     * (the counting till had not heard of every till's sales before it yet), and so is that of the count
+     * after it, which now follows this one. Events that arrive later move them ([countExpectedMoved]):
+     * every till ends with the same report, cheap to read (2026-10 review).
+     */
+    fun countImported(tx: Db.Tx, productId: Long, countId: Long, hlc: Long) {
+        val db = tx.db
+        tx.update(EXPECTED_SET, levelBefore(db, productId, hlc, Ids.deviceOf(countId)), countId)
+        val next = db.queryOne(NEXT_COUNT, args(productId, hlc, hlc, countId)) { it.getLong(0) to it.getLong(1) } ?: return
+        tx.update(EXPECTED_SET, levelBefore(db, productId, next.second, Ids.deviceOf(next.first)), next.first)
+    }
 
     /** Recomputes the cached level of one product from events. */
     fun rebuild(tx: Db.Tx, productId: Long) {
@@ -238,7 +316,11 @@ object StockDao {
     fun insertCount(tx: Db.Tx, productId: Long, qty: Long, sessionId: Long?, staffId: Long?, note: String?, at: Long): Long {
         val id = tx.nextId()
         val hlc = stampAfterEverything(tx.db, tx.hlcNow(), productId)
-        val expected = level(tx.db, productId)
+        // The level now, without what is stamped after this count (a sale from a till whose clock ran
+        // far ahead, see [stampAfterEverything]): that comes after the count, not before it.
+        val dev = tx.deviceNo
+        val after = (tx.db.longOrNull(MOVES_AFTER, productId, hlc, hlc, dev) ?: 0L) + (tx.db.longOrNull(SALES_AFTER, productId, hlc, hlc, dev) ?: 0L)
+        val expected = level(tx.db, productId) - after
         val cost = tx.db.longOrNull("SELECT cost FROM product WHERE id = ?", productId)
         val values = arrayOf<Any?>(id, productId, qty, sessionId, staffId, note, at, hlc, expected, cost)
         tx.insert(INSERT_COUNT, *values)
@@ -257,6 +339,11 @@ object StockDao {
         "stock_moves_after" to MOVES_AFTER,
         "stock_count_hlc" to COUNT_HLC,
         "stock_last_sale_hlc" to LAST_SALE_HLC,
+        "stock_count_before" to COUNT_BEFORE,
+        "stock_moves_between" to MOVES_BETWEEN,
+        "stock_sales_between" to SALES_BETWEEN,
+        "stock_first_count_from" to FIRST_COUNT_FROM,
+        "stock_next_count" to NEXT_COUNT,
         "stock_last_move_hlc" to LAST_MOVE_HLC,
         "stock_sales_after" to SALES_AFTER,
         "movements_first" to MOVES_FIRST,

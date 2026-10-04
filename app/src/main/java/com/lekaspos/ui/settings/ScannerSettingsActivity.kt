@@ -42,7 +42,7 @@ class ScannerSettingsActivity : ScreenActivity() {
     }
 
     override fun onStarted(scope: CoroutineScope) {
-        graph.sppScanner.start()
+        graph.sppScanner.hold(this)
         scope.launch {
             graph.sppScanner.status.collect {
                 if (built) sppState.text = getString(R.string.scanner_state, stateText(it))
@@ -54,7 +54,7 @@ class ScannerSettingsActivity : ScreenActivity() {
     }
 
     override fun onStop() {
-        graph.sppScanner.stop()
+        graph.sppScanner.release(this)
         super.onStop()
     }
 

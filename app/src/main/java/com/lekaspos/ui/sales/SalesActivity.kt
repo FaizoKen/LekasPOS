@@ -82,7 +82,10 @@ class SalesActivity : ScreenActivity() {
                 if (q.isEmpty()) {
                     SaleDao.history(r, null, PAGE)
                 } else {
-                    ReceiptNumbers.candidates(q, ReceiptNumbers.prefix(r, db.deviceNo)).mapNotNull { SaleDao.byReceipt(r, it) }.distinctBy { it.id }
+                    // A number alone: this till's receipt first, then those of the shop's other tills.
+                    val own = ReceiptNumbers.prefix(r, db.deviceNo)
+                    val prefixes = if (ReceiptNumbers.isNumber(q)) listOf(own) + SaleDao.receiptPrefixes(r).filter { it != own } else listOf(own)
+                    ReceiptNumbers.candidates(q, prefixes).mapNotNull { SaleDao.byReceipt(r, it) }.distinctBy { it.id }
                 }
             }
             adapter.submit(items)

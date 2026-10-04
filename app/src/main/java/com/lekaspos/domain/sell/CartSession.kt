@@ -103,6 +103,15 @@ class CartSession(private val graph: AppGraph) {
 
     var payment: PaymentDraft? = null
 
+    /**
+     * A weight or price being asked for a product scanned or tapped (the scanner already beeped "ok"):
+     * asked again when the selling screen is rebuilt (the phone turned) instead of being lost with the
+     * dialog (2026-10 review). Main thread.
+     */
+    data class Prompt(val product: SellableProduct, val code: String?, val weight: Boolean)
+
+    var prompt: Prompt? = null
+
     /** [repair]: a whole-bill rewrite (see [repair]); its own failure is not repaired at once again. */
     private class Op(val ids: Long, val run: ((Db.Tx) -> Unit)?, val done: CompletableDeferred<Unit>? = null, val repair: Boolean = false)
 
@@ -322,8 +331,9 @@ class CartSession(private val graph: AppGraph) {
         // an empty bill does not show: it would have gone to the next customer's first item.
         val dropDiscount = emptied && left.billDiscount != Discount.None
         val next = if (dropDiscount) left.withBillDiscount(Discount.None) else left
-        val lastKey = st.cart.items.lastOrNull { it.key != key }?.key ?: 0L
-        commit(next, lastKey, ids = if (emptied) 1L else 0L) { tx, cartId ->
+        // No line is selected after a removal: the line before took the selection, and on a long bill its
+        // Remove button settled right under the finger — a double tap removed two items (2026-10 review).
+        commit(next, 0L, ids = if (emptied) 1L else 0L) { tx, cartId ->
             CartDao.deleteLine(tx, cartId, key, now)
             if (dropDiscount) CartDao.setBillDiscount(tx, cartId, DiscountKind.NONE, 0L, now)
             if (emptied) logEmptied(tx, staffId, now, total, item.name)

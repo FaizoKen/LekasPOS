@@ -108,4 +108,25 @@ class StaffRulesTest {
         assertEquals(all, all or Perm.DEFAULT_MANAGER or Perm.DEFAULT_CASHIER)
         assertEquals((1L shl 18) - 1L, all)
     }
+
+    @Test
+    fun aRoleEditChangesOnlyTheSwitchesTouchedOnItsScreen() {
+        // The screen showed the manager role with Settings; meanwhile the owner took Settings away on
+        // another till. The manager turns Reports off on the old screen: Settings must stay off.
+        val shown = Perm.DEFAULT_MANAGER or Perm.SETTINGS
+        val edited = shown and Perm.REPORTS.inv()
+        val current = Perm.DEFAULT_MANAGER
+        val merged = Perm.merge(shown, edited, current)
+        assertFalse(Perm.has(merged, Perm.SETTINGS))
+        assertFalse(Perm.has(merged, Perm.REPORTS))
+        assertEquals(Perm.DEFAULT_MANAGER and Perm.REPORTS.inv(), merged)
+        // A switch turned on here is on; one added on the other till meanwhile stays on.
+        val cashierNow = Perm.DEFAULT_CASHIER or Perm.VIEW_AUDIT
+        assertEquals(
+            cashierNow or Perm.VOID,
+            Perm.merge(Perm.DEFAULT_CASHIER, Perm.DEFAULT_CASHIER or Perm.VOID, cashierNow),
+        )
+        // Nothing touched: the role as it is now.
+        assertEquals(current, Perm.merge(shown, shown, current))
+    }
 }

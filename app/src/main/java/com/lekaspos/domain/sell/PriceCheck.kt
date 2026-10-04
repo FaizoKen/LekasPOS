@@ -1,13 +1,20 @@
 package com.lekaspos.domain.sell
 
 import com.lekaspos.app.AppGraph
+import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.Entity
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
+import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.PricingEngine
 import com.lekaspos.core.time.Days
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.data.stock.StockDao
+import com.lekaspos.domain.Approval
+import com.lekaspos.domain.sale.ActionRefused
 import java.util.TimeZone
 
 /**
@@ -33,7 +40,39 @@ class PriceCheck(private val graph: AppGraph) {
         val active: Boolean,
         /** Promotions running today that include this product. */
         val promotions: List<PromotionRow> = emptyList(),
+        /** Cost of one base unit (minor units; 0 = never entered), for a new price's margin. */
+        val cost: Long = 0L,
+        val taxBp: Int = 0,
     )
+
+    /**
+     * A new price for product [productId], straight from the price check: a wrong shelf price found at
+     * the till, or prices raised after a delivery, scanned one by one instead of opening every product
+     * (2026-10 review). Needs MANAGE_PRODUCTS (or a manager's [approval]); written like a product edit
+     * (only the price, LWW, synced) and audited like one. Lines already on a bill keep their price.
+     * Returns the price as it was.
+     */
+    suspend fun setPrice(productId: Long, price: Long, approval: Approval? = null): Long {
+        require(price >= 0L) { "negative price" }
+        val actor = graph.permissions.actor(Perm.MANAGE_PRODUCTS, approval)
+        val c = graph.settings.store.value.currency
+        return graph.db().write(reserveIds = 2L) { tx ->
+            val now = System.currentTimeMillis()
+            // As stored now: a product deleted meanwhile (here or on another till) is not brought back.
+            val before = ProductDao.get(tx.db, productId)?.takeIf { ProductDao.isLive(tx.db, productId) }
+                ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            if (before.sellMode == SellMode.OPEN_PRICE) throw ActionRefused(ActionRefused.Reason.NOT_ALLOWED)
+            if (before.price != price) {
+                ProductDao.update(tx, before, before.copy(price = price), now)
+                AuditDao.log(
+                    tx, AuditAction.PRODUCT_PRICE_CHANGE, actor.staffId, now, Entity.PRODUCT, productId, price,
+                    "${before.name}: ${MoneyFormat.format(before.price, c)} -> ${MoneyFormat.format(price, c)} (price check)",
+                    actor.approvedBy,
+                )
+            }
+            before.price
+        }
+    }
 
     suspend fun lookup(query: String, limit: Int = 5): List<Info> {
         val q = query.trim()
@@ -59,7 +98,7 @@ class PriceCheck(private val graph: AppGraph) {
                 val winner = running.filter { p.id in it.productIds }.minOfOrNull { it.id }
                 val deals = if (p.sellMode != SellMode.UNIT) emptyList() else promos.filter { it.id == winner }
                 val stock = if (p.trackStock) StockDao.level(r, p.id) else null
-                Info(p.id, p.name, p.unit, p.sellMode, p.price, stock, packs, p.active, deals)
+                Info(p.id, p.name, p.unit, p.sellMode, p.price, stock, packs, p.active, deals, p.cost, p.taxBp)
             }
         }
     }

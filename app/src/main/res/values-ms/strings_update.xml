@@ -15,12 +15,12 @@
     <string name="update_title">Versi baharu: %1$s</string>
     <string name="update_title_test">Versi ujian: %1$s</string>
     <string name="update_whats_new">Apa yang baharu:</string>
-    <string name="update_details">Saiz muat turun %1$s. Jualan, produk, pekerja dan tetapan anda kekal. LekasPOS ditutup semasa Android memasangnya; kemudian ketik Buka.</string>
+    <string name="update_details">Saiz muat turun %1$s. Jualan, produk, kakitangan dan tetapan anda kekal. LekasPOS ditutup semasa Android memasangnya; kemudian ketik Buka.</string>
     <string name="update_test_note">Versi ujian, untuk penguji: mungkin masih ada masalah.</string>
     <string name="update_now">Kemas kini sekarang</string>
     <string name="update_later">Nanti</string>
     <string name="update_size_mb">%1$s MB</string>
-    <string name="update_bill_open">Selesaikan atau simpan bil dahulu, kemudian kemas kini.</string>
+    <string name="update_bill_open">Selesaikan atau tangguhkan bil dahulu, kemudian kemas kini.</string>
     <string name="update_downloading_title">Memuat turun kemas kini</string>
     <string name="update_downloading">Versi %1$s, %2$s</string>
     <string name="update_allow_title">Benarkan kemas kini</string>

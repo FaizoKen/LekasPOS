@@ -29,12 +29,18 @@ class CustomerService(private val graph: AppGraph) {
     /** A statement line with the balance right after it. */
     data class StatementRow(val entry: CreditEntry, val balanceAfter: Long)
 
-    suspend fun page(query: String, after: CustomerItem?): List<CustomerItem> = graph.db().read { r ->
+    /**
+     * A page of customers. [withRemoved]: the first page of the whole list starts with deleted customers
+     * whose balance is not 0, so a debt made on another till meanwhile can still be settled (not when
+     * picking a customer for a bill: they get no new credit).
+     */
+    suspend fun page(query: String, after: CustomerItem?, withRemoved: Boolean = false): List<CustomerItem> = graph.db().read { r ->
         val q = query.trim()
         if (q.isNotEmpty() && q.all { it.isDigit() || it == '+' || it == ' ' || it == '-' }) {
             if (after == null) CustomerDao.byPhone(r, q) else emptyList()
         } else {
-            CustomerDao.page(r, q, after)
+            val page = CustomerDao.page(r, q, after)
+            if (withRemoved && after == null && q.isEmpty()) CustomerDao.removedWithBalance(r) + page else page
         }
     }
 
@@ -44,6 +50,9 @@ class CustomerService(private val graph: AppGraph) {
     suspend fun get(id: Long): Pair<Customer, Long>? = graph.db().read { r ->
         CustomerDao.get(r, id)?.let { it to CustomerDao.balance(r, id) }
     }
+
+    /** Deleted (here or on another till): only what they owe, or are owed, can still be settled. */
+    suspend fun isRemoved(id: Long): Boolean = graph.db().read { CustomerDao.isDeleted(it, id) }
 
     /**
      * Adds or edits a customer. Setting or changing the credit limit needs CREDIT_LIMIT (the role,
@@ -61,6 +70,8 @@ class CustomerService(private val graph: AppGraph) {
             val saved = if (before == null) {
                 after.copy(id = CustomerDao.insert(tx, after, now))
             } else {
+                // Deleted meanwhile (here or on another till): not edited back to life, nor given a limit.
+                if (CustomerDao.getLive(tx.db, before.id) == null) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
                 CustomerDao.update(tx, before, after, now)
                 after
             }
@@ -151,6 +162,15 @@ class CustomerService(private val graph: AppGraph) {
         return graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
             if (CustomerDao.get(tx.db, customerId) == null) throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+            // A deleted customer's balance can only be settled, toward 0 and never past it: no new debt
+            // (or money owed to them) that no list would show (2026-10 review).
+            if (CustomerDao.isDeleted(tx.db, customerId)) {
+                val b = CustomerDao.balance(tx.db, customerId)
+                val next = b + delta
+                if (b == 0L || (b > 0L && next !in 0L until b) || (b < 0L && next !in (b + 1L)..0L)) {
+                    throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
+                }
+            }
             val id = CustomerDao.insertCredit(tx, customerId, CreditKind.ADJUST, delta, null, null, actor.staffId, null, note, now)
             AuditDao.log(tx, AuditAction.CREDIT_ADJUST, actor.staffId, now, Entity.CREDIT, id, delta, note, actor.approvedBy)
             CustomerDao.balance(tx.db, customerId)

@@ -35,7 +35,8 @@ import kotlinx.coroutines.launch
  * owners and what roles may do are an owner's business, and an approval of the whole Staff screen
  * no longer counts for them (2026-10 review).
  */
-private fun ScreenActivity.asOwnerIfRefused(action: suspend (com.lekaspos.domain.Approval?) -> Unit) {
+private fun ScreenActivity.asOwnerIfRefused(busy: (Boolean) -> Unit = {}, action: suspend (com.lekaspos.domain.Approval?) -> Unit) {
+    busy(true)
     launchUi {
         try {
             action(null)
@@ -43,8 +44,17 @@ private fun ScreenActivity.asOwnerIfRefused(action: suspend (com.lekaspos.domain
             val s = graph.staff.state.value
             if (e.reason != com.lekaspos.domain.sale.ActionRefused.Reason.OWNER_ONLY || !s.loginRequired || s.current?.isOwner == true) throw e
             ApprovalDialog.show(this@asOwnerIfRefused, graph, scope, Perm.MANAGE_STAFF, onCancel = null, ownersOnly = true) { a ->
-                launchUi { action(a) }
+                busy(true)
+                launchUi {
+                    try {
+                        action(a)
+                    } finally {
+                        busy(false)
+                    }
+                }
             }
+        } finally {
+            busy(false)
         }
     }
 }
@@ -172,9 +182,17 @@ class StaffEditActivity : ScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        staffId = intent.getLongExtra(EXTRA_ID, 0L)
+        // The person just added, when Android ended the app while their PIN was asked: Android starts the
+        // screen again with the intent it was first opened with ("Add staff"), so a second save made them
+        // twice (setIntent alone does not survive that, 2026-10 review).
+        staffId = savedInstanceState?.getLong(STATE_ID, 0L)?.takeIf { it != 0L } ?: intent.getLongExtra(EXTRA_ID, 0L)
         setScreen(getString(if (staffId == 0L) R.string.staff_add else R.string.staff_edit))
         guard(Perm.MANAGE_STAFF)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLong(STATE_ID, staffId)
     }
 
     override fun onStarted(scope: CoroutineScope) {
@@ -211,14 +229,18 @@ class StaffEditActivity : ScreenActivity() {
         content.addView(form.view)
     }
 
+    /** A save is running: a second tap on Save made the new staff member twice (2026-10 review). */
+    private var saving = false
+
     private fun save() {
+        if (saving) return
         val n = name.text.toString().trim()
         if (n.isEmpty()) {
             name.error = getString(R.string.product_error_name)
             return
         }
         val r = roles.getOrNull(role.selectedItemPosition) ?: return
-        asOwnerIfRefused { approval ->
+        asOwnerIfRefused({ saving = it }) { approval ->
             val id = graph.staffAdmin.save(before, n, r.id, active.isChecked, approval)
             if (before == null) {
                 // A new staff member needs a PIN to sign in: ask for it right away.
@@ -279,6 +301,7 @@ class StaffEditActivity : ScreenActivity() {
 
     companion object {
         private const val EXTRA_ID = "staff_id"
+        private const val STATE_ID = "staff.id"
         private const val DEFAULT_ROLE = 3L // cashier
 
         fun intent(ctx: Context, id: Long): Intent = Intent(ctx, StaffEditActivity::class.java).putExtra(EXTRA_ID, id)
@@ -356,7 +379,11 @@ class RoleEditActivity : ScreenActivity() {
         content.addView(form.view)
     }
 
+    /** A save is running: a second tap on Save made a new role twice (2026-10 review). */
+    private var saving = false
+
     private fun save() {
+        if (saving) return
         val n = name.text.toString().trim()
         if (n.isEmpty()) {
             name.error = getString(R.string.product_error_name)
@@ -364,7 +391,7 @@ class RoleEditActivity : ScreenActivity() {
         }
         var perms = 0L
         for ((p, sw) in switches) if (sw.isChecked) perms = perms or p
-        asOwnerIfRefused { approval ->
+        asOwnerIfRefused({ saving = it }) { approval ->
             graph.staffAdmin.saveRole(before, n, perms, approval)
             finish()
         }

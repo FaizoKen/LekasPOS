@@ -121,7 +121,7 @@ data class ShiftText(
         val MS = ShiftText(
             title = "LAPORAN SYIF", till = "Kaunter", opened = "Dibuka", closed = "Ditutup", stillOpen = "masih dibuka",
             openedBy = "Dibuka oleh", closedBy = "Ditutup oleh", salesSection = "Jualan", sales = "Jualan",
-            refunds = "Bayaran balik", voids = "Batal", discounts = "Diskaun", tax = "Cukai", paymentsSection = "Bayaran",
+            refunds = "Bayaran balik", voids = "Dibatalkan", discounts = "Diskaun", tax = "Cukai", paymentsSection = "Bayaran",
             cashSection = "Laci wang", openingFloat = "Wang apungan", cashSales = "Jualan tunai",
             cashRefunds = "Bayaran balik tunai", voided = "Dibatalkan (tunai)", cashIn = "Wang masuk", cashOut = "Wang keluar",
             drops = "Simpanan wang", creditRepayments = "Bayaran hutang tunai", expected = "Tunai dijangka",

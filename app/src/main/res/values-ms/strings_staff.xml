@@ -52,7 +52,7 @@
     <string name="staff_login_off">Log masuk PIN dimatikan: aplikasi berjalan sebagai pemilik. Tetapkan PIN pemilik untuk menghidupkannya.</string>
     <string name="staff_login_on">Log masuk PIN dihidupkan. Kunci apabila tidak digunakan: %1$s.</string>
     <string name="staff_autolock">Kunci apabila tidak digunakan</string>
-    <string name="staff_autolock_never">tidak sekali-kali</string>
+    <string name="staff_autolock_never">tidak pernah</string>
     <string name="staff_autolock_min">selepas %1$d min</string>
     <string name="staff_recovery_new">Kod pemulihan baharu</string>
     <string name="staff_recovery_confirm">Kod pemulihan pemilik yang baharu menggantikan yang lama. Teruskan?</string>
@@ -110,6 +110,12 @@
     <string name="shift_count_hint">Kira semua wang tunai dalam laci dan masukkan jumlahnya.</string>
     <string name="shift_close_confirm">Tutup syif dengan %1$s dikira dalam laci?</string>
     <string name="shift_close_note_hint">Catatan untuk pemilik (pilihan), cth. sebab lebih atau kurang</string>
+    <string name="cash_count_button">Kira wang &amp; syiling</string>
+    <string name="cash_count_title">Kira wang kertas dan syiling</string>
+    <string name="cash_count_row">%1$s ×</string>
+    <string name="cash_count_field">Berapa keping %1$s</string>
+    <string name="cash_count_coin">%1$d sen</string>
+    <string name="cash_count_total">Jumlah %1$s</string>
     <string name="shift_closed">Syif ditutup</string>
     <string name="shift_closed_blind">Syif telah ditutup. Dikira: %1$s.</string>
     <string name="shift_history">Syif lepas</string>
@@ -148,8 +154,10 @@
     <string name="customer_owes">Hutang %1$s</string>
     <string name="customer_limit_line">Had %1$s · baki %2$s</string>
     <string name="customer_delete_confirm">Buang %1$s? Sejarahnya kekal.</string>
+    <string name="customer_removed_tag">dibuang</string>
+    <string name="customer_removed_line">Dibuang daripada senarai pelanggan (di sini atau di kaunter lain). Baki yang masih terhutang boleh diselesaikan di sini.</string>
     <string name="credit_enabled">Pelanggan dan kredit (bayar kemudian)</string>
-    <string name="credit_enabled_help">Kaitkan pelanggan dengan bil, jual secara kredit hingga had, dan terima bayaran hutang. Tutup: tiada ruangan pelanggan di skrin jualan.</string>
+    <string name="credit_enabled_help">Kaitkan pelanggan dengan bil, jual secara kredit hingga had, dan terima bayaran hutang. Dimatikan: tiada ruangan pelanggan di skrin jualan.</string>
     <string name="credit_empty">Belum ada rekod kredit.</string>
     <string name="credit_charge">Beli secara kredit</string>
     <string name="credit_reversal">Jualan kredit dipulangkan</string>

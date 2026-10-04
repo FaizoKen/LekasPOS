@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -35,7 +36,9 @@ import com.lekaspos.data.product.Product
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.Form
+import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.inventory.StockHistoryActivity
 import com.lekaspos.ui.inventory.adjustProduct
@@ -210,15 +213,18 @@ class ProductEditActivity : ScreenActivity() {
         plu = form.text(getString(R.string.product_plu), codes.firstOrNull { it.kind == BarcodeKind.SCALE_PLU }?.code, InputType.TYPE_CLASS_NUMBER)
 
         form.section(getString(R.string.product_more))
+        // A new product after "Save and add another": the last one's category and tax (a shelf is entered in a row).
+        val likeCategory = if (p == null) intent.getLongExtra(EXTRA_CATEGORY, 0L) else 0L
+        val likeTax = if (p == null) intent.getLongExtra(EXTRA_TAX, 0L) else 0L
         category = form.choice(
             getString(R.string.product_category),
             listOf(getString(R.string.product_no_category)) + categories.map { it.name },
-            categories.indexOfFirst { it.id == p?.categoryId } + 1,
+            categories.indexOfFirst { it.id == (p?.categoryId ?: likeCategory) } + 1,
         )
         tax = form.choice(
             getString(R.string.product_tax),
             listOf(getString(R.string.product_no_tax)) + taxes.map { "${it.name} ${ReceiptLayout.percent(it.rateBp)}" },
-            taxes.indexOfFirst { it.id == p?.taxRateId } + 1,
+            taxes.indexOfFirst { it.id == (p?.taxRateId ?: likeTax) } + 1,
         )
         cost = form.text(getString(R.string.product_cost), p?.let { MoneyFormat.format(it.cost, currency, withSymbol = false) }, MONEY_INPUT)
         sku = form.text(getString(R.string.product_sku), p?.sku, InputType.TYPE_CLASS_TEXT)
@@ -238,6 +244,7 @@ class ProductEditActivity : ScreenActivity() {
         }
         active = form.switch(getString(R.string.product_active), p?.active ?: true)
         form.button(getString(R.string.save), primary = true) { save() }
+        if (p == null && intent.getBooleanExtra(EXTRA_SERIES, false)) form.button(getString(R.string.product_save_next)) { save(next = true) }
         if (p != null) form.button(getString(R.string.delete)) { delete() }
         content.removeAllViews()
         content.addView(form.view)
@@ -344,6 +351,42 @@ class ProductEditActivity : ScreenActivity() {
         }
     }
 
+    /**
+     * A scanner fired on the form: its code went into whatever field had the cursor ("Milo
+     * 1kg9556001234567"), and adding a product by scanning took "Add barcode" first (2026-10 review).
+     * Now the code is taken out of the field again and added to the barcodes.
+     */
+    private val fieldScan = FieldScan { scanned(it) }
+    private val scanInput = ScanInput(onScan = { scanned(it) }, onTyped = { _, _ -> })
+
+    override fun screenKey(event: KeyEvent): Boolean {
+        if (saving) return false
+        val field = currentFocus as? EditText
+        return if (field != null) fieldScan.onKey(event, field) else scanInput.onKey(event)
+    }
+
+    override fun serialScans(): (String) -> Unit = { scanned(it) }
+
+    private fun scanned(raw: String) {
+        val code = Gtin.canonical(raw)
+        if (code.isEmpty() || saving) return
+        if (!::codeList.isInitialized) {
+            scannedEarly.add(code) // the form loads after this: kept for it
+            return
+        }
+        if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) {
+            codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
+            renderCodes()
+        }
+        toast(getString(R.string.product_barcode_added, code))
+    }
+
+    override fun onStop() {
+        scanInput.clear()
+        fieldScan.clear()
+        super.onStop()
+    }
+
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
@@ -386,10 +429,11 @@ class ProductEditActivity : ScreenActivity() {
         )
     }
 
-    private fun save(confirmedDuplicates: Boolean = false) {
+    /** With [next], the form of the next new product opens once this one is saved. */
+    private fun save(confirmedDuplicates: Boolean = false, next: Boolean = false) {
         if (saving) return
         if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
-            requireAccess(Perm.MANAGE_PRODUCTS) { save(confirmedDuplicates) }
+            requireAccess(Perm.MANAGE_PRODUCTS) { save(confirmedDuplicates, next) }
             return
         }
         val n = name.text.toString().trim()
@@ -427,7 +471,7 @@ class ProductEditActivity : ScreenActivity() {
                         Dialogs.confirm(
                             this@ProductEditActivity, getString(R.string.product_duplicate_title),
                             getString(R.string.product_error_barcode_dup, dup.first, dup.second), getString(R.string.save),
-                        ) { save(confirmedDuplicates = true) }
+                        ) { save(confirmedDuplicates = true, next = next) }
                         return@launchUi
                     }
                 }
@@ -435,6 +479,7 @@ class ProductEditActivity : ScreenActivity() {
                 saved = true // stays "saving" while the screen closes: a queued tap does nothing
                 setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT_ID, id))
                 toast(R.string.product_saved)
+                if (next) startActivity(newIntent(this@ProductEditActivity, series = true, category = p.categoryId, tax = p.taxRateId))
                 finish()
             } finally {
                 if (!saved) saving = false
@@ -544,6 +589,11 @@ class ProductEditActivity : ScreenActivity() {
     companion object {
         const val EXTRA_PRODUCT_ID = "product_id"
         const val EXTRA_BARCODE = "barcode"
+
+        /** Opened to enter products one after another: "Save and add another" is offered. */
+        private const val EXTRA_SERIES = "series"
+        private const val EXTRA_CATEGORY = "category"
+        private const val EXTRA_TAX = "tax"
         private const val STATE_FORM = "product.form"
         private const val STATE_SHOWN = "product.shown"
         private const val REQ_SCAN = 7
@@ -552,7 +602,19 @@ class ProductEditActivity : ScreenActivity() {
         private const val MONEY_INPUT = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         private const val QTY_INPUT = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
 
-        fun newIntent(ctx: Context, productId: Long = 0L, barcode: String? = null): Intent =
-            Intent(ctx, ProductEditActivity::class.java).putExtra(EXTRA_PRODUCT_ID, productId).putExtra(EXTRA_BARCODE, barcode)
+        /** [series]: products entered one after another; [category] and [tax] preselected for a new one. */
+        fun newIntent(
+            ctx: Context,
+            productId: Long = 0L,
+            barcode: String? = null,
+            series: Boolean = false,
+            category: Long? = null,
+            tax: Long? = null,
+        ): Intent = Intent(ctx, ProductEditActivity::class.java)
+            .putExtra(EXTRA_PRODUCT_ID, productId)
+            .putExtra(EXTRA_BARCODE, barcode)
+            .putExtra(EXTRA_SERIES, series)
+            .putExtra(EXTRA_CATEGORY, category ?: 0L)
+            .putExtra(EXTRA_TAX, tax ?: 0L)
     }
 }

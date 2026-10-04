@@ -110,11 +110,15 @@ class AutoSync(private val graph: AppGraph, private val app: Application) {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w("Auto sync did not finish", e) // shown in the sync status
-            // Tried again a little later, a few times; no internet is handled by the network callback,
-            // and a sign-in needs the owner.
+            // Shown in the sync status; the round itself logged the failure once (with its trace).
             val code = SyncEngine.errorCode(e)
-            if (code != SyncEngine.ERROR_OFFLINE && code != SyncEngine.ERROR_SIGN_IN && ++failures <= MAX_RETRIES) {
+            Log.i("Auto sync did not finish: $code")
+            // Tried again a little later, a few times; no internet is handled by the network callback,
+            // and a sign-in needs the owner. A connection that dropped while the phone kept its network
+            // ("connection reset", a time-out) is tried again too: no callback comes for a network that
+            // never went away.
+            val retry = code != SyncEngine.ERROR_SIGN_IN && (code != SyncEngine.ERROR_OFFLINE || online())
+            if (retry && ++failures <= MAX_RETRIES) {
                 lastRoundAt = SystemClock.elapsedRealtime()
                 plan(RETRY_DELAY_MS * failures, asked = false)
             }

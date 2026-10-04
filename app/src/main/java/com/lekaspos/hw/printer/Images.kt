@@ -97,9 +97,18 @@ object Images {
             decoded
         }
         val tmp = File(context.filesDir, "$LOGO_FILE.tmp")
-        FileOutputStream(tmp).use { scaled.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        if (scaled !== decoded) scaled.recycle()
-        decoded.recycle()
+        try {
+            // false, not an exception, when the file cannot be written (a full phone): a cut-off
+            // picture replaced the good logo (2026-10 review).
+            val written = FileOutputStream(tmp).use { scaled.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            if (!written) {
+                tmp.delete()
+                throw IOException("cannot save logo")
+            }
+        } finally {
+            if (scaled !== decoded) scaled.recycle()
+            decoded.recycle()
+        }
         if (!tmp.renameTo(logoFile(context))) throw IOException("cannot save logo")
     }
 

@@ -11,6 +11,8 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.report.Period
+import com.lekaspos.core.staff.PinHash
+import com.lekaspos.core.staff.RecoveryCode
 import com.lekaspos.core.sync.SyncNames
 import com.lekaspos.core.time.Days
 import com.lekaspos.core.time.Hlc
@@ -32,11 +34,14 @@ import com.lekaspos.data.report.ReportDao
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.SettingKeys
 import com.lekaspos.data.settings.SettingsDao
+import com.lekaspos.data.stock.CountSessionDao
+import com.lekaspos.data.stock.CountSummary
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.sync.Importer
 import com.lekaspos.data.sync.SegmentCodec
 import com.lekaspos.data.sync.SyncDao
 import com.lekaspos.data.sync.SyncEvent
+import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
@@ -334,6 +339,65 @@ class SyncMergeTest {
         syncAll(a, b)
         assertConverged(a, b)
         runBlocking { assertEquals(18_000L, a.db().read { StockDao.level(it, p) }) } // 20 counted − 2 sold after
+    }
+
+    /**
+     * A count's loss was worked out from what the counting till knew: another till's sales made before
+     * the count but not synced yet looked like goods lost, for good (2026-10 review).
+     */
+    @Test
+    fun aCountsLossTakesTheOtherTillsSalesBeforeItIntoAccount() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val p = runBlocking { TestDb.product(a.db(), "Gula", 280L, cost = 200L) }
+        runBlocking {
+            a.db().writeBlocking { tx -> StockDao.insertMovement(tx, p, MovementKind.OPENING, 25_000L, 200L, null, null, null, System.currentTimeMillis()) }
+        }
+        syncAll(a, b)
+        sell(b, p, 3_000L) // not synced yet when A counts
+        Thread.sleep(5)
+        val session = runBlocking { a.inventory.startCount("Rak gula", null) }
+        runBlocking { a.inventory.count(session, p, 22_000L) } // the shelf: 25 less the 3 B sold
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                assertEquals(22_000L, t.db().read { StockDao.level(it, p) })
+                assertEquals(22_000L, t.db().read { CountSessionDao.counts(it, session, null, 10) }.single().expected)
+                assertEquals(CountSummary(1, 0L, 0L), t.db().read { CountSessionDao.summary(it, session) }) // nothing lost
+            }
+        }
+    }
+
+    /** The same, with goods really lost: the loss is what the shelf lacks beyond the other till's sales. */
+    @Test
+    fun aRealLossStaysALossWhenTheOtherTillsSalesArrive() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val p = runBlocking { TestDb.product(a.db(), "Gula", 280L, cost = 200L) }
+        runBlocking {
+            a.db().writeBlocking { tx -> StockDao.insertMovement(tx, p, MovementKind.OPENING, 25_000L, 200L, null, null, null, System.currentTimeMillis()) }
+        }
+        syncAll(a, b)
+        sell(b, p, 3_000L) // not synced yet when A counts
+        Thread.sleep(5)
+        val session = runBlocking { a.inventory.startCount("Rak gula", null) }
+        runBlocking { a.inventory.count(session, p, 20_000L) } // 2 more gone than B sold
+        // Before B's sale arrives, A sees 5 lost.
+        runBlocking { assertEquals(CountSummary(1, 0L, -1_000L), a.db().read { CountSessionDao.summary(it, session) }) }
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                assertEquals(20_000L, t.db().read { StockDao.level(it, p) })
+                assertEquals(22_000L, t.db().read { CountSessionDao.counts(it, session, null, 10) }.single().expected)
+                assertEquals(CountSummary(1, 0L, -400L), t.db().read { CountSessionDao.summary(it, session) }) // 2 at 2.00
+            }
+        }
     }
 
     @Test
@@ -649,11 +713,39 @@ class SyncMergeTest {
             b.db().write(reserveIds = 0L) { tx ->
                 SyncDao.defer(tx, SyncEvent(event.entity, event.op, event.rowId, event.hlc, payload))
                 SyncDao.defer(tx, SyncEvent(99, EventOp.INSERT, 1L, event.hlc, mapOf("x" to 1L)))
+                Meta.put(tx.db, SyncEngine.DEFERRED_TRIED, "1:0") // last tried by that older version
             }
             b.sync.sync(provider)
             // The promotion (known now) is applied; the kind 99 event keeps waiting.
             assertEquals(listOf("Kept"), b.db().read { PromotionDao.list(it) }.map { it.name })
             assertEquals(listOf(99), b.db().read { SyncDao.deferred(it) }.map { it.second.entity })
+        }
+    }
+
+    /**
+     * 2026-10 review: every round (one runs after each sale) read the whole table of set-aside events
+     * and retried each in its own transaction. They are retried once a day, and at once after an update.
+     */
+    @Test
+    fun setAsideEventsAreRetriedOnceADayNotEveryRound() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val milo = product(a, "Milo", 390L)
+        runBlocking {
+            a.promotions.save(null, PromotionRow(0L, "Kept", PromoKind.BUY_GET_FREE, 1, 1, 0L, listOf(milo)))
+            val event = a.db().read { SyncDao.outboxBatch(it, 100) }.last { it.entity == Entity.PROMOTION }
+            @Suppress("UNCHECKED_CAST")
+            val payload = SegmentCodec.parse(event.payload) as Map<String, Any?>
+            b.sync.sync(provider) // today's retry is done
+            b.db().write(reserveIds = 0L) { tx -> SyncDao.defer(tx, SyncEvent(event.entity, event.op, event.rowId, event.hlc, payload)) }
+            b.sync.sync(provider)
+            assertEquals(1L, b.db().read { it.long("SELECT COUNT(*) FROM sync_deferred") }) // not again today
+            b.db().write(reserveIds = 0L) { tx -> Meta.put(tx.db, SyncEngine.DEFERRED_TRIED, "1:0") } // as on another day
+            b.sync.sync(provider)
+            assertEquals(0L, b.db().read { it.long("SELECT COUNT(*) FROM sync_deferred") })
+            assertEquals(listOf("Kept"), b.db().read { PromotionDao.list(it) }.map { it.name })
         }
     }
 
@@ -862,6 +954,39 @@ class SyncMergeTest {
         }
     }
 
+    /**
+     * One stock change from a till whose date ran days ahead stamped every later count of the product
+     * after it, and the count then swallowed the other tills' sales made after it but not synced yet:
+     * the shelf held 29, every till said 50 (2026-10 review).
+     */
+    @Test
+    fun aChangeFromAClockFarAheadDoesNotHideOfflineSalesAfterACount() {
+        val a = till()
+        enable(a)
+        val b = till()
+        enable(b)
+        val p = product(a, "Milo", 1_890L)
+        syncAll(a, b)
+        val ahead = Hlc.pack(System.currentTimeMillis() + 3L * 86_400_000L, 0)
+        val fast = 4_000_001L
+        val move = mapOf(
+            "id" to ((fast shl 41) or 1L), "product_id" to p, "kind" to MovementKind.WASTE.toLong(), "qty" to -1_000L,
+            "unit_cost" to 0L, "ref_id" to null, "reason" to null, "staff_id" to null, "at" to System.currentTimeMillis(), "hlc" to ahead,
+        )
+        for (t in listOf(a, b)) {
+            runBlocking {
+                t.db().write(reserveIds = 0L) { tx -> Importer(tx.db).apply(tx, SyncEvent(Entity.STOCK_MOVE, EventOp.INSERT, move["id"] as Long, ahead, move)) }
+            }
+        }
+        runBlocking { a.db().writeBlocking { tx -> StockDao.insertCount(tx, p, 50_000L, null, null, "shelf", System.currentTimeMillis()) } }
+        Thread.sleep(5)
+        sell(b, p, 20_000L) // B is offline: it does not know the count yet
+        syncAll(a, b)
+        assertConverged(a, b)
+        // 50 counted, 20 sold after it; the broken till's own change (−1) counts after the count too.
+        runBlocking { for (t in listOf(a, b)) assertEquals(29_000L, t.db().read { StockDao.level(it, p) }) }
+    }
+
     /** Two tills turned on at the same moment each made a store in the empty folder: they end up in one. */
     @Test
     fun twoTillsThatMadeTwoStoresAtOnceEndUpInOne() {
@@ -993,5 +1118,48 @@ class SyncMergeTest {
                 assertEquals("Kedai Runcit Ali", t.settings.store.value.name)
             }
         }
+    }
+
+    /**
+     * A new tablet's first-run setup offers "Staff and PINs" before joining: an owner PIN set there was
+     * newer than the store's, so it became the owner's PIN on every till, and the recovery code it
+     * showed never worked (2026-10 review). The store's PIN and recovery code stay.
+     */
+    @Test
+    fun aNewTillsPinGivesWayToTheStoresWhenItJoins() {
+        val a = till()
+        val code = runBlocking { a.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "1111").recoveryCode } ?: error("no recovery code")
+        enable(a, "Counter A")
+        Thread.sleep(5)
+        val b = till()
+        runBlocking { b.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "2222") }
+        val report = runBlocking { b.sync.enable(provider, "Counter B", join = false) } // a new till joins without a question
+        assertTrue(report.pinsDropped)
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                assertTrue(t.staff.check(Seed.Ids.STAFF_OWNER, "1111", 0L) is StaffSession.Check.Ok)
+                val stored = t.db().read { SettingsDao.all(it)[SettingKeys.OWNER_RECOVERY] } ?: error("no recovery code")
+                assertTrue(PinHash.verify(RecoveryCode.normalize(code), stored))
+            }
+            assertTrue(b.staff.check(Seed.Ids.STAFF_OWNER, "2222", 0L) !is StaffSession.Check.Ok)
+        }
+    }
+
+    /** A till with sales of its own that joins keeps its PINs (they are real ones; it was asked first). */
+    @Test
+    fun aTillWithItsOwnSalesKeepsItsPinsWhenItJoins() {
+        val a = till()
+        enable(a, "Counter A")
+        Thread.sleep(5)
+        val b = till()
+        runBlocking { b.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "2468") }
+        sell(b, product(b, "Milo", 450L))
+        val report = runBlocking { b.sync.enable(provider, "Counter B", join = true) }
+        assertEquals(false, report.pinsDropped)
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking { for (t in listOf(a, b)) assertTrue(t.staff.check(Seed.Ids.STAFF_OWNER, "2468", 0L) is StaffSession.Check.Ok) }
     }
 }

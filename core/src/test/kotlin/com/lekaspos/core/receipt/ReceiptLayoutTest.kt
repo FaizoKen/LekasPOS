@@ -108,7 +108,7 @@ class ReceiptLayoutTest {
         val t = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.MS, kl).layout(refund)).map { it.text }
         assertTrue(t.any { it.trim() == "BAYARAN BALIK" })
         assertTrue("Resit asal: AB12-0-000041" in t)
-        assertTrue(t.any { it.startsWith("Pelarasan") && it.endsWith("-0.05") })
+        assertTrue(t.any { it.startsWith("Pembundaran") && it.endsWith("-0.05") })
         assertTrue(row("Tunai", "-18.90") in t)
         assertTrue(t.any { it.trim() == "Imbas untuk minta e-invois" })
     }

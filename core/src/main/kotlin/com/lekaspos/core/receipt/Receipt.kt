@@ -85,6 +85,16 @@ data class ReceiptText(
     val tin: String,
     val einvoice: String,
     val note: String,
+    /**
+     * Names for a tax rate or payment method whose row has not arrived from the till that made it (sync
+     * brings a sale first): in the receipt's language, not English on a Malay receipt (2026-10 review).
+     */
+    val tax: String = "Tax",
+    val cash: String = "Cash",
+    val card: String = "Card",
+    val ewallet: String = "E-wallet",
+    val credit: String = "Credit",
+    val other: String = "Other",
 ) {
     companion object {
         val EN = ReceiptText(
@@ -127,7 +137,7 @@ data class ReceiptText(
             billDiscount = "Diskaun bil",
             discount = "Diskaun",
             taxIncluded = "Termasuk",
-            rounding = "Pelarasan",
+            rounding = "Pembundaran",
             total = "JUMLAH",
             change = "Baki",
             items = "Item",
@@ -140,6 +150,12 @@ data class ReceiptText(
             tin = "TIN",
             einvoice = "Imbas untuk minta e-invois",
             note = "Nota",
+            tax = "Cukai",
+            cash = "Tunai",
+            card = "Kad",
+            ewallet = "E-dompet",
+            credit = "Kredit",
+            other = "Lain-lain",
         )
 
         fun forLanguage(code: String): ReceiptText = if (code == "ms") MS else EN

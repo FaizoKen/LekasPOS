@@ -184,6 +184,17 @@ object Perm {
     fun effective(sysRole: Int, perms: Long): Long = if (sysRole == SysRole.OWNER) ALL else perms
 
     fun has(perms: Long, perm: Long): Boolean = perms and perm == perm
+
+    /**
+     * A role's permissions after an edit made on a screen that showed [shown]: the switches changed
+     * there ([shown] → [edited]) over the role as stored now ([current]); the others keep what they
+     * are now. Written whole, a screen loaded before the owner took a permission away on another till
+     * gave it back (2026-10 review).
+     */
+    fun merge(shown: Long, edited: Long, current: Long): Long {
+        val touched = shown xor edited
+        return (current and touched.inv()) or (edited and touched)
+    }
 }
 
 /** `count_session.status`. */

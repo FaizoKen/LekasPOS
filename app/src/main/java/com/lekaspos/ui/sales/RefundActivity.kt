@@ -26,8 +26,6 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.AmountDialog
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 
 /**
  * Refund / return (references/money.md §6): pick what comes back (up to what is left of each
@@ -175,7 +173,7 @@ class RefundActivity : ScreenActivity() {
                     var done = false
                     try {
                         // The refund itself runs in the app scope: leaving this screen cannot cut it off.
-                        val sale = graph.appScope.async(Dispatchers.Main) { graph.sales.refund(saleId, chosen, back, why, m, approval) }.await()
+                        val sale = outlivingScreen { graph.sales.refund(saleId, chosen, back, why, m, approval) }
                         done = true
                         toast(getString(R.string.refund_done, sale.receiptNo))
                         finish()

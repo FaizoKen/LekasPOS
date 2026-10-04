@@ -27,7 +27,7 @@
     <string name="report_discounts">Diskaun</string>
     <string name="report_net_ex_tax">Jualan bersih (tanpa cukai)</string>
     <string name="report_tax">Cukai</string>
-    <string name="report_rounding">Pelarasan</string>
+    <string name="report_rounding">Pembundaran</string>
     <string name="report_total">Jumlah (selepas bayaran balik)</string>
     <string name="report_cost">Kos barang</string>
     <string name="report_profit">Untung kasar</string>
@@ -76,6 +76,12 @@
     <string name="import_reading">Membaca fail…</string>
     <string name="import_file">Fail</string>
     <string name="import_malformed">Fail tidak dapat dibaca: %1$s</string>
+    <string name="import_malformed_at">baris %1$d: %2$s</string>
+    <string name="csv_line_too_long">satu baris terlalu panjang</string>
+    <string name="csv_text_after_quote">ada teks selepas tanda petik penutup</string>
+    <string name="csv_too_many_columns">terlalu banyak lajur</string>
+    <string name="csv_field_too_long">satu sel terlalu panjang</string>
+    <string name="csv_quote_not_closed">tanda petik tidak ditutup</string>
     <string name="import_missing">Lajur wajib tiada: %1$s. Baris pertama fail mesti menamakan lajur (sekurang-kurangnya name dan price).</string>
     <string name="import_rows">Baris produk</string>
     <string name="import_new">Produk baharu</string>
@@ -119,9 +125,15 @@
     <string name="import_resume">%1$d baris produk pertama fail ini sudah diimport sebelum aplikasi ditutup. Import akan bersambung selepas baris itu (kiraan di bawah untuk baris selebihnya).</string>
     <string name="import_start_again">Mula semula dari baris pertama</string>
     <string name="import_start_again_help">Jika dimulakan semula, baris yang sudah diimport akan diimport sekali lagi: produk tanpa kod bar, SKU atau nombor akan dicipta dua kali.</string>
-    <string name="import_examples">%1$d baris contoh (nama bermula dengan EXAMPLE atau CONTOH) tidak diimport.</string>
-    <string name="import_tax_unmatched">%1$d produk menamakan cukai yang tiada dalam Kadar cukai (%2$s): produk ini diimport tanpa cukai itu, dan produk sedia ada kekal dengan cukainya. Untuk mengenakan cukai, tambah kadar itu dalam Kadar cukai dahulu, kemudian import semula.</string>
-    <string name="import_unreadable">%1$d baris mempunyai aksara yang tidak dapat dibaca (ditunjukkan sebagai �), yang pertama pada baris %2$d. Dalam Excel, simpan fail sebagai “CSV UTF-8” dan import semula untuk mengekalkannya.</string>
+    <plurals name="import_examples">
+        <item quantity="other">%1$d baris contoh (nama bermula dengan EXAMPLE atau CONTOH) tidak diimport.</item>
+    </plurals>
+    <plurals name="import_tax_unmatched">
+        <item quantity="other">%1$d produk menamakan cukai yang tiada dalam Kadar cukai (%2$s): produk ini diimport tanpa cukai itu, dan produk sedia ada kekal dengan cukainya. Untuk mengenakan cukai, tambah kadar itu dalam Kadar cukai dahulu, kemudian import semula.</item>
+    </plurals>
+    <plurals name="import_unreadable">
+        <item quantity="other">%1$d baris mempunyai aksara yang tidak dapat dibaca (ditunjukkan sebagai �), yang pertama pada baris %2$d. Dalam Excel, simpan fail sebagai “CSV UTF-8” dan import semula untuk mengekalkannya.</item>
+    </plurals>
     <string name="import_too_many_rows">Fail ini mempunyai lebih daripada %1$d baris produk: hanya %1$d baris pertama dibaca dan diimport. Letakkan selebihnya dalam fail lain.</string>
     <string name="import_resumed">Diimport sebelum aplikasi ditutup (baris)</string>
 </resources>

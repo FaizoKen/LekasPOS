@@ -112,6 +112,12 @@
     <string name="shift_count_hint">Count all the cash in the drawer and enter the total.</string>
     <string name="shift_close_confirm">Close the shift with %1$s counted in the drawer?</string>
     <string name="shift_close_note_hint">Note for the owner (optional), e.g. why it is over or short</string>
+    <string name="cash_count_button">Count notes &amp; coins</string>
+    <string name="cash_count_title">Count notes and coins</string>
+    <string name="cash_count_row">%1$s ×</string>
+    <string name="cash_count_field">How many %1$s</string>
+    <string name="cash_count_coin">%1$d sen</string>
+    <string name="cash_count_total">Total %1$s</string>
     <string name="shift_closed">Shift closed</string>
     <string name="shift_closed_blind">The shift is closed. Counted: %1$s.</string>
     <string name="shift_history">Past shifts</string>
@@ -150,6 +156,8 @@
     <string name="customer_owes">Owes %1$s</string>
     <string name="customer_limit_line">Limit %1$s · %2$s left</string>
     <string name="customer_delete_confirm">Remove %1$s? Their history stays.</string>
+    <string name="customer_removed_tag">removed</string>
+    <string name="customer_removed_line">Removed from the customers (here or on another till). What is still owed can be settled here.</string>
     <string name="credit_enabled">Customers and credit (pay later)</string>
     <string name="credit_enabled_help">Attach a customer to a bill, sell on credit up to a limit, and take repayments. Off: no customer field on the selling screen.</string>
     <string name="credit_empty">No credit entries yet.</string>

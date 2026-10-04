@@ -28,6 +28,7 @@ object Work {
     private const val SYNC_SOON = "sync-soon"
     private const val REPORTS = "error-reports"
     private const val REPORTS_LATER = "error-reports-later"
+    private const val REPORTS_LATER_2 = "error-reports-later-2"
     private const val UPDATES = "app-updates-daily"
     private const val UPDATES_SOON = "app-updates-soon"
 
@@ -78,13 +79,21 @@ object Work {
      * [laterHours]. Throws: ErrorReports handles a failure without logging an error (that would
      * be a report about reports). Off the main thread.
      */
-    fun sendReports(context: Context, laterHours: Long = 0) {
+    fun sendReports(context: Context, laterHours: Long = 0, from: Set<String> = emptySet()) {
+        // A "later" job that still finds reports held schedules the next under the other name: under its
+        // own (KEEP while it runs) the request was dropped, and held reports waited for good (2026-10 review).
+        val name = when {
+            laterHours <= 0 -> REPORTS
+            REPORTS_LATER in from -> REPORTS_LATER_2
+            else -> REPORTS_LATER
+        }
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInitialDelay(laterHours, TimeUnit.HOURS)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+            .addTag(name)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(if (laterHours > 0) REPORTS_LATER else REPORTS, ExistingWorkPolicy.KEEP, req)
+        WorkManager.getInstance(context).enqueueUniqueWork(name, ExistingWorkPolicy.KEEP, req)
     }
 
     /**
@@ -155,7 +164,7 @@ class ReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         when (ErrorReports.sendPending(applicationContext)) {
             ErrorReports.Outcome.DONE -> Result.success()
             ErrorReports.Outcome.LATER -> {
-                ErrorReports.later(applicationContext)
+                ErrorReports.later(applicationContext, from = tags)
                 Result.success()
             }
             // The relay or the network is down; after that the next start or error tries again.
@@ -170,10 +179,10 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         if (LekasApp.graph(applicationContext).updates.background() || runAttemptCount >= 3) Result.success() else Result.retry()
 }
 
-/** Background sync (references/sync.md §10): retried with backoff; a needed sign-in stops it until the user acts. */
 /** The periodic sync skips a run within this time of a finished round when nothing waits (2026-10). */
 private const val RECENT_ROUND_MS = 15L * 60L * 1000L
 
+/** Background sync (references/sync.md §10): retried with backoff; a needed sign-in stops it until the user acts. */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val graph = LekasApp.graph(applicationContext)

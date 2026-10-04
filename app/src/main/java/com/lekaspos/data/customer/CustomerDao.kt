@@ -30,8 +30,19 @@ data class Customer(
     val creditLimit: Long = 0L,
 )
 
-/** A row of the customer list: [balance] = what the customer owes. */
-data class CustomerItem(val id: Long, val name: String, val nameKey: String, val phone: String?, val creditLimit: Long, val balance: Long)
+/**
+ * A row of the customer list: [balance] = what the customer owes. [removed]: deleted (here or on
+ * another till) but still owing or owed something — listed so it can be settled (2026-10 review).
+ */
+data class CustomerItem(
+    val id: Long,
+    val name: String,
+    val nameKey: String,
+    val phone: String?,
+    val creditLimit: Long,
+    val balance: Long,
+    val removed: Boolean = false,
+)
 
 /** One line of a customer's credit statement; [receiptNo] of the sale it belongs to, if any. */
 data class CreditEntry(
@@ -119,6 +130,17 @@ object CustomerDao {
         db.queryOne("SELECT name FROM customer WHERE id = ?", args(id)) { it.getString(0) }
 
     fun balance(db: SQLiteDatabase, id: Long): Long = db.long("SELECT balance FROM customer_balance WHERE customer_id = ?", id)
+
+    /**
+     * Customers deleted (here or on another till) whose balance is not 0, A–Z: another till, offline,
+     * sold to one on credit while this till deleted them, and the debt could not be seen, repaid or
+     * corrected anywhere (2026-10 review). From the small balance table, then each customer by id.
+     */
+    fun removedWithBalance(db: SQLiteDatabase, limit: Int = 100): List<CustomerItem> = db.queryList(
+        "SELECT c.id, c.name, c.name_key, c.phone, c.credit_limit, b.balance FROM customer_balance b " +
+            "CROSS JOIN customer c ON c.id = b.customer_id WHERE b.balance != 0 AND c.deleted = 1 ORDER BY c.name_key, c.id LIMIT ?",
+        args(limit),
+    ) { c -> item(c).copy(removed = true) }
 
     /** Customers who owe something, and how much in total. */
     fun debtors(db: SQLiteDatabase): Pair<Long, Long> =

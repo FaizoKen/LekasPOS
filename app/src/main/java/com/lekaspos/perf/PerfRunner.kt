@@ -112,13 +112,31 @@ class PerfRunner(private val context: Context, private val scope: CoroutineScope
      */
     suspend fun deleteData(): Boolean {
         // Checked and marked here, on the main thread: a run started while the files go would lose them.
-        check(!isRunning) { "test is running" }
+        // A second tap while the first deletes does nothing (it was an error, and an error report).
+        if (isRunning) return false
         deleting = true
         mutableState.value = State.Idle
         return try {
             withContext(Dispatchers.IO) { PerfDataGenerator.delete(context) }
         } finally {
             deleting = false
+        }
+    }
+
+    /**
+     * At start (main thread): test data left by a run Android ended, or by a crash in the middle
+     * (hundreds of megabytes after FULL), is deleted — only a later run or "Delete test data" did
+     * it, out of sight on the shop's phone (2026-10 review).
+     */
+    fun cleanLeftovers() {
+        if (isRunning) return
+        deleting = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                runCatching { PerfDataGenerator.delete(context) }
+            } finally {
+                withContext(Dispatchers.Main) { deleting = false }
+            }
         }
     }
 

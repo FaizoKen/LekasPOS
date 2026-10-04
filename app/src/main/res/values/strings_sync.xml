@@ -19,6 +19,7 @@
     <string name="backup_restore_file">Restore from a file…</string>
     <string name="backup_saved">Backup file saved.</string>
     <string name="backup_not_a_backup">This is not a LekasPOS backup file.</string>
+    <string name="backup_file_damaged">This backup file is damaged or incomplete (cut short while it was copied, for example). Try another copy of it.</string>
     <string name="backup_newer_app">This backup was made by a newer version of LekasPOS. Update the app first (Settings → App updates), then restore it.</string>
     <string name="backup_restore_title">Restore a backup</string>
     <string name="backup_restore_what">Backup of %1$s · %2$s · sales: %3$d · products: %4$d.</string>
@@ -91,6 +92,7 @@
     <string name="sync_error_clash">Another till in this store has the same till number. Make a backup, then restore it on this phone as a new till, and turn on sync again.</string>
     <string name="sync_old_copy">This phone holds an older copy of this till: newer records were already backed up from it (a backup was restored since). So that nothing is lost or mixed up, this phone continues as a new till. Restart the app, then turn the backup on again: everything that was backed up comes back.</string>
     <string name="sync_other_account">You signed in as %1$s, but this till syncs with %2$s. Sign in with %2$s, or turn sync off and on again to move the store to another account.</string>
+    <string name="sync_pins_dropped">This till now uses the shop\'s staff and PINs. The PIN set on this till before it joined the shop was removed, with its recovery code: sign in with the PIN used on the shop\'s other tills, or set one in Settings → Staff.</string>
     <string name="sync_join_title">Join another shop?</string>
     <string name="sync_join_other">This Google account already holds the backup of a shop with these tills: %1$s.\n\nJoining adds this phone\'s products, sales and customers to that shop on every till, and they cannot be separated again. To keep two shops apart, use a different Google account for each.</string>
     <string name="sync_join_yes">Join this shop</string>

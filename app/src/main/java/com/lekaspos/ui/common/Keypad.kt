@@ -8,21 +8,31 @@ import android.widget.Button
 import android.widget.LinearLayout
 import com.lekaspos.R
 import com.lekaspos.app.LekasApp
+import com.lekaspos.core.text.DigitEntry
 
 /**
  * On-screen number pad for money, quantities and weights (references/money.md §8: digits fill
  * from the right, never parsed through floating point). A hardware keyboard or keypad also
  * works through [onKey].
  */
-class Keypad(private val context: Context, private val maxDigits: Int = 9, private val onChange: (String) -> Unit) {
+class Keypad(private val context: Context, maxDigits: Int = 9, private val onChange: (String) -> Unit) {
 
-    var digits: String = ""
-        private set
+    private val entry = DigitEntry(maxDigits)
+
+    val digits: String get() = entry.digits
+
+    /** The amount shown is the one there was ([preset]): the first key typed replaces it (`:core` DigitEntry). */
+    val replacing: Boolean get() = entry.replacing
 
     val view: View = build()
 
-    fun set(value: String) {
-        digits = value.filter { it in '0'..'9' }.trimStart('0').take(maxDigits)
+    fun set(value: String) = put(value, replace = false)
+
+    /** Shows [value] as the amount now: OK keeps it, the first key typed replaces it. */
+    fun preset(value: String) = put(value, replace = true)
+
+    private fun put(value: String, replace: Boolean) {
+        entry.put(value, replace)
         onChange(digits)
     }
 
@@ -32,14 +42,7 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
         // Dialogs are windows of their own: the screen does not see these taps. An idle time that ran
         // out while paying is kept (the till locks after the payment), so it is not simply reset here.
         if (LekasApp.graph(context).staff.dialogActivity()) return
-        val next = when (key) {
-            DEL -> digits.dropLast(1)
-            else -> if ((digits + key).length > maxDigits) digits else (digits + key).trimStart('0')
-        }
-        if (next != digits) {
-            digits = next
-            onChange(digits)
-        }
+        if (entry.press(key)) onChange(digits)
     }
 
     private var lastKeyAt = 0L
@@ -47,6 +50,7 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
 
     /** The digits before the last key typed at a person's speed (restored when a scanner's burst starts). */
     private var beforeKey = ""
+    private var beforeReplacing = false
 
     /**
      * Hardware keys: digits, Backspace, and Delete to clear. Returns true if consumed.
@@ -71,11 +75,12 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
         val gap = t - lastKeyAt
         lastKeyAt = t
         if (gap < DialogKeys.BURST_GAP_MS || t < burstUntil) {
-            if (t >= burstUntil) set(beforeKey) // a burst begins: undo the key that started it
+            if (t >= burstUntil) put(beforeKey, beforeReplacing) // a burst begins: undo the key that started it
             burstUntil = t + DialogKeys.BURST_IDLE_MS
             return true
         }
         beforeKey = digits
+        beforeReplacing = replacing
         when {
             digit != null -> press(digit)
             code == KeyEvent.KEYCODE_DEL -> press(DEL)
@@ -110,6 +115,6 @@ class Keypad(private val context: Context, private val maxDigits: Int = 9, priva
     }
 
     companion object {
-        private const val DEL = "DEL"
+        private const val DEL = DigitEntry.DELETE
     }
 }

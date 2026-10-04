@@ -24,7 +24,6 @@ import com.lekaspos.util.Log
 import java.lang.ref.WeakReference
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -65,6 +64,7 @@ class SyncActivity : ScreenActivity() {
             pendingAuth = null
             onAuthResult(code, data)
         }
+        showPinsNotice()
         scope.launch {
             graph.sync.refreshStatus()
             val s = graph.sync.status.value
@@ -279,6 +279,9 @@ class SyncActivity : ScreenActivity() {
                 graph.sync.refreshStatus()
                 if (failure == null) com.lekaspos.app.Work.schedule(app, again = true)
             }
+            // A PIN set on this new till before it joined gave way to the shop's (SyncDao.yieldStaff) — also
+            // when the first round failed after that; said the next time this screen opens if it is gone.
+            screen.get()?.let { a -> a.runOnUiThread { if (!a.isFinishing && !a.isDestroyed) a.showPinsNotice() } }
             if (failure != null) {
                 screen.get()?.let { a ->
                     a.runOnUiThread {
@@ -307,6 +310,13 @@ class SyncActivity : ScreenActivity() {
     /** At once: the status turns to "Connecting to Google…" before anything else happens. */
     private fun syncNow() = graph.autoSync.now()
 
+    /** "This till now uses the shop's staff and PINs", once ([SyncEngine.takePinsNotice]). */
+    private fun showPinsNotice() {
+        launchUi {
+            if (graph.sync.takePinsNotice()) Dialogs.message(this@SyncActivity, getString(R.string.sync_title), getString(R.string.sync_pins_dropped))
+        }
+    }
+
     private fun showTills() {
         launchUi {
             val provider = graph.sync.provider() ?: return@launchUi
@@ -329,7 +339,7 @@ class SyncActivity : ScreenActivity() {
         Dialogs.confirm(this, getString(R.string.sync_turn_off), getString(R.string.sync_turn_off_confirm), getString(R.string.sync_turn_off)) {
             // In the app scope: it waits for a running round, and leaving this screen meanwhile must not
             // cancel it (the till kept syncing although "Turn off" was confirmed, 2026-10 review).
-            launchUi { graph.appScope.async { graph.sync.disable() }.await() }
+            launchUi { outlivingScreen { graph.sync.disable() } }
         }
     }
 

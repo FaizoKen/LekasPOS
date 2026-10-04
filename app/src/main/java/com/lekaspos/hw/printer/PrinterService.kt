@@ -66,6 +66,8 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
 
     // Owned by the printer thread.
     private var link: SppLink? = null
+
+    /** When the last job went out, by [SystemClock.elapsedRealtime]: a clock set back kept the link open for hours. */
     private var lastUsed = 0L
     private var lastBytes = 0
     private var failures = 0
@@ -82,6 +84,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
     @Volatile
     private var connecting: SppLink? = null
 
+    @Synchronized
     fun start() {
         if (started) return
         started = true
@@ -112,8 +115,13 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
         }
     }
 
-    /** Look at the queue now (a job was added, or the user asked to retry). */
+    /**
+     * Look at the queue now (a job was added, or the user asked to retry). Starts the printer loop if it
+     * is not running: a back-office screen Android restored after ending the app (the selling screen,
+     * which starts it, never opened) queued a drawer pulse or a shift report that waited (2026-10 review).
+     */
     fun wake() {
+        if (!started) start()
         wakeups.trySend(Unit)
     }
 
@@ -177,10 +185,12 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
             val job = db.read { PrintJobDao.next(it) }
             if (job == null) {
                 clearRendered() // e.g. the queue was cleared while a job was waiting for the printer
-                val now = System.currentTimeMillis()
-                if (link != null && now - lastUsed >= IDLE_CLOSE_MS) closeLink()
+                if (link != null && SystemClock.elapsedRealtime() - lastUsed >= IDLE_CLOSE_MS) closeLink()
                 _status.value = if (link != null) Status.Ready else Status.Idle
-                waitForWake(if (link != null) IDLE_CLOSE_MS else null)
+                // Looked at again now and then even without a wake: a job written by a screen that closed
+                // right after its commit (Back, the idle lock) skipped the wake, and a drawer pulse waited
+                // for the next sale — or expired (2026-10 review).
+                waitForWake(if (link != null) IDLE_CLOSE_MS else IDLE_RECHECK_MS)
                 continue
             }
             val now = System.currentTimeMillis()
@@ -242,7 +252,7 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
                 _status.value = Status.Printing
                 write(bytes, cfg.dots)
                 sentJobId = job.id
-                lastUsed = System.currentTimeMillis()
+                lastUsed = SystemClock.elapsedRealtime()
                 lastBytes = bytes.size
             }
             failures = 0
@@ -354,22 +364,51 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
      * raster data printed as garbage.
      */
     private fun write(bytes: ByteArray, dots: Int) {
-        val out = link?.output() ?: throw IOException("not connected")
+        val l = link ?: throw IOException("not connected")
+        val out = l.output()
         val paceMs = if (bytes.size > PACE_ABOVE_BYTES) CHUNK_BYTES * 1000L / ((dots / 8) * PACE_ROWS_PER_S) else 0L
-        var i = 0
-        while (i < bytes.size) {
-            val n = minOf(CHUNK_BYTES, bytes.size - i)
-            out.write(bytes, i, n)
-            out.flush()
-            i += n
-            if (paceMs > 0L) Thread.sleep(paceMs)
+        // A printer that stops taking data (no paper, the cover open, overheated) leaves a Bluetooth
+        // write blocked for good: the queue froze at "printing", and neither Retry, nor clearing the
+        // queue, nor another printer helped until the printer or Bluetooth was switched off (2026-10
+        // review). A chunk that has not gone out within the deadline closes the link: the write fails
+        // and the job waits and retries like one sent to a printer that is off.
+        val deadline = maxOf(STALL_MS, 3L * paceMs)
+        val chunkAt = java.util.concurrent.atomic.AtomicLong(0L)
+        val stalled = java.util.concurrent.atomic.AtomicBoolean(false)
+        val watchdog = graph.appScope.launch(Dispatchers.Default) {
+            while (true) {
+                delay(WATCH_MS)
+                val at = chunkAt.get()
+                if (at != 0L && SystemClock.elapsedRealtime() - at > deadline) {
+                    stalled.set(true)
+                    l.close()
+                    break
+                }
+            }
+        }
+        try {
+            var i = 0
+            while (i < bytes.size) {
+                val n = minOf(CHUNK_BYTES, bytes.size - i)
+                chunkAt.set(SystemClock.elapsedRealtime())
+                out.write(bytes, i, n)
+                out.flush()
+                chunkAt.set(0L)
+                i += n
+                if (paceMs > 0L) Thread.sleep(paceMs)
+            }
+        } catch (e: IOException) {
+            if (stalled.get()) throw IOException(STALLED, e)
+            throw e
+        } finally {
+            watchdog.cancel()
         }
     }
 
     /** Before closing on purpose: gives the last job time to leave the phone (close drops what is still queued). */
     private suspend fun settle() {
         val until = lastUsed + maxOf(SETTLE_MIN_MS, lastBytes.toLong() / SETTLE_BYTES_PER_MS)
-        val wait = until - System.currentTimeMillis()
+        val wait = until - SystemClock.elapsedRealtime()
         if (wait > 0L) delay(minOf(wait, SETTLE_MAX_MS))
     }
 
@@ -383,7 +422,12 @@ class PrinterService(private val app: Context, private val graph: AppGraph) {
     }
 
     companion object {
+        /** The reason of [Status.Offline] when the printer stopped taking data (see [write]); screens word it. */
+        const val STALLED = "printer not taking data"
+        private const val STALL_MS = 10_000L
+        private const val WATCH_MS = 1_000L
         private const val IDLE_CLOSE_MS = 45_000L
+        private const val IDLE_RECHECK_MS = 30_000L
         private const val RECHECK_MS = 10_000L
         private const val RESTART_MS = 10_000L
         private const val DRAWER_MAX_AGE_MS = 120_000L

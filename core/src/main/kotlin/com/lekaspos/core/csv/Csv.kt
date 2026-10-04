@@ -78,7 +78,16 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
 
     private val input: Reader = if (reader.markSupported()) reader else BufferedReader(reader, 16 * 1024)
 
-    class Malformed(val line: Int, message: String) : Exception("line $line: $message")
+    /** A file that is no CSV this reader takes; [reason] is worded by the screen (in its language). */
+    class Malformed(val line: Int, val reason: Reason) : Exception("line $line: ${reason.text}") {
+        enum class Reason(val text: String) {
+            LINE_TOO_LONG("line too long"),
+            TEXT_AFTER_QUOTE("text after a closing quote"),
+            TOO_MANY_COLUMNS("too many columns"),
+            FIELD_TOO_LONG("field too long"),
+            QUOTE_NOT_CLOSED("quote not closed"),
+        }
+    }
 
     private var peeked = -2
     private var line = 1
@@ -111,7 +120,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
     private var recordChars = 0
 
     private fun counted() {
-        if (++recordChars > MAX_RECORD) throw Malformed(recordLine, "line too long")
+        if (++recordChars > MAX_RECORD) throw Malformed(recordLine, Malformed.Reason.LINE_TOO_LONG)
     }
 
     private fun record(): List<String> {
@@ -126,7 +135,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
                 quoted(sb)
                 val after = peek()
                 if (after != -1 && after != delim.code && after != '\n'.code && after != '\r'.code) {
-                    throw Malformed(line, "text after a closing quote")
+                    throw Malformed(line, Malformed.Reason.TEXT_AFTER_QUOTE)
                 }
                 continue
             }
@@ -145,13 +154,13 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
                     counted()
                     fields.add(sb.toString())
                     sb.setLength(0)
-                    if (fields.size > MAX_FIELDS) throw Malformed(recordLine, "too many columns")
+                    if (fields.size > MAX_FIELDS) throw Malformed(recordLine, Malformed.Reason.TOO_MANY_COLUMNS)
                 }
                 else -> {
                     read()
                     counted()
                     sb.append(c.toChar())
-                    if (sb.length > MAX_FIELD) throw Malformed(recordLine, "field too long")
+                    if (sb.length > MAX_FIELD) throw Malformed(recordLine, Malformed.Reason.FIELD_TOO_LONG)
                 }
             }
         }
@@ -162,7 +171,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
         while (true) {
             val c = read()
             when (c) {
-                -1 -> throw Malformed(start, "quote not closed")
+                -1 -> throw Malformed(start, Malformed.Reason.QUOTE_NOT_CLOSED)
                 '"'.code -> {
                     if (peek() == '"'.code) {
                         read()
@@ -183,7 +192,7 @@ class CsvReader(reader: Reader, delimiter: Char? = null) {
                 else -> sb.append(c.toChar())
             }
             counted()
-            if (sb.length > MAX_FIELD) throw Malformed(start, "field too long")
+            if (sb.length > MAX_FIELD) throw Malformed(start, Malformed.Reason.FIELD_TOO_LONG)
         }
     }
 

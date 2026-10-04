@@ -4,8 +4,10 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.text.InputType
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -31,10 +33,17 @@ class PriceCheckDialog(
     private val check: PriceCheck,
     private val currency: CurrencySpec,
     private val onCamera: (() -> Unit)?,
+    /** "Change price" for the one product found (null: no button); see [PriceCheck.setPrice]. */
+    private val onChangePrice: ((PriceCheck.Info) -> Unit)? = null,
 ) {
     private lateinit var dialog: AlertDialog
     private lateinit var field: EditText
     private lateinit var result: TextView
+    private lateinit var change: Button
+
+    /** The one product the last lookup found (the "Change price" target), and that lookup's text. */
+    private var single: PriceCheck.Info? = null
+    private var lastQuery = ""
 
     val isShowing: Boolean get() = ::dialog.isInitialized && dialog.isShowing
 
@@ -52,9 +61,20 @@ class PriceCheckDialog(
             setOnEditorActionListener { _, action, event -> onEditorAction(action, event) }
         }
         result = TextView(a, null, 0, R.style.Text_Lekas_Body).apply { setPadding(0, pad / 2, 0, pad / 2) }
+        change = Button(a, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
+            text = a.getString(R.string.price_check_change)
+            visibility = View.GONE
+            setOnClickListener { single?.let { onChangePrice?.invoke(it) } }
+        }
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         col.addView(field, LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT))
-        col.addView(ScrollView(a).apply { addView(result) })
+        col.addView(ScrollView(a).apply {
+            addView(LinearLayout(a).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(result)
+                addView(change, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            })
+        })
         val b = AlertDialog.Builder(a)
             .setTitle(R.string.price_check_title)
             .setView(col)
@@ -92,6 +112,9 @@ class PriceCheckDialog(
         if (q.isEmpty()) return
         field.setText(q)
         field.setSelection(q.length)
+        lastQuery = q
+        single = null
+        change.visibility = View.GONE
         // The newest lookup only: a slow search for one scan finished after a quick barcode hit for
         // the next and showed the wrong product's price (2026-10 review).
         lookupJob?.cancel()
@@ -102,9 +125,17 @@ class PriceCheckDialog(
             } else {
                 found.joinToString("\n\n") { describe(it) }
             }
+            // One product found, with a price of its own (an open-price one is priced at the till).
+            single = found.singleOrNull()?.takeIf { it.sellMode != SellMode.OPEN_PRICE }
+            change.visibility = if (single != null && onChangePrice != null) View.VISIBLE else View.GONE
             field.requestFocus()
             field.selectAll() // the next scan replaces the text
         }
+    }
+
+    /** Shows the last lookup again (after its price was changed). */
+    fun refresh() {
+        if (isShowing && lastQuery.isNotEmpty()) lookup(lastQuery)
     }
 
     private fun describe(i: PriceCheck.Info): String {

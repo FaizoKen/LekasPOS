@@ -63,7 +63,13 @@ LWW entities: `setting` (per key), `role`, `staff`, `tax_rate`, `category`, `pro
 Stock work (D-036): a PURCHASE event regenerates its RECEIVE movements with the purchase-line
 ids; the moving-average cost change travels separately as an ordinary LWW `product.cost` edit,
 so importers never recompute averages (D-033). A STOCK_COUNT row carries `expected`/`unit_cost`
-for reports only; stock levels use just its qty and HLC.
+for reports only; stock levels use just its qty and HLC. `expected` is the level just before the
+count's `(hlc, dev)` as this till's events say, kept up to date (D-062): a count from another till
+gets it from this till's events when it arrives, and so does the count after it
+(`StockDao.countImported`, via `levelBefore`); an event that arrives after a count it comes before
+moves that count's `expected` (`applyDelta` → `countExpectedMoved`); a local count takes the level
+minus anything already stamped after it. So every till ends with the same report, read without
+scanning history.
 
 Staff, shifts and credit (D-037..D-039): a PIN change is one LWW field (`pin_hash` holds the
 whole salted record), so the same PIN works on every till. A shift is an LWW row edited only by
@@ -86,7 +92,9 @@ staff member are LOCAL (`meta`: `pin.*`, `session.staff`), per till.
   Local stock events are stamped after what they follow (`StockDao.stampAfterCounts` /
   `stampAfterEverything`): a sale or movement above the products' last counts, a count above the
   product's latest sale, movement and count — so a count from a till whose clock ran ahead never
-  hides later sales or recounts of the other tills (D-056). The till's own clock is not moved.
+  hides later sales or recounts of the other tills (D-056). Sales and movements more than
+  `Hlc.MAX_FUTURE_MS` ahead of this till's clock are left out of that stamping (one bad event no
+  longer pushes a count past every later sale, D-062). The till's own clock is not moved.
 - Same barcode assigned to two products concurrently → both kept; a scan (and a CSV update by
   barcode) picks the barcode row created last (`created_at`, then id — the same on every till,
   D-055); the product's edit screen names the other product.
@@ -149,7 +157,9 @@ Unknown kinds (v6, D-047): an event whose entity this version does not know is s
 `sync_deferred` (not skipped) and applied at the start of a later round once an update knows it.
 An event of a known kind that cannot be applied (a field of another type, a value out of range —
 from a newer or broken till) is set aside there too, after its chunk is rolled back and applied one
-event at a time; it is reported (Log.e) and retried each round, one transaction each (D-061). A full
+event at a time; it is reported (Log.e) and retried one transaction each (D-061) — once a day and at
+once after an app update (`meta sync.deferred_tried` = "versionCode:day"), read in pages of 200 of
+the kinds this version knows (D-062: every round read and retried the whole table). A full
 disk or the network still stops the round. Built-in rows at version (0, 0) named differently on two
 tills take the larger name. Listings ask Drive for compact, gzip answers; the whole folder is listed
 weekly; a till's card is republished when its identity changes or every 15 min (D-061).
@@ -171,7 +181,12 @@ the creation fills; products are re-indexed for search.
   is refused with `OTHER_STORE` (its tills named) until the owner confirms the join (`enable(join =
   true)`, D-060): two shops on one Google account were merged for good. A till joining a different existing store yields its own store settings
   (`setting.ver_hlc = 0`), so a new till's first-run Setup never overwrites the store's receipt
-  header, BRN or tax switch (D-055). Before that (D-054):
+  header, BRN or tax switch (D-055). A **fresh** till (no products, no sales) joining another store
+  also yields its staff (`SyncDao.yieldStaff`, D-062): its PINs and recovery code are cleared and its
+  built-in staff, roles and payment methods are made again as `Seed.insert` makes them (version
+  (0, 0), before the backfill), so the store's PINs sign in on it (the screen says so); a till with
+  data of its own keeps its PINs, and a till that moves store during a round (two new tills each made
+  a store) keeps them too — the PINs merge. Before that (D-054):
   - the folder already holds **more** of this till's files (or its card a higher `lastSeq`) than
     this database ever sealed → it is an older copy of the till (a backup from before it first
     synced was restored as "the same till"): refused with `OLD_COPY`, `meta identity.renew = 1`,

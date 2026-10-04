@@ -15,9 +15,13 @@ import androidx.annotation.RequiresApi
 import com.lekaspos.BuildConfig
 import com.lekaspos.core.diag.CrashText
 import com.lekaspos.core.diag.ErrorReport
+import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.data.db.Schema
+import com.lekaspos.domain.sale.ActionRefused
+import com.lekaspos.sync.AuthNeeded
 import com.lekaspos.util.ErrorLog
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
@@ -111,6 +115,29 @@ object ErrorReports {
         app = context.applicationContext
         ErrorLog.onError = { message, t, thread, before -> logged(message, t, thread, before) }
         ErrorLog.onCrash = { thread, e, before -> crashed(thread, e, before) }
+        Log.expected = ::expected
+    }
+
+    /**
+     * Failures that are no bug of the app (Log.expected), also when wrapped in another exception: a
+     * full phone, a refusal by the rules (ActionRefused), a coroutine or job stopped on purpose, a
+     * picked file that is no backup, Google sign-in needed, no internet (no address, no route, a
+     * time-out). They were filed as error reports from a dozen places (2026-10 review).
+     */
+    internal fun expected(t: Throwable): Boolean {
+        if (Storage.isFull(t)) return true
+        var e: Throwable? = t
+        var depth = 0
+        while (e != null && depth++ < 8) {
+            when (e) {
+                is kotlinx.coroutines.CancellationException, is ActionRefused, is BackupFiles.Invalid, is AuthNeeded,
+                is java.net.UnknownHostException, is java.net.ConnectException, is java.net.NoRouteToHostException,
+                is java.net.SocketTimeoutException,
+                -> return true
+            }
+            e = e.cause
+        }
+        return false
     }
 
     /** [UNASKED], [ON] or [OFF]. Blocking (the first call reads a small file). */
@@ -205,9 +232,9 @@ object ErrorReports {
     }
 
     /** Reports held back by the daily limits: again in a few hours. */
-    fun later(context: Context) {
+    fun later(context: Context, from: Set<String> = emptySet()) {
         try {
-            Work.sendReports(context.applicationContext, laterHours = 6)
+            Work.sendReports(context.applicationContext, laterHours = 6, from = from)
         } catch (e: Exception) {
             android.util.Log.w(Log.TAG, "Error reports: the later job was not scheduled", e)
         }

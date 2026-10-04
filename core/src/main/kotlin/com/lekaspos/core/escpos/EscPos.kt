@@ -134,6 +134,10 @@ object EscPosText {
     private val replacements = mapOf(
         '×' to 'x', '–' to '-', '—' to '-', '‘' to '\'', '’' to '\'', '“' to '"', '”' to '"',
         '•' to '*', '…' to '.', '¥' to 'Y', '\u00A0' to ' ', '·' to '.',
+        // A distributor's product list brings brand marks ("MILO® 1kg"): as a space they keep the
+        // column count; one of them turned every receipt with that product into a picture, about 30
+        // times the data and slow on a Bluetooth printer (2026-10 review).
+        '®' to ' ', '™' to ' ', '©' to ' ', '°' to 'o', '²' to '2', '³' to '3', '¹' to '1', 'µ' to 'u',
     )
 
     /** Printer bytes of [s]: one byte per column, two for a Chinese character in GB18030 mode. */

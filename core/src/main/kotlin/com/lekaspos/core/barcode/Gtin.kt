@@ -34,16 +34,72 @@ object Gtin {
      * also finds a code stored in its 14-digit form (a distributor's file, before [canonical]).
      */
     fun lookupVariants(raw: String): List<String> {
-        val code = raw.trim()
+        val code = asciiDigits(raw.trim())
         if (code.isEmpty()) return emptyList()
         if (!code.all { it in '0'..'9' }) return listOf(code)
-        return when (code.length) {
+        val forms = when (code.length) {
             7, 11 -> if (isValid("0$code")) listOf(code, "0$code") else listOf(code)
             12 -> listOf(code, "0$code")
             13 -> if (code[0] == '0') listOf(code, code.substring(1)) else listOf(code, "0$code")
             14 -> if (code[0] == '0') listOf(code, code.substring(1)) else listOf(code)
             else -> listOf(code)
         }
+        // UPC-E, the short form of a UPC-A on small packs: cameras and many scanners send the 8 digits
+        // while a supplier's list holds the 12 (or 13), or the other way round (2026-10 review).
+        val upcE = when (code.length) {
+            8 -> upcEToUpcA(code)?.let { listOf(it, "0$it") }
+            12 -> upcAToUpcE(code)?.let { listOf(it) }
+            13 -> if (code[0] == '0') upcAToUpcE(code.substring(1))?.let { listOf(it) } else null
+            else -> null
+        }
+        return if (upcE == null) forms else (forms + upcE).distinct()
+    }
+
+    /**
+     * The UPC-A of the UPC-E [code] (8 digits: number system 0 or 1, six digits, check digit), or null
+     * when [code] is none. The check digit is the same in both forms.
+     */
+    fun upcEToUpcA(code: String): String? {
+        if (code.length != 8 || !code.all { it in '0'..'9' } || (code[0] != '0' && code[0] != '1')) return null
+        val d = code.substring(1, 7)
+        val body = code[0] + when (d[5]) {
+            '0', '1', '2' -> d.substring(0, 2) + d[5] + "0000" + d.substring(2, 5)
+            '3' -> d.substring(0, 3) + "00000" + d.substring(3, 5)
+            '4' -> d.substring(0, 4) + "00000" + d[4]
+            else -> d.substring(0, 5) + "0000" + d[5]
+        }
+        val upcA = body + code[7]
+        return if (isValid(upcA)) upcA else null
+    }
+
+    /** The UPC-E of the UPC-A [code] when it has one (its zeros fit one of the four patterns), else null. */
+    fun upcAToUpcE(code: String): String? {
+        if (code.length != 12 || !code.all { it in '0'..'9' } || (code[0] != '0' && code[0] != '1') || !isValid(code)) return null
+        val m = code.substring(1, 6) // manufacturer
+        val p = code.substring(6, 11) // product
+        val six = when {
+            m.substring(2) in setOf("000", "100", "200") && p.startsWith("00") -> m.substring(0, 2) + p.substring(2) + m[2]
+            m.endsWith("00") && p.startsWith("000") -> m.substring(0, 3) + p.substring(3) + "3"
+            m.endsWith("0") && p.startsWith("0000") -> m.substring(0, 4) + p[4] + "4"
+            p.startsWith("0000") && p[4] in '5'..'9' -> m + p[4]
+            else -> return null
+        }
+        val upcE = code[0] + six + code[11]
+        return if (upcEToUpcA(upcE) == code) upcE else null
+    }
+
+    /**
+     * [text] with other scripts' digits (Arabic-Indic, Bengali, Devanagari, full-width …) as 0–9: a
+     * barcode typed on such a keyboard was kept as typed, and no scan ever matched it (2026-10 review).
+     */
+    fun asciiDigits(text: String): String {
+        if (text.all { it.code < 0x80 }) return text
+        val sb = StringBuilder(text.length)
+        for (c in text) {
+            val d = if (c.code >= 0x80) Character.digit(c, 10) else -1
+            sb.append(if (d >= 0) '0' + d else c)
+        }
+        return sb.toString()
     }
 
     /**
@@ -54,7 +110,7 @@ object Gtin {
      * with the 0 a spreadsheet dropped ([restoreLeadingZero]). Other codes stay as they are.
      */
     fun canonical(raw: String): String {
-        val code = raw.trim()
+        val code = asciiDigits(raw.trim())
         if (code.isEmpty()) return code
         val digits = if (code.any { it == ' ' || it == '-' }) code.filter { it != ' ' && it != '-' } else code
         if (digits !== code && !(digits.all { it in '0'..'9' } && isValid(digits))) return code

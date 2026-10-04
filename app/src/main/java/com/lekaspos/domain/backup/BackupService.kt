@@ -78,10 +78,17 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     @Volatile
     var integrityForTests: String? = null
 
+    /** When the database check last passed (elapsed realtime, 0 = not in this process). */
+    @Volatile
+    private var checkedOkAt = 0L
+
     val dir: File get() = Restore.backupDir(app)
 
-    /** Makes a backup on this phone. */
-    suspend fun backupNow(auto: Boolean = false): File = lock.withLock {
+    /**
+     * Makes a backup on this phone. With [quietOnly], not while a bill is being rung up ([Postponed]):
+     * checked again once sales wait for the copy, as a bill may have started meanwhile.
+     */
+    suspend fun backupNow(auto: Boolean = false, quietOnly: Boolean = false): File = lock.withLock {
         if (!auto) graph.permissions.actor(Perm.SETTINGS)
         val db = graph.db()
         withContext(Dispatchers.IO) {
@@ -90,7 +97,9 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
             val part = File(file.path + ".part")
             try {
                 FileOutputStream(part).use { out ->
-                    BackupFiles.write(db, out, File(app.cacheDir, "backup-tmp"), BuildConfig.VERSION_NAME, if (auto) "auto" else "manual")
+                    BackupFiles.write(db, out, File(app.cacheDir, "backup-tmp"), BuildConfig.VERSION_NAME, if (auto) "auto" else "manual") {
+                        if (quietOnly && !graph.cart.state.value.cart.isEmpty) throw Postponed()
+                    }
                     out.fd.sync()
                 }
                 if (!part.renameTo(file)) throw IllegalStateException("cannot finish ${file.name}")
@@ -117,7 +126,8 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         // phone): while a bill is being rung up or the till has just sold, the backup waits for a
         // quiet moment — but never past OVERDUE_MS since the last one (2026-10 review: it ran right
         // when the till was switched on in the morning, and Pay hung with the first customer).
-        if (due && latest != null && recent(latest.lastModified(), now, OVERDUE_MS) && busy(now)) throw Postponed()
+        val mayWait = latest != null && recent(latest.lastModified(), now, OVERDUE_MS)
+        if (due && mayWait && busy(now)) throw Postponed()
         // Not enough room for the copy: tried again tomorrow, and the selling screen says the phone
         // is full ([Storage.lowBelow] covers what the backup needs). It used to fail after pausing
         // sales for the copy, or never ran (2026-10 review). The folder copy of the last backup
@@ -126,8 +136,12 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         if (noRoom) Log.w("Daily backup skipped: not enough free storage")
         val made = if (due && !noRoom) {
             val db = graph.db()
-            val check = integrityForTests ?: KeepDamagedDatabase.problem ?: try {
-                db.read { BackupFiles.integrity(it) }
+            val known = KeepDamagedDatabase.problem
+            // A backup postponed after the check (a customer came meanwhile) does not read the whole
+            // file again on each retry within the hour.
+            val checkedLately = android.os.SystemClock.elapsedRealtime() - checkedOkAt < CHECK_KEPT_MS && checkedOkAt != 0L
+            val check = integrityForTests ?: known ?: if (checkedLately) "ok" else try {
+                db.read { BackupFiles.integrity(it) }.also { if (it == "ok") checkedOkAt = android.os.SystemClock.elapsedRealtime() }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e // the job was stopped (battery low): that is no damage (2026-10 review)
             } catch (e: Exception) {
@@ -136,14 +150,19 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
             if (check != "ok") {
                 // Keep every backup as it is: rotating would replace good copies by damaged ones.
                 val why = check.take(200)
-                Log.e("Database check failed: $why")
+                // Damage found now is an error report; damage already known (set aside at open, or
+                // SQLite's report) was reported when it was found: not once more every day.
+                if (integrityForTests == null && known != null) Log.w("Daily backup paused: $why") else Log.e("Database check failed: $why")
                 // Stored first, then shown: a refresh reading before the commit erased "Data problem".
                 runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.DB_PROBLEM, why) } }
                 _protection.value = _protection.value.copy(state = Protection.State.DAMAGED, damage = why)
                 return false
             }
             db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.DB_PROBLEM, null) }
-            backupNow(auto = true)
+            // Checked again: the database check reads the whole file (a minute for a large store on a
+            // slow phone), and the first customer of the day came meanwhile (2026-10 review).
+            if (mayWait && busy(System.currentTimeMillis())) throw Postponed()
+            backupNow(auto = true, quietOnly = mayWait)
         } else {
             null
         }
@@ -219,6 +238,8 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
                 Meta.put(tx.db, Meta.BACKUP_FOLDER_ERROR, null)
             }
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // the job was stopped (battery low, Android's time limit): no folder error to show
         } catch (e: Exception) {
             Log.w("Copying the backup to the folder failed", e)
             val why = e.message ?: e.javaClass.simpleName
@@ -307,14 +328,20 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     suspend fun stageRestore(open: () -> InputStream, mode: Restore.Mode): BackupFiles.Header {
         val actor = graph.permissions.actor(Perm.SETTINGS)
         val who = Restore.Who(actor.staffId, actor.approvedBy)
-        return try {
-            withContext(Dispatchers.IO) { open().use { Restore.prepare(app, it, mode, who) } }
-        } catch (e: Exception) {
-            // Also when the screen closed while checking: nothing stays waiting to be applied.
-            withContext(NonCancellable + Dispatchers.IO) { Restore.cancelStaged(app) }
-            throw e
+        // One check at a time: a second one, started while the first was checking, began by deleting
+        // the first one's files — a good backup was "damaged", or "Restart now" restored nothing (2026-10 review).
+        return stageLock.withLock {
+            try {
+                withContext(Dispatchers.IO) { open().use { Restore.prepare(app, it, mode, who) } }
+            } catch (e: Exception) {
+                // Also when the screen closed while checking: nothing stays waiting to be applied.
+                withContext(NonCancellable + Dispatchers.IO) { Restore.cancelStaged(app) }
+                throw e
+            }
         }
     }
+
+    private val stageLock = kotlinx.coroutines.sync.Mutex()
 
     /** The checked restore is not wanted (Cancel, or the question closed without "Restart now"). */
     suspend fun cancelRestore() = withContext(Dispatchers.IO) { Restore.cancelStaged(app) }
@@ -386,6 +413,9 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
         const val DUE_MS = 20L * 60L * 60L * 1000L
         private const val OVERDUE_MS = 36L * 60L * 60L * 1000L
         private const val QUIET_MS = 3L * 60L * 1000L
+
+        /** A passed database check is good for a backup postponed within this time. */
+        private const val CHECK_KEPT_MS = 60L * 60L * 1000L
         private const val CLOCK_SLACK_MS = 5L * 60L * 1000L
 
         /** A copy off this phone counts as recent for this long (then "not backed up" shows). */

@@ -13,6 +13,7 @@ import com.lekaspos.data.settings.StoreSettings
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,7 +22,16 @@ import kotlinx.coroutines.withContext
  * Store settings (synced, LWW per key) and this device's hardware settings, loaded once and
  * then served from memory as StateFlows. Saving writes the DB first, then publishes.
  */
-class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: String) {
+class SettingsRepo(
+    private val graph: AppGraph,
+    /**
+     * The receipt language while the store never chose one: the screens' language as chosen now. The
+     * one the process started in printed English receipts after the owner picked Malay, then Malay
+     * ones after a restart, with no setting changed (2026-10 review). See [languageChanged].
+     */
+    private val language: () -> String,
+) {
+    private val defaultLanguage: String get() = language()
 
     private val _store = MutableStateFlow(StoreSettings(receiptLanguage = defaultLanguage))
     val store: StateFlow<StoreSettings> = _store
@@ -85,6 +95,12 @@ class SettingsRepo(private val graph: AppGraph, private val defaultLanguage: Str
         }
         // Keys this screen did not change keep what the database has now (another till's edit).
         reload()
+    }
+
+    /** The app's language was changed: a receipt language the store never chose follows it at once. */
+    fun languageChanged() {
+        if (!loaded) return
+        graph.appScope.launch { reload() }
     }
 
     /** Saves the changes from the settings in memory now to [after] (one-switch changes, tests). */

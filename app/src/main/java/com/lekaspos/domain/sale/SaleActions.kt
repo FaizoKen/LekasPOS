@@ -192,7 +192,11 @@ class SaleActions(private val graph: AppGraph) {
     suspend fun print(saleId: Long, copy: Boolean, approval: Approval? = null) {
         graph.db().write(reserveIds = 4L) { tx ->
             val now = System.currentTimeMillis()
-            if (copy || PrintJobDao.hasReceipt(tx.db, saleId)) {
+            // A first receipt only on the day of the sale: the queue forgets printed jobs after a week,
+            // and the last sale of a till left on over a week's holiday printed as an original (2026-10 review).
+            val soldAt = SaleQueries.header(tx.db, saleId)?.soldAt
+            val recent = soldAt != null && kotlin.math.abs(now - soldAt) < FIRST_RECEIPT_MS
+            if (copy || !recent || PrintJobDao.hasReceipt(tx.db, saleId)) {
                 val actor = graph.permissions.actor(Perm.REPRINT, approval)
                 PrintJobDao.enqueue(tx, PrintJobKind.REPRINT, saleId, 1, now)
                 AuditDao.log(tx, AuditAction.REPRINT, actor.staffId, now, Entity.SALE, saleId, approvedBy = actor.approvedBy)
@@ -224,6 +228,9 @@ class SaleActions(private val graph: AppGraph) {
     }
 
     companion object {
+        /** A receipt asked for this long after its sale is a copy ([print]). */
+        private const val FIRST_RECEIPT_MS = 24L * 60L * 60L * 1000L
+
         /**
          * This till's open shift, read inside the write transaction: a shift closed meanwhile (on the
          * shift screen) never tags a refund or void (2026-10 review). Refused when shifts are required.

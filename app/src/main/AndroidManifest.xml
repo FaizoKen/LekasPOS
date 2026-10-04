@@ -61,11 +61,14 @@
         <!-- Every screen handles uiMode itself: the app has one (light) theme and no night
              resources, and the evening switch to dark mode recreated the screens for nothing,
              closing open dialogs and dropping typed input (2026-10 review). -->
+        <!-- singleTop, not singleTask: tapping the app's icon after Home closed every screen above the
+             selling screen (a product half typed, a refund half chosen) - singleTask clears the task
+             above itself on every launch (2026-10 review). One selling screen: see SellActivity.onCreate. -->
         <activity
             android:name=".ui.sell.SellActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|uiMode"
             android:exported="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize|stateHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

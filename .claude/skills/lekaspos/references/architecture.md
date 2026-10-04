@@ -73,8 +73,15 @@ network on the main thread already throws on API 21+.
   writer thread (UI updates first from memory, persistence follows asynchronously). After a
   crash or kill, `CartSession` reloads the open cart → "crash-safe restart back to the bill".
 - One Activity per major screen. The selling screen (`SellActivity`) is the launcher and home
-  (`launchMode=singleTask`). Small interactions (discount, payment) are dialogs built from our own
-  layouts; the bill line's quantity is changed in place (§8b).
+  (`launchMode=singleTop`; `singleTask` closed every screen above it when the app's icon was tapped,
+  D-062 — a second selling screen from the launcher closes itself in `onCreate`, and "home" uses
+  `CLEAR_TOP | SINGLE_TOP`). Every screen opened by a `ScreenActivity` or the selling screen goes
+  through `LaunchGuard` (the same screen asked for twice within 700 ms opens once). Small
+  interactions (discount, payment) are dialogs built from our own layouts; the bill line's quantity
+  is changed in place (§8b). Number pads (`Keypad`, `:core` `DigitEntry`) show a starting amount
+  grey and replace it with the first key (`preset`).
+- The selling screen's tiles are read again in place after a sale and when `AppGraph.catalogChanges`
+  ticks (sync imported products, categories or stock; a CSV import ended), D-062.
 - Collect flows only between `onStart` and `onStop` (a scope per Activity start); cancel in
   `onStop`. Never keep an Activity/View reference in a singleton.
 - Activities declare `android:configChanges="keyboard|keyboardHidden|navigation"`: Bluetooth
@@ -137,6 +144,8 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   so a stop aborts it), closes it after 45 s idle, reconnects with backoff (2–60 s, stops after
   10 failures until woken) and marks a job done only after its bytes were written. Large (image)
   jobs are paced in 1 KB chunks at about 500 dot rows a second (printers without flow control).
+  A chunk that has not gone out within 10 s (or 3 × the pace) closes the link: a printer that stops
+  taking data (no paper, cover open) fails the write and the job retries, D-062.
   `reconnect()` (settings changed) keeps a live link to the same printer. Automatic sale receipts
   still waiting after 10 min (printer off) expire (FAILED, "expired") instead of flooding out
   later; reprints, shift reports and test pages wait. Printing always happens after the sale
@@ -155,11 +164,15 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   scanned). Every dialog swallows Enter/Tab/Space so a scanner's Enter never presses a focused
   button, and number pads drop scanner-speed digits (`DialogKeys`, D-054; up to 60 ms per key, as
   `ScanBuffer`, D-056). SPP scanners
-  (`hw.scanner.SppScanner`) run while the selling screen is visible; a code without an Enter
+  (`hw.scanner.SppScanner`) run while a screen that takes scans is in front (`hold`/`release`: a
+  screen opened over another starts before that one stops); a code without an Enter
   suffix is delivered after 250 ms of silence. The key-timing logic
-  lives in `ui.common.ScanInput`, shared by the selling, receiving, counting and product-picker screens;
-  `FieldScan` takes a scan typed into a focused field back out of it on those screens, and
-  `scanChar` reads digits by key code (numeric-keypad scanners, other layouts — D-056). Camera scanning
+  lives in `ui.common.ScanInput`, shared by the selling, receiving, counting, product-picker, product
+  list and product form screens; `FieldScan` takes a scan typed into a focused field back out of it on
+  those screens, and `scanChar` reads digits by key code (numeric-keypad scanners, other layouts —
+  D-056). Back-office screens take scanner keys in `ScreenActivity.screenKey` (after the idle-lock
+  check, so a scan counts as use) and serial codes through `serialScans()` (dropped while a dialog has
+  the focus, as keyboard scans are), D-062. Camera scanning
   (`ui.scan.CameraScanActivity`, Camera1 + ZXing 3.3.3) either adds every item to the bill or
   returns one code; in sell mode a code it cannot add by itself (unknown, needs a weight or a price)
   goes back to the selling screen, which registers, weighs or prices it (D-056). All paths end in
@@ -280,8 +293,10 @@ restore that `Db.open` applies before opening the database (D-044).
   per phone, in a preferences file; nothing is queued while it is "off", D-060) and only from
   release-signed builds; ≤ 10 a day, each bug once a day; a crash is
   also tried once at once (≤ 2.5 s). Diagnostics → "Send a report" sends one by hand. Reports hold no
-  shop data; free text goes through `CrashText.scrub`. Never call `Log.e` from the reporting path
-  (a report about reports): it logs with `android.util.Log`. R8 keeps the app's own class names so
+  shop data; free text goes through `CrashText.scrub`. `Log.e` with a throwable that is no fault
+  (`ErrorReports.expected`: offline, a full phone, `ActionRefused`, `BackupFiles.Invalid`, a sign-in
+  needed, a cancellation) is logged as a warning and never reported (D-062). Never call `Log.e` from
+  the reporting path (a report about reports): it logs with `android.util.Log`. R8 keeps the app's own class names so
   fingerprints match across builds. Tests that open the selling screen answer the question first
   (`ErrorReports.setConsent(ctx, false)`), as they skip the welcome screen.
 - WorkManager gets initialisation and scheduling exception handlers: a full disk must never crash

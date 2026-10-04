@@ -19,6 +19,7 @@
     <string name="backup_restore_file">Pulihkan daripada fail…</string>
     <string name="backup_saved">Fail sandaran disimpan.</string>
     <string name="backup_not_a_backup">Ini bukan fail sandaran LekasPOS.</string>
+    <string name="backup_file_damaged">Fail sandaran ini rosak atau tidak lengkap (contohnya terputus semasa disalin). Cuba salinan lain.</string>
     <string name="backup_newer_app">Sandaran ini dibuat oleh versi LekasPOS yang lebih baharu. Kemas kini aplikasi dahulu (Tetapan → Kemas kini aplikasi), kemudian pulihkan.</string>
     <string name="backup_restore_title">Pulihkan sandaran</string>
     <string name="backup_restore_what">Sandaran pada %1$s · %2$s · jualan: %3$d · produk: %4$d.</string>
@@ -88,6 +89,7 @@
     <string name="sync_error_clash">Kaunter lain dalam kedai ini mempunyai nombor kaunter yang sama. Buat sandaran, kemudian pulihkannya pada telefon ini sebagai kaunter baharu, dan hidupkan segerak semula.</string>
     <string name="sync_old_copy">Telefon ini menyimpan salinan lama kaunter ini: rekod yang lebih baharu telah disandarkan daripadanya (sandaran telah dipulihkan selepas itu). Supaya tiada yang hilang atau bercampur, telefon ini diteruskan sebagai kaunter baharu. Mulakan semula aplikasi, kemudian hidupkan sandaran semula: semua yang telah disandarkan akan kembali.</string>
     <string name="sync_other_account">Anda log masuk sebagai %1$s, tetapi kaunter ini bersegerak dengan %2$s. Log masuk dengan %2$s, atau matikan dan hidupkan semula segerak untuk memindahkan kedai ke akaun lain.</string>
+    <string name="sync_pins_dropped">Kaunter ini kini menggunakan kakitangan dan PIN kedai. PIN yang ditetapkan pada kaunter ini sebelum ia menyertai kedai telah dibuang, bersama kod pemulihannya: log masuk dengan PIN yang digunakan di kaunter lain kedai, atau tetapkan PIN dalam Tetapan → Kakitangan.</string>
     <string name="sync_join_title">Sertai kedai lain?</string>
     <string name="sync_join_other">Akaun Google ini sudah menyimpan sandaran sebuah kedai dengan kaunter berikut: %1$s.\n\nJika disertai, produk, jualan dan pelanggan telefon ini ditambah ke kedai itu pada setiap kaunter, dan tidak boleh dipisahkan semula. Untuk mengasingkan dua kedai, gunakan akaun Google yang berbeza bagi setiap kedai.</string>
     <string name="sync_join_yes">Sertai kedai ini</string>

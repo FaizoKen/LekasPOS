@@ -123,6 +123,22 @@ class SaleActionsTest {
         assertEquals(1L, db.readBlocking { AuditDao.countByAction(it, AuditAction.DRAWER_OPEN) })
     }
 
+    /**
+     * 2026-10 review: the queue forgets printed jobs after a week, so the last sale of a till left on
+     * over a holiday printed as an original. A receipt asked for a day after the sale is a copy.
+     */
+    @Test
+    fun aReceiptOfAnOldSaleIsACopy() = runBlocking {
+        val db = graph.db()
+        val a = TestDb.product(db, "A", 500L)
+        val weekAgo = System.currentTimeMillis() - 8L * 24L * 3600L * 1000L
+        val sale = db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(a to 1_000L), soldAt = weekAgo), tz) }
+        graph.sales.print(sale.id, copy = false)
+        val jobs = db.readBlocking { r -> r.queryList("SELECT kind FROM print_job ORDER BY id") { it.getInt(0) } }
+        assertEquals(listOf(PrintJobKind.REPRINT), jobs)
+        assertEquals(1L, db.readBlocking { AuditDao.countByAction(it, AuditAction.REPRINT) })
+    }
+
     @Test
     fun aReturnWorthNothingStillBlocksTheVoid() = runBlocking {
         val db = graph.db()

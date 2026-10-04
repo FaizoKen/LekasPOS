@@ -1084,6 +1084,92 @@ the bill", "save and add next" / duplicate product, editing a product's price fr
 matching for supplier lists, category ordering, sales list by item, a "no cost price" profit warning,
 quick refund reasons, quick keys, bulk price changes, percent-off and spend-threshold promotions.
 
+### D-062 — Sixth bug hunt: double taps, a till left on all day, two tills, scanners everywhere (1.8.0, 2026-10-04)
+The owner asked for another free-hand hunt for bugs and weak features. Read-only reviews took angles the
+earlier hunts had not: a till that never leaves the selling screen, double taps and slow phones, two
+tills editing the same things, a new till joining a store, stock counts across tills and clocks, the
+receipt in Malay, hardware (printers that stop taking paper, serial scanners, keyboard-mode scanners),
+what becomes an error report, and the weak features D-061 listed. Every finding was checked in the code
+first; the whole change was then reviewed again by three independent reviews (sync and data, domain and
+hardware, screens). Decisions that change behaviour:
+- **Prices from the till:** the price check has "Change price" when it found one product (not one
+  priced at the till); it needs "Manage products" (or a manager's PIN) and is in the activity log
+  ("… (price check)"). The selling screen's tiles show the new price at once.
+- **Products entered faster:** a keyboard-mode or serial scanner on the product form adds the code to
+  the barcodes (it was typed into the field with the cursor); "Save and add another" (from the Products
+  list) opens the next product's form with the same category and tax, and the list's + takes a
+  manager's approval once for the whole series; a scan in the Products search replaces what it held.
+- **Cash count:** opening and closing a shift can count the drawer by note and coin (RM100 … 5 sen); a
+  close whose count matches the amount keeps the breakdown in its note.
+- **Keypads:** an amount shown when a dialog opens (the bill, a quantity) is grey and replaced by the
+  first key; Delete clears it (a key used to be added to it: "1" on RM12.50 gave RM125.01).
+- **Double taps and slow phones:** Pay opens one payment; Print queues one receipt; a tap right after
+  picking a search result or closing the result does not reach the tile under it; any screen opened
+  twice within a moment opens once (`LaunchGuard`); the selling screen is `singleTop` (was
+  `singleTask`, which closed every screen above it when the launcher icon was tapped) and a second
+  one from the launcher closes itself.
+- **A till left on all day:** the tiles show the stock after each sale and read again when another
+  till or an import changes products, categories or stock (in place: the grid keeps its place); a
+  weight or price being asked survives the screen being rebuilt; a receipt asked for more than a day
+  after its sale is a copy (the print queue forgets jobs after a week).
+- **Two tills:** a role edited on two tills keeps both changes (only the switches touched on the screen
+  are written); staff and role saves check the rows as they are at the save; a stock count's
+  "expected" is the level just before the count, taking in the other till's sales made before it — kept
+  up to date as events arrive (a count from another till is worked out when it arrives; a late sale
+  moves the count after it), so the count report reads stored values, not each product's history; a
+  till whose clock ran far ahead no longer hides later offline sales after a count; the receipt-number
+  search finds every till's receipt with that number.
+- **A new till joining a store** (no products, no sales): its own PINs and recovery code give way to
+  the store's, and its built-in staff, roles and payment methods are made again as on a new install
+  (version (0, 0)), so the store's staff sign in on it and nothing it changed at setup stays different
+  for good; the Sync screen says so, also the next time it opens if the first sync outlasted it or
+  failed; a till with its own data keeps its PINs (a main till may join a store first made on a
+  spare phone), and so do two new tills that made a store each at the same moment (they merge).
+- **Customers:** a removed customer who still owes stays in the list ("removed") and can only be
+  settled.
+- **Sync:** events set aside are retried once a day and right after an update, in pages (every round
+  read the whole table and retried each in its own transaction); a failed round is logged once per
+  kind of failure, and the world's failures (offline, a dropped connection, Google busy or full, a full
+  phone, Google sign-in unreachable) are warnings, not error reports, and said as "offline"; a
+  connection that dropped while the phone kept its network is retried like any failure.
+- **Error reports** (D-057): outcomes that are not faults — offline, a full phone, an action refused by
+  a rule, a file that is no backup, a sign-in needed — never become reports, whatever the code logs;
+  reports held by the daily limit are no longer dropped when the later job finds more held.
+- **Printer:** a printer that stops taking data (no paper, cover open) closes the link after 10 s (or
+  3 × the pace): the job waits and retries instead of "printing" for ever; the queue is looked at every
+  30 s even without a wake; timing uses the phone's uptime (a clock set back kept the link open).
+- **Scanners:** a serial (SPP) scanner works on Count, Receive and Pick too (only the selling screen
+  took its codes) and stays connected between them; after a link that was up it is tried every 5 s
+  for 2 minutes, and when the till is used within 30 minutes of the drop (at most once a minute: each
+  try pages Bluetooth for ~15 s); a serial code goes to the screen in front only (one scanned while a
+  screen opened went to both); scans on those screens count as use for the idle
+  lock (a count scanned without touching the screen locked half-way). A keyboard-mode scanner that
+  hides the on-screen keyboard is explained once, with a link to the setting.
+- **Backups:** the daily backup checks again that the till is quiet after the database check (it can
+  take a minute) and once more when sales pause for the copy; a passed check counts for an hour (a
+  postponed backup does not read the whole file again on each retry); a restore says "Checking…" and
+  can be cancelled; a file that is no backup, from a newer app or damaged is said as such.
+- **Receipts and words:** payment names and "Tax" print in the receipt's language; "®", "™", "©", "°",
+  "²" print as text in their column; Malay: "Pembundaran" (rounding), "Dibatalkan" (voids), "Mula
+  menjual", "laci wang", "kakitangan", "tangguhkan". A phone whose first language the app does not
+  have shows the first of its languages the app has, else English, with that language's rules (it was
+  a mix of English text and the phone's number and plural rules); built-in names follow the language
+  chosen at setup.
+- **Barcodes:** UPC-E finds a product saved with its UPC-A form (12 or 13 digits) and back, at the till
+  and in imports (up to three codes per lookup); digits of other scripts (Arabic-Indic, Thai …) read as
+  digits. An unregistered 8-digit code that is also a valid UPC-E can find the UPC-A product it
+  expands to (an exact match always wins): accepted, UPC-A products are rare here.
+- **Files:** a receipt picture or a logo the phone could not write is an error, not a broken file
+  shared or a cut-off logo; CSV import problems are said in the screen's language with the line.
+Not changed: a CSV row with stock of 100,000 or more is still skipped whole (rare; the preview names
+it); held keys on keypads (the burst guard already keeps one digit); a recovery code made the instant
+its screen closes (a new one can be made); the activity log's details stay English (D-057 convention);
+an open shift left by a till that became another device; half-written exports; a camera scan repeated
+after rotation; the test page's language; Google sign-in's own messages; printer warm-up and the
+58 mm cut (they need the printers). Weak features still listed for the owner: "void and put back on
+the bill", bulk price changes, quick keys, category ordering, sales list by item, percent-off and
+spend-threshold promotions, quick refund reasons.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

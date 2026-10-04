@@ -344,12 +344,16 @@ class StaffSession(private val graph: AppGraph) {
 
     /** Milliseconds before a PIN of [staffId] is checked again (after too many wrong ones). */
     suspend fun waitMs(staffId: Long): Long {
-        val f = graph.db().read { r -> fails(r, staffId) }
+        val stored = graph.db().read { r -> fails(r, staffId) }
+        val f = unsaved[staffId]?.takeIf { it.count > stored.count } ?: stored
         return remaining(f, System.currentTimeMillis())
     }
 
     /** Wrong PINs in a row, the wall-clock time of the last one, and "boot:elapsedRealtime" of it. */
     private data class Fails(val count: Int, val last: Long, val lastRt: String?)
+
+    /** Wrong PINs counted in this process, per staff member, whether or not their write succeeded. */
+    private val unsaved: MutableMap<Long, Fails> = java.util.Collections.synchronizedMap(HashMap())
 
     private fun fails(r: android.database.sqlite.SQLiteDatabase, staffId: Long) = Fails(
         (Meta.getLong(r, KEY_FAILS + staffId) ?: 0L).toInt(),
@@ -383,6 +387,7 @@ class StaffSession(private val graph: AppGraph) {
 
     /** Forgets [staffId]'s wrong PINs (a new PIN was set for them, or the owner used the recovery code). */
     internal fun clearFails(tx: com.lekaspos.data.db.Db.Tx, staffId: Long) {
+        unsaved.remove(staffId)
         Meta.put(tx.db, KEY_FAILS + staffId, null)
         Meta.put(tx.db, KEY_LAST_FAIL + staffId, null)
         Meta.put(tx.db, KEY_LAST_FAIL_RT + staffId, null)
@@ -396,22 +401,33 @@ class StaffSession(private val graph: AppGraph) {
     suspend fun check(staffId: Long, pin: String, perm: Long): Check = pinLock.withLock {
         val db = graph.db()
         val now = System.currentTimeMillis()
-        val (staff, f) = db.read { r -> StaffDao.get(r, staffId) to fails(r, staffId) }
+        val (staff, stored) = db.read { r -> StaffDao.get(r, staffId) to fails(r, staffId) }
+        // Wrong PINs that could not be stored count as well (see [unsaved]).
+        val f = unsaved[staffId]?.takeIf { it.count > stored.count } ?: stored
         val wait = remaining(f, now)
         if (wait > 0L) {
             // The clock was set back before the last wrong PIN: the wait counts from now. Left as it
             // was, the wait lasted until the clock reached that time again — a cashier who set the
             // date to 2099 for five wrong owner PINs blocked the owner's PIN for years.
-            if (now < f.last) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString()) }
+            if (now < f.last) {
+                // In memory too: a count that could not be stored kept its time in the future, and the
+                // wait lasted until the app restarted.
+                unsaved[staffId]?.let { u -> if (u.last > now) unsaved[staffId] = u.copy(last = now) }
+                db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString()) }
+            }
             return@withLock Check.Wait(wait)
         }
         if (staff == null || !staff.canSignIn || !Perm.has(staff.perms, perm)) return@withLock Check.NotAllowed
         val ok = withContext(Dispatchers.Default) { PinHash.verify(pin, staff.pin) }
         if (ok) {
+            unsaved.remove(staffId)
             if (f.count != 0) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, KEY_FAILS + staffId, null) }
             return@withLock Check.Ok(staff)
         }
         val n = f.count + 1
+        // Counted in memory first: a phone too full to store the count failed this write, the count
+        // never grew, and the waits after five wrong PINs never came (2026-10 review).
+        unsaved[staffId] = Fails(n, now, bootStamp())
         db.write(reserveIds = 1L) { tx ->
             Meta.put(tx.db, KEY_FAILS + staffId, n.toString())
             Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString())

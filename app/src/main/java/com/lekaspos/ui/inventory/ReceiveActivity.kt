@@ -28,7 +28,6 @@ import com.lekaspos.ui.sell.AmountDialog
 import com.lekaspos.ui.sell.Beeper
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
@@ -127,8 +126,10 @@ class ReceiveActivity : ScreenActivity() {
     }
 
     // No scans while the delivery is being recorded: they belong to no delivery (2026-10 review).
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (loaded && !saving && if (ref.hasFocus()) fieldScan.onKey(event, ref) else scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+    override fun screenKey(event: KeyEvent): Boolean =
+        loaded && !saving && if (ref.hasFocus()) fieldScan.onKey(event, ref) else scanInput.onKey(event)
+
+    override fun serialScans(): (String) -> Unit = { if (loaded && !saving) addByCode(it) }
 
     private fun render() {
         supplierButton.text = draft.supplierId?.let { id -> suppliers.firstOrNull { it.id == id }?.name } ?: getString(R.string.inv_no_supplier)
@@ -237,7 +238,7 @@ class ReceiveActivity : ScreenActivity() {
                 var received = false
                 try {
                     // In the app scope: leaving the screen cannot cut a delivery in half.
-                    graph.appScope.async(Dispatchers.Main) { graph.inventory.receive(d) }.await()
+                    outlivingScreen { graph.inventory.receive(d) }
                     received = true // stays "saving" while the screen closes
                     toast(R.string.inv_received)
                     finish()

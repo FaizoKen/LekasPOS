@@ -23,6 +23,7 @@ import com.lekaspos.domain.sell.Resolution
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.ui.sell.replacing
 import com.lekaspos.ui.sell.weightText
 
 /** A product chosen for stock work (by scan, search or tap). */
@@ -117,7 +118,11 @@ object InventoryUi {
             val n = digits.toLongOrNull() ?: return null
             return if (p.weighed) n else n * 1000L
         }
-        val keypad = Keypad(a, 9) { d -> display.text = value(d)?.let { if (p.weighed) weightText(it) + " " + p.unit else qty(it, p.unit) } ?: "" }
+        lateinit var keypad: Keypad
+        keypad = Keypad(a, 9) { d ->
+            display.text = value(d)?.let { if (p.weighed) weightText(it) + " " + p.unit else qty(it, p.unit) } ?: ""
+            display.replacing(keypad.replacing)
+        }
         val col = column(a)
         col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply {
             text = a.getString(R.string.inv_stock_now, qty(p.stock, p.unit))
@@ -137,7 +142,7 @@ object InventoryUi {
             }
         }
         val start = if (initial <= 0L) "" else if (p.weighed) initial.toString() else (initial / 1000L).toString()
-        keypad.set(start)
+        keypad.preset(start) // the quantity now (a first count, a delivery line): the first key replaces it
         d.show()
         return d.trackedBy(a)
     }

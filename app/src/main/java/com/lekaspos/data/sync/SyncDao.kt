@@ -5,10 +5,13 @@ import android.util.JsonReader
 import android.util.JsonToken
 import android.util.JsonWriter
 import com.lekaspos.data.db.Db
+import com.lekaspos.data.db.Seed
+import com.lekaspos.data.db.SeedNames
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.long
 import com.lekaspos.data.db.longOrNull
 import com.lekaspos.data.db.queryList
+import com.lekaspos.data.settings.SettingKeys
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
@@ -43,7 +46,14 @@ object SyncDao {
         "SELECT seq, hlc, entity, op, row_id, payload FROM outbox ORDER BY seq LIMIT ?", args(limit),
     ) { OutboxRow(it.getLong(0), it.getLong(1), it.getInt(2), it.getInt(3), it.longOrNull(4), it.getString(5)) }
 
-    fun outboxCount(db: SQLiteDatabase): Long = db.long("SELECT COUNT(*) FROM outbox")
+    /**
+     * Events waiting in the outbox. It only grows at its end and is only emptied from its start (by
+     * seq), so the first and last seq say it: COUNT(*) read every page of it, and after weeks without
+     * internet (a busy till's 50 MB of sale events) that ran after every sale (2026-10 review). Two
+     * subqueries: SQLite reads a lone MIN or MAX from the end of the key, but `MAX - MIN` scans.
+     */
+    fun outboxCount(db: SQLiteDatabase): Long =
+        db.long("SELECT COALESCE((SELECT MAX(seq) FROM outbox) - (SELECT MIN(seq) FROM outbox) + 1, 0)")
 
     fun deleteOutboxUpTo(tx: Db.Tx, seq: Long) {
         tx.update("DELETE FROM outbox WHERE seq <= ?", seq)
@@ -127,6 +137,31 @@ object SyncDao {
         tx.update("UPDATE setting SET ver_hlc = 0 WHERE ver_hlc > 0")
     }
 
+    /**
+     * A new till — no products, no sales — joins a store that already exists: the store's staff and
+     * PINs apply here (2026-10 review). Its first-run setup offers "Staff and PINs" before "Join", and
+     * an owner PIN set there was newer than the store's, so it became the owner's PIN on every till,
+     * while the recovery code shown with it never worked (the store's stayed). So the PINs set here
+     * before joining are dropped, with that recovery code, and the built-in rows (the owner, the roles,
+     * the payment methods) are made again as every till first makes them, in [names]: at base (0, 0)
+     * they lose to every real edit of the store. (Kept with this till's own values at (0, 0) — a method
+     * switched off at setup — they differed from a store that never edited them, for good.) Returns
+     * true when this till had a PIN of its own. Before the backfill: nothing of this till's own goes out.
+     */
+    fun yieldStaff(tx: Db.Tx, names: SeedNames): Boolean {
+        val hadPins = tx.db.long("SELECT COUNT(*) FROM staff WHERE pin_hash IS NOT NULL") > 0L
+        tx.update("UPDATE staff SET pin_hash = NULL WHERE pin_hash IS NOT NULL")
+        tx.update("DELETE FROM setting WHERE key = ?", SettingKeys.OWNER_RECOVERY)
+        for (table in SEED_TABLES) tx.update("DELETE FROM $table WHERE id < ?", SEED_ID_END)
+        Seed.insert(tx.db, names, System.currentTimeMillis())
+        return hadPins
+    }
+
+    private val SEED_TABLES = listOf("staff", "role", "payment_method")
+
+    /** IDs below this are seed rows (device number 0), the same on every till. */
+    private const val SEED_ID_END = 1L shl 41
+
     // Events of kinds this version cannot apply yet (D-047): kept, applied after an update.
 
     fun defer(tx: Db.Tx, e: SyncEvent) {
@@ -143,6 +178,24 @@ object SyncDao {
     ) { c ->
         val payload = SegmentCodec.parse(c.getString(5)) as? Map<String, Any?> ?: emptyMap()
         c.getLong(0) to SyncEvent(c.getInt(1), c.getInt(2), c.longOrNull(3), c.getLong(4), payload)
+    }
+
+    /**
+     * Waiting events of the kinds in [entities] (codes this version applies), after [afterSeq], at most
+     * [limit]: the whole table was read and parsed at once every round, tens of MB once a newer till's
+     * unknown events piled up (2026-10 review).
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun deferredPage(db: SQLiteDatabase, entities: Set<Int>, afterSeq: Long, limit: Int): List<Pair<Long, SyncEvent>> {
+        if (entities.isEmpty()) return emptyList()
+        val kinds = entities.sorted().joinToString(",") // codes defined in :core, never user input
+        return db.queryList(
+            "SELECT seq, entity, op, row_id, hlc, payload FROM sync_deferred WHERE seq > ? AND entity IN ($kinds) ORDER BY seq LIMIT ?",
+            args(afterSeq, limit),
+        ) { c ->
+            val payload = SegmentCodec.parse(c.getString(5)) as? Map<String, Any?> ?: emptyMap()
+            c.getLong(0) to SyncEvent(c.getInt(1), c.getInt(2), c.longOrNull(3), c.getLong(4), payload)
+        }
     }
 
     fun dropDeferred(tx: Db.Tx, seq: Long) {

@@ -70,6 +70,16 @@ class EscPosTest {
         assertEquals(false, EscPosText.canEncode("Tea £2", TextMode.LATIN))
     }
 
+    /** 2026-10 review: a brand mark in a product's name made every receipt with it a picture. */
+    @Test
+    fun brandMarksPrintAsTextInTheirColumn() {
+        val name = "MILO® 1kg Nescafé™ 5°C"
+        assertTrue(EscPosText.canEncode(name, TextMode.LATIN))
+        val bytes = EscPosText.encode(name, TextMode.LATIN)
+        assertEquals("MILO  1kg Nescafe  5oC", String(bytes, Charsets.US_ASCII))
+        assertEquals(com.lekaspos.core.text.TextWidth.of(name), bytes.size) // the column count is kept
+    }
+
     @Test
     fun textKeepsTheColumnCountOfTheLayout() {
         // The layout measures with TextWidth; the printer must get exactly that many columns.

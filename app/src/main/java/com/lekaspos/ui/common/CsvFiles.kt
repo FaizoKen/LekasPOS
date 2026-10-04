@@ -47,17 +47,27 @@ object CsvFiles {
      * yet. The shared file itself is replaced.
      */
     fun sharedFile(ctx: Context, kind: String, name: String): File {
+        cleanShared(ctx)
+        val dir = File(File(ctx.cacheDir, "shared"), kind).apply { mkdirs() }
+        return File(dir, name).apply { delete() }
+    }
+
+    /**
+     * Deletes shared files older than [SHARED_KEEP_MS]. Also at every start (Blocking): a backup
+     * shared once — a whole copy of the shop's data, PIN records included — stayed in the cache until
+     * the next share, for weeks (2026-10 review).
+     */
+    fun cleanShared(ctx: Context) {
         val root = File(ctx.cacheDir, "shared")
-        val old = System.currentTimeMillis() - SHARED_KEEP_MS
+        val now = System.currentTimeMillis()
+        val old = now - SHARED_KEEP_MS
         root.listFiles()?.forEach { f ->
             if (f.isDirectory) {
-                f.listFiles()?.forEach { if (it.lastModified() < old) it.delete() }
+                f.listFiles()?.forEach { if (it.lastModified() < old || it.lastModified() > now + SHARED_KEEP_MS) it.delete() }
             } else if (f.lastModified() < old) {
                 f.delete() // left directly in the folder by older versions
             }
         }
-        val dir = File(root, kind).apply { mkdirs() }
-        return File(dir, name).apply { delete() }
     }
 
     const val KIND_CSV = "csv"

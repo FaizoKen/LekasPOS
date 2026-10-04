@@ -392,6 +392,27 @@ object SaleDao {
 
     fun byReceipt(db: SQLiteDatabase, receiptNo: String): SaleRow? = db.queryOne(BY_RECEIPT, args(receiptNo), ::saleRow)
 
+    /** The first receipt number after [from] in order (index `sale_receipt`). */
+    private const val RECEIPT_AFTER = "SELECT receipt_no FROM sale WHERE receipt_no > ? ORDER BY receipt_no LIMIT 1"
+
+    /**
+     * Every receipt prefix used in this store (all tills, and a till's earlier prefix), found by
+     * jumping through the receipt index one prefix at a time: a few lookups, never a scan of the
+     * sales. A number alone typed in Sales then finds another till's receipt too (2026-10 review).
+     */
+    fun receiptPrefixes(db: SQLiteDatabase, max: Int = 64): List<String> {
+        val out = LinkedHashSet<String>()
+        var from = ""
+        repeat(max) {
+            val next = db.queryOne(RECEIPT_AFTER, args(from)) { it.getString(0) } ?: return out.toList()
+            val prefixes = ReceiptNumbers.prefixesOf(next)
+            out.addAll(prefixes)
+            // Past every number that starts like this one (its sales, and its refunds after them).
+            from = (prefixes.firstOrNull() ?: next) + '￿'
+        }
+        return out.toList()
+    }
+
     private fun saleRow(c: android.database.Cursor) = SaleRow(
         id = c.getLong(0),
         kind = c.getInt(1),
@@ -447,6 +468,7 @@ object SaleDao {
         "history_first" to HISTORY_FIRST,
         "history_next" to HISTORY_NEXT,
         "receipt_lookup" to BY_RECEIPT,
+        "receipt_after" to RECEIPT_AFTER,
         "product_history" to PRODUCT_HISTORY,
         "refunded_total" to REFUNDED_TOTAL,
         "voids_of_sale" to VOIDS_OF_SALE,

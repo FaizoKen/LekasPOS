@@ -38,7 +38,7 @@
     <string name="pm_kind_ewallet">E-dompet atau QR (jumlah tepat)</string>
     <string name="pm_kind_other">Lain-lain (jumlah tepat)</string>
     <string name="pm_kind_credit">Kredit pelanggan</string>
-    <string name="pm_opens_drawer">Membuka laci tunai</string>
+    <string name="pm_opens_drawer">Membuka laci wang</string>
     <string name="pm_active">Dipaparkan di kaunter</string>
     <string name="pm_hidden">disembunyikan</string>
     <string name="pm_error_name">Masukkan nama.</string>

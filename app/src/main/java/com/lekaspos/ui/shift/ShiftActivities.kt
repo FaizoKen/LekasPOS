@@ -11,7 +11,9 @@ import com.lekaspos.R
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.CashMoveKind
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.shift.CashCount
 import com.lekaspos.core.shift.ShiftReportLayout
 import com.lekaspos.core.shift.ShiftText
 import com.lekaspos.core.time.DateText
@@ -23,6 +25,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.onNearEnd
 import com.lekaspos.ui.sell.AmountDialog
 import com.lekaspos.ui.sell.visible
@@ -32,10 +35,33 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/**
+ * "Count notes & coins" beside OK of a drawer amount (CashCountDialog), when the till knows the
+ * currency's notes and coins; [counted] gets what was counted each time.
+ */
+internal fun cashCountButton(
+    a: Activity,
+    currency: CurrencySpec,
+    counted: (Map<Long, Long>) -> Unit = {},
+): Pair<CharSequence, ((Long) -> Unit) -> Unit>? {
+    if (CashCount.denominations(currency.code).isEmpty()) return null
+    var last: Map<Long, Long> = emptyMap() // opened again, the count so far comes back
+    return a.getString(R.string.cash_count_button) to { setAmount ->
+        CashCountDialog(a, currency, last) { total, pieces ->
+            last = pieces
+            counted(pieces)
+            setAmount(total)
+        }.show()
+    }
+}
+
 /** Asks for the opening float and opens a shift on this till; [opened] runs after it is open. */
 fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () -> Unit) {
     val currency = graph.settings.store.value.currency
-    AmountDialog(a, a.getString(R.string.shift_open), AmountDialog.Kind.MONEY, currency, message = a.getString(R.string.shift_float_hint), allowZero = true) { float ->
+    AmountDialog(
+        a, a.getString(R.string.shift_open), AmountDialog.Kind.MONEY, currency, message = a.getString(R.string.shift_float_hint),
+        allowZero = true, extra = cashCountButton(a, currency),
+    ) { float ->
         scope.launch {
             try {
                 graph.shifts.open(float)
@@ -122,11 +148,23 @@ class ShiftActivity : ScreenActivity() {
     }
 
     private fun close() {
-        AmountDialog(this, getString(R.string.shift_count), AmountDialog.Kind.MONEY, graph.settings.store.value.currency, message = getString(R.string.shift_count_hint), allowZero = true) { counted ->
+        val currency = graph.settings.store.value.currency
+        var pieces: Map<Long, Long> = emptyMap()
+        AmountDialog(
+            this, getString(R.string.shift_count), AmountDialog.Kind.MONEY, currency, message = getString(R.string.shift_count_hint),
+            allowZero = true, extra = cashCountButton(this, currency) { pieces = it },
+        ) { counted ->
+            // The notes and coins counted start the note, for the owner who checks a difference
+            // (the cashier may change it); only when the total was not typed over afterwards.
+            val breakdown = if (pieces.isNotEmpty() && CashCount.total(pieces) == counted) {
+                CashCount.summary(pieces) { CashCountDialog.label(this, currency, it) }
+            } else {
+                ""
+            }
             // With the confirmation, an optional note for the owner (why the drawer is over or short):
             // it could not be written anywhere (2026-10 review). It shows on the shift report.
             Dialogs.input(
-                this, getString(R.string.shift_close), getString(R.string.shift_close_note_hint),
+                this, getString(R.string.shift_close), getString(R.string.shift_close_note_hint), initial = breakdown,
                 message = getString(R.string.shift_close_confirm, money(counted)),
             ) { note ->
                 launchUi {
@@ -149,6 +187,7 @@ class ShiftReportActivity : ScreenActivity() {
 
     private var shiftId = 0L
     private val tz = TimeZone.getDefault()
+    private val printOnce = TapOnce()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -174,9 +213,11 @@ class ShiftReportActivity : ScreenActivity() {
             }
             if (graph.settings.device.value.hasPrinter) {
                 form.button(getString(R.string.shift_print), primary = true) {
-                    launchUi {
-                        graph.shifts.print(shiftId)
-                        toast(R.string.result_printing)
+                    printOnce.run { // a double tap printed the report twice
+                        launchUi {
+                            graph.shifts.print(shiftId)
+                            toast(R.string.result_printing)
+                        }
                     }
                 }
             }

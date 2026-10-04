@@ -41,6 +41,29 @@ object AppLanguage {
         }
     }
 
+    /** The phone's languages (Android's settings, in their order), whatever the app shows. */
+    private fun phoneLanguages(): List<String> {
+        val c = android.content.res.Resources.getSystem().configuration
+        if (Build.VERSION.SDK_INT >= 24) {
+            val list = c.locales
+            return List(list.size()) { list[it].language }
+        }
+        @Suppress("DEPRECATION")
+        return listOfNotNull(c.locale?.language)
+    }
+
+    /**
+     * The phone's language as the app follows it: the first of the phone's languages the app has (a
+     * phone set to Chinese, then Malay, shows Malay, as Android itself picked), else English.
+     */
+    private fun followed(): String = phoneLanguages().firstOrNull { it == ENGLISH || it == MALAY } ?: ENGLISH
+
+    /** The language the screens are in now, "en" or "ms": the choice, else the phone's (see [wrap]). */
+    fun screens(context: Context): String {
+        val chosen = get(context)
+        return if (chosen != PHONE) chosen else followed()
+    }
+
     /** Saves the choice (written in the background); screens opened afterwards use it. */
     fun set(context: Context, language: String) {
         require(language in ALL) { "unknown language $language" }
@@ -60,8 +83,18 @@ object AppLanguage {
      * updateFrom derives the layout direction from it).
      */
     fun wrap(base: Context): Context {
-        val language = get(base)
-        if (language == PHONE) return base
+        val chosen = get(base)
+        // Following a phone whose first language the app does not have (Chinese, Tamil, Arabic …): the
+        // screens are in the first of its languages the app has, or English, with that language's rules
+        // too. In the phone's own rules "1 items", "1 held" (one plural form only), digits of another
+        // script inside English sentences ("Tries left: ২") and number pads laid out right to left
+        // (2026-10 review). A phone whose first language the app has is left alone.
+        if (chosen == PHONE && phoneLanguages().firstOrNull().let { it == ENGLISH || it == MALAY }) return base
+        return inLanguage(base, if (chosen != PHONE) chosen else followed())
+    }
+
+    /** [base] with the screens' [language] ("en" or "ms"); see [wrap] for what is overridden. */
+    fun inLanguage(base: Context, language: String): Context {
         val locale = Locale(language)
         val config = Configuration()
         config.fontScale = 0f

@@ -127,8 +127,11 @@ object ApprovalDialog {
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Said as it is (a full phone, say), not "cannot approve this" (2026-10 review).
                         Log.e("Approval failed", e)
-                        StaffSession.Check.NotAllowed to null
+                        pinPad.setEnabled(true)
+                        pinPad.setMessage(com.lekaspos.ui.common.ScreenActivity.errorText(a, e))
+                        return@launch
                     }
                     pinPad.setEnabled(true)
                     if (approval != null) {

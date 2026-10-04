@@ -85,8 +85,10 @@ class ProductPickActivity : ScreenActivity() {
         super.onStop()
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        (if (search.hasFocus()) fieldScan.onKey(event, search) else scanInput.onKey(event)) || super.dispatchKeyEvent(event)
+    override fun screenKey(event: KeyEvent): Boolean =
+        if (search.hasFocus()) fieldScan.onKey(event, search) else scanInput.onKey(event)
+
+    override fun serialScans(): (String) -> Unit = { onCode(it) }
 
     private fun typed(text: String, submit: Boolean) {
         search.setText(text)

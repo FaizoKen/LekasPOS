@@ -38,6 +38,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -92,7 +95,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
         null
     }
 
-    val settings: SettingsRepo by lazy { SettingsRepo(this, defaultLanguage()) }
+    val settings: SettingsRepo by lazy { SettingsRepo(this) { AppLanguage.screens(app) } }
     val staff: StaffSession by lazy { StaffSession(this) }
     val permissions: PermissionGate by lazy { PermissionGate(staff) }
     val staffAdmin: StaffService by lazy { StaffService(this) }
@@ -140,25 +143,33 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
         lastSyncSoon.set(-SYNC_SOON_GAP_MS)
     }
 
-    private fun defaultLanguage(): String {
-        val locale = if (Build.VERSION.SDK_INT >= 24) {
-            app.resources.configuration.locales[0]
-        } else {
-            @Suppress("DEPRECATION")
-            app.resources.configuration.locale
-        }
-        return if (locale?.language == "ms") "ms" else "en"
+    private val _catalogChanges = MutableStateFlow(0)
+
+    /**
+     * Counts changes to products, categories or stock made away from the selling screen (another
+     * till's, an import): its tiles and chips are then read again ([catalogChanged]).
+     */
+    val catalogChanges: StateFlow<Int> = _catalogChanges
+
+    fun catalogChanged() {
+        _catalogChanges.update { it + 1 }
     }
 
-    private fun seedNames() = SeedNames(
-        owner = app.getString(R.string.seed_role_owner),
-        manager = app.getString(R.string.seed_role_manager),
-        cashier = app.getString(R.string.seed_role_cashier),
-        cash = app.getString(R.string.seed_pm_cash),
-        card = app.getString(R.string.seed_pm_card),
-        ewallet = app.getString(R.string.seed_pm_ewallet),
-        credit = app.getString(R.string.seed_pm_credit),
-    )
+    /** The built-in rows' names in the app's language as chosen now (the Application keeps the one it started with). */
+    fun seedNames(): SeedNames {
+        // Built in the language the screens use now: the Application keeps the one it started with,
+        // and following the phone [AppLanguage.wrap] leaves that as it is.
+        val ctx = AppLanguage.inLanguage(app, AppLanguage.screens(app))
+        return SeedNames(
+            owner = ctx.getString(R.string.seed_role_owner),
+            manager = ctx.getString(R.string.seed_role_manager),
+            cashier = ctx.getString(R.string.seed_role_cashier),
+            cash = ctx.getString(R.string.seed_pm_cash),
+            card = ctx.getString(R.string.seed_pm_card),
+            ewallet = ctx.getString(R.string.seed_pm_ewallet),
+            credit = ctx.getString(R.string.seed_pm_credit),
+        )
+    }
 
     private companion object {
         const val SYNC_SOON_GAP_MS = 60_000L

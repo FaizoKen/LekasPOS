@@ -19,7 +19,9 @@ import com.lekaspos.data.sync.SegmentCodec
 import com.lekaspos.data.sync.SegmentRow
 import com.lekaspos.data.sync.SyncDao
 import com.lekaspos.data.sync.SyncEvent
+import com.lekaspos.domain.StaffSession
 import com.lekaspos.util.Log
+import com.lekaspos.util.Storage
 import java.io.File
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +67,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val clockOff: Boolean = false,
     )
 
-    /** [more]: work is left (more files than one round reads, or this till publishes again): sync again soon. */
+    /**
+     * [more]: work is left (more files than one round reads, or this till publishes again): sync again soon.
+     * [pinsDropped]: joining the store dropped the PINs set on this new till before (SyncDao.yieldStaff).
+     */
     data class Report(
         val sealed: Int,
         val uploaded: Int,
@@ -73,6 +78,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val events: Int,
         val devices: Int,
         val more: Boolean = false,
+        val pinsDropped: Boolean = false,
     )
 
     /** Why sync cannot run; shown to the user. */
@@ -252,11 +258,20 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         // it has numbered files from before: the numbering starts again at 1. The other tills
         // read a till's files in order from 1; continuing at k+1 they never read this till at all.
         val restart = published == 0L && sealed > 0L
+        var pinsDropped = false
+        val seedNames = graph.seedNames()
         db.write(reserveIds = 0L) { tx ->
             if (restart) forgetPublishing(tx)
             if (store != localStore) {
                 Meta.put(tx.db, Meta.STORE_UUID, store)
                 SyncDao.yieldSettings(tx) // the store's own settings win over this till's defaults (2026-10 review)
+                // A new till takes the store's staff and PINs too (a till with its own sales keeps its own:
+                // it was asked before joining, and its PINs are real ones).
+                if (!ProductDao.any(tx.db) && !SaleDao.any(tx.db)) {
+                    pinsDropped = SyncDao.yieldStaff(tx, seedNames)
+                    if (pinsDropped) Meta.put(tx.db, PINS_NOTICE, "1") // said by the sync screen ([takePinsNotice])
+                    Meta.put(tx.db, StaffSession.KEY_STAFF, null) // nobody stays signed in with a PIN that is gone
+                }
             }
             val taken = cards.filter { it.dev != tx.deviceNo }.mapNotNull { it.prefix }.toSet()
             if (ReceiptNumbers.prefix(tx) in taken) Meta.put(tx.db, Meta.RECEIPT_PREFIX, freePrefix(taken))
@@ -269,12 +284,13 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
         // The old numbered files go once the database no longer lists them (new ones reuse the names).
         if (restart) withContext(Dispatchers.IO) { outDir.listFiles()?.forEach { it.delete() } }
+        if (store != localStore) withContext(NonCancellable) { graph.staff.reload() } // who may sign in, as the store says
         db.syncEnabled = true // before the backfill: nothing written meanwhile can be missed
         // The card goes up before the long first round (2026-10 review): a till turned on meanwhile
         // sees this till's number and receipt prefix.
         cardKey = null
         putCard(db, provider, store)
-        return syncLocked(provider, progress)
+        return syncLocked(provider, progress).copy(pinsDropped = pinsDropped)
     }
 
     /** The stores whose manifests are in the folder, in order (the first is the one every till settles on). */
@@ -307,7 +323,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     /**
      * This till moves to [newStore] during a round and publishes into it from file 1: the next
-     * round does the backfill. Its old local files go; the new ones reuse the names.
+     * round does the backfill. Its old local files go; the new ones reuse the names. Its staff and
+     * PINs stay (unlike a new till joining an existing store): two tills that each made a store at
+     * the same moment are both new, and the PINs merge as any edit does — dropping them here left a
+     * store whose owner set the PINs on this till with none, and a recovery code that did not exist.
      */
     private suspend fun restartPublishing(db: Db, newStore: String) {
         db.write(reserveIds = 0L) { tx ->
@@ -317,6 +336,18 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
         withContext(Dispatchers.IO) { outDir.listFiles()?.forEach { it.delete() } }
         cardKey = null
+    }
+
+    /**
+     * Whether this till's own PINs gave way to the store's when it joined (SyncDao.yieldStaff) and
+     * nobody was told yet; the caller says it. The first sync can outlast the screen that started it,
+     * or fail after the PINs were dropped: the notice waits for the next time the screen opens.
+     */
+    suspend fun takePinsNotice(): Boolean {
+        val db = graph.db()
+        if (db.read { Meta.get(it, PINS_NOTICE) } == null) return false
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, PINS_NOTICE, null) }
+        return true
     }
 
     /** Stops syncing (the data stays). Enabling again publishes everything again. */
@@ -429,6 +460,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 Meta.put(tx.db, LAST_ERROR, null)
                 Meta.put(tx.db, CLOCK_OFF, if (clockOff) offset.toString() else null)
             }
+            lastLoggedFailure = null
             _status.update {
                 it.copy(
                     running = false, phase = null, done = 0L, total = 0L, devices = got.devices, lastSuccessAt = now,
@@ -441,8 +473,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             _status.update { it.copy(running = false, phase = null) }
             throw e
         } catch (e: Exception) {
-            Log.w("Sync failed", e)
             val msg = errorCode(e)
+            logFailure(msg, e)
             runCatching { db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, LAST_ERROR, msg) } }
             _status.update { it.copy(running = false, phase = null, lastError = msg, needsSignIn = msg == ERROR_SIGN_IN) }
             throw e
@@ -451,11 +483,30 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
     }
 
+    /** The failure logged last (its code): a round failing the same way again is not logged again. */
+    @Volatile
+    private var lastLoggedFailure: String? = null
+
+    /**
+     * A failed round, logged once for each kind of failure until a round succeeds: every failed round
+     * logged two whole traces (one per sale while offline or waiting for a sign-in), and the error log
+     * kept only the last hour or two. The world's failures — no internet, a Google sign-in, a full or
+     * busy Google Drive, a full phone — are warnings; anything else (a damaged file, an event this
+     * version cannot read) fails every round for good, so the other tills stop getting this till's
+     * sales unseen: an error report (2026-10 review).
+     */
+    private fun logFailure(code: String, e: Exception) {
+        if (code == lastLoggedFailure) return
+        lastLoggedFailure = code
+        if (code in EXPECTED_ERRORS || Storage.isFull(e)) Log.w("Sync failed: $code", e) else Log.e("Sync failed", e)
+    }
+
     private suspend fun reloadChanged(changed: Set<Int>) {
         try {
             if (Entity.SETTING in changed) graph.settings.reload()
             if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
             if (Entity.PROMOTION in changed) graph.promotions.load()
+            if (changed.any { it in CATALOG_ENTITIES }) graph.catalogChanged() // the selling screen's tiles
         } catch (e: Exception) {
             Log.w("Reloading what sync imported failed", e)
         }
@@ -695,28 +746,37 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
 
     /** Events kept by an older version of this app (D-047) that this version can apply now. */
     private suspend fun applyDeferred(db: Db, changed: MutableSet<Int>) {
-        val waiting = db.read { SyncDao.deferred(it) }
-        if (waiting.isEmpty()) return
+        // Tried once per app version and day, not every round (a round runs after each sale): each
+        // waiting event costs a transaction, and thousands of a broken till's events kept a 1 GB phone
+        // busy all day (2026-10 review). An update that can read them tries at once.
+        val stamp = "${BuildConfig.VERSION_CODE}:${System.currentTimeMillis() / DAY_MS}"
+        if (db.read { Meta.get(it, DEFERRED_TRIED) } == stamp) return
         // One transaction each: an event this version cannot apply stays waiting (it is retried, and
-        // an update of the app may read it) instead of failing every round. Unknown kinds wait without
-        // a transaction; a failure is logged once per process (a round runs after each sale).
+        // an update of the app may read it) instead of failing every round. Unknown kinds wait (not even
+        // read); a failure is logged once per process. In pages, never the whole table at once.
         val probe = Importer.knownEntities()
-        for ((seq, e) in waiting) {
-            if (e.entity !in probe) continue
-            try {
-                db.write(reserveIds = 0L) { tx ->
-                    val importer = Importer(tx.db)
-                    if (importer.knows(e.entity)) {
-                        db.hlc.observe(e.hlc) // like any applied event (2026-10 review)
-                        if (importer.apply(tx, e)) changed.add(e.entity)
-                        SyncDao.dropDeferred(tx, seq)
+        var after = 0L
+        while (true) {
+            val page = db.read { SyncDao.deferredPage(it, probe, after, DEFERRED_PAGE) }
+            for ((seq, e) in page) {
+                after = seq
+                try {
+                    db.write(reserveIds = 0L) { tx ->
+                        val importer = Importer(tx.db)
+                        if (importer.knows(e.entity)) {
+                            db.hlc.observe(e.hlc) // like any applied event (2026-10 review)
+                            if (importer.apply(tx, e)) changed.add(e.entity)
+                            SyncDao.dropDeferred(tx, seq)
+                        }
                     }
+                } catch (x: Exception) {
+                    if (!unreadable(x)) throw x
+                    if (loggedStuck.add(seq)) Log.w("A waiting sync event still cannot be applied (entity ${e.entity}): ${x.javaClass.simpleName}")
                 }
-            } catch (x: Exception) {
-                if (!unreadable(x)) throw x
-                if (loggedStuck.add(seq)) Log.w("A waiting sync event still cannot be applied (entity ${e.entity}): ${x.javaClass.simpleName}")
             }
+            if (page.size < DEFERRED_PAGE) break
         }
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, DEFERRED_TRIED, stamp) }
     }
 
     /** Waiting events already said to be stuck (by their seq), this process. */
@@ -1010,7 +1070,6 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** A short listing starts this far before the newest file seen (the folder may list new files late). */
         const val LIST_SLACK_MS = 15L * 60L * 1000L
 
-        /** The whole folder is listed at least this often (and whenever a short listing shows a gap). */
         /**
          * The whole folder is listed this often (a week; a day before 1.7.1): every round still lists
          * the files created since the last one, and a gap in a till's numbers lists the whole folder
@@ -1041,6 +1100,19 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** The last clock difference found ([CLOCK_WARN_MS] or more), or null: kept for [refreshStatus]. */
         const val CLOCK_OFF = "sync.clock_off"
 
+        /** What the selling screen's tiles and chips show: names, prices, categories and stock. */
+        private val CATALOG_ENTITIES = setOf(
+            Entity.PRODUCT, Entity.CATEGORY, Entity.SALE, Entity.SALE_VOID, Entity.STOCK_MOVE, Entity.STOCK_COUNT, Entity.PURCHASE,
+        )
+
+        /** "versionCode:day" of the last retry of the events set aside ([applyDeferred]). */
+        const val DEFERRED_TRIED = "sync.deferred_tried"
+
+        /** Set-aside events read at once when they are retried. */
+        private const val DEFERRED_PAGE = 200
+
+        private const val DAY_MS = 24L * 60L * 60L * 1000L
+
         /** "device:seq" — this till published everything again from file seq on ([DeviceCard.fullFrom]). */
         const val FULL_FROM = "sync.full_from"
         const val LIST_SINCE = "sync.list_since"
@@ -1052,6 +1124,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         const val LAST_OK = Meta.SYNC_LAST_OK
         const val LAST_ERROR = Meta.SYNC_LAST_ERROR
         const val ACCOUNT = "sync.account"
+
+        /** "1": this till's PINs gave way to the store's when it joined, not said yet ([takePinsNotice]). */
+        const val PINS_NOTICE = "sync.pins_notice"
 
         /** Stored as the last error when the provider needs the user to sign in. */
         const val ERROR_SIGN_IN = "sign-in"
@@ -1072,8 +1147,10 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
          */
         fun errorCode(e: Exception): String = when (e) {
             is AuthNeeded -> ERROR_SIGN_IN
-            is java.net.UnknownHostException, is java.net.ConnectException, is java.net.NoRouteToHostException,
-            is java.net.SocketTimeoutException, is javax.net.ssl.SSLHandshakeException -> ERROR_OFFLINE
+            // A connection that drops or stalls half-way ("Connection reset", a read time-out, TLS cut
+            // short) is the network too: it showed as raw English and was retried as a failure (2026-10 review).
+            is java.net.UnknownHostException, is java.net.SocketException, is java.io.InterruptedIOException,
+            is javax.net.ssl.SSLException -> ERROR_OFFLINE
             is com.lekaspos.sync.drive.DriveProvider.HttpError -> when {
                 e.reason == "storageQuotaExceeded" -> ERROR_DRIVE_FULL
                 e.reason == "insufficientPermissions" || e.reason == "insufficientScopes" || e.reason == "authError" -> ERROR_SIGN_IN
@@ -1085,6 +1162,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
 
         private val BUSY_REASONS = setOf("userRateLimitExceeded", "rateLimitExceeded", "dailyLimitExceeded", "backendError")
+
+        /** Failures of the world, not of the app: warnings in the error log, never error reports. */
+        private val EXPECTED_ERRORS = setOf(ERROR_SIGN_IN, ERROR_OFFLINE, ERROR_DRIVE_FULL, ERROR_DRIVE_BUSY)
         const val PHASE_CONNECT = "connect"
         const val PHASE_PREPARE = "prepare"
         const val PHASE_SEND = "send"

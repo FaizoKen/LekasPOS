@@ -106,12 +106,16 @@ class InventoryService(private val graph: AppGraph) {
         if (json.isNullOrEmpty()) {
             fresh
         } else {
-            try {
-                decode(json).takeUnless { received(r, it) } ?: fresh
+            // Only a draft that cannot be decoded is dropped. A database read that failed (a busy or full
+            // phone) dropped it too, and the next save wrote the empty one over the lines (2026-10 review):
+            // that failure now reaches the screen and the stored draft stays.
+            val draft = try {
+                decode(json)
             } catch (e: Exception) {
                 Log.w("Discarding an unreadable delivery draft", e)
-                fresh
+                null
             }
+            draft?.takeUnless { received(r, it) } ?: fresh
         }
     }
 

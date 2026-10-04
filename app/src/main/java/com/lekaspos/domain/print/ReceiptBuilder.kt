@@ -29,6 +29,7 @@ object ReceiptBuilder {
         val lines = SaleQueries.lines(db, saleId)
         val pays = SaleQueries.payments(db, saleId)
         val lineDiscounts = lines.sumOf { it.discount }
+        val text = ReceiptText.forLanguage(store.receiptLanguage)
 
         val taxes = ArrayList<ReceiptTax>(2)
         val byRate = LinkedHashMap<Long, Pair<Int, Long>>()
@@ -39,7 +40,7 @@ object ReceiptBuilder {
             byRate[id] = l.taxBp to ((prev?.second ?: 0L) + l.tax)
         }
         for ((id, v) in byRate) {
-            val name = TaxRateDao.get(db, id)?.name ?: "Tax"
+            val name = TaxRateDao.get(db, id)?.name ?: text.tax
             taxes.add(ReceiptTax(name, v.first, v.second))
         }
 
@@ -79,7 +80,7 @@ object ReceiptBuilder {
             // A cash part of 0.00 (e-wallet paid all but the 2 sen the rounding took) is no payment:
             // "Cash 0.00" under the rounding line only puzzled customers.
             payments = pays.filter { it.amount != 0L || it.tendered != 0L || it.change != 0L }
-                .map { ReceiptPayment(it.name ?: kindName(it.kind), it.amount, it.tendered, it.change) },
+                .map { ReceiptPayment(it.name ?: kindName(it.kind, text), it.amount, it.tendered, it.change) },
             change = h.change,
             note = if (h.kind == SaleKind.REFUND) h.note?.let(::oneLine) else null,
             qrData = qr,
@@ -102,11 +103,11 @@ object ReceiptBuilder {
     internal fun oneLine(s: String): String =
         if (s.none { it < ' ' || it == '\u007F' }) s else s.map { if (it < ' ' || it == '\u007F') ' ' else it }.joinToString("").trim()
 
-    private fun kindName(kind: Int) = when (kind) {
-        PaymentKind.CASH -> "Cash"
-        PaymentKind.CARD -> "Card"
-        PaymentKind.EWALLET -> "E-wallet"
-        PaymentKind.CREDIT -> "Credit"
-        else -> "Other"
+    private fun kindName(kind: Int, t: ReceiptText) = when (kind) {
+        PaymentKind.CASH -> t.cash
+        PaymentKind.CARD -> t.card
+        PaymentKind.EWALLET -> t.ewallet
+        PaymentKind.CREDIT -> t.credit
+        else -> t.other
     }
 }

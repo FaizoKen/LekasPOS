@@ -6,11 +6,13 @@ import android.text.InputType
 import android.widget.EditText
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
+import com.lekaspos.data.db.Seed
 import com.lekaspos.data.settings.StoreSettings
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.SellActivity
 import com.lekaspos.ui.staff.StaffActivity
+import kotlinx.coroutines.launch
 
 /**
  * First-run setup (Phase 8): shown once on a fresh install, over the selling screen. Language,
@@ -57,6 +59,13 @@ class SetupActivity : ScreenActivity() {
         f.choice(getString(R.string.settings_language), names, current) { i ->
             if (i != current) {
                 AppLanguage.set(this, languages[i])
+                // The built-in roles, payment methods and owner were named in the phone's language before
+                // this choice: renamed while nobody edited them; receipts follow the new language too.
+                val g = graph
+                g.appScope.launch {
+                    g.db().write(reserveIds = 0L) { tx -> Seed.renameUntouched(tx.db, g.seedNames()) }
+                    g.settings.languageChanged()
+                }
                 // The selling screen underneath and this one again, both in the new language.
                 val sell = Intent(this, SellActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

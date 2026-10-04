@@ -151,12 +151,21 @@ class BackupActivity : ScreenActivity() {
         else -> R.string.backup_reason_other
     }
 
+    /** "Back up now" is running: a second tap made a second whole copy, kept for good (2026-10 review). */
+    private var backingUp = false
+
     private fun backupNow() {
+        if (backingUp) return
+        backingUp = true
         launchUi {
-            toast(R.string.backup_working)
-            graph.backups.backupNow()
-            toast(R.string.backup_done)
-            reload()
+            try {
+                toast(R.string.backup_working)
+                graph.backups.backupNow()
+                toast(R.string.backup_done)
+                reload()
+            } finally {
+                backingUp = false
+            }
         }
     }
 
@@ -279,28 +288,55 @@ class BackupActivity : ScreenActivity() {
         }
     }
 
+    /**
+     * A restore is being checked or asked about: another one is not started meanwhile. The backup rows
+     * stayed tappable during the seconds of "Checking…" (only a toast said so), and a second check
+     * spoiled the first (2026-10 review).
+     */
+    private var restoring = false
+
     private fun restore(open: () -> InputStream, mode: Restore.Mode) {
-        launchUi {
-            toast(R.string.backup_checking)
-            graph.backups.stageRestore(open, mode)
-            var restarting = false
-            val app = graph
-            AlertDialog.Builder(this@BackupActivity)
-                .setTitle(R.string.backup_restore_title)
-                .setMessage(R.string.backup_restart)
-                .setCancelable(false)
-                .setPositiveButton(R.string.backup_restart_now) { _, _ ->
-                    restarting = true
-                    val a = this@BackupActivity
-                    app.appScope.launch(Dispatchers.Main) { app.backups.restartIntoRestore(a) }
+        if (restoring) return
+        restoring = true
+        val checking = AlertDialog.Builder(this).setMessage(R.string.backup_checking).create()
+        val job = launchUi {
+            var asked = false
+            try {
+                try {
+                    graph.backups.stageRestore(open, mode)
+                } finally {
+                    checking.setOnCancelListener(null)
+                    checking.dismiss()
                 }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
-                .trackedBy(this@BackupActivity)
-                // Cancel, or the question closed any other way (the idle lock, the screen closing):
-                // the checked restore is thrown away, never applied at some later start.
-                .setOnDismissListener { if (!restarting) app.appScope.launch { app.backups.cancelRestore() } }
+                var restarting = false
+                val app = graph
+                AlertDialog.Builder(this@BackupActivity)
+                    .setTitle(R.string.backup_restore_title)
+                    .setMessage(R.string.backup_restart)
+                    .setCancelable(false)
+                    .setPositiveButton(R.string.backup_restart_now) { _, _ ->
+                        restarting = true
+                        val a = this@BackupActivity
+                        app.appScope.launch(Dispatchers.Main) { app.backups.restartIntoRestore(a) }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+                    .trackedBy(this@BackupActivity)
+                    // Cancel, or the question closed any other way (the idle lock, the screen closing):
+                    // the checked restore is thrown away, never applied at some later start.
+                    .setOnDismissListener {
+                        restoring = false
+                        if (!restarting) app.appScope.launch { app.backups.cancelRestore() }
+                    }
+                asked = true
+            } finally {
+                if (!asked) restoring = false
+            }
         }
+        // Back while checking stops the check (nothing is restored), as leaving the screen does.
+        checking.setOnCancelListener { job.cancel() }
+        if (Dialogs.canShow(this)) checking.show()
+        checking.trackedBy(this)
     }
 
     private fun deleteBackup(e: BackupService.Entry) {

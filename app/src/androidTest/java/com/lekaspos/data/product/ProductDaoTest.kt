@@ -53,6 +53,23 @@ class ProductDaoTest {
         assertEquals(gtin14, find("9556001234568")?.product?.id)
     }
 
+    /** 2026-10 review: a UPC-E and its 12- and 13-digit forms are three codes, and the third was dropped. */
+    @Test
+    fun aUpcEProductIsFoundByItsUpcAForms() {
+        val gum = TestDb.product(db, "Gum (UPC-E)", 150, codes = listOf("04252614"))
+        assertEquals(gum, find("04252614")?.product?.id)
+        assertEquals(gum, find("042100005264")?.product?.id) // the UPC-A
+        assertEquals(gum, find("0042100005264")?.product?.id) // the UPC-A as EAN-13
+        assertEquals(listOf(gum), db.readBlocking { ProductDao.owners(it, Gtin.lookupVariants("0042100005264")) })
+    }
+
+    @Test
+    fun aUpcEScanFindsAProductStoredWithThirteenDigits() {
+        val gum = TestDb.product(db, "Gum (EAN-13 form)", 150, codes = listOf("0042100005264"))
+        assertEquals(gum, find("04252614")?.product?.id)
+        assertEquals(listOf(gum), db.readBlocking { ProductDao.owners(it, Gtin.lookupVariants("04252614")) })
+    }
+
     @Test
     fun packBarcodeCarriesItsPackSizeAndPrice() {
         val id = db.writeBlocking { tx ->

@@ -68,6 +68,41 @@ class BarcodeTest {
         assertEquals(emptyList(), Gtin.lookupVariants("  "))
     }
 
+    /** 2026-10 review: the camera and many scanners send a small pack's UPC-E; supplier lists hold the UPC-A. */
+    @Test
+    fun upcEAndUpcAFindEachOther() {
+        assertEquals("042100005264", Gtin.upcEToUpcA("04252614"))
+        assertEquals("04252614", Gtin.upcAToUpcE("042100005264"))
+        assertEquals(listOf("04252614", "042100005264", "0042100005264"), Gtin.lookupVariants("04252614"))
+        assertEquals(listOf("042100005264", "0042100005264", "04252614"), Gtin.lookupVariants("042100005264"))
+        assertEquals(listOf("0042100005264", "042100005264", "04252614"), Gtin.lookupVariants("0042100005264"))
+        // Every pattern (the last of the six digits 0–9) goes there and back.
+        for (six in listOf("120340", "451121", "981232", "123553", "123454", "120345", "123456", "123459")) {
+            for (ns in listOf('0', '1')) {
+                val e = "$ns$six${expectedCheck(ns, six)}"
+                val a = Gtin.upcEToUpcA(e) ?: error("no UPC-A for $e")
+                assertEquals(12, a.length)
+                assertEquals(e, Gtin.upcAToUpcE(a), "round trip of $e")
+            }
+        }
+        assertEquals(null, Gtin.upcEToUpcA("24252614")) // number system 2: no UPC-E
+        assertEquals(null, Gtin.upcEToUpcA("04252615")) // wrong check digit
+        assertEquals(null, Gtin.upcAToUpcE("036000291452")) // no zeros to drop
+    }
+
+    private fun expectedCheck(ns: Char, six: String): Int {
+        for (c in 0..9) if (Gtin.upcEToUpcA("$ns$six$c") != null) return c
+        error("no check digit fits $ns$six")
+    }
+
+    @Test
+    fun digitsOfOtherScriptsAreDigits() {
+        assertEquals("9556001000013", Gtin.asciiDigits("٩٥٥٦٠٠١٠٠٠٠١٣"))
+        assertEquals("9556001000013", Gtin.canonical("৯৫৫৬০০১০০০০১৩"))
+        assertEquals("MILO-1", Gtin.asciiDigits("MILO-１"))
+        assertEquals("Kopi", Gtin.asciiDigits("Kopi"))
+    }
+
     @Test
     fun parsesWeightLabels() {
         val t = ScaleTemplate("20IIIIIWWWWWC")

@@ -15,6 +15,7 @@ import com.lekaspos.data.sale.SaleRow
 import com.lekaspos.domain.print.ReceiptBuilder
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.sell.visible
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
@@ -40,20 +41,27 @@ class SaleDetailActivity : ScreenActivity() {
         share = v.findViewById(R.id.btn_share)
         refund = v.findViewById(R.id.btn_refund)
         void = v.findViewById(R.id.btn_void)
+        // One guard per button: Share right after Print is meant.
+        val printOnce = TapOnce()
+        val shareOnce = TapOnce()
         print.setOnClickListener {
-            withApproval(Perm.REPRINT) { approval ->
-                launchUi {
-                    graph.sales.print(saleId, copy = true, approval = approval)
-                    toast(R.string.sale_print_queued)
+            printOnce.run {
+                withApproval(Perm.REPRINT) { approval ->
+                    launchUi {
+                        graph.sales.print(saleId, copy = true, approval = approval)
+                        toast(R.string.sale_print_queued)
+                    }
                 }
             }
         }
         share.setOnClickListener {
             // A receipt from the history is a copy, whether printed or shared: same permission, same audit entry.
-            withApproval(Perm.REPRINT) { approval ->
-                launchUi {
-                    graph.sales.recordShare(saleId, approval)
-                    ReceiptShare.chooseAndShare(this@SaleDetailActivity, saleId, copy = true)
+            shareOnce.run {
+                withApproval(Perm.REPRINT) { approval ->
+                    launchUi {
+                        graph.sales.recordShare(saleId, approval)
+                        ReceiptShare.chooseAndShare(this@SaleDetailActivity, saleId, copy = true)
+                    }
                 }
             }
         }

@@ -267,4 +267,32 @@ class CustomerCreditTest {
             graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CREDIT, PaymentKind.CREDIT, "Customer credit", false, 1_000L, 1_000L, 0L)), 0L)
         }
     }
+
+    /**
+     * Deleted on this till while another till, offline, sold to them on credit: the debt arrived for a
+     * customer no list showed, and could not be repaid or corrected anywhere (2026-10 review).
+     */
+    @Test
+    fun aDeletedCustomerStillOwingIsListedAndCanOnlyBeSettled() = runBlocking {
+        val db = graph.db()
+        val ali = graph.customers.save(null, Customer(0L, "Ali Bakar"))
+        graph.customers.delete(ali.id)
+        assertTrue(graph.customers.page("", null, withRemoved = true).none { it.id == ali.id }) // owes nothing: gone
+        // The other till's credit sale, as sync brings it.
+        db.write(reserveIds = 1L) { tx ->
+            CustomerDao.insertCredit(tx, ali.id, CreditKind.CHARGE, 3_000L, null, Seed.Ids.PM_CREDIT, null, null, null, System.currentTimeMillis())
+        }
+        val listed = graph.customers.page("", null, withRemoved = true).single { it.id == ali.id }
+        assertTrue(listed.removed)
+        assertEquals(3_000L, listed.balance)
+        assertTrue(graph.customers.page("", null).none { it.id == ali.id }) // picking a customer for a bill: not offered
+        assertTrue(graph.customers.isRemoved(ali.id))
+        // No new debt, no edit back to life; settling it is fine.
+        refused(ActionRefused.Reason.NOT_FOUND) { graph.customers.adjust(ali.id, 100L, "more") }
+        refused(ActionRefused.Reason.NOT_FOUND) { graph.customers.adjust(ali.id, -3_100L, "past zero") }
+        refused(ActionRefused.Reason.NOT_FOUND) { graph.customers.save(ali, ali.copy(creditLimit = 10_000L)) }
+        assertEquals(1_000L, graph.customers.receivePayment(ali.id, 2_000L, cash, null))
+        assertEquals(0L, graph.customers.adjust(ali.id, -1_000L, "written off"))
+        assertTrue(graph.customers.page("", null, withRemoved = true).none { it.id == ali.id }) // settled: gone again
+    }
 }

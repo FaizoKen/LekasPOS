@@ -16,20 +16,36 @@ import java.io.File
  */
 object KeepDamagedDatabase : DatabaseErrorHandler {
 
-    /** The damage reported in this process or set aside at open (shown by the backup status), or null. */
+    /**
+     * The damage reported in this process, or a database set aside at open less than [HOLD_MS] ago
+     * (shown by the backup status), or null. The hold ends after [HOLD_MS] also in a process that
+     * stays alive: on a till never restarted it paused the daily backups for weeks (2026-10 review).
+     */
+    val problem: String?
+        get() = reported ?: heldText?.takeIf { System.currentTimeMillis() < heldUntil }
+
     @Volatile
-    var problem: String? = null
-        private set
+    private var reported: String? = null
+
+    @Volatile
+    private var heldText: String? = null
+
+    @Volatile
+    private var heldUntil = 0L
 
     /** The store's database file (set when it opens); damage of other files is not the store's. */
     @Volatile
     var storePath: String? = null
 
     override fun onCorruption(db: SQLiteDatabase) {
+        // A damaged backup file being checked or restored says nothing about the shop's data (a file
+        // the user picked: no error report).
+        if (db.path != storePath) {
+            Log.w("SQLite reported a damaged database: ${db.path} (not the store's)")
+            return
+        }
         Log.e("SQLite reported a damaged database: ${db.path} (kept)")
-        // A damaged backup file being checked or restored says nothing about the shop's data.
-        if (db.path != storePath) return
-        if (problem == null) problem = "SQLite reported damage (SQLITE_CORRUPT)"
+        if (reported == null) reported = "SQLite reported damage (SQLITE_CORRUPT)"
     }
 
     /**
@@ -67,19 +83,30 @@ object KeepDamagedDatabase : DatabaseErrorHandler {
             m.delete()
             return
         }
-        problem = "The data file was damaged and kept aside (damaged-$at.db). Restore a backup."
+        heldText = "The data file was damaged and kept aside (damaged-$at.db). Restore a backup."
+        heldUntil = at + HOLD_MS
     }
 
     /** A restore replaced the data: the problem of the set-aside file is over. */
     fun restored(ctx: Context) {
         marker(ctx).delete()
+        heldText = null
     }
 
     /** Tests: forget the damage this process saw (other tests share the process). */
     @androidx.annotation.VisibleForTesting
     fun clearForTests(ctx: Context) {
-        problem = null
+        reported = null
+        heldText = null
+        heldUntil = 0L
         marker(ctx).delete()
+    }
+
+    /** Tests: the set-aside hold as if it began at [at] (it ends [HOLD_MS] later). */
+    @androidx.annotation.VisibleForTesting
+    fun holdForTests(text: String, at: Long) {
+        heldText = text
+        heldUntil = at + HOLD_MS
     }
 
     private fun marker(ctx: Context) = File(ctx.filesDir, "db-damaged")

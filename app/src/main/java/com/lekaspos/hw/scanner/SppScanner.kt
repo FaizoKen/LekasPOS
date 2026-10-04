@@ -10,9 +10,11 @@ import com.lekaspos.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.Executors
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,11 +22,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A Bluetooth scanner in SPP (serial) mode: codes arrive as text lines on an RFCOMM socket.
  * Keyboard-mode (HID) scanners need none of this — they type into the selling screen.
- * Runs while the selling screen is visible and reconnects with backoff.
+ * Runs while a screen that takes scans is in front ([hold]) and reconnects with backoff.
  */
 class SppScanner(private val app: Context, private val graph: AppGraph) {
 
@@ -48,6 +51,8 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
         job = graph.appScope.launch(dispatcher) {
             var backoff = 2_000L
             var failures = 0
+            var connectedAt = 0L
+            var quickUntil = 0L
             while (isActive) {
                 val adapter = Bluetooth.adapter(app)
                 if (adapter == null || !Bluetooth.hasPermission(app) || !adapter.isEnabled) {
@@ -63,6 +68,7 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                     l.open() // stop() closes the link, which aborts a connect in progress
                     if (!isActive) throw IOException("stopped")
                     _status.value = Status.CONNECTED
+                    connectedAt = SystemClock.elapsedRealtime()
                     backoff = 2_000L
                     failures = 0
                     read(l)
@@ -70,20 +76,81 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
                     if (isActive) Log.w("SPP scanner: ${e.message}")
                 } catch (e: SecurityException) {
                     Log.w("SPP scanner: ${e.message}")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: RuntimeException) {
+                    // An odd Bluetooth stack error ended this loop for good: "connecting" until the
+                    // selling screen restarted (2026-10 review). Tried again like any lost link.
+                    Log.w("SPP scanner failed", e)
                 } finally {
                     l.close()
                     link = null
                 }
                 if (!isActive) break
                 _status.value = Status.ERROR
-                delay(backoff)
+                val now = SystemClock.elapsedRealtime()
+                // A scanner that was connected went to sleep or was switched off for a moment: it is
+                // likely woken for the next customer soon. It is tried every few seconds for a while
+                // first; it waited up to 5 minutes before (2026-10 review).
+                if (connectedAt != 0L && now - connectedAt >= UP_MS) {
+                    quickUntil = now + QUICK_FOR_MS
+                    failures = 0
+                    backoff = 2_000L
+                }
+                if (connectedAt != 0L) droppedAt = now
+                connectedAt = 0L
+                val quick = now < quickUntil
+                withTimeoutOrNull(if (quick) QUICK_MS else backoff) { pokes.receive() } // or the till is used: at once
                 // A scanner that is off or asleep: after a few tries, once every 5 minutes. Each try pages
                 // for ~15 s (battery, and Bluetooth paging slows the shop's 2.4 GHz Wi-Fi) — every minute
                 // all day before (2026-10 review). Opening the selling screen tries again at once.
-                backoff = minOf(backoff * 2, if (++failures >= SLOW_AFTER) SLOW_RETRY_MS else 60_000L)
+                if (!quick) backoff = minOf(backoff * 2, if (++failures >= SLOW_AFTER) SLOW_RETRY_MS else 60_000L)
             }
             _status.value = Status.OFF
         }
+    }
+
+    /** Screens in front that take its codes (main thread): connected while there is one. */
+    private val holders = HashSet<Any>()
+
+    /**
+     * [holder], a screen that takes scans, came to the front. A screen opened over the selling screen
+     * starts before that one stops: with plain start and stop, a count or a delivery found the scanner
+     * switched off under it (2026-10 review). Main thread.
+     */
+    fun hold(holder: Any) {
+        holders.add(holder)
+        start()
+    }
+
+    /** [holder] left the front; the scanner stops once no screen wants it. Main thread. */
+    fun release(holder: Any) {
+        if (holders.remove(holder) && holders.isEmpty()) stop()
+    }
+
+    private val pokes = Channel<Unit>(Channel.CONFLATED)
+
+    @Volatile
+    private var pokedAt = 0L
+
+    /** When the link last dropped after being up (elapsed realtime), 0 = not since start. */
+    @Volatile
+    private var droppedAt = 0L
+
+    /**
+     * The till is being used (a touch or a key on the selling screen): a scanner that dropped out in
+     * the last [POKE_WINDOW_MS] (asleep, likely woken for the next customer) is tried again now instead
+     * of after the wait (up to 5 minutes), at most every [POKE_EVERY_MS]. Not one that has been gone
+     * longer (off for the day, or switched to keyboard mode): each try pages for ~15 s, and poked by
+     * every touch the phone paged almost without a break (2026-10 review).
+     */
+    fun poke() {
+        if (_status.value != Status.ERROR) return
+        val now = SystemClock.elapsedRealtime()
+        val dropped = droppedAt
+        if (dropped == 0L || now - dropped > POKE_WINDOW_MS || now - pokedAt < POKE_EVERY_MS) return
+        pokedAt = now
+        pokes.trySend(Unit)
     }
 
     fun stop() {
@@ -142,5 +209,12 @@ class SppScanner(private val app: Context, private val graph: AppGraph) {
         private const val POLL_MS = 20L
         private const val SLOW_AFTER = 5
         private const val SLOW_RETRY_MS = 5L * 60L * 1000L
+
+        /** Connected at least this long, then lost: tried every [QUICK_MS] for [QUICK_FOR_MS]. */
+        private const val UP_MS = 30_000L
+        private const val QUICK_MS = 5_000L
+        private const val QUICK_FOR_MS = 2L * 60L * 1000L
+        private const val POKE_EVERY_MS = 60_000L
+        private const val POKE_WINDOW_MS = 30L * 60L * 1000L
     }
 }

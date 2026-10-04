@@ -50,7 +50,13 @@ class Importer(private val db: SQLiteDatabase) {
             Entity.SALE -> SaleDao.applyRemote(tx, map(p["sale"]), list(p["lines"]), list(p["pays"]))
             Entity.SALE_VOID -> SaleDao.applyRemoteVoid(tx, p)
             Entity.STOCK_MOVE -> StockDao.insertMovementRowIfNew(tx, row(MOVE_COLS, p))
-            Entity.STOCK_COUNT -> insert(tx, "stock_count", p).also { new -> if (new) StockDao.rebuild(tx, p["product_id"] as Long) }
+            Entity.STOCK_COUNT -> insert(tx, "stock_count", p).also { new ->
+                if (new) {
+                    val productId = p["product_id"] as Long
+                    StockDao.rebuild(tx, productId)
+                    StockDao.countImported(tx, productId, p["id"] as Long, p["hlc"] as Long)
+                }
+            }
             Entity.PURCHASE -> purchase(tx, map(p["purchase"]), list(p["lines"]))
             Entity.CASH_MOVE -> insert(tx, "cash_movement", p)
             Entity.AUDIT -> insert(tx, "audit_log", p)

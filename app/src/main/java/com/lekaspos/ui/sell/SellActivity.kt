@@ -43,6 +43,8 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.PricingEngine
+import com.lekaspos.core.report.ReportMath
 import com.lekaspos.core.scan.ScanBuffer
 import com.lekaspos.core.time.ClockCheck
 import com.lekaspos.core.time.DateText
@@ -59,17 +61,24 @@ import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sale.ActionRefused
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.domain.sell.CheckoutService
+import com.lekaspos.domain.sell.PriceCheck
 import com.lekaspos.hw.printer.PrinterService
+import com.lekaspos.hw.scanner.SppScanner
+import com.lekaspos.perf.PerfDataGenerator
 import com.lekaspos.sync.SyncEngine
 import com.lekaspos.ui.Insets
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
+import com.lekaspos.ui.common.CsvFiles
 import com.lekaspos.ui.common.DialogHost
 import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.KeyboardTip
+import com.lekaspos.ui.common.LaunchGuard
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.scanChar
 import com.lekaspos.ui.common.trackedBy
@@ -109,6 +118,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -200,8 +210,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The icon tapped while the app runs in a task Android started otherwise (the installer's "Open"
+        // after an update): a second selling screen would open above the first one and the screens over
+        // it. The task as it was shows instead (the manifest's singleTop, 2026-10 review).
+        if (alive > 0 && !isTaskRoot && intent?.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+            finish()
+            return
+        }
+        alive++
+        counted = true
         setContentView(R.layout.activity_sell)
         Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
+        KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
         titleView = findViewById(R.id.title)
         printerState = findViewById(R.id.printer_state)
         syncState = findViewById(R.id.sync_state)
@@ -296,6 +316,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         started = s
         lockShown = false
         graph.staff.screenStarted() // idle too long while out of sight: locks now, before the first tap counts as activity
+        // Back from a screen that kept the serial scanner connected: kept, not dropped and reconnected.
+        if (graph.sppScanner.status.value != SppScanner.Status.OFF) graph.sppScanner.hold(this)
         s.launch {
             try {
                 graph.cart.load()
@@ -307,6 +329,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 showFailure(e)
             }
             resumePayment()
+            if (paymentDialog == null) resumePrompt()
             if (!reportedDrawn) {
                 reportedDrawn = true
                 reportFullyDrawn()
@@ -322,11 +345,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
             if (!setupShown && !reportsChecked) askAboutReports()
             delay(HARDWARE_DELAY_MS) // keep Bluetooth work out of the cold-start path
             graph.printer.start()
-            graph.sppScanner.start()
+            graph.sppScanner.hold(this@SellActivity)
             val app = applicationContext
             graph.appScope.launch(Dispatchers.IO) {
                 Work.schedule(app) // background jobs, after the till is usable (WorkManager starts here, off the main thread)
                 ErrorReports.atStart(app) // waiting error reports, and how the app last ended (D-057)
+                CsvFiles.cleanShared(app) // copies shared earlier (a backup holds the whole shop's data)
+                // Test data of a performance run Android ended half-way (hundreds of MB).
+                if (PerfDataGenerator.exists(app)) withContext(Dispatchers.Main) { graph.perfRunner.cleanLeftovers() }
                 // New versions (D-059): the daily check; once after an update, say so.
                 graph.updates.atStart()?.let { version ->
                     withContext(Dispatchers.Main) {
@@ -362,8 +388,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
             combine(graph.sync.status, graph.backups.protection) { a, b -> a to b }.collect { renderSafety(it.first, it.second) }
         }
         s.launch { graph.sync.status.map { it.lastSuccessAt }.distinctUntilChanged().collect { graph.backups.refreshProtection() } }
-        s.launch { graph.sppScanner.codes.collect { onScanned(it) } }
+        s.launch { graph.sppScanner.codes.collect { if (resumed) onScanned(it) } }
         s.launch { graph.checkout.last.collect { renderLastSale(it) } }
+        s.launch { graph.catalogChanges.drop(1).collect { loadCategories(refresh = true) } } // read below at once
         s.launch {
             graph.checkout.outcome.collect {
                 showOutcome(it)
@@ -375,10 +402,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
         // Many phones only pause the app while their screen is off: waking them calls onResume,
         // not onStart, and the till stayed signed in until the first tap (reported on 1.3.0).
         graph.staff.lockIfIdle()
     }
+
+    override fun onPause() {
+        resumed = false
+        super.onPause()
+    }
+
+    /**
+     * In front: a serial scanner's code goes to the screen in front only. A screen opened over this one
+     * starts before this one stops, and a code scanned in between went to both (counted on Count and
+     * put on the bill, 2026-10 review).
+     */
+    private var resumed = false
 
     /**
      * Error reports (D-057): asked once, of someone who may change settings, with no bill open;
@@ -410,12 +450,22 @@ class SellActivity : Activity(), LineActions, DialogHost {
         started?.cancel()
         started = null
         graph.staff.screenStopped()
-        graph.sppScanner.stop()
+        graph.sppScanner.release(this) // kept for a screen opened over this one that takes scans
         scanInput.clear()
         super.onStop()
     }
 
     override fun onDestroy() {
+        if (!counted) {
+            // A second selling screen closed at once in onCreate: the bill, its prompt and its payment
+            // are the live screen's (clearing the prompt here lost the other's weight being asked).
+            scope.cancel()
+            super.onDestroy()
+            return
+        }
+        // Only a screen that is finishing drops a weight or price being asked (see keepPrompt).
+        destroying = isChangingConfigurations || !isFinishing
+        if (!destroying) graph.cart.prompt = null
         // Rebuilt mid-payment (a tablet turned: Android 16 ignores the orientation lock on large
         // screens): the payment stays open with what was already taken, and the new screen shows
         // it again (resumePayment). So also when Android destroys the screen to save memory while the
@@ -429,10 +479,21 @@ class SellActivity : Activity(), LineActions, DialogHost {
         dialogs.dismissAll()
         scope.cancel()
         beeper?.release()
+        if (counted) alive--
         super.onDestroy()
     }
 
+    /** This instance is one of the [alive] selling screens (not one closed at once in onCreate). */
+    private var counted = false
+
     override fun track(d: android.app.Dialog) = dialogs.track(d)
+
+    private val starts = LaunchGuard()
+
+    /** A screen asked for twice by a double tap (the camera, a menu entry) opens once (ScreenActivity, 2026-10 review). */
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        if (starts.allow(intent)) super.startActivityForResult(intent, requestCode, options)
+    }
 
     private fun showFailure(e: Throwable) {
         // A refusal is the rule working, not a bug: no error report (D-057).
@@ -569,8 +630,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun printLastSale() {
         val done = graph.checkout.last.value ?: return
-        printReceipt(done.saleId)
+        printOnce.run { printReceipt(done.saleId) }
     }
+
+    /** A double tap on Print queued a copy too (with its audit entry, or a manager's PIN asked). */
+    private val printOnce = TapOnce()
 
     /**
      * Prints a receipt of [saleId]. SaleActions.print tells the first one from a copy by the print
@@ -589,8 +653,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
                         try {
                             graph.sales.print(saleId, copy = true, approval = approval)
                             onQueued()
-                        } catch (e: Exception) {
-                            notAllowed()
+                        } catch (e: ActionRefused) {
+                            notAllowed() // other failures are said as they are (the screen's handler)
                         }
                     }
                 }
@@ -698,9 +762,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun handleBack(): Boolean {
         if (!backConsumable()) return false
+        // Back with the keyboard up closes the keyboard first: on Android 13–14 this screen's Back came
+        // before the keyboard's, and the search typed so far was wiped (2026-10 review).
+        if (Build.VERSION.SDK_INT >= 30 && Ime30.visible(this)) {
+            hideKeyboard()
+            return true
+        }
         catalogOpen = false
         if (search.text.isNotEmpty()) clearSearch() else showPanels()
         return true
+    }
+
+    @RequiresApi(30)
+    private object Ime30 {
+        fun visible(a: Activity): Boolean = a.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
     }
 
     /** Below API 33 the back key/gesture arrives as KEYCODE_BACK (see [dispatchKeyEvent]). */
@@ -734,6 +809,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (graph.staff.activity()) return true // idle too long: locked; this key was meant for whoever was signed in
+        graph.sppScanner.poke() // the till is in use: a serial scanner that dropped out is tried again now
         val scanned = if (search.hasFocus()) scanIntoSearch(event) else scanKey(event)
         return backKey(event) || scanned || super.dispatchKeyEvent(event)
     }
@@ -766,7 +842,27 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (graph.staff.activity()) return true // idle too long: locked (the sign-in shows)
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            graph.sppScanner.poke() // the till is in use: a serial scanner that dropped out is tried again now
+            shielded = SystemClock.uptimeMillis() < shieldUntil
+        }
+        if (shielded) {
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) shielded = false
+            return true // the whole touch is dropped
+        }
         return super.dispatchTouchEvent(ev)
+    }
+
+    private var shieldUntil = 0L
+    private var shielded = false
+
+    /**
+     * What is under the finger just changed (a search result picked: the catalogue comes back; the
+     * sale's result closed): the second tap of a double tap is dropped. It added whatever tile now
+     * sat there — to the next customer's bill (2026-10 review).
+     */
+    private fun shieldTaps() {
+        shieldUntil = SystemClock.uptimeMillis() + SHIELD_MS
     }
 
     /** Keyboard-wedge scanner input while no text field has focus (also forwarded by dialogs). */
@@ -812,15 +908,47 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun askWeight(p: SellableProduct, code: String?) {
-        AmountDialog(this, getString(R.string.weigh_title, p.name), AmountDialog.Kind.WEIGHT, currency, p.unit) { milli ->
+        val d = AmountDialog(this, getString(R.string.weigh_title, p.name), AmountDialog.Kind.WEIGHT, currency, p.unit) { milli ->
             if (graph.cart.addProduct(p, qty = milli, barcode = code) == 0L) beeper?.error()
         }.show()
+        keepPrompt(d, CartSession.Prompt(p, code, weight = true))
     }
 
+    /** [d] asks [prompt]: remembered until it is answered or cancelled, not when the screen is rebuilt. */
+    private fun keepPrompt(d: AlertDialog, prompt: CartSession.Prompt) {
+        graph.cart.prompt = prompt
+        promptDialog = d
+        d.setOnDismissListener {
+            if (promptDialog === d) promptDialog = null
+            if (!destroying) graph.cart.prompt = null
+        }
+    }
+
+    private var promptDialog: AlertDialog? = null
+
+    /** The weight or price asked before the screen was rebuilt, asked again. */
+    private fun resumePrompt() {
+        val p = graph.cart.prompt ?: return
+        if (promptDialog?.isShowing == true) return // still open (the screen only went out of sight)
+        if (!graph.cart.state.value.canEdit || isFinishing) {
+            graph.cart.prompt = null
+            return
+        }
+        if (p.weight) askWeight(p.product, p.code) else askPrice(p.product, p.code)
+    }
+
+    /** onDestroy has begun: dialogs closing now were not answered by the cashier. */
+    private var destroying = false
+
     private fun askPrice(p: SellableProduct, code: String?) {
-        AmountDialog(this, getString(R.string.price_for_title, p.name), AmountDialog.Kind.MONEY, currency) { price ->
+        // A product priced 0.00 may be sold for 0.00: a free plastic bag or gift could not be sold at all
+        // once a product without a price asked for one (1.7.1) — it is still asked, never sold free
+        // unseen. A product priced at the till (kuih, vegetables) still needs a price typed.
+        val allowZero = p.sellMode != SellMode.OPEN_PRICE
+        val d = AmountDialog(this, getString(R.string.price_for_title, p.name), AmountDialog.Kind.MONEY, currency, allowZero = allowZero) { price ->
             if (graph.cart.addAtPrice(p, price, code) == 0L) beeper?.error()
         }.show()
+        keepPrompt(d, CartSession.Prompt(p, code, weight = false))
     }
 
     /** Price check: scan or search to see price, stock and deals; the bill is not touched. */
@@ -833,7 +961,37 @@ class SellActivity : Activity(), LineActions, DialogHost {
         } else {
             null
         }
-        priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera).also { it.show() }
+        priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera) { changePrice(it) }.also { it.show() }
+    }
+
+    /**
+     * A new price for the product the price check found: a wrong price found at the till, or prices
+     * raised after a delivery, one scan each instead of opening every product (2026-10 review). Needs
+     * MANAGE_PRODUCTS, else a manager's PIN; audited. The bill's lines keep their price.
+     */
+    private fun changePrice(info: PriceCheck.Info) {
+        withApproval(graph, scope, Perm.MANAGE_PRODUCTS) { approval ->
+            val c = currency
+            val text = StringBuilder(getString(R.string.price_check_now, money(info.price)))
+            if (info.cost > 0L) {
+                // The margin of the price now, after the tax it includes (the cost is without tax).
+                val inclTax = graph.settings.store.value.pricesIncludeTax
+                val netEx = if (inclTax && info.taxBp > 0) info.price - PricingEngine.taxInclusive(info.price, info.taxBp) else info.price
+                val margin = ReportMath.marginBp(netEx, info.cost)?.let { MoneyFormat.plain(it.toLong(), 2) + "%" } ?: "-"
+                text.append(' ').append(getString(R.string.price_check_cost, money(info.cost), margin))
+            }
+            AmountDialog(
+                this, getString(R.string.price_check_new_title, info.name), AmountDialog.Kind.MONEY, c, initial = info.price,
+                message = text.toString(),
+            ) { price ->
+                billJob {
+                    graph.priceCheck.setPrice(info.productId, price, approval)
+                    Toast.makeText(this, getString(R.string.price_check_saved, info.name, MoneyFormat.format(price, c)), Toast.LENGTH_SHORT).show()
+                    priceCheck?.refresh()
+                    if (!isDestroyed) refreshTiles() // the tiles show the new price, the grid keeps its place
+                }
+            }.show()
+        }
     }
 
     /** Only registered products are sold (D-050): an unknown barcode is registered, then it is on the bill. */
@@ -892,6 +1050,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             return
         }
         catalogJob?.cancel()
+        refreshJob?.cancel()
         searchJob = scope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             val results = graph.db().read { ProductDao.search(it, text, 60) }
@@ -954,7 +1113,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(search.windowToken, 0)
     }
 
-    private fun loadCategories() {
+    /** The chips, then the tiles from the top; with [refresh] (another till or an import changed them) the tiles where they are. */
+    private fun loadCategories(refresh: Boolean = false) {
         val s = started ?: return
         s.launch {
             val cats = graph.db().read { CategoryDao.list(it) }
@@ -963,14 +1123,51 @@ class SellActivity : Activity(), LineActions, DialogHost {
             if (popular) chips.add(Category(CategoryChipAdapter.POPULAR, getString(R.string.sell_popular)))
             chips.add(Category(CategoryChipAdapter.ALL, getString(R.string.sell_all)))
             chips.addAll(cats)
+            val before = selectedCategory
             // Best sellers first once the shop has sold something; the owner's choice is kept after that.
-            if (!categoryChosen && popular) selectedCategory = CategoryChipAdapter.POPULAR
+            if (!refresh && !categoryChosen && popular) selectedCategory = CategoryChipAdapter.POPULAR
             if (chips.none { it.id == selectedCategory }) selectedCategory = CategoryChipAdapter.ALL
             categoryAdapter.submit(chips)
             categoryAdapter.selected = selectedCategory
-            if (search.text.isEmpty()) loadCatalog(reset = true)
+            if (!refresh || selectedCategory != before) loadCatalog(reset = true) else refreshTiles()
         }
     }
+
+    /**
+     * The tiles read again where they are: after a sale (their stock), and when another till or an
+     * import changed products (2026-10 review: the tiles kept the stock, prices and names of when the
+     * screen opened, all day on a till that never leaves it). At the top, the first page again (new
+     * products show); further down, the tiles around those in view, and the grid keeps its place.
+     * Search results are read again with the next keystroke.
+     */
+    private fun refreshTiles() {
+        if (search.text.isNotEmpty()) return
+        refreshJob?.cancel() // one that read before the latest change
+        val grid = productGrid.layoutManager as? GridLayoutManager ?: return
+        val items = productAdapter.items
+        val n = items.size
+        val first = grid.findFirstVisibleItemPosition()
+        // Hidden (the bill pane on a phone), its positions are those of the list before the last reload:
+        // read from the top again, unseen.
+        if (n == 0 || first <= 0 || first >= n || !productGrid.isShown) return loadCatalog(reset = true)
+        val last = grid.findLastVisibleItemPosition().coerceIn(first, n - 1)
+        val ids = items.subList((first - REFRESH_AROUND).coerceAtLeast(0), (last + REFRESH_AROUND).coerceAtMost(n - 1) + 1).map { it.id }
+        refreshJob = scope.launch {
+            val fresh = graph.db().read { ProductDao.listByIds(it, ids) }
+            if (search.text.isNotEmpty()) return@launch // search results replaced the tiles meanwhile
+            productAdapter.refresh(ids, fresh.associateBy { it.id })
+            catalogEmpty.visible(productAdapter.itemCount == 0)
+        }
+    }
+
+    /** The in-place tile refresh ([refreshTiles]); a reload or a search cancels it. */
+    private var refreshJob: Job? = null
+
+    /**
+     * The last tile of the pages read (the keyset of the next page): an in-place refresh may rename the
+     * last tile shown, and the next page started after its new name, skipping or repeating products.
+     */
+    private var catalogCursor: ProductListItem? = null
 
     private fun selectCategory(id: Long) {
         categoryChosen = true
@@ -983,8 +1180,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         if (search.text.isNotEmpty()) return
         if (!reset && (catalogEnd || catalogJob?.isActive == true)) return
         catalogJob?.cancel()
+        if (reset) refreshJob?.cancel()
         val category = selectedCategory
-        val after = if (reset) null else productAdapter.items.lastOrNull()
+        val after = if (reset) null else catalogCursor
         catalogJob = scope.launch {
             val popular = category == CategoryChipAdapter.POPULAR
             val page = if (popular) {
@@ -997,8 +1195,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
             if (reset) {
                 productAdapter.submit(page)
                 productGrid.scrollToPosition(0)
+                catalogCursor = page.lastOrNull()
             } else {
                 productAdapter.append(page)
+                page.lastOrNull()?.let { catalogCursor = it }
             }
             catalogEnd = popular || page.size < PAGE
             catalogEmpty.text = getString(R.string.sell_no_products)
@@ -1009,7 +1209,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
     /** A tile: added to the bill. Picked from search results, the search closes and the bill shows again. */
     private fun tapProduct(item: ProductListItem) {
         addProductById(item.id)
-        if (search.text.isNotEmpty()) clearSearch()
+        if (search.text.isNotEmpty()) {
+            clearSearch()
+            shieldTaps()
+        }
     }
 
     private fun addProductById(id: Long) {
@@ -1138,8 +1341,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 try {
                     graph.sales.openDrawer(approval)
                     Dialogs.message(this@SellActivity, null, getString(R.string.drawer_opened))
-                } catch (e: Exception) {
-                    notAllowed()
+                } catch (e: ActionRefused) {
+                    notAllowed() // other failures are said as they are (the screen's handler)
                 }
             }
         }
@@ -1194,9 +1397,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     // ------------------------------------------------------------------ payment
 
+    /**
+     * Pay was pressed and its checks are reading the database (the clock, the payment methods): the
+     * bill only freezes once they are done, so a second tap meanwhile opened a second payment
+     * dialog — after the sale the stale one was still there, and paying in it failed (2026-10 review).
+     */
+    private var paymentOpening = false
+
     private fun openPayment(clockChecked: Boolean = false) {
         val st = graph.cart.state.value
-        if (!st.canEdit || st.cart.isEmpty) return
+        if (!st.canEdit || st.cart.isEmpty || paymentOpening || paymentDialog != null) return
         val store = graph.settings.store.value
         if (store.shiftRequired && graph.shifts.current.value == null) {
             Dialogs.confirm(this, getString(R.string.shift_needed_title), getString(R.string.shift_needed), getString(R.string.shift_open)) {
@@ -1204,37 +1414,42 @@ class SellActivity : Activity(), LineActions, DialogHost {
             }
             return
         }
+        paymentOpening = true
         scope.launch {
-            if (!clockChecked) {
-                // The sale is filed for good under the phone's date (ClockCheck, 2026-10 review).
-                val now = System.currentTimeMillis()
-                val db = graph.db()
-                val last = db.read { SaleDao.lastOwnSoldAt(it, db.deviceNo) }
-                when (ClockCheck.verdict(now, last)) {
-                    ClockCheck.Verdict.OK -> Unit
-                    ClockCheck.Verdict.WRONG -> {
-                        wrongClock(getString(R.string.clock_wrong, DateText.dateTime(now, TimeZone.getDefault())), sellAnyway = null)
-                        return@launch
-                    }
-                    ClockCheck.Verdict.SUSPECT -> {
-                        val tz = TimeZone.getDefault()
-                        val text = getString(R.string.clock_suspect, DateText.dateTime(now, tz), DateText.dateTime(last ?: now, tz))
-                        wrongClock(text) { openPayment(clockChecked = true) }
-                        return@launch
+            try {
+                if (!clockChecked) {
+                    // The sale is filed for good under the phone's date (ClockCheck, 2026-10 review).
+                    val now = System.currentTimeMillis()
+                    val db = graph.db()
+                    val last = db.read { SaleDao.lastOwnSoldAt(it, db.deviceNo) }
+                    when (ClockCheck.verdict(now, last)) {
+                        ClockCheck.Verdict.OK -> Unit
+                        ClockCheck.Verdict.WRONG -> {
+                            wrongClock(getString(R.string.clock_wrong, DateText.dateTime(now, TimeZone.getDefault())), sellAnyway = null)
+                            return@launch
+                        }
+                        ClockCheck.Verdict.SUSPECT -> {
+                            val tz = TimeZone.getDefault()
+                            val text = getString(R.string.clock_suspect, DateText.dateTime(now, tz), DateText.dateTime(last ?: now, tz))
+                            wrongClock(text) { openPayment(clockChecked = true) }
+                            return@launch
+                        }
                     }
                 }
+                val credit = store.creditEnabled && graph.cart.state.value.customerId != null
+                val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
+                // Priced with today's promotions: a bill rung up before midnight kept a deal that had
+                // ended, or missed one that started (2026-10 review).
+                graph.cart.reprice()
+                val now = graph.cart.state.value
+                if (!now.canEdit || now.cart.isEmpty || paymentDialog != null) return@launch
+                graph.cart.setPaying(true)
+                val draft = CartSession.PaymentDraft(now.priced.total, methods)
+                graph.cart.payment = draft
+                showPayment(draft)
+            } finally {
+                paymentOpening = false
             }
-            val credit = store.creditEnabled && graph.cart.state.value.customerId != null
-            val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT || credit }
-            // Priced with today's promotions: a bill rung up before midnight kept a deal that had
-            // ended, or missed one that started (2026-10 review).
-            graph.cart.reprice()
-            val now = graph.cart.state.value
-            if (!now.canEdit || now.cart.isEmpty) return@launch
-            graph.cart.setPaying(true)
-            val draft = CartSession.PaymentDraft(now.priced.total, methods)
-            graph.cart.payment = draft
-            showPayment(draft)
         }
     }
 
@@ -1328,7 +1543,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
         outcomeDialog = null
         when (o) {
             null -> Unit
-            is CheckoutService.Outcome.Completed -> outcomeDialog = showResult(o.done)
+            is CheckoutService.Outcome.Completed -> {
+                outcomeDialog = showResult(o.done)
+                refreshTiles() // the stock they show
+            }
             is CheckoutService.Outcome.Refused -> {
                 val d = Dialogs.message(this, getString(R.string.pay_failed_title), ScreenActivity.errorText(this, ActionRefused(o.reason)))
                 d.setOnDismissListener { graph.checkout.acknowledge() }
@@ -1379,23 +1597,33 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val print = v.findViewById<Button>(R.id.result_print)
         print.visible(device.hasPrinter)
         print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
-        print.setOnClickListener { printReceipt(done.saleId) { print.isEnabled = false } }
+        print.setOnClickListener { printOnce.run { printReceipt(done.saleId) { print.isEnabled = false } } }
         v.findViewById<View>(R.id.result_share).setOnClickListener { ReceiptShare.chooseAndShare(this, done.saleId) }
         v.findViewById<View>(R.id.result_new).setOnClickListener { d.dismiss() }
-        d.setOnDismissListener { graph.checkout.acknowledge() }
+        d.setOnDismissListener {
+            graph.checkout.acknowledge()
+            shieldTaps()
+        }
         d.forwardKeys { e -> scanKey(e) }
         d.show()
         return d
     }
 
     companion object {
+        /** Selling screens not destroyed yet (main thread). */
+        private var alive = 0
+
         private const val REQ_NEW_PRODUCT = 1
         private const val REQ_PRICE_SCAN = 7
         private const val REQ_CAMERA_SELL = 8
         private const val REQ_CUSTOMER = 2
         private const val IDLE_CHECK_MS = 15_000L
         private const val DOUBLE_TAP_MS = 600L
+        private const val SHIELD_MS = 400L
         private const val PAGE = 60
+
+        /** Tiles read again on each side of those in view ([refreshTiles]). */
+        private const val REFRESH_AROUND = 60
         private const val SEARCH_DEBOUNCE_MS = 150L
         private const val HARDWARE_DELAY_MS = 1500L
         private const val SYNC_STALE_MS = 24L * 60L * 60L * 1000L

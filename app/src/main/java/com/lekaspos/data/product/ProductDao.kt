@@ -166,17 +166,26 @@ object ProductDao {
             "WHERE b.code IN (?, ?) AND b.deleted = 0 AND b.kind = ? AND p.deleted = 0 " +
             "ORDER BY b.code = ? DESC, $CODE_WINNER LIMIT 1"
 
+    private const val FIND_BY_CODE_3 =
+        "SELECT $SELLABLE_COLUMNS, b.code, b.kind, b.pack_qty, b.pack_price " +
+            "FROM product_barcode b JOIN product p ON p.id = b.product_id " +
+            "LEFT JOIN tax_rate t ON t.id = p.tax_rate_id AND t.deleted = 0 " +
+            "WHERE b.code IN (?, ?, ?) AND b.deleted = 0 AND b.kind = ? AND p.deleted = 0 " +
+            "ORDER BY b.code = ? DESC, $CODE_WINNER LIMIT 1"
+
     /**
      * Resolves a scanned code. [codes] are the lookup variants (see Gtin.lookupVariants), at
-     * most two. The code exactly as scanned comes first (a newer product with only its padded form
-     * took over the scans of "1234565", 2026-10 review); with duplicates, the barcode created last
-     * wins, on every till ([CODE_WINNER]).
+     * most three (a UPC-E's 12- and 13-digit forms: a third was dropped, and those small packs were
+     * "not found", 2026-10 review). The code exactly as scanned comes first (a newer product with only
+     * its padded form took over the scans of "1234565", 2026-10 review); with duplicates, the barcode
+     * created last wins, on every till ([CODE_WINNER]).
      */
     fun findByCode(db: SQLiteDatabase, codes: List<String>, kind: Int = BarcodeKind.BARCODE): ScanHit? =
         when (codes.size) {
             0 -> null
             1 -> db.queryOne(FIND_BY_CODE_1, args(codes[0], kind), ::scanHit)
-            else -> db.queryOne(FIND_BY_CODE_2, args(codes[0], codes[1], kind, codes[0]), ::scanHit)
+            2 -> db.queryOne(FIND_BY_CODE_2, args(codes[0], codes[1], kind, codes[0]), ::scanHit)
+            else -> db.queryOne(FIND_BY_CODE_3, args(codes[0], codes[1], codes[2], kind, codes[0]), ::scanHit)
         }
 
     private fun sellable(c: Cursor) = SellableProduct(
@@ -546,15 +555,19 @@ object ProductDao {
     private const val OWNERS_2 =
         "SELECT b.product_id FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
             "WHERE b.code IN (?, ?) AND b.deleted = 0 AND p.deleted = 0 ORDER BY $CODE_WINNER LIMIT 5"
+    private const val OWNERS_3 =
+        "SELECT b.product_id FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
+            "WHERE b.code IN (?, ?, ?) AND b.deleted = 0 AND p.deleted = 0 ORDER BY $CODE_WINNER LIMIT 5"
 
     /**
-     * The products (not deleted) that use one of [codes] (a code and its UPC/EAN form, see
-     * Gtin.lookupVariants), the one a scan picks first ([CODE_WINNER]); each once, at most five.
+     * The products (not deleted) that use one of [codes] (a code and its UPC/EAN forms, at most three,
+     * see Gtin.lookupVariants), the one a scan picks first ([CODE_WINNER]); each once, at most five.
      */
     fun owners(db: SQLiteDatabase, codes: List<String>): List<Long> = when (codes.size) {
         0 -> emptyList()
         1 -> db.queryList(OWNERS_1, args(codes[0])) { it.getLong(0) }
-        else -> db.queryList(OWNERS_2, args(codes[0], codes[1])) { it.getLong(0) }
+        2 -> db.queryList(OWNERS_2, args(codes[0], codes[1])) { it.getLong(0) }
+        else -> db.queryList(OWNERS_3, args(codes[0], codes[1], codes[2])) { it.getLong(0) }
     }.distinct()
 
     /** The product (not deleted) that uses [code] as a barcode, if any: the one a scan picks. */
@@ -566,9 +579,8 @@ object ProductDao {
         return ids.singleOrNull()
     }
 
-    /** Other products that already use [code] (duplicate-barcode warning). */
     /**
-     * Other products with [code] — also in its other UPC/EAN form, which answers the same scan
+     * Other products with [code] (duplicate-barcode warning) — also in its other UPC/EAN form, which answers the same scan
      * ("036000291452" beside "0036000291452" went unnoticed, 2026-10 review).
      */
     fun codeOwners(db: SQLiteDatabase, code: String, exceptProductId: Long): List<Pair<Long, String>> =
@@ -638,6 +650,7 @@ object ProductDao {
     /** Hot queries whose plans the perf suite verifies (name → SQL). */
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "barcode_lookup" to FIND_BY_CODE_2,
+        "barcode_lookup_3" to FIND_BY_CODE_3,
         "search_fts" to SEARCH_FTS,
         "search_prefix" to SEARCH_PREFIX,
         "search_barcode_prefix" to SEARCH_BARCODE_PREFIX,
@@ -652,6 +665,7 @@ object ProductDao {
         "product_export" to EXPORT_PAGE,
         "product_export_barcodes" to EXPORT_BARCODES,
         "barcode_owners" to OWNERS_2,
+        "barcode_owners_3" to OWNERS_3,
         "popular_ids" to POPULAR_HEAD + SummaryRange.qty(SummaryRange.SAMPLE).sql + POPULAR_TAIL,
         "products_by_ids" to BY_ID_PREFIX + "(?,?,?)",
     )

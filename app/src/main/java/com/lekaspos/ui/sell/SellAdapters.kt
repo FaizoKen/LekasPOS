@@ -177,6 +177,24 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         notifyItemRangeInserted(start, more.size)
     }
 
+    /**
+     * Fresh rows ([fresh], by id) for the tiles of [checked]: only tiles that changed are redrawn; a
+     * checked product missing from [fresh] (deleted or switched off meanwhile) loses its tile.
+     */
+    @SuppressLint("NotifyDataSetChanged") // tiles removed: rare
+    fun refresh(checked: List<Long>, fresh: Map<Long, ProductListItem>) {
+        val old = items
+        val gone = checked.filterTo(HashSet()) { it !in fresh }
+        if (gone.isEmpty()) {
+            val next = old.map { fresh[it.id] ?: it }
+            items = next
+            for (i in next.indices) if (next[i] != old[i]) notifyItemChanged(i)
+        } else {
+            items = old.filter { it.id !in gone }.map { fresh[it.id] ?: it }
+            notifyDataSetChanged()
+        }
+    }
+
     override fun getItemCount() = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
