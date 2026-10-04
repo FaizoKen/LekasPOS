@@ -1213,8 +1213,8 @@ and straightforward for a cashier; and make buttons such as product tiles fast e
   picks another; was "Change").
 Rejected: keeping the buttons with a PIN dialog (the owner's ask); a separate "manager mode" sign-in
 (two PINs and a sign-out per discount); hiding the data-safety pills from cashiers (D-048).
-Raised with the owner, not changed: a cashier may add a customer with no credit limit (an empty limit
-means none) and sell to them on credit — a default limit is the owner's business rule.
+Raised with the owner: a cashier may add a customer with no credit limit (an empty limit means none) and
+sell to them on credit. **The owner decided (2026-10-04): no default limit, keep it as it is.**
 **1.9.1** (the owner, same day): the selected line's buttons on **one line** under the item — Remove,
 −, quantity, +, More (`LineControls`). Remove is at the far end from + with a wider gap, so fast taps on
 + never remove the item. Where one line does not fit (a turned phone's bill pane, a small phone with
