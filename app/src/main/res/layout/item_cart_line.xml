@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One bill line. The selected line (the one just scanned or tapped) shows its buttons right
-     here: −, quantity, + and remove, more (D-049). -->
+     here, on one line under the item: Remove, −, quantity, +, More (D-049, D-063). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -56,80 +56,57 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Two rows, so "More" (line discount, price change) never falls off a narrow bill pane or a
-         large font: − quantity + first, then Remove and More. -->
-    <LinearLayout
+    <!-- One line under the item (LineControls): Remove, −, quantity, +, More. Remove is far from +, so
+         fast taps on + never land on it. Too narrow for one line (two panes on a turned phone, a large
+         font): − quantity + over Remove and More, so no button is ever cut. -->
+    <com.lekaspos.ui.sell.LineControls
         android:id="@+id/controls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:orientation="vertical"
         android:visibility="gone">
 
-        <LinearLayout
-            android:id="@+id/line_qty_row"
-            android:layout_width="match_parent"
+        <com.lekaspos.ui.common.FitButton
+            android:id="@+id/line_remove"
+            style="@style/Widget.Lekas.Button.LineDanger"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:baselineAligned="false"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:text="@string/line_remove_short" />
 
-            <ImageButton
-                android:id="@+id/line_minus"
-                style="@style/Widget.Lekas.Button.Line"
-                android:layout_width="64dp"
-                android:layout_height="56dp"
-                android:contentDescription="@string/line_minus"
-                android:scaleType="center"
-                android:src="@drawable/ic_minus"
-                android:tint="@color/brand" />
+        <ImageButton
+            android:id="@+id/line_minus"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/line_minus"
+            android:scaleType="center"
+            android:src="@drawable/ic_minus"
+            android:tint="@color/brand" />
 
-            <com.lekaspos.ui.common.FitButton
-                android:id="@+id/line_qty"
-                style="@style/Widget.Lekas.Button.Line"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <ImageButton
-                android:id="@+id/line_plus"
-                style="@style/Widget.Lekas.Button.Line"
-                android:layout_width="64dp"
-                android:layout_height="56dp"
-                android:contentDescription="@string/line_plus"
-                android:scaleType="center"
-                android:src="@drawable/ic_add"
-                android:tint="@color/brand" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <com.lekaspos.ui.common.FitButton
+            android:id="@+id/line_qty"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-            <com.lekaspos.ui.common.FitButton
-                android:id="@+id/line_remove"
-                style="@style/Widget.Lekas.Button.LineDanger"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/line_remove_short" />
+        <ImageButton
+            android:id="@+id/line_plus"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/line_plus"
+            android:scaleType="center"
+            android:src="@drawable/ic_add"
+            android:tint="@color/brand" />
 
-            <com.lekaspos.ui.common.FitButton
-                android:id="@+id/line_more"
-                style="@style/Widget.Lekas.Button.Line"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="@string/line_more" />
-        </LinearLayout>
-    </LinearLayout>
+        <com.lekaspos.ui.common.FitButton
+            android:id="@+id/line_more"
+            style="@style/Widget.Lekas.Button.Line"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/line_more" />
+    </com.lekaspos.ui.sell.LineControls>
 </LinearLayout>

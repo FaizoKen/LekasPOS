@@ -268,7 +268,9 @@ restore that `Db.open` applies before opening the database (D-044).
   on the bill) or Cancel; items without a barcode are products picked from Items (sold by weight
   or with the price typed at the till). Old bills and sales with unregistered lines still load.
 - The selected bill line (the one scanned or changed last, or tapped) shows Remove, −, quantity,
-  +, More in place; "−" stops at one (taking the last one off is Remove). Other lines stay one row.
+  +, More in place, on one line under the item (`LineControls`, D-063: Remove farthest from +, with a
+  wider gap); where they do not fit (narrow pane, large font) − quantity + over Remove and More. "−"
+  stops at one (taking the last one off is Remove). Other lines stay one row.
 - Totals bar: summary, a big TOTAL, then Hold / Discount / PAY. The empty bill explains how to
   start and shows the last sale of this session (`CheckoutService.last`: change again, a copy).
 - Payment dialog order: total, cash received + live change, one-tap notes, every method (3 per

@@ -34,7 +34,8 @@ interface LineActions {
 
 /**
  * The bill. The selected line (the one just scanned, or tapped) shows its buttons in place —
- * remove, −, quantity, +, more — so changing a count is one tap, not a dialog (D-049).
+ * Remove, −, quantity, +, More on one line under it (LineControls) — so changing a count is one tap,
+ * not a dialog (D-049).
  */
 class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartAdapter.Holder>() {
 
@@ -43,7 +44,6 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val detail: TextView = v.findViewById(R.id.detail)
         val amount: TextView = v.findViewById(R.id.amount)
         val controls: View = v.findViewById(R.id.controls)
-        val qtyRow: View = v.findViewById(R.id.line_qty_row)
         val remove: View = v.findViewById(R.id.line_remove)
         val minus: View = v.findViewById(R.id.line_minus)
         val qty: TextView = v.findViewById(R.id.line_qty)
@@ -108,8 +108,8 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val counted = !weighed && it.fixedGross == null
         h.minus.visibility = if (counted) View.VISIBLE else View.GONE
         h.plus.visibility = if (counted) View.VISIBLE else View.GONE
-        // A label-price line has no quantity: its whole − quantity + row goes, not an empty row.
-        h.qtyRow.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
+        // A label-price line has no quantity: − quantity + all go (Remove and More fill the line).
+        h.qty.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
         h.qty.text = if (weighed) "${MoneyFormat.formatQty(it.qty)} ${it.unit ?: "kg"}" else MoneyFormat.formatQty(it.qty)
         // One is the least: taking the last one off is "Remove", never a tap too many on "−".
         val canLower = it.qty > ONE
@@ -119,7 +119,7 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         h.plus.setOnClickListener { _ -> actions.changeQty(it, ONE) }
         h.qty.setOnClickListener { _ -> actions.enterQty(it) }
         h.remove.setOnClickListener { _ -> actions.remove(it) }
-        h.more.visibility = if (showMore) View.VISIBLE else View.GONE // Remove then takes the whole row
+        h.more.visibility = if (showMore) View.VISIBLE else View.GONE // the quantity then takes its room
         h.more.setOnClickListener { _ -> actions.more(it) }
     }
 

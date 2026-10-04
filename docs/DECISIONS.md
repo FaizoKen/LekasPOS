@@ -1215,6 +1215,11 @@ Rejected: keeping the buttons with a PIN dialog (the owner's ask); a separate "m
 (two PINs and a sign-out per discount); hiding the data-safety pills from cashiers (D-048).
 Raised with the owner, not changed: a cashier may add a customer with no credit limit (an empty limit
 means none) and sell to them on credit — a default limit is the owner's business rule.
+**1.9.1** (the owner, same day): the selected line's buttons on **one line** under the item — Remove,
+−, quantity, +, More (`LineControls`). Remove is at the far end from + with a wider gap, so fast taps on
++ never remove the item. Where one line does not fit (a turned phone's bill pane, a small phone with
+More, a font over ~1.3×) it falls back to the two lines of D-049 rather than cut a button; − and + are
+56dp wide (were 64) and the quantity takes the room left. A 360dp phone needs ~311 of its 336dp.
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
