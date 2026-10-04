@@ -1457,7 +1457,10 @@ sign-in, payment and result dialogs) fed the change; every finding checked in th
       screen. `SidewaysLayoutTest`: each fits 290dp at 780 × 336 and 640 × 336dp, every button inside, ≥ 48dp
 - [x] CI run 37179987006 (bfb1071) failed 3 tests per API: `LineControlsTest` found − and + measured at their
       icon's width (44dp) instead of 56dp — fixed (a child's fixed size is now kept)
-- [ ] CI and test build v1.9.1
+- [x] CI on c0f3e33 (run 37180987053, build 124): **258/258 on API 21 and 36** (with `LineControlsTest` and
+      `SidewaysLayoutTest`), tablet 9/9, release smoke, lint
+- [x] Test build **v1.9.1** (pre-release; build 124, 1,514,780 bytes, release key — same certificate as 1.8.0;
+      SHA-256 of the APK `b6fdd908…7e62`, `mapping-1.9.1.txt` attached). The public download stays v1.8.0
 
 Phone check: tap a line on the bill → one row under it: Remove, −, the quantity, +, More (a cashier:
 no More). Tap + quickly several times → only the count changes. Turn the phone (two panes) → the buttons
