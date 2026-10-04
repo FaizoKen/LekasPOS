@@ -1473,4 +1473,7 @@ result with the phone turned → everything shows at once, nothing to scroll; th
       inside the app within a day. No privacy change (nothing new stored, sent, asked for or connected to).
       The checks above were not run on a phone before the release: worth running on the shop's phone and
       tablet after the update. v1.9.0 stays a test build
-- [ ] Perf FULL on the released code (started after the release, as for 1.6.1)
+- [x] Perf FULL on the released code (run 37182177887, 6e70f65): **PASS** on API 21, 29 and 36, every plan check
+      ok (103/103 on API 21); API 21 sale commit p95 9.9 ms (150), report_month 74 ms (1,000), report_year
+      174 ms (3,000), multi-word search p95 3.1 ms (50), scan to cart 0.26 ms; cold start median to a usable
+      till 586 / 571 / 387 ms
