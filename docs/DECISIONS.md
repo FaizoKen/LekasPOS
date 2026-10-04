@@ -1195,7 +1195,8 @@ and straightforward for a cashier; and make buttons such as product tiles fast e
 - **A manager helps at the till with their PIN:** Menu → "Manager PIN" (shown to whoever lacks some
   permission). The manager's permissions then apply to the bill on the till — the hidden buttons show,
   and actions are logged as the cashier's, approved by the manager — until the bill is paid, held or
-  cleared, the till locks or someone signs in, the "Manager: name ✕" pill is tapped, or 5 minutes pass.
+  cleared, another held bill is brought back, the till locks or someone signs in, the "Manager: name ✕"
+  pill is tapped, or 5 minutes pass. A helper must add a permission a role can be given (`Perm.addsTo`).
   The approval is in the activity log (as screen approvals are, D-037). A cashier scanning an unknown
   barcode is asked for the manager's PIN *before* the product form (it was asked at Save, after the
   form). One-time approvals (`withApproval`) stay as the fallback everywhere else.

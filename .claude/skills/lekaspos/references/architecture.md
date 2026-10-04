@@ -281,7 +281,7 @@ restore that `Db.open` applies before opening the database (D-044).
   when `graph.permissions.allowed(perm)` is false (role, or a manager's help), on the selling screen and
   the cashier's screens (shift, sales, customers). New controls follow the same rule. A manager's PIN
   (Menu → "Manager PIN", `ApprovalDialog.help` → `PermissionGate.startHelp`) shows them for the bill on
-  the till; `CartSession.resetEmpty` ends it (also a lock, the pill, 5 minutes). Clearing a bill needs no
+  the till; `CartSession.resetEmpty` and `resume` end it (also a lock, the pill, 5 minutes). Clearing a bill needs no
   permission (`Perm.CANCEL_BILL` retired; `Perm.ROLE_EDITOR` is the role editor's list).
 - Fast taps (D-063): the selling screen's lists are `TapList` and keypad dialogs `TapScroll` (no 100 ms
   pressed-state delay); the tile grid has no item animator and redraws only the badge (payload); tile

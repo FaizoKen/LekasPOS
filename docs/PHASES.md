@@ -27,7 +27,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
-| — | **1.9.0**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps (D-063) | in progress — CI and the owner's phone test pending |
+| — | **1.9.0**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps (D-063) | test build v1.9.0 (pre-release, 2026-10-04) — waiting for the owner's phone test |
 
 ## Open questions for the user
 
@@ -1406,8 +1406,20 @@ sign-in, payment and result dialogs) fed the change; every finding checked in th
 - [x] Sign-in after a lock starts at the last person's PIN ("Not you?" to switch)
 - [x] Local: `:core` 259 and `:app` 42 JVM tests pass, the instrumented tests compile, lint 0 errors; release
       APK **1,508,297 bytes** (1,473 KB; 1.8.0's local build was 1,500,841 — about +7 KB)
-- [ ] CI (instrumented tests on API 21 and 36, tablet, release smoke) and perf QUICK
-- [ ] Test build v1.9.0 (pre-release) and the owner's phone test
+- [x] CI on a0f2641 (run 37177213243, build 120): **251/251 on API 21 and 36**, tablet, release smoke (upgrade
+      from 1.8.0), lint; release APK 1,509,248 bytes
+- [x] Perf QUICK (run 37177241588, a0f2641): **PASS** on API 21, 29 and 36; cold start median to a usable till
+      644 / 753 / 512 ms (1.6.1: 613 / 800 / 554)
+- [x] An independent review of the change found five defects, all fixed in efb591d: a manager's help carried
+      over to a held bill resumed; "Not you?" was undone when the sign-in screen was rebuilt; a three-line
+      payment refusal moved the keys when typed over; the retired bit alone made someone a "helper"; a tile
+      tapped right behind a weighed one was dropped silently. Also: a repayment with one payment method asks no
+      "Paid with" question
+- [x] CI on efb591d (run 37178161657, build 121): **251/251 on API 21 and 36**, tablet 9/9, release smoke, lint
+- [x] Test build **v1.9.0** (pre-release; build 121, 1,509,416 bytes, release key — same certificate as 1.8.0,
+      `0a67abec…d4b9`; SHA-256 of the APK `00791f65…bf30`, `mapping-1.9.0.txt` attached). The public download
+      stays v1.8.0; the owner asked for the test build (2026-10-04)
+- [ ] The owner's phone test (below)
 
 ### Needs real-device testing (1.9.0)
 
