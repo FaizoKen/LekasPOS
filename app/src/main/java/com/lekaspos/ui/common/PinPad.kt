@@ -28,7 +28,21 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
     private var lastKeyAt = 0L
     private var burstUntil = 0L
 
-    val view: View = build()
+    /** The dots and the line under them. Use it with [keypad] (side by side), or [view] alone. */
+    val display: View = buildDisplay()
+
+    /** The 1–9 / ⌫ 0 OK keys. */
+    val keypad: View = buildKeys()
+
+    /** The dots over the keys, as one column (upright). */
+    val view: View by lazy {
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            addView(this@PinPad.display, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(this@PinPad.keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+    }
 
     fun clear() {
         pin = ""
@@ -101,7 +115,7 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
         }
     }
 
-    private fun build(): View {
+    private fun buildDisplay(): View {
         val col = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -114,7 +128,13 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
         message.gravity = Gravity.CENTER
         message.visibility = View.GONE
         col.addView(message, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        val h = (60 * density).toInt()
+        render()
+        return col
+    }
+
+    private fun buildKeys(): View {
+        val col = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val h = context.keyHeightPx(60) // a little lower on a phone held sideways (D-063)
         for (row in listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(DEL, "0", OK))) {
             val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
             for (key in row) {
@@ -137,7 +157,6 @@ class PinPad(private val context: Context, private val onSubmit: (String) -> Uni
             }
             col.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
-        render()
         return col
     }
 

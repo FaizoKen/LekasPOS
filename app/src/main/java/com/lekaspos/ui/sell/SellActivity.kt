@@ -82,7 +82,9 @@ import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.scanChar
+import com.lekaspos.ui.common.sideways
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.ui.common.wide
 import com.lekaspos.ui.customers.CustomersActivity
 import com.lekaspos.ui.customers.pickCustomer
 import com.lekaspos.ui.diag.DiagnosticsActivity
@@ -1686,7 +1688,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun showResult(done: CheckoutService.Done): AlertDialog {
         @SuppressLint("InflateParams") // a dialog's view has no parent to inflate into
-        val v = layoutInflater.inflate(R.layout.dialog_result, null)
+        // Held sideways: the change on the left, the buttons on the right ("New sale" fell below the fold, D-063).
+        val sideways = sideways()
+        val v = layoutInflater.inflate(if (sideways) R.layout.dialog_result_wide else R.layout.dialog_result, null)
         val device = graph.settings.device.value
         v.findViewById<TextView>(R.id.result_label).setText(if (done.change > 0L) R.string.result_change else R.string.result_paid)
         v.findViewById<TextView>(R.id.result_amount).apply {
@@ -1730,6 +1734,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         d.forwardKeys { e -> scanKey(e) }
         d.show()
+        if (sideways) d.wide()
         return d
     }
 

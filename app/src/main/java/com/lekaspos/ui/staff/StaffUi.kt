@@ -6,7 +6,6 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import com.lekaspos.R
@@ -18,6 +17,7 @@ import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.ui.common.DialogKeys
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.PadDialog
 import com.lekaspos.ui.common.PinPad
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
@@ -140,19 +140,16 @@ object ApprovalDialog {
                 Dialogs.message(a, null, a.getString(R.string.not_allowed)).setOnDismissListener { onCancel?.invoke() }
                 return@launch
             }
-            val pad = (20 * a.resources.displayMetrics.density).toInt()
-            val col = LinearLayout(a).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(pad, pad / 2, pad, 0)
-            }
-            col.addView(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = why })
+            // The PIN keys beside the rest on a phone held sideways (PadDialog, D-063).
+            val p = PadDialog(a, a.getString(R.string.approval_title))
+            p.info(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = why })
             val picker = Spinner(a)
             picker.adapter = ArrayAdapter(a, android.R.layout.simple_spinner_dropdown_item, approvers.map { it.name })
             picker.minimumHeight = (48 * a.resources.displayMetrics.density).toInt()
             picker.visibility = if (approvers.size > 1) View.VISIBLE else View.GONE
-            col.addView(picker)
+            p.info(picker)
             if (approvers.size == 1) {
-                col.addView(TextView(a, null, 0, R.style.Text_Lekas_Section).apply { text = approvers[0].name })
+                p.info(TextView(a, null, 0, R.style.Text_Lekas_Section).apply { text = approvers[0].name })
             }
             var dialog: AlertDialog? = null
             var approved = false
@@ -182,12 +179,10 @@ object ApprovalDialog {
                     }
                 }
             }
-            col.addView(pinPad.view)
-            val d = AlertDialog.Builder(a)
-                .setTitle(R.string.approval_title)
-                .setView(Dialogs.scrolling(col))
-                .setNegativeButton(R.string.cancel, null)
-                .create()
+            p.info(pinPad.display)
+            p.pad(pinPad.keypad)
+            p.negative(a.getString(R.string.cancel))
+            val d = p.create()
             d.keys { e -> pinPad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
             d.setOnDismissListener { if (!approved) onCancel?.invoke() }
             dialog = d
@@ -199,7 +194,6 @@ object ApprovalDialog {
 
 /** Asks for a PIN once (e.g. the current PIN). [onPin] may return a message to show and keep asking. */
 fun askPin(a: Activity, title: CharSequence, message: CharSequence?, onPin: (String, (String?) -> Unit) -> Unit): AlertDialog {
-    val col = pinColumn(a, message)
     lateinit var d: AlertDialog
     lateinit var pad: PinPad
     pad = PinPad(a) { pin ->
@@ -209,8 +203,7 @@ fun askPin(a: Activity, title: CharSequence, message: CharSequence?, onPin: (Str
             if (error == null) d.dismiss() else pad.setMessage(error)
         }
     }
-    col.addView(pad.view)
-    d = AlertDialog.Builder(a).setTitle(title).setView(Dialogs.scrolling(col)).setNegativeButton(R.string.cancel, null).create()
+    d = pinDialog(a, title, message, pad)
     d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)
@@ -218,7 +211,6 @@ fun askPin(a: Activity, title: CharSequence, message: CharSequence?, onPin: (Str
 
 /** Asks for a new PIN (4–6 digits) twice; [onPin] gets it when both match. */
 fun askNewPin(a: Activity, title: CharSequence, onPin: (String) -> Unit): AlertDialog {
-    val col = pinColumn(a, a.getString(R.string.pin_new_hint))
     var first: String? = null
     lateinit var d: AlertDialog
     lateinit var pad: PinPad
@@ -239,8 +231,7 @@ fun askNewPin(a: Activity, title: CharSequence, onPin: (String) -> Unit): AlertD
             }
         }
     }
-    col.addView(pad.view)
-    d = AlertDialog.Builder(a).setTitle(title).setView(Dialogs.scrolling(col)).setNegativeButton(R.string.cancel, null).create()
+    d = pinDialog(a, title, a.getString(R.string.pin_new_hint), pad)
     d.keys { e -> pad.onKey(e) || DialogKeys.pressesFocused(e.keyCode) }
     d.show()
     return d.trackedBy(a)
@@ -255,12 +246,12 @@ fun showRecoveryCode(a: Activity, code: String): AlertDialog = AlertDialog.Build
     .show()
     .trackedBy(a)
 
-private fun pinColumn(a: Activity, message: CharSequence?): LinearLayout {
-    val pad = (20 * a.resources.displayMetrics.density).toInt()
-    val col = LinearLayout(a).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(pad, pad / 2, pad, 0)
-    }
-    if (message != null) col.addView(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = message })
-    return col
+/** A PIN dialog: [message] and the dots, the keys beside them on a phone held sideways (PadDialog, D-063). */
+private fun pinDialog(a: Activity, title: CharSequence, message: CharSequence?, pad: PinPad): AlertDialog {
+    val p = PadDialog(a, title)
+    if (message != null) p.info(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = message })
+    p.info(pad.display)
+    p.pad(pad.keypad)
+    p.negative(a.getString(R.string.cancel))
+    return p.create()
 }

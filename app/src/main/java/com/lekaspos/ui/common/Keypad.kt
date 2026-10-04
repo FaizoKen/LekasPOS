@@ -92,7 +92,7 @@ class Keypad(private val context: Context, maxDigits: Int = 9, private val onCha
     private fun build(): View {
         val rows = listOf(listOf("7", "8", "9"), listOf("4", "5", "6"), listOf("1", "2", "3"), listOf("00", "0", DEL))
         val grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val h = (56 * context.resources.displayMetrics.density).toInt()
+        val h = context.keyHeightPx(56) // a little lower on a phone held sideways (D-063)
         for (row in rows) {
             val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
             for (key in row) {

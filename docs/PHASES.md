@@ -27,7 +27,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
-| — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line (D-063) | test build v1.9.1 (pre-release, 2026-10-04) — waiting for the owner's phone test |
+| — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | test build v1.9.1 (pre-release, 2026-10-04) — waiting for the owner's phone test |
 
 ## Open questions for the user
 
@@ -1441,16 +1441,26 @@ sign-in, payment and result dialogs) fed the change; every finding checked in th
 8. **Sign-in:** lock the till → the PIN pad for the person who was signed in; "Not you?" → the list.
 9. As the owner (or with PIN login off) everything is as before.
 
-### 1.9.1 — the bill line's buttons on one line (the owner, 2026-10-04)
+### 1.9.1 — the bill line's buttons on one line; nothing to scroll held sideways (the owner, 2026-10-04)
 
 - [x] `LineControls`: Remove, −, quantity, +, More on one line under the selected item; Remove at the far
       end from + (wider gap); two lines only where one does not fit (no button is ever cut); − and + 56dp
 - [x] `LineControlsTest` (instrumented): one line at 336, 411 and 600dp in that order; two lines at 230dp;
-      a cashier's line (no More) one line at 260dp; a label-price line (Remove and More) fills the line;
+      a cashier's line (no More) one line at 300dp; a label-price line (Remove and More) fills the line;
       every button inside, apart, ≥ 56dp high
 - [x] Local: `:core` 259 and `:app` 42 JVM tests pass, instrumented tests compile, lint 0 errors
+- [x] **Held sideways** (the owner: keys and buttons hidden below the fold, "like on payment"): keypad
+      dialogs side by side (`PadDialog`: amounts, quantities, weights, prices, discounts, stock count and
+      adjust, manager approval and PIN dialogs), the payment in three columns (`dialog_payment_wide`; two
+      notes and two methods to a row under 720dp), the sale's result with its buttons beside the change
+      (`dialog_result_wide`), the sign-in with its keys beside the name; 50dp keys on a short sideways
+      screen. `SidewaysLayoutTest`: each fits 290dp at 780 × 336 and 640 × 336dp, every button inside, ≥ 48dp
+- [x] CI run 37179987006 (bfb1071) failed 3 tests per API: `LineControlsTest` found − and + measured at their
+      icon's width (44dp) instead of 56dp — fixed (a child's fixed size is now kept)
 - [ ] CI and test build v1.9.1
 
 Phone check: tap a line on the bill → one row under it: Remove, −, the quantity, +, More (a cashier:
 no More). Tap + quickly several times → only the count changes. Turn the phone (two panes) → the buttons
 take two rows and none is cut. Large font (phone settings) → the same.
+Held sideways: open the payment, a quantity (More → Quantity), a discount, the manager PIN and the sale's
+result with the phone turned → everything shows at once, nothing to scroll; the sign-in too.

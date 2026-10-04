@@ -86,7 +86,7 @@ class LineControlsTest {
     @Test
     fun withoutMoreOrAQuantityTheLineStillFills() {
         // A cashier (no discount or price change): no More — one line even on a narrow pane.
-        val cashier = controls(260, gone = listOf(R.id.line_more))
+        val cashier = controls(300, gone = listOf(R.id.line_more))
         assertTrue(cashier.oneLine)
         assertEquals(cashier.width, cashier.findViewById<View>(R.id.line_plus).right)
         assertWhole(cashier, "cashier")

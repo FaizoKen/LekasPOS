@@ -20,18 +20,13 @@ import com.lekaspos.core.time.DateText
 import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.DialogKeys
-import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.PadDialog
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import java.util.TimeZone
 
 private fun Activity.dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
-private fun Activity.column(): LinearLayout = LinearLayout(this).apply {
-    orientation = LinearLayout.VERTICAL
-    setPadding(dp(20), dp(8), dp(20), 0)
-}
 
 private fun Activity.display(): TextView = TextView(this, null, 0, R.style.Text_Lekas_Display).apply {
     gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -110,36 +105,28 @@ class AmountDialog(
     }
 
     fun show(): AlertDialog {
-        val col = activity.column()
-        message?.let {
-            col.addView(TextView(activity, null, 0, R.style.Text_Lekas_Caption).apply { text = it }, matchWrap())
+        // The keypad beside the amount on a phone held sideways (PadDialog, D-063).
+        val p = PadDialog(activity, title)
+        message?.let { p.info(TextView(activity, null, 0, R.style.Text_Lekas_Caption).apply { text = it }) }
+        p.info(display, matchWrap().apply { topMargin = activity.dp(8); bottomMargin = activity.dp(8) })
+        p.pad(keypad.view)
+        // The extra button keeps this dialog open: the amount it brings is confirmed with OK.
+        if (extra != null) {
+            p.neutral(extra.first) { d ->
+                // Only what the keypad can hold (9 digits): a longer amount would be cut, not refused.
+                extra.second { amount -> if (d.isShowing && amount in 0L..999_999_999L) keypad.preset(amount.toString()) }
+            }
         }
-        col.addView(display, matchWrap().apply { topMargin = activity.dp(8); bottomMargin = activity.dp(8) })
-        col.addView(keypad.view, matchWrap())
-        val d = AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setView(Dialogs.scrolling(col))
-            .setPositiveButton(R.string.ok, null)
-            .setNegativeButton(R.string.cancel, null)
-            .apply { if (extra != null) setNeutralButton(extra.first, null) }
-            .create()
+        p.negative(activity.getString(R.string.cancel))
+        p.positive(activity.getString(R.string.ok)) { d ->
+            val v = value(keypad.digits)
+            if (v != null) {
+                d.dismiss()
+                onOk(v)
+            }
+        }
+        val d = p.create()
         d.keys { e -> keypad.onKey(e) }
-        d.setOnShowListener {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val v = value(keypad.digits)
-                if (v != null) {
-                    d.dismiss()
-                    onOk(v)
-                }
-            }
-            // The extra button keeps this dialog open: the amount it brings is confirmed with OK.
-            if (extra != null) {
-                d.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-                    // Only what the keypad can hold (9 digits): a longer amount would be cut, not refused.
-                    extra.second { amount -> if (d.isShowing && amount in 0L..999_999_999L) keypad.preset(amount.toString()) }
-                }
-            }
-        }
         val start = when (kind) {
             Kind.MONEY, Kind.WEIGHT -> if (initial > 0L) initial.toString() else ""
             Kind.PIECES -> if (initial >= 1000L && initial % 1000L == 0L) (initial / 1000L).toString() else ""
@@ -198,7 +185,6 @@ class DiscountDialog(
     }
 
     fun show(): AlertDialog {
-        val col = activity.column()
         val tabs = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             isBaselineAligned = false
@@ -215,26 +201,25 @@ class DiscountDialog(
         }
         tabs.addView(amountTab, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         tabs.addView(percentTab, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        col.addView(tabs, matchWrap())
-        col.addView(display, matchWrap().apply { topMargin = activity.dp(8); bottomMargin = activity.dp(8) })
-        col.addView(keypad.view, matchWrap())
-        val d = AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setView(Dialogs.scrolling(col))
-            .setPositiveButton(R.string.ok, null)
-            .setNeutralButton(R.string.discount_none) { _, _ -> onSet(Discount.None) }
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-        d.keys { e -> keypad.onKey(e) }
-        d.setOnShowListener {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val disc = discount()
-                if (disc != null) {
-                    d.dismiss()
-                    onSet(disc)
-                }
+        // The keypad beside the amount on a phone held sideways (PadDialog, D-063).
+        val p = PadDialog(activity, title)
+        p.info(tabs)
+        p.info(display, matchWrap().apply { topMargin = activity.dp(8); bottomMargin = activity.dp(8) })
+        p.pad(keypad.view)
+        p.neutral(activity.getString(R.string.discount_none)) { d ->
+            d.dismiss()
+            onSet(Discount.None)
+        }
+        p.negative(activity.getString(R.string.cancel))
+        p.positive(activity.getString(R.string.ok)) { d ->
+            val disc = discount()
+            if (disc != null) {
+                d.dismiss()
+                onSet(disc)
             }
         }
+        val d = p.create()
+        d.keys { e -> keypad.onKey(e) }
         keypad.preset(initialDigits) // the discount now: OK keeps it, the first key replaces it
         render()
         d.show()

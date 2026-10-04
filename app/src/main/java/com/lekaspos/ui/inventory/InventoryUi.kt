@@ -21,6 +21,7 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.domain.sell.BarcodeLookup
 import com.lekaspos.domain.sell.Resolution
 import com.lekaspos.ui.common.Keypad
+import com.lekaspos.ui.common.PadDialog
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.replacing
@@ -123,24 +124,21 @@ object InventoryUi {
             display.text = value(d)?.let { if (p.weighed) weightText(it) + " " + p.unit else qty(it, p.unit) } ?: ""
             display.replacing(keypad.replacing)
         }
-        val col = column(a)
-        col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply {
-            text = a.getString(R.string.inv_stock_now, qty(p.stock, p.unit))
-        })
-        col.addView(display, lp())
-        col.addView(keypad.view, lp())
-        val d = AlertDialog.Builder(a).setTitle(title).setView(com.lekaspos.ui.common.Dialogs.scrolling(col))
-            .setPositiveButton(R.string.ok, null).setNegativeButton(R.string.cancel, null).create()
-        d.keys { e -> keypad.onKey(e) }
-        d.setOnShowListener {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val v = value(keypad.digits)
-                if (v != null && (v > 0L || allowZero)) {
-                    d.dismiss()
-                    onOk(v)
-                }
+        // The keypad beside the quantity on a phone held sideways (PadDialog, D-063).
+        val pd = PadDialog(a, title)
+        pd.info(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { text = a.getString(R.string.inv_stock_now, qty(p.stock, p.unit)) })
+        pd.info(display, lp())
+        pd.pad(keypad.view)
+        pd.negative(a.getString(R.string.cancel))
+        pd.positive(a.getString(R.string.ok)) { d ->
+            val v = value(keypad.digits)
+            if (v != null && (v > 0L || allowZero)) {
+                d.dismiss()
+                onOk(v)
             }
         }
+        val d = pd.create()
+        d.keys { e -> keypad.onKey(e) }
         val start = if (initial <= 0L) "" else if (p.weighed) initial.toString() else (initial / 1000L).toString()
         keypad.preset(start) // the quantity now (a first count, a delivery line): the first key replaces it
         d.show()
@@ -151,15 +149,14 @@ object InventoryUi {
     fun askAdjust(a: Activity, p: StockProduct, onOk: (AdjustReason, Long, Boolean, String?) -> Unit): AlertDialog {
         val reasons = AdjustReason.values().toList()
         var removing = true
-        val col = column(a)
-        col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply {
-            text = a.getString(R.string.inv_stock_now, qty(p.stock, p.unit))
-        })
+        // The keypad beside the rest on a phone held sideways (PadDialog, D-063).
+        val pd = PadDialog(a, p.name)
+        pd.info(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { text = a.getString(R.string.inv_stock_now, qty(p.stock, p.unit)) })
         val reason = Spinner(a).apply {
             adapter = ArrayAdapter(a, android.R.layout.simple_spinner_dropdown_item, reasons.map { reasonLabel(a, it) })
             minimumHeight = (48 * a.resources.displayMetrics.density).toInt()
         }
-        col.addView(reason, lp())
+        pd.info(reason, lp())
         val tabs = LinearLayout(a).apply {
             orientation = LinearLayout.HORIZONTAL
             isBaselineAligned = false
@@ -181,7 +178,7 @@ object InventoryUi {
         }
         tabs.addView(out, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         tabs.addView(inn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        col.addView(tabs, lp())
+        pd.info(tabs, lp())
         val display = TextView(a, null, 0, R.style.Text_Lekas_Display).apply {
             gravity = android.view.Gravity.END
             setBackgroundResource(R.drawable.field_bg)
@@ -192,38 +189,30 @@ object InventoryUi {
             return if (p.weighed) n else n * 1000L
         }
         val keypad = Keypad(a, 9) { d -> display.text = value(d)?.let { if (p.weighed) weightText(it) + " " + p.unit else qty(it, p.unit) } ?: "" }
-        col.addView(display, lp())
-        col.addView(keypad.view, lp())
+        pd.info(display, lp())
         val note = EditText(a).apply {
             hint = a.getString(R.string.inv_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setSingleLine(true)
         }
-        col.addView(note, lp())
+        pd.info(note, lp())
+        pd.pad(keypad.view)
         reason.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = renderDirection()
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
         }
         renderDirection()
         keypad.clear()
-        val d = AlertDialog.Builder(a).setTitle(p.name).setView(android.widget.ScrollView(a).apply { addView(col) })
-            .setPositiveButton(R.string.save, null).setNegativeButton(R.string.cancel, null).create()
-        d.keys { e -> if (note.hasFocus()) false else keypad.onKey(e) }
-        d.setOnShowListener {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val v = value(keypad.digits) ?: return@setOnClickListener
-                d.dismiss()
-                onOk(reasons[reason.selectedItemPosition.coerceAtLeast(0)], v, removing, note.text.toString().trim().ifEmpty { null })
-            }
+        pd.negative(a.getString(R.string.cancel))
+        pd.positive(a.getString(R.string.save)) { d ->
+            val v = value(keypad.digits) ?: return@positive
+            d.dismiss()
+            onOk(reasons[reason.selectedItemPosition.coerceAtLeast(0)], v, removing, note.text.toString().trim().ifEmpty { null })
         }
+        val d = pd.create()
+        d.keys { e -> if (note.hasFocus()) false else keypad.onKey(e) }
         d.show()
         return d.trackedBy(a)
-    }
-
-    private fun column(a: Activity) = LinearLayout(a).apply {
-        orientation = LinearLayout.VERTICAL
-        val pad = (20 * a.resources.displayMetrics.density).toInt()
-        setPadding(pad, pad / 2, pad, 0)
     }
 
     private fun lp() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {

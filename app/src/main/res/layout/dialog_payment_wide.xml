@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Payment on a screen held sideways (D-063): three columns, so nothing needs scrolling on a phone's
+     short height — the total, what the customer gave, the change and Cancel; the notes and every payment
+     method; the keypad. No title bar or button bar: they took the height the keys need. The same ids as
+     dialog_payment (upright), plus pay_cancel. SidewaysLayoutTest checks it fits. -->
+<com.lekaspos.ui.common.TapScroll xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.95"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/pay_total"
+                    android:textSize="16sp" />
+
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_total"
+                    style="@style/Text.Lekas.Display"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:textSize="28sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/pay_tenders"
+                style="@style/Text.Lekas.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/pay_remaining_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pay_remaining"
+                    android:textSize="15sp" />
+
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_remaining"
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/pay_cash_hint"
+                style="@style/Text.Lekas.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:visibility="gone" />
+
+            <TextView
+                style="@style/Text.Lekas.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/pay_received" />
+
+            <com.lekaspos.ui.common.FitTextView
+                android:id="@+id/pay_amount"
+                style="@style/Text.Lekas.Display"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:accessibilityLiveRegion="polite"
+                android:background="@drawable/field_bg"
+                android:gravity="end|center_vertical"
+                android:minHeight="52dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
+
+            <!-- The change or why a payment was refused; keeps its height (see dialog_payment). -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp">
+
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_change"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:background="@drawable/change_bg"
+                    android:gravity="end|center_vertical"
+                    android:minHeight="44dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:visibility="invisible" />
+
+                <TextView
+                    android:id="@+id/pay_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:textColor="@color/danger"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="6dp" />
+
+            <Button
+                android:id="@+id/pay_cancel"
+                style="@style/Widget.Lekas.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="@string/cancel" />
+        </LinearLayout>
+
+        <!-- The notes and every payment method: two of each to a row on a narrow screen (PaymentDialog). -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1.25"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/pay_quick"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:baselineAligned="false"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:id="@+id/pay_methods"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/pay_keypad"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+</com.lekaspos.ui.common.TapScroll>

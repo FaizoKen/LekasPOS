@@ -33,6 +33,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.PinPad
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.sideways
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
 import com.lekaspos.util.Log
@@ -135,21 +136,33 @@ class LockActivity : Activity(), DialogHost {
             }
         }
         nameRow.addView(changeButton)
-        pinCol.addView(nameRow)
         pinPad = PinPad(this) { submit(it) }
-        pinCol.addView(pinPad.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(8)
-        })
         forgotButton = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
             setText(R.string.lock_forgot)
             setOnClickListener { forgot() }
         }
-        pinCol.addView(forgotButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(12)
-        })
+        val matchWrap = { top: Int -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = top } }
+        val sideways = sideways()
+        if (sideways) {
+            // Held sideways: who and the dots on the left, the keys on the right — under each other the
+            // keys fell below a phone's short height (D-063).
+            pinCol.orientation = LinearLayout.HORIZONTAL
+            pinCol.isBaselineAligned = false
+            val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            left.addView(nameRow)
+            left.addView(pinPad.display, matchWrap(dp(8)))
+            left.addView(forgotButton, matchWrap(dp(12)))
+            pinCol.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            pinCol.addView(pinPad.keypad, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) })
+        } else {
+            pinCol.addView(nameRow)
+            pinCol.addView(pinPad.view, matchWrap(dp(8)))
+            pinCol.addView(forgotButton, matchWrap(dp(12)))
+        }
         // Keep the pad a sensible size on tablets and in landscape.
         val center = FrameLayout(this)
-        center.addView(pinCol, FrameLayout.LayoutParams(dp(420).coerceAtMost(resources.displayMetrics.widthPixels), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL))
+        val width = dp(if (sideways) 760 else 420).coerceAtMost(resources.displayMetrics.widthPixels)
+        center.addView(pinCol, FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL))
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             addView(center)

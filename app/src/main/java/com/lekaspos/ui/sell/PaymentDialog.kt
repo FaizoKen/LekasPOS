@@ -27,7 +27,9 @@ import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.keys
+import com.lekaspos.ui.common.sideways
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.ui.common.wide
 
 /**
  * Taking payment (references/money.md §4–§5): cash with change and 5-sen rounding when cash
@@ -66,8 +68,17 @@ class PaymentDialog(
 
     private val step: Long get() = currency.cashStep
 
+    /**
+     * Held sideways on a narrow screen (an older 16:9 phone): two notes and two methods to a row, so each
+     * button keeps its 48dp in the middle column (D-063).
+     */
+    private val narrow: Boolean = activity.sideways() && activity.resources.configuration.screenWidthDp < NARROW_DP
+
     fun show(): AlertDialog {
-        val root = activity.layoutInflater.inflate(R.layout.dialog_payment, null)
+        // Held sideways: three columns with Cancel in them, no title or button bar — on a phone's short
+        // height the keys and the methods were below the fold (D-063).
+        val wide = activity.sideways()
+        val root = activity.layoutInflater.inflate(if (wide) R.layout.dialog_payment_wide else R.layout.dialog_payment, null)
         totalView = root.findViewById(R.id.pay_total)
         remainingView = root.findViewById(R.id.pay_remaining)
         remainingRow = root.findViewById(R.id.pay_remaining_row)
@@ -91,10 +102,10 @@ class PaymentDialog(
             addMethods(methodRows, density)
         }
         dialog = AlertDialog.Builder(activity)
-            .setTitle(R.string.pay_title)
             .setView(root)
-            .setNegativeButton(R.string.cancel, null)
+            .apply { if (!wide) setTitle(R.string.pay_title).setNegativeButton(R.string.cancel, null) }
             .create()
+        root.findViewById<View>(R.id.pay_cancel)?.setOnClickListener { back() }
         // A touch beside the dialog must not throw away payments already entered (split tender).
         dialog.setCanceledOnTouchOutside(false)
         dialog.keys { e ->
@@ -107,7 +118,8 @@ class PaymentDialog(
             }
         }
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { back() }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener { back() }
+            if (wide) dialog.wide()
         }
         refresh()
         dialog.show()
@@ -143,7 +155,7 @@ class PaymentDialog(
     /** Every payment method, [PER_ROW] to a row so long names (e-wallets) never get cut off. */
     private fun addMethods(rows: LinearLayout, density: Float) {
         val gap = (6 * density).toInt()
-        val perRow = PER_ROW.coerceAtMost(methods.size).coerceAtLeast(1)
+        val perRow = (if (narrow) 2 else PER_ROW).coerceAtMost(methods.size).coerceAtLeast(1)
         for ((r, chunk) in methods.chunked(perRow).withIndex()) {
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -282,7 +294,7 @@ class PaymentDialog(
         quick.removeAllViews()
         val cash = methods.firstOrNull { it.kind == PaymentKind.CASH } ?: return
         if (due <= 0L) return
-        val amounts = listOf(due) + QuickCash.amounts(due, currency.scale)
+        val amounts = listOf(due) + QuickCash.amounts(due, currency.scale, max = if (narrow) 2 else 3)
         val density = activity.resources.displayMetrics.density
         for ((i, a) in amounts.withIndex()) {
             // One line that shrinks to fit: at large fonts "RM100" wrapped to "RM10" over "0" (2026-10 review).
@@ -315,6 +327,7 @@ class PaymentDialog(
 
     private companion object {
         const val PER_ROW = 3
+        const val NARROW_DP = 720
         const val DOUBLE_TAP_MS = 600L
     }
 }

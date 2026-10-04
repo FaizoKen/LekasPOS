@@ -1220,6 +1220,17 @@ means none) and sell to them on credit — a default limit is the owner's busine
 + never remove the item. Where one line does not fit (a turned phone's bill pane, a small phone with
 More, a font over ~1.3×) it falls back to the two lines of D-049 rather than cut a button; − and + are
 56dp wide (were 64) and the quantity takes the room left. A 360dp phone needs ~311 of its 336dp.
+**Held sideways** (the owner, same day: "key/button is hidden, need to scroll … like on payment"): a
+phone held sideways has ~300dp of height, and every keypad dialog stacked title bar, amount, keypad and
+button bar. When the screen is wider than tall (`sideways()`), they go side by side with no title or
+button bar: `PadDialog` (amounts, quantities, weights, prices, discounts, stock counts and adjustments,
+manager approval and PIN dialogs) puts the title, the amount and the buttons on the left and the keypad
+on the right; the payment has three columns (total, amount, change and Cancel | notes and methods |
+keypad; on a screen under 720dp wide two notes and two methods to a row so each keeps 48dp); the sale's
+result puts the buttons beside the change; the sign-in puts the keys beside the name and dots. Keys
+are 50dp high on such a short screen (56 elsewhere; never under 48). `SidewaysLayoutTest` measures them
+at 780 × 336 and 640 × 336dp: each fits 290dp, every button inside and ≥ 48dp. Screens that handle a
+turn themselves keep the layout a dialog opened with until it closes.
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

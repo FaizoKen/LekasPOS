@@ -39,11 +39,10 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
             setMeasuredDimension(width, paddingTop + paddingBottom)
             return
         }
-        // Each button's own width first: its label at full size.
-        val free = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+        // Each button's own width first: its label at full size, or the width it is given (− and +: 56dp).
         val natural = HashMap<View, Int>()
         for (c in all) {
-            c.measure(free, heightSpec(c))
+            c.measure(sizeSpec(c.layoutParams.width), sizeSpec(c.layoutParams.height))
             natural[c] = if (c === getChildAt(QTY)) maxOf(c.measuredWidth, minQty) else c.measuredWidth
         }
         val need = all.sumOf { natural.getValue(it) } + gaps(all)
@@ -125,8 +124,8 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
 
     private fun exactly(size: Int) = MeasureSpec.makeMeasureSpec(size.coerceAtLeast(0), MeasureSpec.EXACTLY)
 
-    private fun heightSpec(c: View): Int =
-        getChildMeasureSpec(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 0, c.layoutParams.height)
+    /** A fixed size from the layout (56dp) exactly; wrap_content unbounded (the label at full size). */
+    private fun sizeSpec(size: Int): Int = getChildMeasureSpec(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 0, size)
 
     private companion object {
         const val REMOVE = 0
