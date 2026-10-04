@@ -473,6 +473,8 @@ class CartSession(private val graph: AppGraph) {
             val customer = loaded.first?.customerId?.let { id -> graph.db().read { billCustomer(it, id) } }
             val base = State(loaded = true, heldCount = loaded.second)
             _state.value = loaded.first?.let { fromStored(it, base, customer) } ?: base
+            // Another bill on the till: a manager's help was for the one now held (D-063).
+            graph.permissions.endHelp()
             return loaded.first != null
         } catch (e: Exception) {
             _state.value = _state.value.copy(busy = false)

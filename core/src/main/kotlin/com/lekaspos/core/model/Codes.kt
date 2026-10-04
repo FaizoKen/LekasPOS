@@ -185,6 +185,9 @@ object Perm {
     /** Some permission a role can be given is missing from [perms]: a manager may unlock it on the till. */
     fun lacksAny(perms: Long): Boolean = ROLE_EDITOR.any { !has(perms, it) }
 
+    /** [helper] may do something [own] may not (retired bits do not count): a manager who can help on the till. */
+    fun addsTo(helper: Long, own: Long): Boolean = ROLE_EDITOR.any { has(helper, it) && !has(own, it) }
+
     /** Seed roles' starting permissions (the owner edits them in Settings → Staff → Roles). */
     const val DEFAULT_MANAGER: Long = DISCOUNT or PRICE_OVERRIDE or CANCEL_BILL or VOID or REFUND or REPRINT or
         OPEN_DRAWER or CASH_MOVE or SHIFT_REPORT or CUSTOMERS or CREDIT_SALE or CREDIT_LIMIT or MANAGE_PRODUCTS or

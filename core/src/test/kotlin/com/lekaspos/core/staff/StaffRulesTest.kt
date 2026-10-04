@@ -114,6 +114,11 @@ class StaffRulesTest {
         assertTrue(Perm.lacksAny(Perm.DEFAULT_MANAGER)) // settings and staff
         assertFalse(Perm.lacksAny(Perm.ALL))
         assertFalse(Perm.lacksAny(Perm.ALL and Perm.CANCEL_BILL.inv())) // the retired bit is not missed
+        // A helper on the till must add something a role can be given, not only the retired bit.
+        assertTrue(Perm.addsTo(Perm.DEFAULT_MANAGER, Perm.DEFAULT_CASHIER))
+        assertFalse(Perm.addsTo(Perm.DEFAULT_CASHIER or Perm.CANCEL_BILL, Perm.DEFAULT_CASHIER))
+        assertFalse(Perm.addsTo(Perm.DEFAULT_CASHIER, Perm.DEFAULT_MANAGER))
+        assertTrue(Perm.addsTo(Perm.ALL, Perm.DEFAULT_MANAGER))
     }
 
     @Test

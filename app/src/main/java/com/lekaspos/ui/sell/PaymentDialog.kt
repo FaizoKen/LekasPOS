@@ -169,7 +169,8 @@ class PaymentDialog(
         // The second tap of a double tap would pay the whole rest with this method.
         if (SystemClock.uptimeMillis() - partAt < DOUBLE_TAP_MS) return
         val entered = enteredAmount()
-        errorView.visible(false)
+        // An old refusal goes, but keeps its room: the slot never shrinks under the cashier's finger.
+        if (errorView.visibility == View.VISIBLE) errorView.visibility = View.INVISIBLE
         if (m.kind == PaymentKind.CASH) {
             val given = entered ?: Settlement.cashDue(remaining, step)
             when (val r = Settlement.cash(remaining, given, step)) {
@@ -269,7 +270,9 @@ class PaymentDialog(
         val due = Settlement.cashDue(remaining, step)
         val change = if (v != null && v > due) v - due else 0L
         changeView.text = activity.getString(R.string.pay_change, money(change))
-        if (v != null) errorView.visible(false) // typing again: the refusal is old news, the change shows
+        // Typing again: the refusal is old news and the change shows — invisible, not gone, as a refusal of
+        // three lines made the slot taller, and the keys would move up under the next digit.
+        if (v != null && errorView.visibility == View.VISIBLE) errorView.visibility = View.INVISIBLE
         // Invisible, not gone: its slot keeps its height, so the keys below never move while typing.
         changeView.visibility = if (change > 0L && errorView.visibility != View.VISIBLE) View.VISIBLE else View.INVISIBLE
     }

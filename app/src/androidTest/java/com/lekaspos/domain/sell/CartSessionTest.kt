@@ -186,6 +186,14 @@ class CartSessionTest {
         assertTrue(cart.clear())
         assertEquals(null, p.helper.value)
         assertFalse(p.allowed(Perm.DISCOUNT))
+        // Another bill brought back from the held ones: the help was for the bill now held.
+        cart.addProduct(TestDb.sellable(graph.db(), product("B", 500L, "222")))
+        assertTrue(cart.hold(null))
+        cart.addProduct(TestDb.sellable(graph.db(), product("C", 700L, "333")))
+        p.startHelp(help)
+        assertTrue(cart.resume(cart.heldBills().single { it.total == 500L }.id))
+        assertEquals(null, p.helper.value)
+        assertFalse(p.allowed(Perm.DISCOUNT))
         // A lock ends a help too.
         p.startHelp(help)
         graph.staff.lock()

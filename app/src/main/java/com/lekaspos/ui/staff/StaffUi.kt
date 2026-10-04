@@ -107,7 +107,7 @@ object ApprovalDialog {
         val own = graph.staff.perms
         ask(
             a, graph, scope, why,
-            loadApprovers = { db -> StaffDao.list(db).filter { it.canSignIn && Perm.has(it.perms, needed) && it.perms and own.inv() != 0L } },
+            loadApprovers = { db -> StaffDao.list(db).filter { it.canSignIn && Perm.has(it.perms, needed) && Perm.addsTo(it.perms, own) } },
             approve = { id, pin -> graph.permissions.approveHelp(id, pin, needed) },
             onCancel = null,
         ) { approval ->

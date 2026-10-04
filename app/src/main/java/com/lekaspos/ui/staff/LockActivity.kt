@@ -127,7 +127,12 @@ class LockActivity : Activity(), DialogHost {
         nameRow.addView(nameView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         changeButton = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
             setText(R.string.lock_change_user)
-            setOnClickListener { showList() }
+            setOnClickListener {
+                // Someone else signs in: a rebuilt screen (turned, screen off) must not go back to the last
+                // person's PIN pad, where this person's PIN would count as a wrong one of theirs.
+                graph.staff.forgetLastSignedIn()
+                showList()
+            }
         }
         nameRow.addView(changeButton)
         pinCol.addView(nameRow)

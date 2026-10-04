@@ -1309,9 +1309,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val id = taps.removeFirstOrNull() ?: break
             val p = sellable[id] ?: graph.db().read { ProductDao.sellableById(it, id) }?.also { sellable[id] = it } ?: continue
             if (promptDialog?.isShowing == true) {
-                // A weight or price is being asked: the taps behind it were the same tile tapped twice.
-                taps.clear()
-                break
+                // A weight or price is being asked. The same tile tapped twice: once is enough. Another
+                // product that needs a question too: one question at a time — the error beep says it was
+                // not added (tap it again after this one). Others go on the bill as usual.
+                if (graph.cart.prompt?.product?.id == id) continue
+                if (p.sellMode == SellMode.WEIGHT || p.sellMode == SellMode.OPEN_PRICE || p.price == 0L) {
+                    beeper?.error()
+                    continue
+                }
             }
             when (p.sellMode) {
                 SellMode.WEIGHT -> askWeight(p, null)

@@ -208,6 +208,11 @@ class StaffSession(private val graph: AppGraph) {
     var lastSignedIn = 0L
         private set
 
+    /** "Not you?" on the sign-in screen: it stays on the list (a rebuilt screen went back to the last PIN pad). */
+    fun forgetLastSignedIn() {
+        lastSignedIn = 0L
+    }
+
     /** Locks the till: the next person must sign in. No effect while PIN login is off. */
     fun lock() {
         val g: Long
@@ -520,7 +525,7 @@ class PermissionGate(private val session: StaffSession) {
     suspend fun approveHelp(staffId: Long, pin: String, needed: Long): Pair<StaffSession.Check, Approval?> {
         val c = session.check(staffId, pin, needed)
         if (c !is StaffSession.Check.Ok) return c to null
-        if (c.staff.perms and session.perms.inv() == 0L) return StaffSession.Check.NotAllowed to null
+        if (!Perm.addsTo(c.staff.perms, session.perms)) return StaffSession.Check.NotAllowed to null
         return c to Approval(c.staff.perms, c.staff.id, c.staff.name)
     }
 

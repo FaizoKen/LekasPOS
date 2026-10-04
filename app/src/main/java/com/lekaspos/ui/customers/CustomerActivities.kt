@@ -257,7 +257,7 @@ class CustomerActivity : ScreenActivity() {
                 message = getString(R.string.customer_owes, MoneyFormat.format(balance, currency))) { amount ->
                 launchUi {
                     val methods = graph.db().read { PaymentMethodDao.active(it) }.filter { it.kind != PaymentKind.CREDIT }
-                    Dialogs.choose(this@CustomerActivity, getString(R.string.credit_paid_with), methods.map { it.name }) { i ->
+                    val take = { i: Int ->
                         launchUi {
                             val left = graph.customers.receivePayment(
                                 c.id, amount, methods[i], null, approval, getString(R.string.credit_cash_rounding),
@@ -265,7 +265,10 @@ class CustomerActivity : ScreenActivity() {
                             toast(getString(R.string.customer_owes, MoneyFormat.format(left, currency)))
                             reload()
                         }
+                        Unit
                     }
+                    // One way to pay (cash only): no question with one answer (D-063).
+                    if (methods.size == 1) take(0) else Dialogs.choose(this@CustomerActivity, getString(R.string.credit_paid_with), methods.map { it.name }, onPick = take)
                 }
             }.show()
         }
