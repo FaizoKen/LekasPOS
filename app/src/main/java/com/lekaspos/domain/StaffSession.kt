@@ -200,12 +200,21 @@ class StaffSession(private val graph: AppGraph) {
         }
     }
 
+    /**
+     * Who was signed in before the last lock (this process): the sign-in screen starts at their PIN, as
+     * the same cashier usually comes back after an idle lock ("Not you?" picks another, D-063).
+     */
+    @Volatile
+    var lastSignedIn = 0L
+        private set
+
     /** Locks the till: the next person must sign in. No effect while PIN login is off. */
     fun lock() {
         val g: Long
         synchronized(stateLock) {
             val s = _state.value
             if (!s.loginRequired || s.current == null) return
+            lastSignedIn = s.current.id
             graph.permissions.clear()
             _state.value = s.copy(current = null)
             g = ++generation
@@ -504,6 +513,50 @@ class PermissionGate(private val session: StaffSession) {
         return c to if (c is StaffSession.Check.Ok) Approval(perm, c.staff.id, c.staff.name) else null
     }
 
+    /**
+     * Checks a manager's PIN for [startHelp]: anyone who may sign in, holds [needed] (0 = nothing in
+     * particular) and may do something the person signed in may not. The approval carries all they may do.
+     */
+    suspend fun approveHelp(staffId: Long, pin: String, needed: Long): Pair<StaffSession.Check, Approval?> {
+        val c = session.check(staffId, pin, needed)
+        if (c !is StaffSession.Check.Ok) return c to null
+        if (c.staff.perms and session.perms.inv() == 0L) return StaffSession.Check.NotAllowed to null
+        return c to Approval(c.staff.perms, c.staff.id, c.staff.name)
+    }
+
+    private val _helper = MutableStateFlow<Approval?>(null)
+
+    /**
+     * A manager helping at the till (D-063): their PIN, given on the selling screen, lets the till do
+     * what they may — the buttons a cashier does not see show — for the bill on it: until it is paid,
+     * held or cleared ([endHelp]), the till locks or someone signs in, or [HELP_MS] has passed.
+     */
+    val helper: StateFlow<Approval?> = _helper
+    private var helpToken = 0L
+    private var helpUntil = 0L
+
+    @Synchronized
+    fun startHelp(approval: Approval) {
+        if (helpToken != 0L) elevations.remove(helpToken)
+        helpToken = elevate(approval)
+        helpUntil = SystemClock.elapsedRealtime() + HELP_MS
+        _helper.value = approval
+    }
+
+    @Synchronized
+    fun endHelp() {
+        if (helpToken == 0L) return
+        elevations.remove(helpToken)
+        helpToken = 0L
+        _helper.value = null
+    }
+
+    /** Ends the help once its time is up; the selling screen asks now and then (its buttons hide again). */
+    @Synchronized
+    fun endHelpIfExpired() {
+        if (helpToken != 0L && SystemClock.elapsedRealtime() >= helpUntil) endHelp()
+    }
+
     /** Lets a screen use [approval] until [release]; returns the token. */
     @Synchronized
     fun elevate(approval: Approval): Long {
@@ -521,12 +574,22 @@ class PermissionGate(private val session: StaffSession) {
     @Synchronized
     fun holds(token: Long): Boolean = elevations.containsKey(token)
 
-    /** Drops every screen approval (sign-in, lock). */
+    /** Drops every screen approval and a manager's help (sign-in, lock). */
     @Synchronized
     fun clear() {
         elevations.clear()
+        helpToken = 0L
+        _helper.value = null
     }
 
     @Synchronized
-    private fun elevated(perm: Long): Approval? = elevations.values.lastOrNull { Perm.has(it.perm, perm) }
+    private fun elevated(perm: Long): Approval? {
+        endHelpIfExpired()
+        return elevations.values.lastOrNull { Perm.has(it.perm, perm) }
+    }
+
+    private companion object {
+        /** The longest a manager's help lasts, also when the bill never ends (an empty till left so). */
+        const val HELP_MS = 5L * 60L * 1000L
+    }
 }

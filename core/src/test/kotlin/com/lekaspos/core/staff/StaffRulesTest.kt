@@ -107,6 +107,13 @@ class StaffRulesTest {
         }
         assertEquals(all, all or Perm.DEFAULT_MANAGER or Perm.DEFAULT_CASHIER)
         assertEquals((1L shl 18) - 1L, all)
+        // Clearing a bill needs no permission any more (D-063): the editor has no switch for it.
+        assertFalse(Perm.CANCEL_BILL in Perm.ROLE_EDITOR)
+        assertEquals(Perm.LIST.size - 1, Perm.ROLE_EDITOR.size)
+        assertTrue(Perm.lacksAny(Perm.DEFAULT_CASHIER))
+        assertTrue(Perm.lacksAny(Perm.DEFAULT_MANAGER)) // settings and staff
+        assertFalse(Perm.lacksAny(Perm.ALL))
+        assertFalse(Perm.lacksAny(Perm.ALL and Perm.CANCEL_BILL.inv())) // the retired bit is not missed
     }
 
     @Test

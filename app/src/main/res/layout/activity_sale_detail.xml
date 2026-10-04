@@ -78,7 +78,9 @@
                 android:text="@string/result_share" />
         </LinearLayout>
 
+        <!-- Refund and Void: only for whoever may (D-063); the row goes when neither shows. -->
         <LinearLayout
+            android:id="@+id/refund_void_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"

@@ -56,6 +56,7 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
 import com.lekaspos.domain.sale.ActionRefused
@@ -102,6 +103,7 @@ import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.settings.UpdateUi
 import com.lekaspos.ui.shift.ShiftActivity
 import com.lekaspos.ui.shift.openShift
+import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.LockActivity
 import com.lekaspos.ui.staff.changeOwnPin
 import com.lekaspos.ui.staff.withApproval
@@ -151,6 +153,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var syncState: TextView
     private lateinit var heldPill: TextView
     private lateinit var updatePill: TextView
+    private lateinit var helperPill: TextView
     private lateinit var cameraButton: View
     private lateinit var search: EditText
     private lateinit var searchClear: View
@@ -227,6 +230,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         syncState = findViewById(R.id.sync_state)
         heldPill = findViewById(R.id.held_pill)
         updatePill = findViewById(R.id.update_pill)
+        helperPill = findViewById(R.id.helper_pill)
         cameraButton = findViewById(R.id.btn_camera)
         search = findViewById(R.id.search)
         searchClear = findViewById(R.id.search_clear)
@@ -255,13 +259,19 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
         cartList.layoutManager = LinearLayoutManager(this)
         cartList.adapter = cartAdapter
+        cartList.setHasFixedSize(true) // its size is the pane's, whatever the bill holds: no layout of the screen per tap
         // No cross-fade when a line changes: the fading copy of a row kept taking taps on its old − and +.
         (cartList.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
         categoryList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         categoryList.adapter = categoryAdapter
+        categoryList.setHasFixedSize(true)
         val grid = GridLayoutManager(this, spanCount())
         productGrid.layoutManager = grid
         productGrid.adapter = productAdapter
+        productGrid.setHasFixedSize(true)
+        // No animations on the tiles: each tap cross-faded the tapped tile for a quarter of a second, and
+        // fast taps landed on the fading copy (D-063). The badge changes at once instead.
+        productGrid.itemAnimator = null
         productGrid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && !catalogEnd && grid.findLastVisibleItemPosition() >= productAdapter.itemCount - 12) loadCatalog(reset = false)
@@ -301,6 +311,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         findViewById<View>(R.id.btn_menu).setOnClickListener { showMenu(it) }
         heldPill.setOnClickListener { showHeld() }
         updatePill.setOnClickListener { UpdateUi.offer(this, scope) }
+        helperPill.setOnClickListener { graph.permissions.endHelp() } // the manager is done: their buttons hide again
         @Suppress("DEPRECATION")
         cameraButton.setOnClickListener { startActivityForResult(CameraScanActivity.sellIntent(this), REQ_CAMERA_SELL) }
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
@@ -315,6 +326,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val s = MainScope() + failures
         started = s
         lockShown = false
+        sellable.clear() // products, prices or tax rates may have been edited on the screen just closed
         graph.staff.screenStarted() // idle too long while out of sight: locks now, before the first tap counts as activity
         // Back from a screen that kept the serial scanner connected: kept, not dropped and reconnected.
         if (graph.sppScanner.status.value != SppScanner.Status.OFF) graph.sppScanner.hold(this)
@@ -366,11 +378,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
+        s.launch { combine(graph.staff.state, graph.permissions.helper) { st, h -> st to h }.collect { renderAccess(it.first, it.second) } }
         s.launch { combine(graph.updates.status, graph.staff.state) { u, st -> u to st }.collect { renderUpdate(it.first, it.second) } }
         s.launch {
             while (true) {
                 delay(IDLE_CHECK_MS)
                 graph.staff.lockIfIdle()
+                graph.permissions.endHelpIfExpired()
             }
         }
         s.launch {
@@ -387,10 +401,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
         s.launch {
             combine(graph.sync.status, graph.backups.protection) { a, b -> a to b }.collect { renderSafety(it.first, it.second) }
         }
-        s.launch { graph.sync.status.map { it.lastSuccessAt }.distinctUntilChanged().collect { graph.backups.refreshProtection() } }
+        s.launch {
+            graph.sync.status.map { it.lastSuccessAt }.distinctUntilChanged().collect {
+                sellable.clear() // another till's prices or tax rates may have come in
+                graph.backups.refreshProtection()
+            }
+        }
         s.launch { graph.sppScanner.codes.collect { if (resumed) onScanned(it) } }
         s.launch { graph.checkout.last.collect { renderLastSale(it) } }
-        s.launch { graph.catalogChanges.drop(1).collect { loadCategories(refresh = true) } } // read below at once
+        s.launch {
+            graph.catalogChanges.drop(1).collect {
+                sellable.clear()
+                loadCategories(refresh = true) // read below at once
+            }
+        }
         s.launch {
             graph.checkout.outcome.collect {
                 showOutcome(it)
@@ -558,7 +582,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val onBill = HashMap<Long, Long>()
         for (item in st.cart.items) item.productId?.let { onBill[it] = (onBill[it] ?: 0L) + item.qty }
         productAdapter.setOnBill(onBill)
-        val credit = graph.settings.store.value.creditEnabled
+        // Choosing the bill's customer is for selling on credit: not shown to whoever may not (D-063),
+        // unless the bill already has one (a held bill resumed).
+        val credit = graph.settings.store.value.creditEnabled && (st.customerId != null || allowed(Perm.CREDIT_SALE))
         customerChip.visible(credit)
         if (credit) customerChip.text = st.customerName?.let { getString(R.string.sell_customer, it) } ?: getString(R.string.sell_customer_none)
     }
@@ -567,6 +593,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
         staffChip.text = s.current?.name
         staffChip.visible(s.loginRequired && s.current != null)
         if (s.locked) showLock()
+    }
+
+    /** May the person signed in do [perm] — by their role, or with the help of a manager ([renderAccess])? */
+    private fun allowed(perm: Long): Boolean = graph.permissions.allowed(perm)
+
+    /**
+     * Buttons for what the person signed in may not do are not shown (D-063): a cashier sees a short,
+     * clean screen. A manager's PIN (Menu → Manager PIN) shows them for one bill; [helper] is that
+     * manager, shown in the top bar until the bill ends (a tap there ends it sooner).
+     */
+    private fun renderAccess(staff: StaffSession.State, helper: Approval?) {
+        helperPill.text = helper?.let { getString(R.string.helper_pill, it.name) }
+        helperPill.visible(helper != null && staff.current != null)
+        discountButton.visible(allowed(Perm.DISCOUNT))
+        cartAdapter.showMore = allowed(Perm.DISCOUNT) || allowed(Perm.PRICE_OVERRIDE)
+        render(graph.cart.state.value)
+        renderLastSale(graph.checkout.last.value)
     }
 
     /** Nobody is signed in: the lock screen covers the till (Back there leaves the app). */
@@ -631,7 +674,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         lastSaleChange.text = getString(R.string.pay_change, money(done.change))
         lastSaleChange.visible(done.change > 0L)
-        lastSalePrint.visible(graph.settings.device.value.hasPrinter)
+        // A copy needs "Reprint" (D-063: not shown to whoever may not); a receipt not printed yet is no copy.
+        lastSalePrint.visible(graph.settings.device.value.hasPrinter && (!done.receiptQueued || allowed(Perm.REPRINT)))
     }
 
     private fun printLastSale() {
@@ -702,8 +746,17 @@ class SellActivity : Activity(), LineActions, DialogHost {
             else -> null
         }
         syncState.text = pill?.let { getString(it.first) }
-        syncState.setOnClickListener { pill?.second?.invoke() }
+        // The shop's data stays visible to everyone (D-048), but fixing it is the owner's: a cashier is
+        // told whom to tell, not asked for a PIN they do not have (D-063).
+        syncState.setOnClickListener {
+            if (pill == null) return@setOnClickListener
+            if (allowed(Perm.SETTINGS) || pill.first == R.string.storage_pill) pill.second() else tellOwner(getString(pill.first))
+        }
         syncState.visible(pill != null)
+    }
+
+    private fun tellOwner(what: String) {
+        Dialogs.message(this, what, getString(R.string.safety_tell_owner))
     }
 
     private fun open(target: Class<*>) = startActivity(Intent(this, target))
@@ -967,7 +1020,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         } else {
             null
         }
-        priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera) { changePrice(it) }.also { it.show() }
+        // "Change price" only for whoever may change products (D-063).
+        val change: ((PriceCheck.Info) -> Unit)? = if (allowed(Perm.MANAGE_PRODUCTS)) { info -> changePrice(info) } else null
+        priceCheck = PriceCheckDialog(this, scope, graph.priceCheck, currency, camera, change).also { it.show() }
     }
 
     /**
@@ -992,6 +1047,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             ) { price ->
                 billJob {
                     graph.priceCheck.setPrice(info.productId, price, approval)
+                    sellable.remove(info.productId) // its tile sells at the new price from the next tap
                     Toast.makeText(this, getString(R.string.price_check_saved, info.name, MoneyFormat.format(price, c)), Toast.LENGTH_SHORT).show()
                     priceCheck?.refresh()
                     if (!isDestroyed) refreshTiles() // the tiles show the new price, the grid keeps its place
@@ -1000,9 +1056,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
-    /** Only registered products are sold (D-050): an unknown barcode is registered, then it is on the bill. */
+    /**
+     * Only registered products are sold (D-050): an unknown barcode is registered, then it is on the bill.
+     * A cashier who may not add products gets a manager's PIN asked first (the manager helps with this
+     * bill, D-063), not a whole form typed in vain before a PIN at Save.
+     */
     private fun unknownBarcode(code: String) {
-        showUnknownBarcode(this, code) { startActivityForResult(ProductEditActivity.newIntent(this, barcode = code), REQ_NEW_PRODUCT) }
+        showUnknownBarcode(this, code, needsManager = !allowed(Perm.MANAGE_PRODUCTS)) {
+            val open = { startActivityForResult(ProductEditActivity.newIntent(this, barcode = code), REQ_NEW_PRODUCT) }
+            if (allowed(Perm.MANAGE_PRODUCTS)) {
+                open()
+            } else {
+                ApprovalDialog.help(this, graph, scope, Perm.MANAGE_PRODUCTS, getString(R.string.help_add_product), open)
+            }
+        }
     }
 
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
@@ -1221,16 +1288,40 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
+    /**
+     * Tiles tapped and not added yet, in the order tapped. A product read once is kept in [sellable]
+     * (until the catalogue may have changed or the sale is done), so a tile tapped again goes on the
+     * bill in the same moment, with no database read in between: cashiers tap fast (D-063).
+     */
+    private val taps = ArrayDeque<Long>()
+    private var tapJob: Job? = null
+    private val sellable = HashMap<Long, SellableProduct>()
+
     private fun addProductById(id: Long) {
-        scope.launch {
-            graph.cart.load() // a product just added, after Android ended the app meanwhile (see onActivityResult)
-            val p = graph.db().read { ProductDao.sellableById(it, id) } ?: return@launch
+        taps.addLast(id)
+        // Main.immediate: a product already read is added before this tap returns.
+        if (tapJob?.isActive != true) tapJob = scope.launch(Dispatchers.Main.immediate) { addTapped() }
+    }
+
+    private suspend fun addTapped() {
+        graph.cart.load() // a product just added, after Android ended the app meanwhile (see onActivityResult)
+        while (true) {
+            val id = taps.removeFirstOrNull() ?: break
+            val p = sellable[id] ?: graph.db().read { ProductDao.sellableById(it, id) }?.also { sellable[id] = it } ?: continue
+            if (promptDialog?.isShowing == true) {
+                // A weight or price is being asked: the taps behind it were the same tile tapped twice.
+                taps.clear()
+                break
+            }
             when (p.sellMode) {
                 SellMode.WEIGHT -> askWeight(p, null)
                 SellMode.OPEN_PRICE -> askPrice(p, null)
                 // No price yet: asked, never sold free (2026-10 review).
                 else -> if (p.price == 0L) askPrice(p, null) else if (graph.cart.addProduct(p) != 0L) beeper?.ok() else beeper?.error()
             }
+        }
+        // Only when the search had the keyboard: hiding it is a call to another process, on every tap.
+        if (search.hasFocus()) {
             hideKeyboard()
             search.clearFocus()
         }
@@ -1248,7 +1339,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun more(item: CartItem) {
         if (!graph.cart.state.value.canEdit) return
-        showLineMore(this, item, onQty = { enterQty(item) }, onDiscount = { lineDiscount(item) }, onPrice = { linePrice(item) })
+        showLineMore(
+            this, item, onQty = { enterQty(item) },
+            onDiscount = if (allowed(Perm.DISCOUNT)) { { lineDiscount(item) } } else null,
+            onPrice = if (allowed(Perm.PRICE_OVERRIDE)) { { linePrice(item) } } else null,
+        )
     }
 
     override fun enterQty(item: CartItem) {
@@ -1317,24 +1412,21 @@ class SellActivity : Activity(), LineActions, DialogHost {
             showHeldBills(
                 this@SellActivity, bills, currency,
                 onResume = { id -> billJob { graph.cart.resume(id) } },
-                onDelete = { id ->
-                    // Throwing a parked bill away is cancelling a bill: same permission, same audit entry.
-                    withApproval(graph, scope, Perm.CANCEL_BILL) { approval ->
-                        billJob { if (!graph.cart.deleteHeld(id, approval) && !isDestroyed) notAllowed() }
-                    }
-                },
+                // Throwing a parked bill away is clearing a bill: no PIN, the same audit entry (D-063).
+                onDelete = { id -> billJob { graph.cart.deleteHeld(id) } },
             )
         }
     }
 
-    private fun cancelBill() {
+    /** Clears the bill after a yes: no manager needed (D-063); it is in the activity log. */
+    private fun clearBill() {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty) return
         Dialogs.confirm(
             this, getString(R.string.clear_confirm_title),
             resources.getQuantityString(R.plurals.clear_confirm_message, st.cart.items.size, st.cart.items.size),
             getString(R.string.clear_yes),
-        ) { withApproval(graph, scope, Perm.CANCEL_BILL) { approval -> if (!graph.cart.clear(approval)) notAllowed() } }
+        ) { graph.cart.clear() }
     }
 
     private fun openDrawer() {
@@ -1360,39 +1452,52 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     /**
      * The cashier's jobs first; the shop's back office (products, stock, reports, settings…) under
-     * one "Manage shop" entry, so a new cashier sees a short list (D-049).
+     * one "Manage shop" entry, so a new cashier sees a short list (D-049). Only what the person signed
+     * in may do is listed (D-063); "Manager PIN" lets a manager use the rest on this bill.
      */
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
+        val st = graph.cart.state.value
         val items = ArrayList<Int>(10)
-        items += listOf(R.string.price_check_title, R.string.held_title, R.string.menu_sales)
+        if (!st.cart.isEmpty) items += R.string.menu_cancel_bill
+        if (st.heldCount > 0) items += R.string.held_title
+        // Price check has its own button on the screen.
+        items += if (allowed(Perm.REFUND) || allowed(Perm.VOID)) R.string.menu_sales else R.string.menu_receipts
         if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
-        items += listOf(R.string.menu_shift, R.string.menu_open_drawer, R.string.menu_cancel_bill)
-        if (graph.staff.state.value.loginRequired) items += R.string.menu_lock
+        items += R.string.menu_shift
+        if (allowed(Perm.OPEN_DRAWER)) items += R.string.menu_open_drawer
+        val staff = graph.staff.state.value
+        if (staff.loginRequired) items += R.string.menu_lock
+        // Someone signed in who may not do everything, and no manager helping yet.
+        if (staff.current?.let { Perm.lacksAny(it.perms) } == true && graph.permissions.helper.value == null) items += R.string.menu_manager_help
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
-        val manage = m.menu.addSubMenu(0, R.string.menu_manage, items.size, getString(R.string.menu_manage) + "  ›")
-        val office = listOf(
-            R.string.menu_products, R.string.menu_inventory, R.string.menu_categories, R.string.promo_title,
-            R.string.menu_tax_rates, R.string.menu_reports, R.string.menu_settings, R.string.menu_diagnostics,
-        )
-        manage.setHeaderTitle(R.string.menu_manage)
-        for ((i, res) in office.withIndex()) manage.add(0, res, i, res)
+        val office = ArrayList<Int>(8)
+        if (allowed(Perm.MANAGE_PRODUCTS)) office += listOf(R.string.menu_products, R.string.menu_categories, R.string.promo_title)
+        if (allowed(Perm.MANAGE_STOCK)) office += R.string.menu_inventory
+        if (allowed(Perm.REPORTS)) office += R.string.menu_reports
+        if (allowed(Perm.SETTINGS) || allowed(Perm.MANAGE_STAFF) || allowed(Perm.VIEW_AUDIT)) office += R.string.menu_settings
+        if (allowed(Perm.SETTINGS)) office += listOf(R.string.menu_tax_rates, R.string.menu_diagnostics)
+        if (office.isNotEmpty()) {
+            val manage = m.menu.addSubMenu(0, R.string.menu_manage, items.size, getString(R.string.menu_manage) + "  ›")
+            manage.setHeaderTitle(R.string.menu_manage)
+            for ((i, res) in office.withIndex()) manage.add(0, res, i, res)
+        }
         m.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.string.held_title -> showHeld()
-                R.string.price_check_title -> showPriceCheck()
+                R.string.menu_manager_help -> ApprovalDialog.help(this, graph, scope, 0L, getString(R.string.help_why)) {}
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
                 R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))
                 R.string.menu_categories -> startActivity(Intent(this, CategoriesActivity::class.java))
                 R.string.promo_title -> startActivity(Intent(this, PromotionsActivity::class.java))
                 R.string.menu_tax_rates -> startActivity(Intent(this, TaxRatesActivity::class.java))
-                R.string.menu_sales -> startActivity(Intent(this, SalesActivity::class.java))
+                R.string.menu_sales, R.string.menu_receipts -> startActivity(Intent(this, SalesActivity::class.java))
                 R.string.menu_reports -> startActivity(Intent(this, ReportsActivity::class.java))
                 R.string.menu_shift -> startActivity(Intent(this, ShiftActivity::class.java))
                 R.string.menu_customers -> startActivity(Intent(this, CustomersActivity::class.java))
                 R.string.menu_lock -> graph.staff.lock()
                 R.string.menu_open_drawer -> openDrawer()
-                R.string.menu_cancel_bill -> cancelBill()
+                R.string.menu_cancel_bill -> clearBill()
                 R.string.menu_settings -> startActivity(Intent(this, SettingsActivity::class.java))
                 R.string.menu_diagnostics -> startActivity(Intent(this, DiagnosticsActivity::class.java))
             }
@@ -1552,6 +1657,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             is CheckoutService.Outcome.Completed -> {
                 outcomeDialog = showResult(o.done)
                 refreshTiles() // the stock they show
+                sellable.clear() // each bill reads its products afresh at least once
             }
             is CheckoutService.Outcome.Refused -> {
                 val d = Dialogs.message(this, getString(R.string.pay_failed_title), ScreenActivity.errorText(this, ActionRefused(o.reason)))
@@ -1587,21 +1693,28 @@ class SellActivity : Activity(), LineActions, DialogHost {
             visible(done.change > 0L)
         }
         v.findViewById<TextView>(R.id.result_receipt).text = getString(R.string.result_receipt, done.receiptNo)
-        v.findViewById<TextView>(R.id.result_print_state).text = when {
+        val printState = when {
             done.receiptQueued -> getString(R.string.result_printing)
-            !device.hasPrinter -> getString(R.string.result_no_printer)
+            // A till run without a printer: said to whoever can set one up, not after every sale to a cashier.
+            !device.hasPrinter && allowed(Perm.SETTINGS) -> getString(R.string.result_no_printer)
             else -> ""
+        }
+        v.findViewById<TextView>(R.id.result_print_state).apply {
+            text = printState
+            visible(printState.isNotEmpty())
         }
         val cust = v.findViewById<TextView>(R.id.result_customer)
         val owes = done.customerBalance
         cust.text = if (done.customerName != null && owes != null) getString(R.string.result_customer, done.customerName, money(owes)) else ""
         cust.visible(done.customerName != null && owes != null)
+        // Stock running low is for whoever orders it; the cashier's result is the change and the receipt.
+        val lowStock = if (allowed(Perm.MANAGE_STOCK)) done.lowStock else emptyList()
         val low = v.findViewById<TextView>(R.id.result_low_stock)
-        low.text = if (done.lowStock.isEmpty()) "" else getString(R.string.result_low_stock, done.lowStock.joinToString(", ") { "${it.name} (${MoneyFormat.formatQty(it.qty)})" })
-        low.visible(done.lowStock.isNotEmpty())
+        low.text = if (lowStock.isEmpty()) "" else getString(R.string.result_low_stock, lowStock.joinToString(", ") { "${it.name} (${MoneyFormat.formatQty(it.qty)})" })
+        low.visible(lowStock.isNotEmpty())
         val d = AlertDialog.Builder(this).setView(Dialogs.scrolling(v)).create()
         val print = v.findViewById<Button>(R.id.result_print)
-        print.visible(device.hasPrinter)
+        print.visible(device.hasPrinter && (!done.receiptQueued || allowed(Perm.REPRINT))) // a copy needs "Reprint" (D-063)
         print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
         print.setOnClickListener { printOnce.run { printReceipt(done.saleId) { print.isEnabled = false } } }
         v.findViewById<View>(R.id.result_share).setOnClickListener { ReceiptShare.chooseAndShare(this, done.saleId) }

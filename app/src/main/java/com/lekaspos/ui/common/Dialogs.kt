@@ -30,7 +30,7 @@ object Dialogs {
      * than a phone in landscape or a window in split screen, and without it the bottom keys — "0",
      * OK — were cut off and could not be reached (2026-10 review).
      */
-    fun scrolling(content: View): View = android.widget.ScrollView(content.context).apply {
+    fun scrolling(content: View): View = TapScroll(content.context).apply {
         isFillViewport = true
         addView(content)
     }

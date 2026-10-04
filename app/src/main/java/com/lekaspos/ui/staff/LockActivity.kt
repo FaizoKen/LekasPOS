@@ -173,7 +173,9 @@ class LockActivity : Activity(), DialogHost {
                 }
                 staff = graph.staffAdmin.staff().filter { it.canSignIn }
                 adapter.submit(staff)
-                val c = chosen?.let { old -> staff.firstOrNull { it.id == old.id } }
+                // The person chosen before, else the one signed in before the lock (D-063): one tap less after an idle lock.
+                val id = chosen?.id ?: graph.staff.lastSignedIn
+                val c = staff.firstOrNull { it.id == id }
                 when {
                     c != null -> select(c)
                     staff.size == 1 -> select(staff[0])

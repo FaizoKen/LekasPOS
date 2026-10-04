@@ -27,6 +27,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
+| — | **1.9.0**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps (D-063) | in progress — CI and the owner's phone test pending |
 
 ## Open questions for the user
 
@@ -1380,3 +1381,50 @@ Weak features added: **change a price from the price check**, **count the drawer
 13. Serial (SPP) scanner (when available): Stock → Count → scan → the product's count opens; Receive →
     scan → the line is added; back on the selling screen the scanner is still connected.
 
+
+## 1.9.0 — the cashier's screen: clear without a PIN, only what the cashier may do, faster taps (D-063)
+
+The owner asked (2026-10-04): clearing a bill should not need a manager; a cashier without a manager's
+permission should not see the buttons that need one; audit the UI so it is easy for a cashier; make tiles
+and buttons fast to tap. One read-only review of the cashier's other screens (shift, sales, customers,
+sign-in, payment and result dialogs) fed the change; every finding checked in the code first.
+
+- [x] **Clear bill** (was "Cancel bill") and deleting a held bill: no PIN, still in the activity log;
+      `Perm.CANCEL_BILL` retired from the role editor
+- [x] **Hidden without the permission:** Discount, line "More" (when it would offer only the quantity),
+      Change price (line, price check), Open cash drawer, the "Manage shop" entries one may not use, receipt
+      copies, the customer chip, shift cash in/out/drop, report and past shifts, Refund and Void, a
+      customer's balance adjustment and credit limit; "Receipts" instead of "Sales & refunds"; no "No printer
+      set up" or low stock on a cashier's result; data-safety pills say "tell the owner" to a cashier
+- [x] **Manager PIN** (menu): the manager's buttons show for the bill on the till, a "Manager: name ✕" pill
+      in the top bar, ended by the bill (paid, held, cleared), a lock, the pill or 5 minutes; an unknown
+      barcode asks a cashier for the manager's PIN before the product form
+- [x] **Faster taps:** no tile animations, badge-only redraw, immediate press feedback on the selling
+      screen's lists and keypad dialogs, tile taps in order with each product read once per bill, the beep
+      off the main thread, no keyboard call per tap; the payment keypad no longer jumps when the change
+      appears; one dialog for a double tap on a weighed tile, on Open shift or Close shift
+- [x] Sign-in after a lock starts at the last person's PIN ("Not you?" to switch)
+- [x] Local: `:core` 259 and `:app` 42 JVM tests pass, the instrumented tests compile, lint 0 errors; release
+      APK **1,508,297 bytes** (1,473 KB; 1.8.0's local build was 1,500,841 — about +7 KB)
+- [ ] CI (instrumented tests on API 21 and 36, tablet, release smoke) and perf QUICK
+- [ ] Test build v1.9.0 (pre-release) and the owner's phone test
+
+### Needs real-device testing (1.9.0)
+
+1. Install over 1.8.0 (Settings → App updates → Include test versions): data, staff, settings still there.
+2. **Clear bill** as a cashier (PIN login on): Menu → Clear bill → Clear bill → empty, no PIN asked.
+   Settings → Activity log (as the owner) lists it under the cashier.
+3. **Cashier's screen:** signed in as a cashier, the totals bar shows Hold and PAY only; a selected line
+   shows Remove, −, quantity, + (no More); Menu has Clear bill (with items), Held bills (when there are
+   some), Receipts, Shift & cash, Lock, Manager PIN — no Open cash drawer, no Manage shop; Price check has
+   no "Change price"; Shift & cash shows only Open or Close; a receipt has no Refund or Void.
+4. **Manager PIN:** Menu → Manager PIN → the manager's PIN → "Manager: name ✕" in the top bar; Discount and
+   More appear; give a discount; pay → the pill goes, the buttons hide again. Tap the pill → it ends at once.
+5. **Unknown barcode** as a cashier: "Add product" asks for the manager's PIN first, then the form; saved,
+   it is on the bill.
+6. **Fast taps:** tap one product tile ten times quickly → ×10 on the tile and 10 on the bill, no tile
+   flashing; tap three different tiles quickly → three lines in the order tapped. Double-tap a weighed
+   tile → one weight dialog.
+7. **Pay:** type 1 0 0 0 0 for a RM95 bill → the change shows and the keys do not move while typing.
+8. **Sign-in:** lock the till → the PIN pad for the person who was signed in; "Not you?" → the list.
+9. As the owner (or with PIN login off) everything is as before.

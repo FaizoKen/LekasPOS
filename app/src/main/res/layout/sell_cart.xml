@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/surface">
 
-    <androidx.recyclerview.widget.RecyclerView
+    <com.lekaspos.ui.common.TapList
         android:id="@+id/cart_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

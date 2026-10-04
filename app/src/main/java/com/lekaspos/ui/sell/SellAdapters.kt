@@ -54,6 +54,18 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
     private var rows: List<CartRow> = emptyList()
     var currency: CurrencySpec = CurrencySpec.MYR
 
+    /**
+     * "More" on the selected line: only when it offers a discount or a price change the person signed
+     * in may give (D-063) — typing a quantity is the quantity button itself.
+     */
+    var showMore = true
+        @SuppressLint("NotifyDataSetChanged") // a sign-in or a manager's help: rare
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyDataSetChanged()
+        }
+
     fun submit(items: List<CartItem>, priced: PricedCart, selectedKey: Long) {
         val next = items.mapIndexed { i, it ->
             val pl = priced.lines.getOrNull(i)
@@ -107,6 +119,7 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         h.plus.setOnClickListener { _ -> actions.changeQty(it, ONE) }
         h.qty.setOnClickListener { _ -> actions.enterQty(it) }
         h.remove.setOnClickListener { _ -> actions.remove(it) }
+        h.more.visibility = if (showMore) View.VISIBLE else View.GONE // Remove then takes the whole row
         h.more.setOnClickListener { _ -> actions.more(it) }
     }
 
@@ -156,12 +169,15 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
     /** Product id → quantity on the bill (selling units, milli). */
     private var onBill: Map<Long, Long> = emptyMap()
 
-    /** Marks the tiles of products on the bill; only tiles whose count changed are redrawn. */
+    /**
+     * Marks the tiles of products on the bill; only tiles whose count changed are redrawn, and only
+     * their badge ([BADGE]): a whole tile bound again for every tap made fast tapping lag (D-063).
+     */
     fun setOnBill(next: Map<Long, Long>) {
         val old = onBill
         if (old == next) return
         onBill = next
-        for ((i, p) in items.withIndex()) if (old[p.id] != next[p.id]) notifyItemChanged(i)
+        for ((i, p) in items.withIndex()) if (old[p.id] != next[p.id]) notifyItemChanged(i, BADGE)
     }
 
     @SuppressLint("NotifyDataSetChanged") // a new result set replaces the old one
@@ -212,11 +228,24 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         val stock = p.stockQty
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
         h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
+        bindBadge(h, p)
+        h.itemView.setOnClickListener { onClick(p) }
+    }
+
+    override fun onBindViewHolder(h: Holder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isNotEmpty() && payloads.all { it === BADGE }) bindBadge(h, items[position]) else onBindViewHolder(h, position)
+    }
+
+    private fun bindBadge(h: Holder, p: ProductListItem) {
         val q = onBill[p.id]
         h.itemView.isSelected = q != null
         h.inBill.visibility = if (q != null) View.VISIBLE else View.GONE
         if (q != null) h.inBill.text = h.itemView.context.getString(R.string.tile_in_bill, MoneyFormat.formatQty(q))
-        h.itemView.setOnClickListener { onClick(p) }
+    }
+
+    private companion object {
+        /** Payload: only the "×n on the bill" badge changed. */
+        val BADGE = Any()
     }
 }
 

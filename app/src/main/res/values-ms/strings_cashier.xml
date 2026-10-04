@@ -44,4 +44,12 @@
     <string name="pm_error_name">Masukkan nama.</string>
     <string name="pm_rename_used">Jualan yang sudah dibayar dengan “%1$s” juga akan menunjukkan “%2$s”: pada salinan resit, dalam laporan dan pada laporan syif yang telah ditutup. Untuk mengekalkan nama lama padanya, tambah kaedah bayaran baharu dan sembunyikan yang ini.</string>
     <string name="pm_rename_yes">Tukar nama</string>
+    <!-- Juruwang hanya melihat apa yang dibenarkan; PIN pengurus memaparkan selebihnya untuk satu bil (D-063) -->
+    <string name="menu_manager_help">PIN pengurus</string>
+    <string name="menu_receipts">Resit</string>
+    <string name="helper_pill">Pengurus: %1$s ✕</string>
+    <string name="help_why">PIN pengurus memaparkan butang pengurus pada kaunter ini (diskaun, tukar harga, laci tunai, Urus kedai) sehingga bil ini dibayar, ditangguh atau dikosongkan.</string>
+    <string name="help_add_product">Menambah produk memerlukan PIN pengurus. Pengurus kemudian menambahnya, dan ia masuk ke bil ini.</string>
+    <string name="sell_not_found_manager">Belum ada produk dengan kod bar %1$s. Pengurus boleh menambahkannya sekarang (PIN mereka dahulu): ia disimpan untuk lain kali dan masuk ke bil ini.</string>
+    <string name="safety_tell_owner">Sila beritahu pemilik kedai: mereka boleh membetulkannya dalam Menu → Urus kedai → Tetapan.</string>
 </resources>

@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
+import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SaleKind
 import com.lekaspos.core.model.SaleStatus
 import com.lekaspos.core.money.MoneyFormat
@@ -70,7 +71,12 @@ class SalesActivity : ScreenActivity() {
         })
     }
 
-    override fun onStarted(scope: CoroutineScope) = reload(debounce = false)
+    override fun onStarted(scope: CoroutineScope) {
+        // Its menu entry's name: "Receipts" for whoever may not refund or void (D-063).
+        val refunds = graph.permissions.allowed(Perm.REFUND) || graph.permissions.allowed(Perm.VOID)
+        setScreenTitle(getString(if (refunds) R.string.sales_title else R.string.menu_receipts))
+        reload(debounce = false)
+    }
 
     private fun reload(debounce: Boolean) {
         job?.cancel()

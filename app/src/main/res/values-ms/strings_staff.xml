@@ -6,7 +6,7 @@
     <!-- Log masuk dan PIN -->
     <string name="lock_title">Log masuk</string>
     <string name="lock_who">Siapa yang menggunakan kaunter?</string>
-    <string name="lock_change_user">Tukar</string>
+    <string name="lock_change_user">Bukan anda?</string>
     <string name="lock_forgot">Lupa PIN?</string>
     <string name="pin_enter">Masukkan PIN</string>
     <string name="pin_wrong">PIN salah. Baki cubaan: %1$d.</string>
@@ -94,7 +94,7 @@
     <string name="shift_none">Tiada syif dibuka di kaunter ini.</string>
     <string name="shift_open">Buka syif</string>
     <string name="shift_float_hint">Wang tunai yang dimasukkan ke laci pada permulaan (untuk baki).</string>
-    <string name="shift_current">Syif dibuka</string>
+    <string name="shift_current">Syif semasa</string>
     <string name="shift_opened_by">Dibuka oleh</string>
     <string name="shift_opened_at">Dibuka</string>
     <string name="shift_float">Wang apungan</string>

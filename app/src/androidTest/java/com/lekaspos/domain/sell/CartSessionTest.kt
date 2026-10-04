@@ -130,24 +130,67 @@ class CartSessionTest {
         assertEquals(200L, entry.amount)
     }
 
-    @Test
-    fun aCashierNeedsAManagerToThrowAwayAHeldBill() = runBlocking {
+    /** A cashier (PIN login on); the owner's PIN is 2468. */
+    private suspend fun signInCashier(): Long {
         graph.staff.load()
         graph.staffAdmin.setPin(Seed.Ids.STAFF_OWNER, "2468")
         val cashier = graph.staffAdmin.save(null, "Siti", Seed.Ids.ROLE_CASHIER, true)
         graph.staffAdmin.setPin(cashier, "1111")
         graph.staff.lock()
         graph.staff.signIn(cashier, "1111")
+        return cashier
+    }
+
+    @Test
+    fun aCashierClearsABillAndThrowsAHeldBillAwayWithoutAManager() = runBlocking {
+        // D-063: taking every line off never needed a manager, so clearing the bill does not either.
+        val cashier = signInCashier()
         cart.addProduct(TestDb.sellable(graph.db(), product("A", 100L, "111")))
         assertTrue(cart.hold("Ali"))
         val held = cart.heldBills().single()
-        assertFalse(cart.deleteHeld(held.id))
-        assertEquals(1, cart.state.value.heldCount)
-        val approval = assertNotNull(graph.permissions.approve(Seed.Ids.STAFF_OWNER, "2468", Perm.CANCEL_BILL).second)
-        assertTrue(cart.deleteHeld(held.id, approval))
+        assertTrue(cart.deleteHeld(held.id))
         assertEquals(0, cart.state.value.heldCount)
-        val entry = graph.db().read { AuditDao.byAction(it, AuditAction.BILL_CANCEL, null) }.single()
-        assertEquals(Seed.Ids.STAFF_OWNER, entry.approvedBy)
+        cart.addProduct(TestDb.sellable(graph.db(), product("B", 250L, "222")))
+        assertTrue(cart.clear())
+        assertTrue(cart.state.value.cart.isEmpty)
+        cart.flush()
+        // Both are in the activity log under the cashier, with no approval.
+        val entries = graph.db().read { AuditDao.byAction(it, AuditAction.BILL_CANCEL, null) }
+        assertEquals(setOf(100L, 250L), entries.map { it.amount }.toSet())
+        for (e in entries) {
+            assertEquals(cashier, e.staffId)
+            assertEquals(null, e.approvedBy)
+        }
+    }
+
+    @Test
+    fun aManagersPinHelpsWithOneBill() = runBlocking {
+        val cashier = signInCashier()
+        val p = graph.permissions
+        assertFalse(p.allowed(Perm.DISCOUNT))
+        // The cashier's own PIN adds nothing: not a helper.
+        assertEquals(null, p.approveHelp(cashier, "1111", 0L).second)
+        assertEquals(null, p.approveHelp(Seed.Ids.STAFF_OWNER, "0000", 0L).second) // wrong PIN
+        val help = assertNotNull(p.approveHelp(Seed.Ids.STAFF_OWNER, "2468", Perm.MANAGE_PRODUCTS).second)
+        p.startHelp(help)
+        assertEquals(help, p.helper.value)
+        assertTrue(p.allowed(Perm.DISCOUNT))
+        assertFalse(p.ownRole(Perm.DISCOUNT))
+        cart.addProduct(TestDb.sellable(graph.db(), product("A", 1000L, "111")))
+        assertTrue(cart.setBillDiscount(Discount.Amount(100L)))
+        cart.flush()
+        val discount = graph.db().read { AuditDao.byAction(it, AuditAction.BILL_DISCOUNT, null) }.single()
+        assertEquals(cashier, discount.staffId)
+        assertEquals(Seed.Ids.STAFF_OWNER, discount.approvedBy)
+        // The bill ends (here cleared): the next bill is the cashier's alone.
+        assertTrue(cart.clear())
+        assertEquals(null, p.helper.value)
+        assertFalse(p.allowed(Perm.DISCOUNT))
+        // A lock ends a help too.
+        p.startHelp(help)
+        graph.staff.lock()
+        assertEquals(null, p.helper.value)
+        assertFalse(p.allowed(Perm.DISCOUNT))
     }
 
     @Test

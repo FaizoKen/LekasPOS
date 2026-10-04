@@ -152,7 +152,7 @@ class CustomerCreditTest {
         assertEquals(3_000L, balance(ali.id))
         assertTrue(!graph.cart.state.value.cart.isEmpty) // refused before anything was written
 
-        graph.cart.clear(graph.permissions.approve(manager, "5555", Perm.CANCEL_BILL).second)
+        graph.cart.clear()
         val approval = assertNotNull(graph.permissions.approve(manager, "5555", Perm.CREDIT_LIMIT).second)
         onCredit(ali, beras, listOf(approval))
         assertEquals(6_000L, balance(ali.id))

@@ -234,11 +234,12 @@ class CustomerActivity : ScreenActivity() {
 
     private fun actions() {
         val c = customer ?: return
-        val items = if (removed) {
-            listOf(R.string.credit_receive, R.string.credit_adjust_title) // settle only
-        } else {
-            listOf(R.string.credit_receive, R.string.credit_adjust_title, R.string.customer_edit, R.string.delete)
-        }
+        // Adjusting a balance only for whoever may (D-063): for a cashier it led to a manager's PIN.
+        val adjust = graph.permissions.allowed(Perm.CREDIT_LIMIT)
+        val items = ArrayList<Int>(4)
+        items += R.string.credit_receive
+        if (adjust) items += R.string.credit_adjust_title
+        if (!removed) items += listOf(R.string.customer_edit, R.string.delete) // a removed customer: settle only
         Dialogs.choose(this, c.name, items.map { getString(it) }) { i ->
             when (items[i]) {
                 R.string.credit_receive -> receive(c)
@@ -332,12 +333,18 @@ private fun showCustomerForm(a: ScreenActivity, existing: Customer?, approval: c
     val email = field(R.string.store_email, existing?.email, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
     val address = field(R.string.store_address, existing?.address, words or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
     val tin = field(R.string.customer_tin, existing?.tin, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS)
-    val limit = field(
-        R.string.customer_limit, existing?.creditLimit?.takeIf { it > 0L }?.let { MoneyFormat.format(it, currency, withSymbol = false) },
-        InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-    )
+    // The credit limit only for whoever may set it (D-063): for a cashier the field only led to a PIN.
+    val mayLimit = a.graph.permissions.allowed(Perm.CREDIT_LIMIT)
+    val limit = if (!mayLimit) {
+        null
+    } else {
+        field(
+            R.string.customer_limit, existing?.creditLimit?.takeIf { it > 0L }?.let { MoneyFormat.format(it, currency, withSymbol = false) },
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+    }
     val note = field(R.string.inv_note_hint, existing?.note, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
-    col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { setText(R.string.customer_limit_hint) })
+    if (mayLimit) col.addView(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { setText(R.string.customer_limit_hint) })
     val d = AlertDialog.Builder(a)
         .setTitle(if (existing == null) R.string.customer_add else R.string.customer_edit)
         .setView(ScrollView(a).apply { addView(col) })
@@ -351,10 +358,14 @@ private fun showCustomerForm(a: ScreenActivity, existing: Customer?, approval: c
             name.error = a.getString(R.string.product_error_name)
             return@setOnClickListener
         }
-        val limitText = limit.text.toString().trim()
-        val limitValue = if (limitText.isEmpty()) 0L else MoneyFormat.parse(limitText, currency)
+        val limitText = limit?.text?.toString()?.trim()
+        val limitValue = when {
+            limit == null -> existing?.creditLimit ?: 0L // not shown: kept as it is
+            limitText.isNullOrEmpty() -> 0L
+            else -> MoneyFormat.parse(limitText, currency)
+        }
         if (limitValue == null || limitValue < 0L) {
-            limit.error = a.getString(R.string.customer_limit_error)
+            limit?.error = a.getString(R.string.customer_limit_error)
             return@setOnClickListener
         }
         fun t(e: EditText) = e.text.toString().trim().ifEmpty { null }

@@ -3,6 +3,7 @@ package com.lekaspos.ui.staff
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
@@ -11,6 +12,7 @@ import android.widget.TextView
 import com.lekaspos.R
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.Perm
+import com.lekaspos.data.staff.Staff
 import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
@@ -87,9 +89,47 @@ object ApprovalDialog {
         ownersOnly: Boolean = false,
         onApproved: (Approval) -> Unit,
     ) {
+        val why = if (ownersOnly) a.getString(R.string.approval_owner_needed) else a.getString(R.string.approval_needed, a.getString(permLabel(perm)))
+        ask(
+            a, graph, scope, why,
+            loadApprovers = { db -> StaffDao.approvers(db, perm).filter { !ownersOnly || it.isOwner } },
+            approve = { id, pin -> graph.permissions.approve(id, pin, perm) },
+            onCancel = onCancel, onApproved = onApproved,
+        )
+    }
+
+    /**
+     * A manager helps at the till (D-063): their PIN, and the buttons the person signed in does not see
+     * show for this bill ([com.lekaspos.domain.PermissionGate.startHelp]). [needed]: a permission the
+     * helper must hold (0 = any the person signed in lacks); [why] says what for.
+     */
+    fun help(a: Activity, graph: AppGraph, scope: CoroutineScope, needed: Long, why: String, onHelping: () -> Unit) {
+        val own = graph.staff.perms
+        ask(
+            a, graph, scope, why,
+            loadApprovers = { db -> StaffDao.list(db).filter { it.canSignIn && Perm.has(it.perms, needed) && it.perms and own.inv() != 0L } },
+            approve = { id, pin -> graph.permissions.approveHelp(id, pin, needed) },
+            onCancel = null,
+        ) { approval ->
+            graph.permissions.startHelp(approval)
+            graph.appScope.launch { graph.staff.recordApproval(approval) }
+            onHelping()
+        }
+    }
+
+    private fun ask(
+        a: Activity,
+        graph: AppGraph,
+        scope: CoroutineScope,
+        why: String,
+        loadApprovers: (SQLiteDatabase) -> List<Staff>,
+        approve: suspend (staffId: Long, pin: String) -> Pair<StaffSession.Check, Approval?>,
+        onCancel: (() -> Unit)?,
+        onApproved: (Approval) -> Unit,
+    ) {
         scope.launch {
             val approvers = try {
-                graph.db().read { StaffDao.approvers(it, perm) }.filter { !ownersOnly || it.isOwner }
+                graph.db().read(loadApprovers)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e // the screen closed: no "not allowed" on it (it crashed the app)
             } catch (e: Exception) {
@@ -105,7 +145,6 @@ object ApprovalDialog {
                 orientation = LinearLayout.VERTICAL
                 setPadding(pad, pad / 2, pad, 0)
             }
-            val why = if (ownersOnly) a.getString(R.string.approval_owner_needed) else a.getString(R.string.approval_needed, a.getString(permLabel(perm)))
             col.addView(TextView(a, null, 0, R.style.Text_Lekas_Body).apply { text = why })
             val picker = Spinner(a)
             picker.adapter = ArrayAdapter(a, android.R.layout.simple_spinner_dropdown_item, approvers.map { it.name })
@@ -123,7 +162,7 @@ object ApprovalDialog {
                 pinPad.setEnabled(false)
                 scope.launch {
                     val (check, approval) = try {
-                        graph.permissions.approve(who.id, pin, perm)
+                        approve(who.id, pin)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {

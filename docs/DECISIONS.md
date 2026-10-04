@@ -1172,6 +1172,49 @@ after rotation; the test page's language; Google sign-in's own messages; printer
 the bill", bulk price changes, quick keys, category ordering, sales list by item, percent-off and
 spend-threshold promotions, quick refund reasons.
 
+### D-063 — The cashier's screen: no PIN to clear a bill, only what the cashier may do, faster taps (1.9.0, 2026-10-04)
+The owner asked (2026-10-04): clearing a bill should not need a manager; a cashier without a manager's
+permission should not see the buttons that need one ("to make it clean"); audit the whole UI so it is easy
+and straightforward for a cashier; and make buttons such as product tiles fast enough to tap quickly.
+- **Clearing a bill needs no permission.** Taking the lines off one by one never needed one (and an
+  emptied bill was already logged as a cancelled bill), so the PIN on "Cancel bill" protected nothing and
+  held up the queue. "Clear bill" (renamed from "Cancel bill", Malay "Kosongkan bil") and deleting a held
+  bill are recorded in the activity log under whoever was signed in. `Perm.CANCEL_BILL` is retired: the
+  bit stays (old roles and audit entries still read), the role editor no longer shows it (`ROLE_EDITOR`),
+  and an edited role keeps whatever it had.
+- **Only what the person signed in may do is shown** (selling screen and the cashier's screens). Hidden
+  without the permission: Discount (bill and line), Change price (line "More" and the price check),
+  "More" itself when it would offer only the quantity (the quantity button types it), Open cash drawer,
+  every "Manage shop" entry the person may not use (the submenu goes when none is left), a receipt copy
+  (Reprint), the customer chip (Sell on credit), the shift's cash in/out/drop, report and past shifts,
+  Refund and Void on a sale, a customer's balance adjustment and credit-limit field. Price check moved
+  out of the menu (it has its own button); "Clear bill" and "Held bills" show only when there is one.
+  The cashier's result after a sale leaves out "No printer set up" and low stock (for whoever sets up or
+  orders); "Sales & refunds" is "Receipts" for whoever may not refund. The data-safety pills stay for
+  everyone (D-048), but a cashier's tap says to tell the owner instead of asking for a PIN.
+- **A manager helps at the till with their PIN:** Menu → "Manager PIN" (shown to whoever lacks some
+  permission). The manager's permissions then apply to the bill on the till — the hidden buttons show,
+  and actions are logged as the cashier's, approved by the manager — until the bill is paid, held or
+  cleared, the till locks or someone signs in, the "Manager: name ✕" pill is tapped, or 5 minutes pass.
+  The approval is in the activity log (as screen approvals are, D-037). A cashier scanning an unknown
+  barcode is asked for the manager's PIN *before* the product form (it was asked at Save, after the
+  form). One-time approvals (`withApproval`) stay as the fallback everywhere else.
+- **Faster taps:** tiles are not animated (each tap cross-faded the tile for 250 ms); a tap redraws only
+  the tile's "×n" badge; lists and dialog keypads show the press the moment the finger lands (scrolling
+  containers hold it back 100 ms); tiles tapped are added in order, a product read once per bill is kept
+  so a tile tapped again goes on the bill in the same moment (cleared when the catalogue, prices or tax
+  may have changed: another screen, sync, an import, a price change, a sale); the beep plays on its own
+  thread (the tone generator's call to the audio service can take tens of ms on some phones); the
+  keyboard is hidden only when the search had it. The payment dialog keeps the change's slot: appearing,
+  it pushed the notes, methods and keypad down while the cashier was still typing; a refusal shows in
+  the same slot. A double tap on a weighed tile asks the weight once; Open and Close shift take one tap.
+- **Sign-in:** after a lock the screen starts at the PIN of whoever was signed in before ("Not you?"
+  picks another; was "Change").
+Rejected: keeping the buttons with a PIN dialog (the owner's ask); a separate "manager mode" sign-in
+(two PINs and a sign-out per discount); hiding the data-safety pills from cashiers (D-048).
+Raised with the owner, not changed: a cashier may add a customer with no credit limit (an empty limit
+means none) and sell to them on credit — a default limit is the owner's business rule.
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

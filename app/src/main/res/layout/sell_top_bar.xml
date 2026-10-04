@@ -83,6 +83,24 @@
         android:textSize="13sp"
         android:visibility="gone" />
 
+    <!-- A manager helping with this bill (D-063): their buttons show; a tap ends it. -->
+    <TextView
+        android:id="@+id/helper_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/pill_info_bg"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxWidth="200dp"
+        android:minHeight="56dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:singleLine="true"
+        android:textColor="@color/text_on_brand"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <!-- A new version of the app is ready (D-059): shown to whoever may change settings. -->
     <TextView
         android:id="@+id/update_pill"

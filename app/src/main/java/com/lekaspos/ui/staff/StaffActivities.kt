@@ -313,7 +313,7 @@ class RolesActivity : ScreenActivity() {
 
     private val adapter = RowAdapter<Role>(
         bind = { h, r ->
-            val n = if (r.isOwner) Perm.LIST.size else Perm.LIST.count { Perm.has(r.perms, it) }
+            val n = if (r.isOwner) Perm.ROLE_EDITOR.size else Perm.ROLE_EDITOR.count { Perm.has(r.perms, it) }
             h.set(r.name, resources.getQuantityString(R.plurals.role_perm_count, n, n))
         },
         onClick = { startActivity(RoleEditActivity.intent(this, it.id)) },
@@ -368,7 +368,7 @@ class RoleEditActivity : ScreenActivity() {
         name = form.text(getString(R.string.role_name), b?.name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         form.section(getString(R.string.role_perms))
         if (b?.isOwner == true) form.info(getString(R.string.role_owner_all))
-        for (p in Perm.LIST) {
+        for (p in Perm.ROLE_EDITOR) {
             val sw = form.switch(getString(permLabel(p)), b?.let { Perm.has(it.effective, p) } ?: false)
             sw.isEnabled = b?.isOwner != true
             switches[p] = sw
@@ -389,7 +389,7 @@ class RoleEditActivity : ScreenActivity() {
             name.error = getString(R.string.product_error_name)
             return
         }
-        var perms = 0L
+        var perms = (before?.perms ?: 0L) and Perm.CANCEL_BILL // a retired bit has no switch: left as it is
         for ((p, sw) in switches) if (sw.isChecked) perms = perms or p
         asOwnerIfRefused({ saving = it }) { approval ->
             graph.staffAdmin.saveRole(before, n, perms, approval)

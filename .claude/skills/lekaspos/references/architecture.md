@@ -277,6 +277,17 @@ restore that `Db.open` applies before opening the database (D-044).
 - Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from
   `sum_day_product` over 30 days, kept 10 minutes; products read fresh by id). Tiles of products
   on the bill are highlighted with "×n"; picking a search result closes the search.
+- Only what the signed-in person may do is shown (D-063): a control needing a permission is hidden
+  when `graph.permissions.allowed(perm)` is false (role, or a manager's help), on the selling screen and
+  the cashier's screens (shift, sales, customers). New controls follow the same rule. A manager's PIN
+  (Menu → "Manager PIN", `ApprovalDialog.help` → `PermissionGate.startHelp`) shows them for the bill on
+  the till; `CartSession.resetEmpty` ends it (also a lock, the pill, 5 minutes). Clearing a bill needs no
+  permission (`Perm.CANCEL_BILL` retired; `Perm.ROLE_EDITOR` is the role editor's list).
+- Fast taps (D-063): the selling screen's lists are `TapList` and keypad dialogs `TapScroll` (no 100 ms
+  pressed-state delay); the tile grid has no item animator and redraws only the badge (payload); tile
+  taps are queued in order and a product read once per bill is kept (`sellable`, cleared on catalogue,
+  sync, price changes, a sale, `onStart`); `Beeper` plays on its own thread. Payment dialog: the change
+  and a refusal share one slot that keeps its height (nothing moves under the cashier's finger).
 
 ## 9. Errors, logging, crash safety
 

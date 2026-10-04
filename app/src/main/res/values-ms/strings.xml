@@ -85,7 +85,7 @@
     <string name="menu_tax_rates">Kadar cukai</string>
     <string name="menu_sales">Jualan &amp; bayaran balik</string>
     <string name="menu_open_drawer">Buka laci wang</string>
-    <string name="menu_cancel_bill">Batal bil</string>
+    <string name="menu_cancel_bill">Kosongkan bil</string>
     <string name="menu_settings">Tetapan</string>
     <string name="menu_diagnostics">Diagnostik</string>
 
@@ -114,11 +114,11 @@
     <string name="held_delete_which">Padam bil ditangguh yang mana?</string>
 
     <!-- Batal bil -->
-    <string name="clear_confirm_title">Batalkan bil ini?</string>
+    <string name="clear_confirm_title">Kosongkan bil ini?</string>
     <plurals name="clear_confirm_message">
         <item quantity="other">Semua %d baris akan dibuang.</item>
     </plurals>
-    <string name="clear_yes">Batal bil</string>
+    <string name="clear_yes">Kosongkan bil</string>
 
     <!-- Laci wang -->
     <string name="drawer_opened">Membuka laci wang…</string>

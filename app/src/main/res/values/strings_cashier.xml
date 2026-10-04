@@ -45,4 +45,12 @@
     <string name="pm_error_name">Enter a name.</string>
     <string name="pm_rename_used">Sales already paid with “%1$s” will show “%2$s” too: on receipt copies, in reports and on closed shift reports. To keep the old name on them, add a new payment method and hide this one instead.</string>
     <string name="pm_rename_yes">Rename</string>
+    <!-- A cashier sees only what they may do; a manager's PIN shows the rest for one bill (D-063) -->
+    <string name="menu_manager_help">Manager PIN</string>
+    <string name="menu_receipts">Receipts</string>
+    <string name="helper_pill">Manager: %1$s ✕</string>
+    <string name="help_why">A manager\'s PIN shows the manager\'s buttons on this till (discounts, price changes, the cash drawer, Manage shop) until this bill is paid, held or cleared.</string>
+    <string name="help_add_product">Adding a product needs a manager\'s PIN. The manager then adds it, and it goes on this bill.</string>
+    <string name="sell_not_found_manager">No product has barcode %1$s yet. A manager can add it now (their PIN first): it is saved for next time and goes on this bill.</string>
+    <string name="safety_tell_owner">Please tell the shop owner: they can fix this in Menu → Manage shop → Settings.</string>
 </resources>

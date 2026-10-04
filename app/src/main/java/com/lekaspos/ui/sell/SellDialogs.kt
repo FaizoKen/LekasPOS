@@ -245,13 +245,14 @@ class DiscountDialog(
 
 /**
  * The less common things for one bill line (quantity and weight are on the line itself): type
- * the quantity or weight, discount, change the price.
+ * the quantity or weight, discount, change the price. Null: not offered (the person signed in may
+ * not, D-063).
  */
-fun showLineMore(a: Activity, item: CartItem, onQty: () -> Unit, onDiscount: () -> Unit, onPrice: () -> Unit): AlertDialog {
+fun showLineMore(a: Activity, item: CartItem, onQty: () -> Unit, onDiscount: (() -> Unit)?, onPrice: (() -> Unit)?): AlertDialog {
     val actions = ArrayList<Pair<Int, () -> Unit>>(3)
     if (item.fixedGross == null) actions += (if (item.sellMode == SellMode.WEIGHT) R.string.line_weight else R.string.line_qty) to onQty
-    actions += R.string.line_discount to onDiscount
-    actions += R.string.line_price to onPrice
+    if (onDiscount != null) actions += R.string.line_discount to onDiscount
+    if (onPrice != null) actions += R.string.line_price to onPrice
     val labels = actions.map { a.getString(it.first) }.toTypedArray<CharSequence>()
     return AlertDialog.Builder(a)
         .setTitle(item.name)
@@ -311,11 +312,14 @@ fun showHeldBills(
     d.trackedBy(a)
 }
 
-/** A barcode no product has: register it (then it goes on the bill), or cancel (D-050). */
-fun showUnknownBarcode(a: Activity, code: String, onAddProduct: () -> Unit): AlertDialog =
+/**
+ * A barcode no product has: register it (then it goes on the bill), or cancel (D-050). [needsManager]:
+ * the person signed in may not add products, and is told a manager's PIN comes first (D-063).
+ */
+fun showUnknownBarcode(a: Activity, code: String, needsManager: Boolean, onAddProduct: () -> Unit): AlertDialog =
     AlertDialog.Builder(a)
         .setTitle(R.string.sell_not_found_title)
-        .setMessage(a.getString(R.string.sell_not_found_message, code))
+        .setMessage(a.getString(if (needsManager) R.string.sell_not_found_manager else R.string.sell_not_found_message, code))
         .setPositiveButton(R.string.sell_add_product) { _, _ -> onAddProduct() }
         .setNegativeButton(R.string.cancel, null)
         .show()

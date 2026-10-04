@@ -69,7 +69,8 @@ fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () ->
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e // the screen closed: not an error to report
             } catch (e: Exception) {
-                Log.e("Opening the shift failed", e)
+                // A refusal (a shift already open) is the rule working: no error report (D-057).
+                if (e is com.lekaspos.domain.sale.ActionRefused) Log.w("Opening the shift refused: ${e.reason}") else Log.e("Opening the shift failed", e)
                 Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
             }
         }
@@ -103,23 +104,34 @@ class ShiftActivity : ScreenActivity() {
 
     private fun money(v: Long) = MoneyFormat.format(v, graph.settings.store.value.currency)
 
+    /** A double tap on Open or Close stacked two dialogs: the second open failed, the second count stayed. */
+    private val once = TapOnce()
+
+    /**
+     * Only what the person signed in may do is shown (D-063): a cashier sees Open or Close; cash in and
+     * out, the report and past shifts need a manager (Menu → Manager PIN on the selling screen).
+     */
     private fun render(s: Shift?) {
         val form = Form(this)
+        val reports = graph.permissions.allowed(Perm.SHIFT_REPORT)
         if (s == null) {
             form.info(getString(R.string.shift_none))
-            form.button(getString(R.string.shift_open), primary = true) { openShift(this, graph, scope) {} }
+            form.button(getString(R.string.shift_open), primary = true) { once.run { openShift(this, graph, scope) {} } }
         } else {
             form.section(getString(R.string.shift_current))
             form.row(getString(R.string.shift_opened_by), names[s.openedBy] ?: "-")
             form.row(getString(R.string.shift_opened_at), DateText.dateTime(s.openedAt, tz))
             form.row(getString(R.string.shift_float), money(s.openingFloat))
-            form.button(getString(R.string.shift_cash_in)) { moveCash(CashMoveKind.CASH_IN) }
-            form.button(getString(R.string.shift_cash_out)) { moveCash(CashMoveKind.CASH_OUT) }
-            form.button(getString(R.string.shift_drop)) { moveCash(CashMoveKind.DROP) }
-            form.button(getString(R.string.shift_report)) { requireAccess(Perm.SHIFT_REPORT) { startActivity(ShiftReportActivity.intent(this, s.id)) } }
-            form.button(getString(R.string.shift_close), primary = true) { close() }
+            if (graph.permissions.allowed(Perm.CASH_MOVE)) {
+                form.button(getString(R.string.shift_cash_in)) { moveCash(CashMoveKind.CASH_IN) }
+                form.button(getString(R.string.shift_cash_out)) { moveCash(CashMoveKind.CASH_OUT) }
+                form.button(getString(R.string.shift_drop)) { moveCash(CashMoveKind.DROP) }
+            }
+            if (reports) form.button(getString(R.string.shift_report)) { startActivity(ShiftReportActivity.intent(this, s.id)) }
+            form.button(getString(R.string.shift_close), primary = true) { once.run { close() } }
         }
-        form.button(getString(R.string.shift_history)) { startActivity(Intent(this, ShiftsActivity::class.java)) }
+        // Past shifts open their reports only: a list of dates leading nowhere for whoever may not see them.
+        if (reports) form.button(getString(R.string.shift_history)) { startActivity(Intent(this, ShiftsActivity::class.java)) }
         content.removeAllViews()
         content.addView(form.view)
     }

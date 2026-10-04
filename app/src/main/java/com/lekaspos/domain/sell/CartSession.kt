@@ -383,25 +383,24 @@ class CartSession(private val graph: AppGraph) {
         }
     }
 
-    /** Cancels the whole bill (audited when it had lines). Returns false when not allowed. */
-    fun clear(approval: Approval? = null): Boolean {
+    /**
+     * Clears the whole bill (audited when it had lines). No permission is needed (D-063): taking the
+     * lines off one by one never needed one, and a cashier waiting for a manager to clear a bill the
+     * customer walked away from held up the queue. Returns false only while the bill is frozen.
+     */
+    fun clear(): Boolean {
         val st = _state.value
         if (!st.canEdit) return false
         if (st.cart.isEmpty && st.cartId == 0L) return true
-        val actor = if (st.cart.isEmpty) null else graph.permissions.actorOrNull(Perm.CANCEL_BILL, approval) ?: return false
         val cartId = st.cartId
         val now = System.currentTimeMillis()
         val total = st.priced.total
         val lines = st.cart.items.size
+        val staffId = graph.staff.staffId
         if (cartId != 0L) {
             enqueue(if (lines > 0) 1L else 0L) { tx ->
                 CartDao.deleteCart(tx, cartId)
-                if (lines > 0) {
-                    AuditDao.log(
-                        tx, AuditAction.BILL_CANCEL, actor?.staffId ?: graph.staff.staffId, now, amount = total, detail = "$lines lines",
-                        approvedBy = actor?.approvedBy,
-                    )
-                }
+                if (lines > 0) AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, now, amount = total, detail = "$lines lines")
             }
         }
         resetEmpty(st.heldCount)
@@ -485,11 +484,11 @@ class CartSession(private val graph: AppGraph) {
     }
 
     /**
-     * Deletes a held bill. It is a cancelled bill like any other: the same permission (or a
-     * manager's [approval]) and the same audit entry. Returns false when not allowed.
+     * Deletes a held bill. It is a cleared bill like any other: no permission ([clear], D-063), the
+     * same audit entry.
      */
-    suspend fun deleteHeld(heldId: Long, approval: Approval? = null): Boolean {
-        val actor = graph.permissions.actorOrNull(Perm.CANCEL_BILL, approval) ?: return false
+    suspend fun deleteHeld(heldId: Long): Boolean {
+        val staffId = graph.staff.staffId
         flush()
         val inclTax = graph.settings.store.value.pricesIncludeTax
         val promos = graph.promotions.active()
@@ -500,7 +499,7 @@ class CartSession(private val graph: AppGraph) {
         enqueue(if (lines > 0) 1L else 0L) { tx ->
             CartDao.deleteCart(tx, heldId)
             if (lines > 0) {
-                AuditDao.log(tx, AuditAction.BILL_CANCEL, actor.staffId, now, amount = total, detail = "held bill, $lines lines", approvedBy = actor.approvedBy)
+                AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, now, amount = total, detail = "held bill, $lines lines")
             }
         }
         flush()
@@ -636,6 +635,7 @@ class CartSession(private val graph: AppGraph) {
         lineNos.clear()
         nextLineNo = 1
         payment = null
+        graph.permissions.endHelp() // the bill a manager helped with is done: the next one is the cashier's (D-063)
         _state.value = State(loaded = true, heldCount = heldCount)
     }
 

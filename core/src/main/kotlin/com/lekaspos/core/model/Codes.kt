@@ -140,6 +140,11 @@ object Perm {
     const val REPRINT = 1L shl 5
     const val MANAGE_PRODUCTS = 1L shl 6
     const val SETTINGS = 1L shl 7
+
+    /**
+     * Retired (D-063): clearing a bill or throwing a held bill away needs no permission — taking its
+     * lines off one by one never did. Kept so old roles and audit entries still read; not in [ROLE_EDITOR].
+     */
     const val CANCEL_BILL = 1L shl 8
 
     /** Receive stock, adjust stock, count stock, edit suppliers. */
@@ -168,11 +173,17 @@ object Perm {
     const val CREDIT_LIMIT = 1L shl 16
     const val ALL = -1L
 
-    /** Every assignable permission, in the order the role editor lists them. */
+    /** Every permission bit, in the order the role editor lists them (names of old audit entries too). */
     val LIST: List<Long> = listOf(
         DISCOUNT, PRICE_OVERRIDE, CANCEL_BILL, VOID, REFUND, REPRINT, OPEN_DRAWER, CASH_MOVE, SHIFT_REPORT,
         CUSTOMERS, CREDIT_SALE, CREDIT_LIMIT, MANAGE_PRODUCTS, MANAGE_STOCK, REPORTS, VIEW_AUDIT, SETTINGS, MANAGE_STAFF,
     )
+
+    /** The permissions a role can be given (the role editor's switches): [LIST] without the retired ones. */
+    val ROLE_EDITOR: List<Long> = LIST - CANCEL_BILL
+
+    /** Some permission a role can be given is missing from [perms]: a manager may unlock it on the till. */
+    fun lacksAny(perms: Long): Boolean = ROLE_EDITOR.any { !has(perms, it) }
 
     /** Seed roles' starting permissions (the owner edits them in Settings → Staff → Roles). */
     const val DEFAULT_MANAGER: Long = DISCOUNT or PRICE_OVERRIDE or CANCEL_BILL or VOID or REFUND or REPRINT or

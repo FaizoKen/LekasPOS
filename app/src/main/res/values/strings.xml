@@ -88,7 +88,7 @@
     <string name="menu_tax_rates">Tax rates</string>
     <string name="menu_sales">Sales &amp; refunds</string>
     <string name="menu_open_drawer">Open cash drawer</string>
-    <string name="menu_cancel_bill">Cancel bill</string>
+    <string name="menu_cancel_bill">Clear bill</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_diagnostics">Diagnostics</string>
 
@@ -116,13 +116,13 @@
     <string name="held_delete_one">Delete a bill…</string>
     <string name="held_delete_which">Delete which held bill?</string>
 
-    <!-- Cancel bill -->
-    <string name="clear_confirm_title">Cancel this bill?</string>
+    <!-- Clear bill (no PIN needed, D-063) -->
+    <string name="clear_confirm_title">Clear this bill?</string>
     <plurals name="clear_confirm_message">
         <item quantity="one">%d line will be removed.</item>
         <item quantity="other">All %d lines will be removed.</item>
     </plurals>
-    <string name="clear_yes">Cancel bill</string>
+    <string name="clear_yes">Clear bill</string>
 
     <!-- Cash drawer -->
     <string name="drawer_opened">Opening the cash drawer…</string>

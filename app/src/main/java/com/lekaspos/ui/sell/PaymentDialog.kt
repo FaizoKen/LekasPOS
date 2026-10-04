@@ -236,9 +236,11 @@ class PaymentDialog(
         dialog.dismiss()
     }
 
+    /** In the change's slot (dialog_payment): nothing below it moves. */
     private fun error(text: String) {
         errorView.text = text
         errorView.visible(true)
+        changeView.visibility = View.INVISIBLE
     }
 
     private fun refresh() {
@@ -267,7 +269,9 @@ class PaymentDialog(
         val due = Settlement.cashDue(remaining, step)
         val change = if (v != null && v > due) v - due else 0L
         changeView.text = activity.getString(R.string.pay_change, money(change))
-        changeView.visible(change > 0L)
+        if (v != null) errorView.visible(false) // typing again: the refusal is old news, the change shows
+        // Invisible, not gone: its slot keeps its height, so the keys below never move while typing.
+        changeView.visibility = if (change > 0L && errorView.visibility != View.VISIBLE) View.VISIBLE else View.INVISIBLE
     }
 
     /** "Exact" and the notes customers hand over for the cash due (`:core` QuickCash). */

@@ -33,6 +33,7 @@ class TopBarLayoutTest {
             R.id.held_pill to "2 ditahan",
             R.id.sync_state to "Sandaran: log masuk",
             R.id.printer_state to "Pencetak luar talian (12)",
+            R.id.helper_pill to "Pengurus: Haji Abdul Rahman ✕",
         )) {
             bar.findViewById<TextView>(id).apply {
                 this.text = text
@@ -59,7 +60,7 @@ class TopBarLayoutTest {
             val menu = bar.findViewById<View>(R.id.btn_menu)
             assertEquals(bar.width - bar.paddingRight, menu.right, "Menu at the right edge at ${widthDp}dp")
             assertTrue(menu.left >= bar.paddingLeft && menu.width >= (56 * density).toInt() - 1, "Menu whole at ${widthDp}dp")
-            val pills = listOf(R.id.staff_chip, R.id.held_pill, R.id.sync_state, R.id.printer_state).map { bar.findViewById<View>(it) }
+            val pills = listOf(R.id.staff_chip, R.id.held_pill, R.id.sync_state, R.id.printer_state, R.id.helper_pill).map { bar.findViewById<View>(it) }
             for (p in pills) {
                 assertTrue(p.width > 0 && p.left >= 0 && p.right <= bar.width && p.bottom <= bar.height, "pill inside the bar at ${widthDp}dp")
                 assertTrue(!Rect.intersects(rect(p), rect(menu)), "pill under Menu at ${widthDp}dp")
@@ -73,7 +74,7 @@ class TopBarLayoutTest {
     @Test
     fun withoutPillsTheBarIsOneLine() {
         val bar = bar()
-        for (id in listOf(R.id.staff_chip, R.id.held_pill, R.id.sync_state, R.id.printer_state)) bar.findViewById<View>(id).visibility = View.GONE
+        for (id in listOf(R.id.staff_chip, R.id.held_pill, R.id.sync_state, R.id.printer_state, R.id.helper_pill)) bar.findViewById<View>(id).visibility = View.GONE
         val width = (360 * density).toInt()
         bar.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
         assertEquals((56 * density).toInt(), bar.measuredHeight)

@@ -7,7 +7,7 @@
     <!-- Sign-in and PINs -->
     <string name="lock_title">Sign in</string>
     <string name="lock_who">Who is using the till?</string>
-    <string name="lock_change_user">Change</string>
+    <string name="lock_change_user">Not you?</string>
     <string name="lock_forgot">Forgot PIN?</string>
     <string name="pin_enter">Enter PIN</string>
     <string name="pin_wrong">Wrong PIN. Tries left: %1$d.</string>
@@ -96,7 +96,7 @@
     <string name="shift_none">No shift is open on this till.</string>
     <string name="shift_open">Open shift</string>
     <string name="shift_float_hint">Cash put in the drawer at the start (change).</string>
-    <string name="shift_current">Open shift</string>
+    <string name="shift_current">Current shift</string>
     <string name="shift_opened_by">Opened by</string>
     <string name="shift_opened_at">Opened</string>
     <string name="shift_float">Opening float</string>

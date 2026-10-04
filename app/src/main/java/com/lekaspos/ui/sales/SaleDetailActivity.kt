@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import com.lekaspos.R
 import com.lekaspos.core.model.Perm
@@ -30,6 +32,7 @@ class SaleDetailActivity : ScreenActivity() {
     private lateinit var share: Button
     private lateinit var refund: Button
     private lateinit var void: Button
+    private lateinit var refundVoidRow: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +44,7 @@ class SaleDetailActivity : ScreenActivity() {
         share = v.findViewById(R.id.btn_share)
         refund = v.findViewById(R.id.btn_refund)
         void = v.findViewById(R.id.btn_void)
+        refundVoidRow = v.findViewById(R.id.refund_void_row)
         // One guard per button: Share right after Print is meant.
         val printOnce = TapOnce()
         val shareOnce = TapOnce()
@@ -85,9 +89,18 @@ class SaleDetailActivity : ScreenActivity() {
             refunds.text = refundText(data.third)
             refunds.visible(data.third.isNotEmpty())
             val hasPrinter = graph.settings.device.value.hasPrinter
-            print.visible(hasPrinter)
-            refund.visible(header.kind == SaleKind.SALE && !header.voided)
-            void.visible(!header.voided)
+            // Only what the person signed in may do (D-063): a refund typed in full before a PIN was
+            // asked at the very end was the worst dead end a cashier met.
+            val p = graph.permissions
+            print.visible(hasPrinter && p.allowed(Perm.REPRINT))
+            share.visible(p.allowed(Perm.REPRINT))
+            val canRefund = header.kind == SaleKind.SALE && !header.voided && p.allowed(Perm.REFUND)
+            val canVoid = !header.voided && p.allowed(Perm.VOID)
+            refund.visible(canRefund)
+            void.visible(canVoid)
+            val gap = if (canRefund) (6 * resources.displayMetrics.density).toInt() else 0
+            void.layoutParams = (void.layoutParams as LinearLayout.LayoutParams).apply { marginStart = gap }
+            refundVoidRow.visible(canRefund || canVoid)
         }
     }
 
