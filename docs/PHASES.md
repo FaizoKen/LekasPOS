@@ -27,7 +27,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
-| — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | test build v1.9.1 (pre-release, 2026-10-04) — waiting for the owner's phone test |
+| — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 
 ## Open questions for the user
 
@@ -1467,3 +1467,10 @@ no More). Tap + quickly several times → only the count changes. Turn the phone
 take two rows and none is cut. Large font (phone settings) → the same.
 Held sideways: open the payment, a quantity (More → Quantity), a discount, the manager PIN and the sale's
 result with the phone turned → everything shows at once, nothing to scroll; the sign-in too.
+- [x] The owner asked to release it (2026-10-04): **v1.9.1 is the latest release** (public notes with What's new
+      in English and Malay, covering 1.9.0 too; the website's Download link serves it, SHA-256 checked, and
+      GitHub's latest release is v1.9.1); smoke baseline (`PREV_APK_URL`) v1.9.1. Shops on 1.8.0 are offered it
+      inside the app within a day. No privacy change (nothing new stored, sent, asked for or connected to).
+      The checks above were not run on a phone before the release: worth running on the shop's phone and
+      tablet after the update. v1.9.0 stays a test build
+- [ ] Perf FULL on the released code (started after the release, as for 1.6.1)
