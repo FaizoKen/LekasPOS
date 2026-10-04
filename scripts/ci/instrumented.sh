@@ -20,6 +20,10 @@ adb install -r -t "$APKS/app-debug-androidTest.apk"
 api=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 echo "Running instrumented tests on API $api (limit $TEST_TIMEOUT)"
 raw="$OUT/instrumented-api$api.raw.txt"
+# The log is streamed while the tests run: a run that froze the emulator (adb answered nothing
+# afterwards) left an empty log when it was read only at the end.
+adb logcat -v time > "$OUT/logcat-api$api.txt" 2>/dev/null &
+logcat_pid=$!
 timeout "$TEST_TIMEOUT" adb shell am instrument -w -e notClass com.lekaspos.perf.PerfSuiteTest -e timeout_msec "$TEST_TIMEOUT_MS" \
   com.lekaspos.app.debug.test/androidx.test.runner.AndroidJUnitRunner | tee "$raw"
 status=${PIPESTATUS[0]}
@@ -28,16 +32,17 @@ tr -d '\r' < "$raw" > "$OUT/instrumented-api$api.txt"
 if [ "$status" -eq 124 ]; then
   echo "Instrumented tests did not finish within $TEST_TIMEOUT"
 fi
-adb logcat -d -v time > "$OUT/logcat-api$api.txt" 2>/dev/null || true
+kill "$logcat_pid" 2>/dev/null || true
 
 # Screenshots from ScreenshotsTest (layout review in both languages): external app files, or
 # internal files through run-as (debug build) where the emulator has no external storage.
 shots="$OUT/screens-api$api"
-adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/screens "$shots" > /dev/null 2>&1 || true
+# Bounded: a frozen emulator answers nothing, and the job's own limit cut the upload of what was there.
+timeout 120 adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/screens "$shots" > /dev/null 2>&1 || true
 if [ ! -d "$shots" ]; then
   mkdir -p "$shots"
-  for f in $(adb shell run-as com.lekaspos.app.debug ls files/screens 2>/dev/null | tr -d '\r'); do
-    adb exec-out run-as com.lekaspos.app.debug cat "files/screens/$f" > "$shots/$f"
+  for f in $(timeout 60 adb shell run-as com.lekaspos.app.debug ls files/screens 2>/dev/null | tr -d '\r'); do
+    timeout 60 adb exec-out run-as com.lekaspos.app.debug cat "files/screens/$f" > "$shots/$f"
   done
 fi
 
@@ -45,9 +50,9 @@ fi
 # objects with LeakCanary's shark-cli (a CI-only diagnostic, never part of the app). The dump
 # itself is large and not kept.
 leaks="$OUT/leaks-api$api"
-for f in $(adb shell run-as com.lekaspos.app.debug ls files/leaks 2>/dev/null | tr -d '\r'); do
+for f in $(timeout 60 adb shell run-as com.lekaspos.app.debug ls files/leaks 2>/dev/null | tr -d '\r'); do
   mkdir -p "$leaks"
-  adb exec-out run-as com.lekaspos.app.debug cat "files/leaks/$f" > "$leaks/$f"
+  timeout 300 adb exec-out run-as com.lekaspos.app.debug cat "files/leaks/$f" > "$leaks/$f"
 done
 if ls "$leaks"/*.hprof > /dev/null 2>&1; then
   curl -sSfL -o /tmp/shark.zip https://github.com/square/leakcanary/releases/download/v2.14/shark-cli-2.14.zip \

@@ -87,7 +87,8 @@ abstract class ScreenActivity : Activity(), DialogHost {
     protected fun setScreen(title: CharSequence, layout: Int? = null): View? {
         setContentView(R.layout.screen)
         Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
-        KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
+        KeyboardTip.unwatch(this, keyboardTip)
+        keyboardTip = KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
         findViewById<View>(R.id.back).setOnClickListener { finish() }
         titleView = findViewById(R.id.title)
         titleView.text = title
@@ -387,8 +388,13 @@ abstract class ScreenActivity : Activity(), DialogHost {
         destroying = true // dialogs closed from here on were not cancelled by the user
         dialogs.dismissAll()
         scope.cancel()
+        KeyboardTip.unwatch(this, keyboardTip)
+        keyboardTip = null
         super.onDestroy()
     }
+
+    /** This screen's [KeyboardTip] watcher, removed when it is destroyed. */
+    private var keyboardTip: android.view.ViewTreeObserver.OnGlobalFocusChangeListener? = null
 
     /**
      * Runs [block] in the app scope (leaving this screen cannot cut it off half-way) and waits for it

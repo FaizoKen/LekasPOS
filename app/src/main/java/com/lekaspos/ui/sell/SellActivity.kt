@@ -221,7 +221,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         counted = true
         setContentView(R.layout.activity_sell)
         Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
-        KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
+        keyboardTip = KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
         titleView = findViewById(R.id.title)
         printerState = findViewById(R.id.printer_state)
         syncState = findViewById(R.id.sync_state)
@@ -479,12 +479,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
         dialogs.dismissAll()
         scope.cancel()
         beeper?.release()
+        // The window outlives a screen rebuilt after a change (Android 7.0+): its watcher must go.
+        KeyboardTip.unwatch(this, keyboardTip)
+        keyboardTip = null
         if (counted) alive--
         super.onDestroy()
     }
 
     /** This instance is one of the [alive] selling screens (not one closed at once in onCreate). */
     private var counted = false
+
+    /** This screen's [KeyboardTip] watcher, removed when it is destroyed. */
+    private var keyboardTip: android.view.ViewTreeObserver.OnGlobalFocusChangeListener? = null
 
     override fun track(d: android.app.Dialog) = dialogs.track(d)
 

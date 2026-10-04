@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
+import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import com.lekaspos.R
@@ -25,15 +26,28 @@ object KeyboardTip {
     @Volatile
     private var shown = false
 
-    /** Watches [a]'s text fields (call in onCreate after the content view is set). */
-    fun watch(a: Activity) {
-        a.window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, now ->
+    /** Watches [a]'s text fields (call in onCreate after the content view is set); [unwatch] in onDestroy. */
+    fun watch(a: Activity): ViewTreeObserver.OnGlobalFocusChangeListener {
+        val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, now ->
             // Tapped (touch mode), not focused by the scanner's own keys.
             if (now is EditText && now.isInTouchMode && !shown && hidesKeyboard(a)) {
                 shown = true
                 show(a)
             }
         }
+        a.window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
+        return listener
+    }
+
+    /**
+     * Stops watching [a] (onDestroy). Android 7.0+ keeps the window of a screen it rebuilds after a
+     * change for the new one: every old screen's watcher stayed on it, and with it the old screen
+     * (2026-10 review: five selling screens kept in memory).
+     */
+    fun unwatch(a: Activity, listener: ViewTreeObserver.OnGlobalFocusChangeListener?) {
+        if (listener == null) return
+        val observer = a.window.decorView.viewTreeObserver
+        if (observer.isAlive) observer.removeOnGlobalFocusChangeListener(listener)
     }
 
     /** A physical keyboard is attached and the on-screen one stays hidden while it is. */

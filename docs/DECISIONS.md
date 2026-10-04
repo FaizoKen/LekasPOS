@@ -1144,7 +1144,9 @@ hardware, screens). Decisions that change behaviour:
   try pages Bluetooth for ~15 s); a serial code goes to the screen in front only (one scanned while a
   screen opened went to both); scans on those screens count as use for the idle
   lock (a count scanned without touching the screen locked half-way). A keyboard-mode scanner that
-  hides the on-screen keyboard is explained once, with a link to the setting.
+  hides the on-screen keyboard is explained once, with a link to the setting (its watcher is removed
+  when a screen closes: Android 7.0+ keeps the window of a rebuilt screen, and CI's leak test found
+  every old selling screen kept by it).
 - **Backups:** the daily backup checks again that the till is quiet after the database check (it can
   take a minute) and once more when sales pause for the copy; a passed check counts for an hour (a
   postponed backup does not read the whole file again on each retry); a restore says "Checking…" and

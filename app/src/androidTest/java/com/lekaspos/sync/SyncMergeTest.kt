@@ -650,6 +650,9 @@ class SyncMergeTest {
         val a = till()
         enable(a, "Counter A")
         val b = till()
+        // B has data of its own: it keeps its built-in rows when it joins (a new till makes them again,
+        // in the language its screens use — this graph's is English).
+        product(b, "Teh", 150L)
         runBlocking {
             // As if B had been set up in Malay: its seed names, at the seed version.
             b.db().write(reserveIds = 0L) { tx ->
@@ -657,7 +660,7 @@ class SyncMergeTest {
                 tx.db.execSQL("UPDATE role SET name = 'Pengurus' WHERE id = ?", arrayOf<Any?>(Seed.Ids.ROLE_MANAGER))
             }
         }
-        enable(b, "Counter B", join = false)
+        enable(b, "Counter B") // with data of its own, joining the store is confirmed
         syncAll(a, b)
         for (t in listOf(a, b)) runBlocking {
             assertEquals("Tunai", t.db().read { it.queryList("SELECT name FROM payment_method WHERE id = ?", arrayOf(Seed.Ids.PM_CASH.toString())) { c -> c.getString(0) } }.single())
@@ -1144,6 +1147,32 @@ class SyncMergeTest {
                 assertTrue(PinHash.verify(RecoveryCode.normalize(code), stored))
             }
             assertTrue(b.staff.check(Seed.Ids.STAFF_OWNER, "2222", 0L) !is StaffSession.Check.Ok)
+        }
+    }
+
+    /**
+     * 2026-10 review: a new till's built-in rows went back to version (0, 0) with what it changed at
+     * setup, and a store that never edited them kept its own values: two tills different for good. They
+     * are made again as on a new install.
+     */
+    @Test
+    fun aNewTillsSetupChangesToBuiltInRowsGiveWayWhenItJoins() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        runBlocking {
+            // At B's first-run setup: the e-wallet method switched off.
+            b.db().write(reserveIds = 0L) { tx ->
+                tx.db.execSQL("UPDATE payment_method SET active = 0 WHERE id = ?", arrayOf<Any?>(Seed.Ids.PM_EWALLET))
+            }
+            b.sync.enable(provider, "Counter B", join = false)
+        }
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            for (t in listOf(a, b)) {
+                assertEquals(1L, t.db().read { it.long("SELECT active FROM payment_method WHERE id = ?", Seed.Ids.PM_EWALLET) })
+            }
         }
     }
 
