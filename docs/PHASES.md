@@ -25,8 +25,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.5.2**: reports fast on the store's tablet (D-058) — from its first error reports | **released** 2026-10-02 — QUICK and FULL passed on the store's tablet |
 | — | **Release 1.6.1**: the app updates itself from GitHub releases (D-059) | **released** 2026-10-03 — the owner updated 1.6.0 → 1.6.1 inside the app on the phone |
 | — | **1.7.0**: fourth bug hunt — new features, the outside world, long use; payment methods, special prices (D-060) | **released** 2026-10-03 — the owner asked to release it; offered in the app to shops on 1.6.1 |
-| — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | **test build** v1.7.1 (pre-release, 2026-10-04) — CI and perf FULL green; waiting for the owner's phone tests |
-| — | **1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **test build** v1.8.0 (pre-release, 2026-10-04) — CI and perf FULL green; waiting for the owner's phone tests |
+| — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
+| — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 
 ## Open questions for the user
 
@@ -1289,7 +1289,7 @@ year-old store's sync used tens of MB a day per till; "50" typed for RM50 was qu
       refused the class) and two sync tests expected the till's card every round (now every 15 minutes)
 - [x] Test build **v1.7.1** (pre-release; build 114, 1,470,071 bytes — +28 KB, release key (same certificate),
       SHA-256 `7a87e543…877e`, `mapping-1.7.1.txt` attached). The public download stays v1.7.0
-- [ ] The owner's phone tests (below), then release it as latest and point `PREV_APK_URL` at it
+- [x] Not released on its own: its changes went public with 1.8.0 (2026-10-04); the checks below still apply
 
 ### Needs real-device testing (1.7.1)
 
@@ -1343,9 +1343,13 @@ Weak features added: **change a price from the price check**, **count the drawer
       commit p95 12.9 ms (150), report_month 122 ms (1,000), report_year 217 ms (3,000), multi-word search p95
       4.8 ms (50); cold start API 21 ~580 ms usable (1.7.1: ~600)
 - [x] Test build **v1.8.0** (pre-release; build 117, 1,501,877 bytes, release key — same certificate as 1.7.1,
-      `0a67abec…d4b9`; SHA-256 of the APK `78569c54…12de6`, `mapping-1.8.0.txt` attached). The public download
-      stays v1.7.0
-- [ ] The owner's phone tests (below)
+      `0a67abec…d4b9`; SHA-256 of the APK `78569c54…12de6`, `mapping-1.8.0.txt` attached)
+- [x] The owner asked to release it (2026-10-04): **v1.8.0 is the latest release** (public notes with What's new
+      in English and Malay, covering 1.7.1 too; the website's Download link serves it, SHA-256 checked, and
+      GitHub's latest release is v1.8.0); smoke baseline (`PREV_APK_URL`) v1.8.0. Shops on 1.7.0 are offered it
+      inside the app within a day. No privacy change (nothing new stored, sent, asked for or connected to). The
+      checks below (and 1.7.1's) were not run on a phone before the release: worth running on the shop's phone
+      and tablet after the update
 
 ### Needs real-device testing (1.8.0)
 
