@@ -1505,8 +1505,14 @@ simple" and "make pay screen a lot more better and simple. currently is hard to 
 - [x] CI run 37338392499 (9606f41): upright passes; held sideways a payment method in a short last row was
       squashed to 1px — **an old bug too**: since methods became editable (1.7.0), a fourth method upright, or
       Credit with a customer on the bill, could be invisible. Fillers now take the row's height
-- [ ] CI green (instrumented API 21 and 36, tablet, release smoke, lint); screenshots reviewed
+- [x] CI on 586ed9e (run 37340295469, build 131): **259/259 on API 21 and 36**, tablet 9/9, release smoke (upgrade
+      from 1.9.1), lint; release APK **1,519,594 bytes** (1.9.1's build 124: 1,514,780 — about +5 KB). Screenshots
+      (`pay`, `pay-cash`, `sell`; English and Malay; phone and tablet) reviewed: the owner's selling screen is the
+      cashier's; both payment steps whole, nothing to scroll
 - [ ] Test build v1.10.0 and the owner's phone check (below)
+
+Seen in passing (not changed): on Android 5 the keypad's ⌫ key shows an empty box (the system font has no
+such character; the key still deletes, and a long press clears).
 
 ### Needs real-device testing (1.10.0)
 
