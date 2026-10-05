@@ -1499,7 +1499,13 @@ simple" and "make pay screen a lot more better and simple. currently is hard to 
       640dp with six methods; upright on a 360dp phone), `LineControlsTest` without More, `ScreenshotsTest`
       adds the cash step (`pay-cash`)
 - [x] Local: `:core` and `:app` JVM tests pass, the instrumented tests compile
-- [ ] CI (instrumented API 21 and 36, tablet, release smoke, lint); screenshots reviewed
+- [x] CI run 37336660068 (94ae693): `SidewaysLayoutTest` failed — held sideways "Split payment" was cut (a
+      wrap_content row sizes itself by its other columns: every column is now match_parent); upright the split
+      step measured 540dp of 520 (its extra heading dropped)
+- [x] CI run 37338392499 (9606f41): upright passes; held sideways a payment method in a short last row was
+      squashed to 1px — **an old bug too**: since methods became editable (1.7.0), a fourth method upright, or
+      Credit with a customer on the bill, could be invisible. Fillers now take the row's height
+- [ ] CI green (instrumented API 21 and 36, tablet, release smoke, lint); screenshots reviewed
 - [ ] Test build v1.10.0 and the owner's phone check (below)
 
 ### Needs real-device testing (1.10.0)

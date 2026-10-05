@@ -1262,6 +1262,10 @@ The owner asked (2026-10-05): the owner's and a manager's selling screen should 
   `PaymentViews` builds both layouts' rows of buttons, so `SidewaysLayoutTest` measures what the till
   shows: both steps fit 290dp held sideways (780 and 640dp wide, six payment methods) and 520dp upright
   on a 360dp phone.
+  Found by that test: a short last row of payment methods (a fourth method upright, or Credit when the bill
+  has a customer) had a 1px filler beside its button, and a LinearLayout row sizes match_parent buttons by
+  its other children — the button was squashed to 1px, invisible. The old dialog had the same rows (since
+  the methods became editable, D-060); the fillers are now as tall as the row.
 Rejected: choosing the method first and then the amount (Square-style) — one more tap on every cash sale,
 the most common one; keeping the keypad always on step 1 (it pushed the methods below the fold on a 5-inch
 phone); "Discount" kept for the owner on the totals bar (the owner asked for one screen); a long-press on a

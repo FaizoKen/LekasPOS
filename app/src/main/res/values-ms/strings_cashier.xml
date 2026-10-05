@@ -20,7 +20,7 @@
     <string name="pay_to_pay">Jumlah perlu dibayar</string>
     <string name="pay_paid">Sudah dibayar: %1$s</string>
     <string name="pay_bill_total">Jumlah bil %1$s</string>
-    <string name="pay_cash_gave">Tunai: ketik wang yang pelanggan beri</string>
+    <string name="pay_cash_gave">Tunai: ketik wang yang diberi</string>
     <string name="pay_other_amount">Jumlah lain</string>
     <string name="pay_other_ways">Cara bayar lain</string>
     <string name="pay_ways">Bayar dengan</string>

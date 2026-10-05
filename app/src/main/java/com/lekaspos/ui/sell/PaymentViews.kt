@@ -130,8 +130,10 @@ internal class PaymentViews(private val ctx: Context, val wide: Boolean) {
                 val weight = if (fillLast && i == chunk.size - 1) 1f + (n - chunk.size) else 1f
                 row.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply { if (i > 0) marginStart = gap })
             }
-            // A short last row keeps the buttons the same width as the rows above.
-            if (!fillLast) repeat(n - chunk.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap }) }
+            // A short last row keeps the buttons the same width as the rows above. The fillers are as tall as
+            // the row: a 1px one made the row 1px high and squashed its button flat (match_parent buttons take
+            // the height of the other children) — a fourth payment method, or Credit, was missing.
+            if (!fillLast) repeat(n - chunk.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = gap }) }
             into.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { if (r > 0) topMargin = gap })
         }
     }
