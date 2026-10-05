@@ -268,14 +268,20 @@ restore that `Db.open` applies before opening the database (D-044).
   on the bill) or Cancel; items without a barcode are products picked from Items (sold by weight
   or with the price typed at the till). Old bills and sales with unregistered lines still load.
 - The selected bill line (the one scanned or changed last, or tapped) shows Remove, −, quantity,
-  +, More in place, on one line under the item (`LineControls`, D-063: Remove farthest from +, with a
-  wider gap); where they do not fit (narrow pane, large font) − quantity + over Remove and More. "−"
+  + in place, on one line under the item (`LineControls`, D-063: Remove farthest from +, with a
+  wider gap); where they do not fit (narrow pane, large font) − quantity + over Remove. "−"
   stops at one (taking the last one off is Remove). Other lines stay one row.
-- Totals bar: summary, a big TOTAL, then Hold / Discount / PAY. The empty bill explains how to
+- Totals bar: summary, a big TOTAL, then Hold / PAY. The empty bill explains how to
   start and shows the last sale of this session (`CheckoutService.last`: change again, a copy).
-- Payment dialog order: total, cash received + live change, one-tap notes, every method (3 per
-  row), then the keypad — nothing a cashier needs falls below the fold on a 5-inch phone.
-- Menu: cashier jobs first; the back office under one "Manage shop" submenu.
+- **One selling screen for everyone** (D-064): the owner sees the cashier's screen. Discounts and a line's
+  price are Menu → Discount (bill, the selected line's discount or price); no permission-only button sits
+  on the selling screen itself.
+- Payment (`PaymentDialog`, D-064), two steps: (1) how the customer pays — "Total to pay", Cash (the amount
+  due and up to four notes, one tap pays; "Other amount"), other ways to pay (each pays the rest), "Split
+  payment"; (2) only when asked for, the keypad: the cash given with the live change and "Done", or one
+  part of a split payment with every method. Taps within 500 ms of a step appearing are ignored (a double
+  tap would pay). `PaymentViews` builds the button rows for both layouts (tests measure them).
+- Menu: cashier jobs first (Discount first, for whoever may); the back office under one "Manage shop" submenu.
 - Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from
   `sum_day_product` over 30 days, kept 10 minutes; products read fresh by id). Tiles of products
   on the bill are highlighted with "×n"; picking a search result closes the search.

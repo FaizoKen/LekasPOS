@@ -7,11 +7,6 @@ import android.os.Build
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
@@ -35,6 +30,11 @@ import com.lekaspos.ui.common.wide
  * Taking payment (references/money.md §4–§5): cash with change and 5-sen rounding when cash
  * settles the rest, card / e-wallet / other for exact amounts, any mix of them (split tender).
  * Payments are only recorded — no card terminal or wallet is contacted.
+ *
+ * Two steps (D-064). First, how the customer pays: the total to pay; Cash — one tap on the amount due or
+ * the note the customer gave, or "Other amount"; then the other ways to pay, each paying the whole rest.
+ * Second, only when asked for, an amount on the keypad: the cash the customer gave ("Other amount", with
+ * the change as it is typed), or one part of a split payment with any way to pay.
  */
 class PaymentDialog(
     private val activity: Activity,
@@ -49,79 +49,56 @@ class PaymentDialog(
     private val authorize: (method: PaymentMethod, amount: Long, done: (Boolean) -> Unit) -> Unit = { _, _, done -> done(true) },
     private val onPaid: (tenders: List<Tender>, rounding: Long) -> Unit,
 ) {
+    private enum class Step { CHOOSE, CASH, SPLIT }
+
     private val tenders = ArrayList<Tender>(initial)
     private var remaining = total - initial.sumOf { it.applied }
-
-    /** When the last part payment was taken: a second tap that lands right after it is not a new payment. */
-    private var partAt = 0L
-    private lateinit var dialog: AlertDialog
-    private lateinit var totalView: TextView
-    private lateinit var remainingView: TextView
-    private lateinit var remainingRow: View
-    private lateinit var changeView: TextView
-    private lateinit var cashHint: TextView
-    private lateinit var tendersView: TextView
-    private lateinit var amountView: TextView
-    private lateinit var errorView: TextView
-    private lateinit var quick: LinearLayout
-    private val keypad = Keypad(activity, 9) { renderAmount() }
-
-    private val step: Long get() = currency.cashStep
+    private var step = Step.CHOOSE
 
     /**
-     * Held sideways on a narrow screen (an older 16:9 phone): two notes and two methods to a row, so each
-     * button keeps its 48dp in the middle column (D-063).
+     * When the dialog or a step appeared, or a part payment was taken. A tap landing right after is the
+     * second half of a double tap (on Pay, Back, a payment): it would pay with whatever is under the finger.
      */
-    private val narrow: Boolean = activity.sideways() && activity.resources.configuration.screenWidthDp < NARROW_DP
+    private var shownAt = 0L
+    private lateinit var dialog: AlertDialog
+    private lateinit var v: PaymentViews
+    private val keypad = Keypad(activity, 9) { renderAmount() }
+    private val cash: PaymentMethod? = methods.firstOrNull { it.kind == PaymentKind.CASH }
+
+    private val cashStep: Long get() = currency.cashStep
 
     fun show(): AlertDialog {
-        // Held sideways: three columns with Cancel in them, no title or button bar — on a phone's short
-        // height the keys and the methods were below the fold (D-063).
+        // Held sideways: the same steps in columns, so nothing is below the fold on a phone (D-063).
         val wide = activity.sideways()
-        val root = activity.layoutInflater.inflate(if (wide) R.layout.dialog_payment_wide else R.layout.dialog_payment, null)
-        totalView = root.findViewById(R.id.pay_total)
-        remainingView = root.findViewById(R.id.pay_remaining)
-        remainingRow = root.findViewById(R.id.pay_remaining_row)
-        changeView = root.findViewById(R.id.pay_change)
-        cashHint = root.findViewById(R.id.pay_cash_hint)
-        tendersView = root.findViewById(R.id.pay_tenders)
-        amountView = root.findViewById(R.id.pay_amount)
-        errorView = root.findViewById(R.id.pay_error)
-        quick = root.findViewById(R.id.pay_quick)
-        root.findViewById<FrameLayout>(R.id.pay_keypad).addView(keypad.view)
-        val methodRows = root.findViewById<LinearLayout>(R.id.pay_methods)
-        val density = activity.resources.displayMetrics.density
+        v = PaymentViews(activity, wide)
+        v.keypad.addView(keypad.view)
+        v.cancel.setOnClickListener { back() }
+        v.back.setOnClickListener { back() }
+        v.split.setOnClickListener { go(Step.SPLIT) }
+        v.done.setOnClickListener { cash?.let { pay(it, enteredAmount()) } }
+        v.complete.setOnClickListener { if (SystemClock.uptimeMillis() - shownAt >= GUARD_MS) finish(0L) }
+        val others = methods.filter { it.kind != PaymentKind.CASH }
         if (total <= 0L) {
             // Nothing to pay (e.g. 100% discount): one button completes the sale.
-            val b = Button(activity, null, 0, R.style.Widget_Lekas_Button_Primary)
-            b.text = activity.getString(R.string.pay_complete)
-            b.setOnClickListener { finish(0L) }
-            methodRows.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            root.findViewById<View>(R.id.pay_keypad).visible(false)
+            v.complete.visible(true)
+            v.cash.visible(false)
+            v.others.visible(false)
+            v.split.visible(false)
         } else {
-            addMethods(methodRows, density)
+            v.cash.visible(cash != null)
+            v.others.visible(others.isNotEmpty())
+            v.othersLabel.setText(if (cash != null) R.string.pay_other_ways else R.string.pay_ways)
+            v.methods(others.map { it.name }) { pay(others[it], null) }
+            v.split.visible(methods.size > 1)
+            v.partMethods(methods.map { it.name }, methods.indexOf(cash)) { pay(methods[it], enteredAmount()) }
         }
-        dialog = AlertDialog.Builder(activity)
-            .setView(root)
-            .apply { if (!wide) setTitle(R.string.pay_title).setNegativeButton(R.string.cancel, null) }
-            .create()
-        root.findViewById<View>(R.id.pay_cancel)?.setOnClickListener { back() }
+        dialog = AlertDialog.Builder(activity).setView(v.root).create()
         // A touch beside the dialog must not throw away payments already entered (split tender).
         dialog.setCanceledOnTouchOutside(false)
-        dialog.keys { e ->
-            // Below Android 13 Back arrives here as a key; from 13 on, see Back33.
-            if (e.keyCode == KeyEvent.KEYCODE_BACK && tenders.isNotEmpty()) {
-                if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) confirmCancel()
-                true
-            } else {
-                keypad.onKey(e)
-            }
-        }
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener { back() }
-            if (wide) dialog.wide()
-        }
+        dialog.keys { e -> onKey(e) }
+        if (wide) dialog.setOnShowListener { dialog.wide() }
         refresh()
+        go(Step.CHOOSE)
         dialog.show()
         // The app takes Back through OnBackInvokedCallback (manifest), so from Android 13 on the key
         // never reaches the listener above: the dialog's own Back cancelled at once and dropped a
@@ -131,9 +108,31 @@ class PaymentDialog(
         return dialog.trackedBy(activity)
     }
 
-    /** Cancel or Back: closes at once while nothing is paid; with part payments taken it asks first. */
+    private fun onKey(e: KeyEvent): Boolean {
+        // Below Android 13 Back arrives here as a key; from 13 on, see Back33.
+        if (e.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) back()
+            return true
+        }
+        // A number typed on a keyboard on the first step: the cash the customer gave.
+        val digit = e.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 || e.keyCode in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9
+        if (digit && step == Step.CHOOSE && e.action == KeyEvent.ACTION_DOWN) {
+            if (cash == null || total <= 0L) return true
+            go(Step.CASH)
+        }
+        return keypad.onKey(e)
+    }
+
+    /**
+     * Back or Cancel: from the keypad back to the first step; there, closes at once while nothing is paid,
+     * and asks first once part of the bill is paid.
+     */
     private fun back() {
-        if (tenders.isEmpty()) dialog.cancel() else confirmCancel()
+        when {
+            step != Step.CHOOSE -> go(Step.CHOOSE)
+            tenders.isEmpty() -> dialog.cancel()
+            else -> confirmCancel()
+        }
     }
 
     @RequiresApi(33)
@@ -152,40 +151,32 @@ class PaymentDialog(
         }
     }
 
-    /** Every payment method, [PER_ROW] to a row so long names (e-wallets) never get cut off. */
-    private fun addMethods(rows: LinearLayout, density: Float) {
-        val gap = (6 * density).toInt()
-        val perRow = (if (narrow) 2 else PER_ROW).coerceAtMost(methods.size).coerceAtLeast(1)
-        for ((r, chunk) in methods.chunked(perRow).withIndex()) {
-            val row = LinearLayout(activity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                isBaselineAligned = false
-            }
-            for ((i, m) in chunk.withIndex()) {
-                val style = if (m.kind == PaymentKind.CASH) R.style.Widget_Lekas_Button_Primary else R.style.Widget_Lekas_Button_Secondary
-                val b = Button(activity, null, 0, style)
-                b.text = m.name
-                b.minWidth = 0
-                b.setOnClickListener { pay(m) }
-                row.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap })
-            }
-            // A short last row keeps the buttons the same width as the rows above.
-            repeat(perRow - chunk.size) { row.addView(View(activity), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap }) }
-            rows.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { if (r > 0) topMargin = gap })
-        }
+    /** Shows [to]: the keypad starts empty, showing in grey what a payment without typing takes. */
+    private fun go(to: Step) {
+        step = to
+        shownAt = SystemClock.uptimeMillis()
+        v.showStep(amount = to != Step.CHOOSE)
+        v.amountLabel.setText(if (to == Step.SPLIT) R.string.pay_amount_part else R.string.pay_amount_cash)
+        v.done.visible(to == Step.CASH)
+        v.part.visible(to == Step.SPLIT)
+        v.error.visible(false)
+        val due = if (to == Step.CASH) Settlement.cashDue(remaining, cashStep) else remaining
+        v.due.text = activity.getString(if (tenders.isEmpty()) R.string.pay_due else R.string.pay_due_rest, money(due))
+        keypad.clear() // renders the amount
     }
 
-    private fun enteredAmount(): Long? = if (keypad.digits.isEmpty()) null else MoneyFormat.keypad(keypad.digits, currency)
+    /** What was typed; nothing (or zero) means "the amount due", as the grey amount shows. */
+    private fun enteredAmount(): Long? =
+        if (keypad.digits.isEmpty()) null else MoneyFormat.keypad(keypad.digits, currency)?.takeIf { it > 0L }
 
-    private fun pay(m: PaymentMethod) {
-        // The second tap of a double tap would pay the whole rest with this method.
-        if (SystemClock.uptimeMillis() - partAt < DOUBLE_TAP_MS) return
-        val entered = enteredAmount()
+    /** Pays [entered] (null: what is still due) with [m]. */
+    private fun pay(m: PaymentMethod, entered: Long?) {
+        if (SystemClock.uptimeMillis() - shownAt < GUARD_MS) return
         // An old refusal goes, but keeps its room: the slot never shrinks under the cashier's finger.
-        if (errorView.visibility == View.VISIBLE) errorView.visibility = View.INVISIBLE
+        if (v.error.visibility == View.VISIBLE) v.error.visibility = View.INVISIBLE
         if (m.kind == PaymentKind.CASH) {
-            val given = entered ?: Settlement.cashDue(remaining, step)
-            when (val r = Settlement.cash(remaining, given, step)) {
+            val given = entered ?: Settlement.cashDue(remaining, cashStep)
+            when (val r = Settlement.cash(remaining, given, cashStep)) {
                 is Settlement.Result.Settled -> {
                     tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, r.change))
                     finish(r.rounding)
@@ -193,10 +184,7 @@ class PaymentDialog(
                 is Settlement.Result.Partial -> {
                     val takePart = {
                         tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, given, 0L))
-                        remaining = r.remaining
-                        partAt = SystemClock.uptimeMillis()
-                        onTenders(ArrayList(tenders))
-                        refresh()
+                        partTaken(r.remaining)
                     }
                     // The keypad fills from the right: "50" typed for RM50 is RM0.50, and was taken at
                     // once as part of the bill (2026-10 review). Cash as the first, partial payment asks.
@@ -234,13 +222,18 @@ class PaymentDialog(
             }
             is Settlement.Result.Partial -> {
                 tenders.add(Tender(m.id, m.kind, m.name, m.opensDrawer, r.applied, amount, 0L))
-                remaining = r.remaining
-                partAt = SystemClock.uptimeMillis()
-                onTenders(ArrayList(tenders))
-                refresh()
+                partTaken(r.remaining)
             }
             is Settlement.Result.Rejected -> Unit
         }
+    }
+
+    /** A part of the bill is paid: back to the first step for the rest. */
+    private fun partTaken(rest: Long) {
+        remaining = rest
+        onTenders(ArrayList(tenders))
+        refresh()
+        go(Step.CHOOSE)
     }
 
     private fun finish(rounding: Long) {
@@ -249,76 +242,57 @@ class PaymentDialog(
         dialog.dismiss()
     }
 
-    /** In the change's slot (dialog_payment): nothing below it moves. */
+    /** In the change's slot on the keypad step: nothing below it moves. */
     private fun error(text: String) {
-        errorView.text = text
-        errorView.visible(true)
-        changeView.visibility = View.INVISIBLE
+        if (step == Step.CHOOSE) {
+            Dialogs.message(activity, null, text)
+            return
+        }
+        v.error.text = text
+        v.error.visible(true)
+        v.change.visibility = View.INVISIBLE
     }
 
+    /** The first step: what is still to pay, what is paid already, and the cash buttons for it. */
     private fun refresh() {
-        totalView.text = money(total)
-        remainingView.text = money(remaining)
-        remainingRow.visible(tenders.isNotEmpty()) // only a split payment has something "still to pay"
-        val due = Settlement.cashDue(remaining, step)
-        cashHint.text = activity.getString(R.string.pay_cash_due, money(due))
-        cashHint.visible(due != remaining && remaining > 0L)
+        v.totalLabel.setText(if (tenders.isEmpty()) R.string.pay_to_pay else R.string.pay_remaining)
+        v.total.text = money(remaining)
         if (tenders.isEmpty()) {
-            tendersView.visible(false)
+            v.tenders.visible(false)
         } else {
-            tendersView.text = tenders.joinToString("\n") { activity.getString(R.string.pay_tender_row, it.name, money(it.applied)) }
-            tendersView.visible(true)
+            val paid = tenders.joinToString(", ") { activity.getString(R.string.pay_tender_row, it.name, money(it.applied)) }
+            v.tenders.text = activity.getString(R.string.pay_paid, paid) + "\n" + activity.getString(R.string.pay_bill_total, money(total))
+            v.tenders.visible(true)
         }
-        buildQuickCash(due)
-        keypad.clear()
+        val due = Settlement.cashDue(remaining, cashStep)
+        v.cashHint.text = activity.getString(R.string.pay_cash_due, money(due))
+        v.cashHint.visible(cash != null && due != remaining && remaining > 0L)
+        val cashMethod = cash ?: return
+        if (total <= 0L) return
+        // The amount due, then the notes customers hand over for it (`:core` QuickCash).
+        val amounts = listOf(due) + QuickCash.amounts(due, currency.scale, max = NOTES)
+        v.notes(amounts.map { wholeMoney(it) }, activity.getString(R.string.pay_other_amount), { pay(cashMethod, amounts[it]) }, { go(Step.CASH) })
     }
 
     private fun renderAmount() {
-        val v = enteredAmount()
-        // Nothing typed: the amount still to pay, in grey — what "Cash" takes if pressed now.
-        amountView.text = money(v ?: remaining)
-        amountView.setTextColor(activity.colorOf(if (v == null) R.color.text_disabled else R.color.text_primary))
+        val typed = enteredAmount()
+        val due = Settlement.cashDue(remaining, cashStep)
+        // Nothing typed: in grey, what a payment takes if pressed now — the cash due, or the rest of the bill.
+        v.amount.text = money(typed ?: if (step == Step.SPLIT) remaining else due)
+        v.amount.setTextColor(activity.colorOf(if (typed == null) R.color.text_disabled else R.color.text_primary))
         // The change shows while the cashier types what the customer gave, before any button.
-        val due = Settlement.cashDue(remaining, step)
-        val change = if (v != null && v > due) v - due else 0L
-        changeView.text = activity.getString(R.string.pay_change, money(change))
+        val change = if (typed != null && typed > due) typed - due else 0L
+        v.change.text = activity.getString(R.string.pay_change, money(change))
         // Typing again: the refusal is old news and the change shows — invisible, not gone, as a refusal of
         // three lines made the slot taller, and the keys would move up under the next digit.
-        if (v != null && errorView.visibility == View.VISIBLE) errorView.visibility = View.INVISIBLE
+        if (typed != null && v.error.visibility == View.VISIBLE) v.error.visibility = View.INVISIBLE
         // Invisible, not gone: its slot keeps its height, so the keys below never move while typing.
-        changeView.visibility = if (change > 0L && errorView.visibility != View.VISIBLE) View.VISIBLE else View.INVISIBLE
-    }
-
-    /** "Exact" and the notes customers hand over for the cash due (`:core` QuickCash). */
-    private fun buildQuickCash(due: Long) {
-        quick.removeAllViews()
-        val cash = methods.firstOrNull { it.kind == PaymentKind.CASH } ?: return
-        if (due <= 0L) return
-        val amounts = listOf(due) + QuickCash.amounts(due, currency.scale, max = if (narrow) 2 else 3)
-        val density = activity.resources.displayMetrics.density
-        for ((i, a) in amounts.withIndex()) {
-            // One line that shrinks to fit: at large fonts "RM100" wrapped to "RM10" over "0" (2026-10 review).
-            val b = com.lekaspos.ui.common.FitButton(activity, null, 0, R.style.Widget_Lekas_Button_Secondary)
-            b.text = if (i == 0) activity.getString(R.string.pay_exact) else wholeMoney(a)
-            b.minWidth = 0 // four notes across a 5-inch phone
-            val side = (4 * density).toInt()
-            b.setPadding(side, b.paddingTop, side, b.paddingBottom)
-            b.setOnClickListener {
-                keypad.set(a.toString())
-                pay(cash)
-            }
-            quick.addView(
-                b,
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    if (i > 0) marginStart = (6 * density).toInt()
-                },
-            )
-        }
+        v.change.visibility = if (change > 0L && v.error.visibility != View.VISIBLE) View.VISIBLE else View.INVISIBLE
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
 
-    /** "RM100" for a note: "RM100.00" did not fit a quarter of a small phone's width (2026-10 review). */
+    /** "RM100" for a note: "RM100.00" did not fit a small phone's button (2026-10 review). */
     private fun wholeMoney(v: Long): String {
         val s = money(v)
         val zeros = "." + "0".repeat(currency.decimals)
@@ -326,8 +300,10 @@ class PaymentDialog(
     }
 
     private companion object {
-        const val PER_ROW = 3
-        const val NARROW_DP = 720
-        const val DOUBLE_TAP_MS = 600L
+        /** Notes offered besides the amount due: with it and "Other amount", two rows of three. */
+        const val NOTES = 4
+
+        /** A double tap's second tap comes within about this long. */
+        const val GUARD_MS = 500L
     }
 }

@@ -1232,6 +1232,41 @@ are 50dp high on such a short screen (56 elsewhere; never under 48). `SidewaysLa
 at 780 × 336 and 640 × 336dp: each fits 290dp, every button inside and ≥ 48dp. Screens that handle a
 turn themselves keep the layout a dialog opened with until it closes.
 
+### D-064 — One selling screen for everyone; the payment in two clear steps (1.10.0, 2026-10-05)
+The owner asked (2026-10-05): the owner's and a manager's selling screen should be the same as the cashier's
+— "clean, easy and simple"; and the payment screen is "hard to understand and looks weird".
+- **The same selling screen for everyone.** The totals bar is Hold and Pay; the selected bill line is
+  Remove, −, quantity, +. The owner's extra buttons (Discount on the totals bar, "More" on the line) are
+  gone: **Menu → Discount** (first in the menu, for whoever may give one, or with a manager's help) offers
+  the whole bill, the selected line's discount, or the selected line's price, and opens straight away when
+  only one applies. Typing a quantity or weight is the quantity button itself (it was also in "More").
+  What only some may do stays in the Menu and the cashier's other screens, hidden from whoever may not
+  (D-063).
+- **The payment asks one thing at a time.** Before, one dialog held the total, a grey "cash received"
+  amount, an empty slot for the change, "Exact" and notes, "Cash", "Card", "E-wallet" in the same style,
+  and a keypad cut off below the fold on a small phone — which button paid how was not clear ("Exact" and
+  "Cash" did the same). Now:
+  1. **How the customer pays**: "Total to pay" in big figures on a tinted panel; **Cash**: one tap on the
+     amount due or a note the customer gave (filled buttons: RM23.45 → RM23.45, RM25, RM30, RM50, RM100)
+     pays at once, with the change shown after the sale as before; "Other amount" (outlined) opens the
+     keypad; **Other ways to pay**: each method pays the whole rest at once; "Split payment" for paying
+     with more than one way. Cancel at the top. Rounded cash says so under the total.
+  2. **An amount on the keypad** (only when asked for): "Back", "To pay RM…", what the customer gave with
+     the change live as it is typed, the keypad, then "Done" — or, for a split payment, "Pay this part with"
+     and every way to pay. A part payment comes back to step 1 with "Still to pay", what was paid and the
+     bill total.
+  Up to four notes are offered (was three: RM50 and RM100 were often missing). A tap within 500 ms of a
+  step appearing is ignored: a double tap on Pay (or Back) would otherwise land on a payment button,
+  which pays at once. A keyboard's digits on step 1 go to the cash amount. Held sideways, the same steps
+  in columns (total | cash | other ways; amount and Done | keypad | ways to pay a part).
+  `PaymentViews` builds both layouts' rows of buttons, so `SidewaysLayoutTest` measures what the till
+  shows: both steps fit 290dp held sideways (780 and 640dp wide, six payment methods) and 520dp upright
+  on a 360dp phone.
+Rejected: choosing the method first and then the amount (Square-style) — one more tap on every cash sale,
+the most common one; keeping the keypad always on step 1 (it pushed the methods below the fold on a 5-inch
+phone); "Discount" kept for the owner on the totals bar (the owner asked for one screen); a long-press on a
+bill line for its discount or price (nobody finds it).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

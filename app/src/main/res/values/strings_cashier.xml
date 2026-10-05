@@ -17,8 +17,22 @@
     <string name="last_sale_received">Total %1$s · received %2$s</string>
     <string name="last_sale_paid">Total %1$s · paid</string>
     <string name="line_remove_short">Remove</string>
-    <string name="line_more">More</string>
-    <string name="pay_received">Cash received (tap a note, or type the amount)</string>
+    <!-- The payment in two steps (D-064): how the customer pays, then (if asked for) an amount -->
+    <string name="pay_to_pay">Total to pay</string>
+    <string name="pay_paid">Paid: %1$s</string>
+    <string name="pay_bill_total">Bill total %1$s</string>
+    <string name="pay_cash_gave">Cash: tap what the customer gave</string>
+    <string name="pay_other_amount">Other amount</string>
+    <string name="pay_other_ways">Other ways to pay</string>
+    <string name="pay_ways">Pay with</string>
+    <string name="pay_split">Split payment</string>
+    <string name="pay_back">Back</string>
+    <string name="pay_due">To pay %1$s</string>
+    <string name="pay_due_rest">Still to pay %1$s</string>
+    <string name="pay_amount_cash">Cash the customer gave</string>
+    <string name="pay_amount_part">Amount for this part</string>
+    <string name="pay_done">Done</string>
+    <string name="pay_part_with">Pay this part with</string>
     <string name="pay_change">Change %1$s</string>
     <string name="result_received">Received %1$s · total %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
@@ -49,7 +63,7 @@
     <string name="menu_manager_help">Manager PIN</string>
     <string name="menu_receipts">Receipts</string>
     <string name="helper_pill">Manager: %1$s ✕</string>
-    <string name="help_why">A manager\'s PIN shows the manager\'s buttons on this till (discounts, price changes, the cash drawer, Manage shop) until this bill is paid, held or cleared.</string>
+    <string name="help_why">A manager\'s PIN lets the manager\'s jobs be done on this till (in the Menu: discounts and price changes, the cash drawer, Manage shop) until this bill is paid, held or cleared.</string>
     <string name="help_add_product">Adding a product needs a manager\'s PIN. The manager then adds it, and it goes on this bill.</string>
     <string name="sell_not_found_manager">No product has barcode %1$s yet. A manager can add it now (their PIN first): it is saved for next time and goes on this bill.</string>
     <string name="safety_tell_owner">Please tell the shop owner: they can fix this in Menu → Manage shop → Settings.</string>

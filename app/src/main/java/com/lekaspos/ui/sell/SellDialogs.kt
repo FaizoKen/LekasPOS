@@ -10,8 +10,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.lekaspos.R
-import com.lekaspos.core.cart.CartItem
-import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.Discount
@@ -226,25 +224,6 @@ class DiscountDialog(
         d.trackedBy(activity)
         return d
     }
-}
-
-/**
- * The less common things for one bill line (quantity and weight are on the line itself): type
- * the quantity or weight, discount, change the price. Null: not offered (the person signed in may
- * not, D-063).
- */
-fun showLineMore(a: Activity, item: CartItem, onQty: () -> Unit, onDiscount: (() -> Unit)?, onPrice: (() -> Unit)?): AlertDialog {
-    val actions = ArrayList<Pair<Int, () -> Unit>>(3)
-    if (item.fixedGross == null) actions += (if (item.sellMode == SellMode.WEIGHT) R.string.line_weight else R.string.line_qty) to onQty
-    if (onDiscount != null) actions += R.string.line_discount to onDiscount
-    if (onPrice != null) actions += R.string.line_price to onPrice
-    val labels = actions.map { a.getString(it.first) }.toTypedArray<CharSequence>()
-    return AlertDialog.Builder(a)
-        .setTitle(item.name)
-        .setItems(labels) { _, which -> actions[which].second() }
-        .setNegativeButton(R.string.close, null)
-        .show()
-        .trackedBy(a)
 }
 
 fun showHeldBills(

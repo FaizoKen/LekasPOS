@@ -97,8 +97,10 @@
     <string name="line_plus">+1</string>
     <string name="line_qty">Quantity</string>
     <string name="line_weight">Weight</string>
-    <string name="line_discount">Discount</string>
-    <string name="line_price">Change price</string>
+    <!-- Menu → Discount (D-064) -->
+    <string name="discount_bill">Discount on the whole bill</string>
+    <string name="discount_line">Discount on %1$s</string>
+    <string name="discount_price">Change the price of %1$s</string>
     <string name="price_title">Price</string>
     <string name="discount_title">Item discount</string>
     <string name="bill_discount_title">Bill discount</string>
@@ -130,12 +132,10 @@
 
     <!-- Payment -->
     <string name="pay_title">Payment</string>
-    <string name="pay_total">Total</string>
     <string name="pay_remaining">Still to pay</string>
     <string name="pay_cash_due">In cash (rounded): %1$s</string>
-    <string name="pay_exact">Exact</string>
     <string name="pay_complete">Complete sale</string>
-    <string name="pay_tender_row">%1$s: %2$s</string>
+    <string name="pay_tender_row">%1$s %2$s</string>
     <string name="pay_error_cash">Cash must be at least %1$s (rounded), or less than the amount due for part of the bill.</string>
     <string name="pay_error_exceeds">%1$s can pay at most %2$s.</string>
     <string name="pay_failed_title">Sale not saved</string>

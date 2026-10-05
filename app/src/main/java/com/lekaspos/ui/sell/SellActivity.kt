@@ -175,7 +175,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var lastSaleChange: TextView
     private lateinit var lastSalePrint: View
     private lateinit var holdButton: Button
-    private lateinit var discountButton: Button
     private lateinit var payButton: Button
     private lateinit var staffChip: TextView
     private lateinit var customerChip: TextView
@@ -252,7 +251,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         lastSaleChange = findViewById(R.id.last_sale_change)
         lastSalePrint = findViewById(R.id.last_sale_print)
         holdButton = findViewById(R.id.btn_hold)
-        discountButton = findViewById(R.id.btn_discount)
         payButton = findViewById(R.id.btn_pay)
         staffChip = findViewById(R.id.staff_chip)
         customerChip = findViewById(R.id.customer_chip)
@@ -309,7 +307,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         lastSalePrint.setOnClickListener { printLastSale() }
         payButton.setOnClickListener { openPayment() }
         holdButton.setOnClickListener { hold() }
-        discountButton.setOnClickListener { billDiscount() }
         findViewById<View>(R.id.btn_menu).setOnClickListener { showMenu(it) }
         heldPill.setOnClickListener { showHeld() }
         updatePill.setOnClickListener { UpdateUi.offer(this, scope) }
@@ -577,7 +574,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         payButton.isEnabled = !empty && st.canEdit
         totalView.text = money(st.priced.total)
         holdButton.isEnabled = !empty && st.canEdit
-        discountButton.isEnabled = !empty && st.canEdit
         summary.text = summaryText(st)
         heldPill.text = resources.getQuantityString(R.plurals.held_pill, st.heldCount, st.heldCount)
         heldPill.visible(st.heldCount > 0)
@@ -601,15 +597,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun allowed(perm: Long): Boolean = graph.permissions.allowed(perm)
 
     /**
-     * Buttons for what the person signed in may not do are not shown (D-063): a cashier sees a short,
-     * clean screen. A manager's PIN (Menu → Manager PIN) shows them for one bill; [helper] is that
-     * manager, shown in the top bar until the bill ends (a tap there ends it sooner).
+     * The selling screen looks the same for the owner and a cashier (D-064); what only some may do is in
+     * the Menu, listed for those who may (D-063). A manager's PIN (Menu → Manager PIN) lists it for one
+     * bill; [helper] is that manager, shown in the top bar until the bill ends (a tap there ends it sooner).
      */
     private fun renderAccess(staff: StaffSession.State, helper: Approval?) {
         helperPill.text = helper?.let { getString(R.string.helper_pill, it.name) }
         helperPill.visible(helper != null && staff.current != null)
-        discountButton.visible(allowed(Perm.DISCOUNT))
-        cartAdapter.showMore = allowed(Perm.DISCOUNT) || allowed(Perm.PRICE_OVERRIDE)
         render(graph.cart.state.value)
         renderLastSale(graph.checkout.last.value)
     }
@@ -1344,15 +1338,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     override fun changeQty(item: CartItem, delta: Long) = graph.cart.changeQty(item.key, delta)
 
-    override fun more(item: CartItem) {
-        if (!graph.cart.state.value.canEdit) return
-        showLineMore(
-            this, item, onQty = { enterQty(item) },
-            onDiscount = if (allowed(Perm.DISCOUNT)) { { lineDiscount(item) } } else null,
-            onPrice = if (allowed(Perm.PRICE_OVERRIDE)) { { linePrice(item) } } else null,
-        )
-    }
-
     override fun enterQty(item: CartItem) {
         if (item.sellMode == SellMode.WEIGHT) {
             AmountDialog(this, getString(R.string.line_weight), AmountDialog.Kind.WEIGHT, currency, item.unit, item.qty) {
@@ -1382,6 +1367,25 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     override fun remove(item: CartItem) = graph.cart.remove(item.key)
+
+    /**
+     * Menu → Discount (D-064: not a button on the screen, so the owner's screen is the cashier's): the whole
+     * bill, or the selected line's discount or price. Only one of them possible: it opens at once.
+     */
+    private fun discount() {
+        val st = graph.cart.state.value
+        if (!st.canEdit || st.cart.isEmpty) return
+        val line = st.cart.item(selectedKey)
+        val choices = ArrayList<Pair<String, () -> Unit>>(3)
+        if (allowed(Perm.DISCOUNT)) choices += getString(R.string.discount_bill) to { billDiscount() }
+        if (line != null && allowed(Perm.DISCOUNT)) choices += getString(R.string.discount_line, line.name) to { lineDiscount(line) }
+        if (line != null && allowed(Perm.PRICE_OVERRIDE)) choices += getString(R.string.discount_price, line.name) to { linePrice(line) }
+        when (choices.size) {
+            0 -> notAllowed()
+            1 -> choices[0].second()
+            else -> Dialogs.choose(this, getString(R.string.sell_discount), choices.map { it.first }) { choices[it].second() }
+        }
+    }
 
     private fun billDiscount() {
         val st = graph.cart.state.value
@@ -1465,7 +1469,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showMenu(anchor: View) {
         val m = PopupMenu(this, anchor)
         val st = graph.cart.state.value
-        val items = ArrayList<Int>(10)
+        val items = ArrayList<Int>(11)
+        val line = st.cart.item(selectedKey)
+        if (!st.cart.isEmpty && (allowed(Perm.DISCOUNT) || (line != null && allowed(Perm.PRICE_OVERRIDE)))) items += R.string.sell_discount
         if (!st.cart.isEmpty) items += R.string.menu_cancel_bill
         if (st.heldCount > 0) items += R.string.held_title
         // Price check has its own button on the screen.
@@ -1492,6 +1498,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         m.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.string.held_title -> showHeld()
+                R.string.sell_discount -> discount()
                 R.string.menu_manager_help -> ApprovalDialog.help(this, graph, scope, 0L, getString(R.string.help_why)) {}
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
                 R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))

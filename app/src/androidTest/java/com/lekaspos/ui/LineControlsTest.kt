@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 
 /**
  * The selected bill line's buttons (D-063): one line under the item on a phone — Remove, −, quantity,
- * +, More in that order — and two lines where they do not fit (a narrow bill pane), never a button cut
+ * + in that order, the same for everyone (D-064) — and two lines where they do not fit (a narrow bill pane), never a button cut
  * off, overlapping another or smaller than a selling-screen touch target.
  */
 @RunWith(AndroidJUnit4::class)
@@ -26,7 +26,7 @@ class LineControlsTest {
 
     private val ctx = ContextThemeWrapper(InstrumentationRegistry.getInstrumentation().targetContext, R.style.Theme_Lekas)
     private val density = ctx.resources.displayMetrics.density
-    private val ids = listOf(R.id.line_remove, R.id.line_minus, R.id.line_qty, R.id.line_plus, R.id.line_more)
+    private val ids = listOf(R.id.line_remove, R.id.line_minus, R.id.line_qty, R.id.line_plus)
 
     private fun controls(widthDp: Int, gone: List<Int> = emptyList(), qty: String = "12"): LineControls {
         val line = LayoutInflater.from(ctx).inflate(R.layout.item_cart_line, null) as ViewGroup
@@ -79,21 +79,21 @@ class LineControlsTest {
         assertFalse(c.oneLine)
         val minus = c.findViewById<View>(R.id.line_minus)
         val remove = c.findViewById<View>(R.id.line_remove)
-        assertTrue(remove.top >= minus.bottom, "Remove and More below − quantity +")
+        assertTrue(remove.top >= minus.bottom, "Remove below − quantity +")
         assertWhole(c, "230dp")
     }
 
     @Test
-    fun withoutMoreOrAQuantityTheLineStillFills() {
-        // A cashier (no discount or price change): no More — one line even on a narrow pane.
-        val cashier = controls(300, gone = listOf(R.id.line_more))
-        assertTrue(cashier.oneLine)
-        assertEquals(cashier.width, cashier.findViewById<View>(R.id.line_plus).right)
-        assertWhole(cashier, "cashier")
-        // A label-price line: no − quantity +; Remove and More share the line.
+    fun aNarrowPaneOrNoQuantityStillFillsTheLine() {
+        // One line even on a narrow pane, + at its far end.
+        val narrow = controls(300)
+        assertTrue(narrow.oneLine)
+        assertEquals(narrow.width, narrow.findViewById<View>(R.id.line_plus).right)
+        assertWhole(narrow, "300dp")
+        // A label-price line: no − quantity +; Remove takes the line.
         val label = controls(336, gone = listOf(R.id.line_minus, R.id.line_qty, R.id.line_plus))
         assertTrue(label.oneLine)
-        assertEquals(label.width, label.findViewById<View>(R.id.line_more).right)
+        assertEquals(label.width, label.findViewById<View>(R.id.line_remove).right)
         assertWhole(label, "label price")
     }
 }

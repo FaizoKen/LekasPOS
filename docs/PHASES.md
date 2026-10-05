@@ -28,6 +28,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
+| — | **1.10.0**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064) | in progress — CI, then a test build for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1477,3 +1478,43 @@ result with the phone turned → everything shows at once, nothing to scroll; th
       ok (103/103 on API 21); API 21 sale commit p95 9.9 ms (150), report_month 74 ms (1,000), report_year
       174 ms (3,000), multi-word search p95 3.1 ms (50), scan to cart 0.26 ms; cold start median to a usable
       till 586 / 571 / 387 ms
+
+## 1.10.0 — one selling screen for everyone; the payment in two clear steps (D-064)
+
+The owner asked (2026-10-05): "make manager/owner main cashier UI same as normal cashier UI. clean, easy and
+simple" and "make pay screen a lot more better and simple. currently is hard to understanding and looks weird".
+
+- [x] **One selling screen:** the totals bar is Hold and Pay for everyone; the selected line is Remove, −,
+      quantity, + for everyone ("More" is gone — the quantity button types a quantity or weight). Discounts
+      and a line's price: **Menu → Discount** (the whole bill, the selected line's discount, its price; opens
+      straight away when only one applies), for whoever may, or after a manager's PIN
+- [x] **Payment, step 1 — how the customer pays:** "Total to pay" in big figures; Cash: the amount due and up
+      to four notes (one tap pays) and "Other amount"; other ways to pay (one tap pays the rest); "Split
+      payment"; Cancel at the top. A part payment shows what is paid, what is still to pay and the bill total
+- [x] **Payment, step 2 — only when asked for:** Back, "To pay RM…", the cash the customer gave with the
+      change as it is typed, the keypad, Done; for a split payment, "Pay this part with" and every method
+- [x] Taps within 500 ms of a payment step appearing are ignored (a double tap on Pay would pay); keyboard
+      digits on step 1 go to the cash amount; held sideways, both steps in columns
+- [x] Tests: `SidewaysLayoutTest` measures both steps as `PaymentViews` builds them (sideways at 780 and
+      640dp with six methods; upright on a 360dp phone), `LineControlsTest` without More, `ScreenshotsTest`
+      adds the cash step (`pay-cash`)
+- [x] Local: `:core` and `:app` JVM tests pass, the instrumented tests compile
+- [ ] CI (instrumented API 21 and 36, tablet, release smoke, lint); screenshots reviewed
+- [ ] Test build v1.10.0 and the owner's phone check (below)
+
+### Needs real-device testing (1.10.0)
+
+1. **Owner's screen:** signed in as the owner (or PIN login off) → the totals bar shows Hold and Pay only; a
+   selected line shows Remove, −, quantity, + — the same as a cashier's.
+2. **Menu → Discount** (owner) with a line selected → "Discount on the whole bill", "Discount on <item>",
+   "Change the price of <item>"; each works. With no line selected (tap the selected line again) → the bill
+   discount opens at once. A cashier sees no Discount in the menu until Menu → Manager PIN.
+3. **Pay, cash note:** RM23.45 bill → Pay → RM23.45, RM25, RM30, RM50, RM100, Other amount → tap RM50 → the
+   result shows change RM26.55.
+4. **Pay, other amount:** Pay → Other amount → type 6 1 6 0 for RM59.60 → "Change RM2.00" shows → Done.
+   Back on the keypad step returns to step 1.
+5. **Pay, card / e-wallet:** Pay → E-wallet / QR → paid at once.
+6. **Split:** Pay → Split payment → type 2 0 0 0 → Card → step 1 says "Still to pay", "Paid: Card RM20.00" →
+   pay the rest with a note. Cancel then asks before dropping the card part.
+7. **Double tap on Pay** → the payment opens and nothing is paid.
+8. Held sideways (phone and tablet): both steps show whole, nothing to scroll.

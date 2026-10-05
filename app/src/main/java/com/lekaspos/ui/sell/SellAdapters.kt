@@ -28,14 +28,13 @@ interface LineActions {
     /** − or + : [delta] is added to the quantity the line has now. */
     fun changeQty(item: CartItem, delta: Long)
     fun enterQty(item: CartItem)
-    fun more(item: CartItem)
     fun remove(item: CartItem)
 }
 
 /**
  * The bill. The selected line (the one just scanned, or tapped) shows its buttons in place —
- * Remove, −, quantity, +, More on one line under it (LineControls) — so changing a count is one tap,
- * not a dialog (D-049).
+ * Remove, −, quantity, + on one line under it (LineControls) — so changing a count is one tap,
+ * not a dialog (D-049). The same for the owner and a cashier: discounts and prices are in the Menu (D-064).
  */
 class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartAdapter.Holder>() {
 
@@ -48,23 +47,10 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val minus: View = v.findViewById(R.id.line_minus)
         val qty: TextView = v.findViewById(R.id.line_qty)
         val plus: View = v.findViewById(R.id.line_plus)
-        val more: View = v.findViewById(R.id.line_more)
     }
 
     private var rows: List<CartRow> = emptyList()
     var currency: CurrencySpec = CurrencySpec.MYR
-
-    /**
-     * "More" on the selected line: only when it offers a discount or a price change the person signed
-     * in may give (D-063) — typing a quantity is the quantity button itself.
-     */
-    var showMore = true
-        @SuppressLint("NotifyDataSetChanged") // a sign-in or a manager's help: rare
-        set(value) {
-            if (field == value) return
-            field = value
-            notifyDataSetChanged()
-        }
 
     fun submit(items: List<CartItem>, priced: PricedCart, selectedKey: Long) {
         val next = items.mapIndexed { i, it ->
@@ -108,7 +94,7 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         val counted = !weighed && it.fixedGross == null
         h.minus.visibility = if (counted) View.VISIBLE else View.GONE
         h.plus.visibility = if (counted) View.VISIBLE else View.GONE
-        // A label-price line has no quantity: − quantity + all go (Remove and More fill the line).
+        // A label-price line has no quantity: − quantity + all go (Remove fills the line).
         h.qty.visibility = if (it.fixedGross == null) View.VISIBLE else View.GONE
         h.qty.text = if (weighed) "${MoneyFormat.formatQty(it.qty)} ${it.unit ?: "kg"}" else MoneyFormat.formatQty(it.qty)
         // One is the least: taking the last one off is "Remove", never a tap too many on "−".
@@ -119,8 +105,6 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
         h.plus.setOnClickListener { _ -> actions.changeQty(it, ONE) }
         h.qty.setOnClickListener { _ -> actions.enterQty(it) }
         h.remove.setOnClickListener { _ -> actions.remove(it) }
-        h.more.visibility = if (showMore) View.VISIBLE else View.GONE // the quantity then takes its room
-        h.more.setOnClickListener { _ -> actions.more(it) }
     }
 
     private fun detail(ctx: android.content.Context, it: CartItem, promo: AppliedPromo?): String {

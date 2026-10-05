@@ -16,8 +16,22 @@
     <string name="last_sale_received">Jumlah %1$s · diterima %2$s</string>
     <string name="last_sale_paid">Jumlah %1$s · dibayar</string>
     <string name="line_remove_short">Buang</string>
-    <string name="line_more">Lagi</string>
-    <string name="pay_received">Tunai diterima (ketik wang kertas, atau taip jumlah)</string>
+    <!-- Bayaran dalam dua langkah (D-064) -->
+    <string name="pay_to_pay">Jumlah perlu dibayar</string>
+    <string name="pay_paid">Sudah dibayar: %1$s</string>
+    <string name="pay_bill_total">Jumlah bil %1$s</string>
+    <string name="pay_cash_gave">Tunai: ketik wang yang pelanggan beri</string>
+    <string name="pay_other_amount">Jumlah lain</string>
+    <string name="pay_other_ways">Cara bayar lain</string>
+    <string name="pay_ways">Bayar dengan</string>
+    <string name="pay_split">Pecah bayaran</string>
+    <string name="pay_back">Kembali</string>
+    <string name="pay_due">Perlu dibayar %1$s</string>
+    <string name="pay_due_rest">Baki perlu dibayar %1$s</string>
+    <string name="pay_amount_cash">Tunai yang pelanggan beri</string>
+    <string name="pay_amount_part">Jumlah untuk bahagian ini</string>
+    <string name="pay_done">Selesai</string>
+    <string name="pay_part_with">Bayar bahagian ini dengan</string>
     <string name="pay_change">Baki %1$s</string>
     <string name="result_received">Diterima %1$s · jumlah %2$s</string>
     <string name="tile_in_bill">×%1$s</string>
@@ -48,7 +62,7 @@
     <string name="menu_manager_help">PIN pengurus</string>
     <string name="menu_receipts">Resit</string>
     <string name="helper_pill">Pengurus: %1$s ✕</string>
-    <string name="help_why">PIN pengurus memaparkan butang pengurus pada kaunter ini (diskaun, tukar harga, laci wang, Urus kedai) sehingga bil ini dibayar, ditangguh atau dikosongkan.</string>
+    <string name="help_why">PIN pengurus membolehkan kerja pengurus dibuat pada kaunter ini (dalam Menu: diskaun dan tukar harga, laci wang, Urus kedai) sehingga bil ini dibayar, ditangguh atau dikosongkan.</string>
     <string name="help_add_product">Menambah produk memerlukan PIN pengurus. Pengurus kemudian menambahnya, dan ia masuk ke bil ini.</string>
     <string name="sell_not_found_manager">Belum ada produk dengan kod bar %1$s. Pengurus boleh menambahkannya sekarang (PIN mereka dahulu): ia disimpan untuk lain kali dan masuk ke bil ini.</string>
     <string name="safety_tell_owner">Sila beritahu pemilik kedai: mereka boleh membetulkannya dalam Menu → Urus kedai → Tetapan.</string>

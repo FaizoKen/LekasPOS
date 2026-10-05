@@ -94,8 +94,10 @@
     <string name="line_plus">+1</string>
     <string name="line_qty">Kuantiti</string>
     <string name="line_weight">Berat</string>
-    <string name="line_discount">Diskaun</string>
-    <string name="line_price">Tukar harga</string>
+    <!-- Menu → Diskaun (D-064) -->
+    <string name="discount_bill">Diskaun untuk seluruh bil</string>
+    <string name="discount_line">Diskaun untuk %1$s</string>
+    <string name="discount_price">Tukar harga %1$s</string>
     <string name="price_title">Harga</string>
     <string name="discount_title">Diskaun item</string>
     <string name="bill_discount_title">Diskaun bil</string>
@@ -126,12 +128,10 @@
 
     <!-- Pembayaran -->
     <string name="pay_title">Bayaran</string>
-    <string name="pay_total">Jumlah</string>
     <string name="pay_remaining">Baki perlu dibayar</string>
     <string name="pay_cash_due">Tunai (dibundarkan): %1$s</string>
-    <string name="pay_exact">Tepat</string>
     <string name="pay_complete">Selesai jualan</string>
-    <string name="pay_tender_row">%1$s: %2$s</string>
+    <string name="pay_tender_row">%1$s %2$s</string>
     <string name="pay_error_cash">Tunai mesti sekurang-kurangnya %1$s (dibundarkan), atau kurang daripada amaun perlu dibayar untuk sebahagian bil.</string>
     <string name="pay_error_exceeds">%1$s boleh membayar paling banyak %2$s.</string>
     <string name="pay_failed_title">Jualan tidak disimpan</string>

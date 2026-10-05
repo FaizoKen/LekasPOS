@@ -67,6 +67,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Hold and Pay, the same for the owner and a cashier (D-064): discounts are in the Menu. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -82,16 +83,6 @@
             android:layout_weight="1"
             android:minWidth="0dp"
             android:text="@string/sell_hold" />
-
-        <com.lekaspos.ui.common.FitButton
-            android:id="@+id/btn_discount"
-            style="@style/Widget.Lekas.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
-            android:text="@string/sell_discount" />
 
         <com.lekaspos.ui.common.FitButton
             android:id="@+id/btn_pay"

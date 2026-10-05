@@ -55,6 +55,17 @@
         <item name="android:paddingEnd">8dp</item>
     </style>
 
+    <!-- A word that acts without the weight of a button: Cancel, Back, Split payment (the payment, D-064). -->
+    <style name="Widget.Lekas.Button.Text">
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:textColor">@color/brand</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+    </style>
+
     <!-- Keypad keys: big digits, no minimum width (4 across on a small phone). -->
     <style name="Widget.Lekas.Key" parent="Widget.Lekas.Button.Secondary">
         <item name="android:minWidth">0dp</item>

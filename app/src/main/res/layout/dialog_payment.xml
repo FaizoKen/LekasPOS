@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Payment, top to bottom in the order a cashier needs it (D-049): the total, what the customer
-     gave and the change, one-tap cash notes, every payment method, then the keypad for other
-     amounts. The buttons stay above the keypad so a small phone never hides them. -->
+<!-- Payment in two steps (D-064). First how the customer pays: the total to pay, then Cash — one tap on
+     the note the customer gave, or "Other amount" — then the other ways (card, e-wallet…), each paying
+     the whole amount at once. Second, only when asked for: an amount on the keypad, for cash ("Other
+     amount") or for one part of a split payment. dialog_payment_wide has the same ids, side by side. -->
 <com.lekaspos.ui.common.TapScroll xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -11,147 +12,281 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="20dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="20dp">
+        android:paddingTop="8dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="12dp">
 
-        <!-- The label keeps its room; the amount takes the rest and shrinks rather than wrap. -->
+        <!-- Step 1: how the customer pays. -->
         <LinearLayout
+            android:id="@+id/pay_step_choose"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
-            <TextView
-                style="@style/Text.Lekas.Body"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/pay_title"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/pay_cancel"
+                    style="@style/Widget.Lekas.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="-12dp"
+                    android:text="@string/cancel" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/pay_total_bg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="10dp">
+
+                <TextView
+                    android:id="@+id/pay_total_label"
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pay_to_pay"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+
+                <!-- One line that shrinks rather than lose a digit. -->
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_total"
+                    style="@style/Text.Lekas.Display"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:textSize="40sp" />
+
+                <TextView
+                    android:id="@+id/pay_tenders"
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/pay_cash_hint"
+                    style="@style/Text.Lekas.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Nothing to pay (a 100% discount): one button ends the sale. -->
+            <Button
+                android:id="@+id/pay_complete"
+                style="@style/Widget.Lekas.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/pay_complete"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/pay_cash"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Text.Lekas.Section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pay_cash_gave" />
+
+                <!-- The amount due and the notes customers hand over (one tap and it is paid), then
+                     "Other amount" (PaymentViews.notes). -->
+                <LinearLayout
+                    android:id="@+id/pay_quick"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pay_others"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/pay_others_label"
+                    style="@style/Text.Lekas.Section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pay_other_ways" />
+
+                <LinearLayout
+                    android:id="@+id/pay_methods"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/pay_split"
+                style="@style/Widget.Lekas.Button.Text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/pay_total"
-                android:textSize="18sp" />
-
-            <com.lekaspos.ui.common.FitTextView
-                android:id="@+id/pay_total"
-                style="@style/Text.Lekas.Display"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:textSize="32sp" />
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:text="@string/pay_split" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/pay_tenders"
-            style="@style/Text.Lekas.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:visibility="gone" />
-
+        <!-- Step 2: an amount on the keypad (cash, or one part of a split payment). -->
         <LinearLayout
-            android:id="@+id/pay_remaining_row"
+            android:id="@+id/pay_step_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                style="@style/Text.Lekas.Body"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/pay_remaining"
-                android:textSize="16sp" />
-
-            <com.lekaspos.ui.common.FitTextView
-                android:id="@+id/pay_remaining"
-                style="@style/Text.Lekas.Body"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/pay_cash_hint"
-            style="@style/Text.Lekas.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:visibility="gone" />
-
-        <TextView
-            style="@style/Text.Lekas.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/pay_received" />
-
-        <com.lekaspos.ui.common.FitTextView
-            android:id="@+id/pay_amount"
-            style="@style/Text.Lekas.Display"
-            android:accessibilityLiveRegion="polite"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:background="@drawable/field_bg"
-            android:gravity="end|center_vertical"
-            android:minHeight="56dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
-
-        <!-- One slot that keeps its height: the change (while typing) or why a payment was refused.
-             Appearing in a slot of its own, the change pushed the notes, methods and keypad down
-             while the cashier was still typing, and the next tap hit the wrong key (D-063). -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp">
-
-            <com.lekaspos.ui.common.FitTextView
-                android:id="@+id/pay_change"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/pay_back"
+                    style="@style/Widget.Lekas.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="-12dp"
+                    android:text="@string/pay_back" />
+
+                <!-- "To pay RM59.60": shrinks rather than lose a digit. -->
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_due"
+                    style="@style/Text.Lekas.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- "Cash the customer gave", or "Amount for this part" (a split payment). -->
+            <TextView
+                android:id="@+id/pay_amount_label"
+                style="@style/Text.Lekas.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+
+            <com.lekaspos.ui.common.FitTextView
+                android:id="@+id/pay_amount"
+                style="@style/Text.Lekas.Display"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:accessibilityLiveRegion="polite"
-                android:background="@drawable/change_bg"
+                android:background="@drawable/field_bg"
                 android:gravity="end|center_vertical"
-                android:minHeight="44dp"
+                android:minHeight="56dp"
                 android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:visibility="invisible" />
+                android:paddingEnd="12dp" />
 
-            <TextView
-                android:id="@+id/pay_error"
+            <!-- One slot that keeps its height: the change (while typing) or why a payment was refused.
+                 Nothing below it moves under the cashier's finger (D-063). -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:textColor="@color/danger"
-                android:textSize="14sp"
-                android:visibility="gone" />
-        </FrameLayout>
+                android:layout_marginTop="6dp">
 
-        <LinearLayout
-            android:id="@+id/pay_quick"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal" />
+                <com.lekaspos.ui.common.FitTextView
+                    android:id="@+id/pay_change"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:background="@drawable/change_bg"
+                    android:gravity="end|center_vertical"
+                    android:minHeight="44dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:visibility="invisible" />
 
-        <LinearLayout
-            android:id="@+id/pay_methods"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:orientation="vertical" />
+                <TextView
+                    android:id="@+id/pay_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:textColor="@color/danger"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </FrameLayout>
 
-        <FrameLayout
-            android:id="@+id/pay_keypad"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+            <FrameLayout
+                android:id="@+id/pay_keypad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+
+            <!-- Cash: the amount typed is what the customer gave. -->
+            <Button
+                android:id="@+id/pay_done"
+                style="@style/Widget.Lekas.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/pay_done"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- A split payment: this part, with one of the ways to pay. -->
+            <LinearLayout
+                android:id="@+id/pay_part"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/Text.Lekas.Section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pay_part_with" />
+
+                <LinearLayout
+                    android:id="@+id/pay_part_methods"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </com.lekaspos.ui.common.TapScroll>

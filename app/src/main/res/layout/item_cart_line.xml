@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One bill line. The selected line (the one just scanned or tapped) shows its buttons right
-     here, on one line under the item: Remove, −, quantity, +, More (D-049, D-063). -->
+     here, on one line under the item: Remove, −, quantity, + (D-049, D-063) — the same for everyone (D-064). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -56,9 +56,9 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- One line under the item (LineControls): Remove, −, quantity, +, More. Remove is far from +, so
-         fast taps on + never land on it. Too narrow for one line (two panes on a turned phone, a large
-         font): − quantity + over Remove and More, so no button is ever cut. -->
+    <!-- One line under the item (LineControls): Remove, −, quantity, +. Remove is far from +, so fast taps
+         on + never land on it. Too narrow for one line (two panes on a turned phone, a large font):
+         − quantity + over Remove, so no button is ever cut. -->
     <com.lekaspos.ui.sell.LineControls
         android:id="@+id/controls"
         android:layout_width="match_parent"
@@ -101,12 +101,5 @@
             android:scaleType="center"
             android:src="@drawable/ic_add"
             android:tint="@color/brand" />
-
-        <com.lekaspos.ui.common.FitButton
-            android:id="@+id/line_more"
-            style="@style/Widget.Lekas.Button.Line"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/line_more" />
     </com.lekaspos.ui.sell.LineControls>
 </LinearLayout>

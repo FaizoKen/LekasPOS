@@ -7,12 +7,12 @@ import android.view.ViewGroup
 
 /**
  * The selected bill line's buttons on one line under the item (the owner's ask, 2026-10-04): Remove,
- * −, quantity, +, More. Remove sits at the far end from + with a wider gap, so fast taps on + never
- * land on it. When they do not fit — a narrow bill pane (a phone turned, two panes), a small phone, a
- * large font — they take two lines as before (D-049): − quantity + over Remove and More, so no button
- * is ever cut. The quantity takes the room left over.
+ * −, quantity, + — the same for everyone ("More" went to the Menu, D-064). Remove sits at the far end
+ * from + with a wider gap, so fast taps on + never land on it. When they do not fit — a narrow bill pane
+ * (a phone turned, two panes), a small phone, a large font — they take two lines as before (D-049):
+ * − quantity + over Remove, so no button is ever cut. The quantity takes the room left over.
  *
- * Children in this order: remove, minus, quantity, plus, more; gone ones are left out. Left-to-right
+ * Children in this order: remove, minus, quantity, plus; gone ones are left out. Left-to-right
  * only (English and Malay), like [TopBarLayout].
  */
 class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, attrs) {
@@ -23,7 +23,7 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
     private val rowGap = (ROW_GAP_DP * density).toInt()
     private val minQty = (MIN_QTY_DP * density).toInt()
 
-    /** All on one line (else two: − quantity + over Remove and More). */
+    /** All on one line (else two: − quantity + over Remove). */
     var oneLine = true
         private set
 
@@ -34,7 +34,7 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val inner = (width - paddingLeft - paddingRight).coerceAtLeast(0)
-        val all = shown(REMOVE, MINUS, QTY, PLUS, MORE)
+        val all = shown(REMOVE, MINUS, QTY, PLUS)
         if (all.isEmpty()) {
             setMeasuredDimension(width, paddingTop + paddingBottom)
             return
@@ -50,18 +50,14 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         val height = if (oneLine) {
             val qty = getChildAt(QTY).takeIf { it.visibility != View.GONE }
             val extra = inner - need
-            // The room left goes to the quantity; without one (a label-price line), to Remove and More.
+            // The room left goes to the quantity; without one (a label-price line), to Remove.
             val widths = HashMap(natural)
-            if (qty != null) {
-                widths[qty] = widths.getValue(qty) + extra
-            } else {
-                val ends = shown(REMOVE, MORE).ifEmpty { all }
-                for ((i, c) in ends.withIndex()) widths[c] = widths.getValue(c) + extra / ends.size + if (i == 0) extra % ends.size else 0
-            }
+            val grows = qty ?: all.first()
+            widths[grows] = widths.getValue(grows) + extra
             measureRow(all, widths)
         } else {
             val top = shown(MINUS, QTY, PLUS)
-            val bottom = shown(REMOVE, MORE)
+            val bottom = shown(REMOVE)
             firstRowHeight = measureStretched(top, inner, stretch = getChildAt(QTY))
             val second = measureStretched(bottom, inner, stretch = null)
             firstRowHeight + if (top.isNotEmpty() && bottom.isNotEmpty()) rowGap + second else second
@@ -102,11 +98,11 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         val left = paddingLeft
         val top = paddingTop
         if (oneLine) {
-            place(shown(REMOVE, MINUS, QTY, PLUS, MORE), left, top)
+            place(shown(REMOVE, MINUS, QTY, PLUS), left, top)
         } else {
             val first = shown(MINUS, QTY, PLUS)
             place(first, left, top)
-            place(shown(REMOVE, MORE), left, top + if (first.isEmpty()) 0 else firstRowHeight + rowGap)
+            place(shown(REMOVE), left, top + if (first.isEmpty()) 0 else firstRowHeight + rowGap)
         }
     }
 
@@ -132,7 +128,6 @@ class LineControls(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         const val MINUS = 1
         const val QTY = 2
         const val PLUS = 3
-        const val MORE = 4
 
         const val GAP_DP = 4
         const val REMOVE_GAP_DP = 10

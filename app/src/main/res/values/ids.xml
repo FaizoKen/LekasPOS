@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The payment's "Other amount" button, built in code (PaymentViews.notes); tests press it. -->
+    <item name="pay_other" type="id" />
+</resources>
