@@ -265,7 +265,8 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <!-- A split payment: this part, with one of the ways to pay. -->
+            <!-- A split payment: this part, with one of the ways to pay ("Amount for this part" above says
+                 what they are for; a heading of their own put the step over a 5-inch phone's height). -->
             <LinearLayout
                 android:id="@+id/pay_part"
                 android:layout_width="match_parent"
@@ -274,17 +275,10 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <TextView
-                    style="@style/Text.Lekas.Section"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/pay_part_with" />
-
                 <LinearLayout
                     android:id="@+id/pay_part_methods"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
                     android:orientation="vertical" />
             </LinearLayout>
         </LinearLayout>

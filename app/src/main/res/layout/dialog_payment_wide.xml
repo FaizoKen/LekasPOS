@@ -16,7 +16,8 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
-        <!-- Step 1: how the customer pays. -->
+        <!-- Step 1: how the customer pays. Every column of a step is match_parent: a wrap_content row sizes
+             itself by its other children only, and a column taller than them was cut (Split payment). -->
         <LinearLayout
             android:id="@+id/pay_step_choose"
             android:layout_width="match_parent"
@@ -130,7 +131,7 @@
             <LinearLayout
                 android:id="@+id/pay_cash"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
@@ -153,7 +154,7 @@
             <LinearLayout
                 android:id="@+id/pay_others"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
@@ -286,14 +287,14 @@
             <FrameLayout
                 android:id="@+id/pay_keypad"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1" />
 
             <LinearLayout
                 android:id="@+id/pay_part"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="0.8"
                 android:orientation="vertical"
