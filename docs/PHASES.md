@@ -29,7 +29,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
-| — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | in progress — CI, then a test build; the owner adds the `drive.file` scope in Google Cloud |
+| — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 
 ## Open questions for the user
 
@@ -1590,7 +1590,13 @@ the Daily sales report, one CSV per month, once a day, CSV.
       → Data access → Add or remove scopes → tick `.../auth/drive.file` (or paste
       `https://www.googleapis.com/auth/drive.file` under "Manually add scopes") → Update → Save. Non-sensitive:
       no verification. It can take a few minutes to reach Google's servers
-- [ ] CI, test build v1.11.0 and the owner's phone check (below)
+- [x] CI on 949babb (run 37416703176, build 136): **264/264 on API 21 and 36** (with `DailyReportUploadTest` 4/4),
+      tablet, release smoke (upgrade from 1.9.1), lint, website (privacy pages); release APK **1,541,020 bytes**
+      (1.10.1's build 134: 1,522,590 — about +18 KB)
+- [x] Test build **v1.11.0** (pre-release, 2026-10-06; build 136, release key — same certificate; SHA-256 of the APK
+      `f2027a8b…66c2`, `mapping-1.11.0.txt` attached). The public download stays v1.9.1
+- [ ] The owner's phone check (below), after the owner's step above. Not yet tried against real Google Drive:
+      CI has no Google account (the tests use a folder in memory)
 
 ### Needs real-device testing (1.11.0)
 
