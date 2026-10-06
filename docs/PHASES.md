@@ -28,7 +28,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
-| — | **1.10.0**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064) | in progress — CI, then a test build for the owner's phone check |
+| — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test build v1.10.0 (build 131); v1.10.1 — CI, then a test build for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1509,17 +1509,9 @@ simple" and "make pay screen a lot more better and simple. currently is hard to 
       from 1.9.1), lint; release APK **1,519,594 bytes** (1.9.1's build 124: 1,514,780 — about +5 KB). Screenshots
       (`pay`, `pay-cash`, `sell`; English and Malay; phone and tablet) reviewed: the owner's selling screen is the
       cashier's; both payment steps whole, nothing to scroll
-- [x] **Google Drive missing from the folder picker** (the owner, 2026-10-06: an Android 10 tablet whose old
-      Drive app cannot be updated shows Drive in the file picker and the share sheet, not in the folder picker).
-      The backup file actions were already there (⋮ → Share a backup file, Save a backup file…, Restore from a
-      file…); now: the folder picker closed with no folder chosen (and none set) → "Google Drive not in the
-      list?" with Share and Save as a file; with no folder and no sync the Backup screen says where to find
-      them; a picked file that cannot be read (a Drive file offline) says so instead of "not a LekasPOS backup
-      file", and "Checking…" shows while Drive downloads it; "Save a backup file…" retries with mode "w" when
-      the app refuses "wt"; a share that failed half-way leaves no half file; a second tap on Share is ignored
-      while the first runs. `BackupTest.aPickedFileThatCannotBeReadIsNotCalledNoBackup`. Local: JVM tests and
-      lint pass, release APK 1,521,421 bytes
-- [ ] Test build v1.10.0 and the owner's phone check (below)
+- [x] Test build **v1.10.0** (pre-release, 2026-10-06; build 131, 1,519,594 bytes, release key; SHA-256 of the APK
+      `160a4377…2c8d`, `mapping-1.10.0.txt` attached). The public download stays v1.9.1
+- [ ] The owner's phone check (below) — on v1.10.1, which carries all of 1.10.0
 
 Seen in passing (not changed): on Android 5 the keypad's ⌫ key shows an empty box (the system font has no
 such character; the key still deletes, and a long press clears).
@@ -1540,6 +1532,24 @@ such character; the key still deletes, and a long press clears).
    pay the rest with a note. Cancel then asks before dropping the card part.
 7. **Double tap on Pay** → the payment opens and nothing is paid.
 8. Held sideways (phone and tablet): both steps show whole, nothing to scroll.
+
+### 1.10.1 — Google Drive missing from the folder picker: a backup file to Drive instead
+
+The owner (2026-10-06): an Android 10 tablet whose old Google Drive app cannot be updated shows Drive in the file
+picker and the share sheet, but not in the folder picker, so the daily folder copy cannot go to Drive.
+
+- [x] The backup file actions were already there (⋮ → Share a backup file, Save a backup file…, Restore from a
+      file…; D-044). Now: the folder picker closed with no folder chosen (and none set) → "Google Drive not in the
+      list?" with Share and Save as a file; with no folder and no sync the Backup screen says where to find them;
+      a picked file that cannot be read (a Drive file offline) says so instead of "not a LekasPOS backup file",
+      and "Checking…" shows while Drive downloads it; "Save a backup file…" (and CSV exports) retry with mode
+      "w" when the app refuses "wt"; a share that failed half-way leaves no half file; a second tap on Share is
+      ignored while the first runs. `BackupTest.aPickedFileThatCannotBeReadIsNotCalledNoBackup`
+- [x] Local: JVM tests and lint pass, the instrumented tests compile; release APK 1,521,421 bytes
+- [ ] CI, test build v1.10.1 and the owner's phone check (1.10.0's list above, and below)
+
+Phone check (1.10.1), on the Android 10 tablet:
+
 9. **Backup to Drive on the old tablet** (no folder set, sync off): Settings → Backup & restore → the top says
    "Google Drive not in the folder list?…". ⋮ → Daily copy to a folder → Back without choosing → "Google Drive
    not in the list?" → **Share** → Drive "Save to Drive" → the file `lekaspos-backup-<date>.lekasbak` is in
