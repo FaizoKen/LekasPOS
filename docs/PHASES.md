@@ -28,7 +28,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.7.1**: fifth bug hunt — what 1.7.0 broke, killed apps, crafted files, mobile data, a first week, large fonts (D-061) | test build v1.7.1 (pre-release) — released to everyone as part of 1.8.0 |
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
-| — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test build v1.10.0 (build 131); v1.10.1 — CI, then a test build for the owner's phone check |
+| — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1546,7 +1546,12 @@ picker and the share sheet, but not in the folder picker, so the daily folder co
       "w" when the app refuses "wt"; a share that failed half-way leaves no half file; a second tap on Share is
       ignored while the first runs. `BackupTest.aPickedFileThatCannotBeReadIsNotCalledNoBackup`
 - [x] Local: JVM tests and lint pass, the instrumented tests compile; release APK 1,521,421 bytes
-- [ ] CI, test build v1.10.1 and the owner's phone check (1.10.0's list above, and below)
+- [x] CI on 1bab076 (run 37410266682, build 134): **260/260 on API 21 and 36** (with the new `BackupTest`), tablet,
+      release smoke (upgrade from 1.9.1), lint; release APK **1,522,590 bytes** (1.10.0's build 131: 1,519,594 — about
+      +3 KB). Screenshots `backup` (English, Malay) show the Drive line under "No copy of this data off this phone"
+- [x] Test build **v1.10.1** (pre-release, 2026-10-06; build 134, release key — same certificate; SHA-256 of the APK
+      `152868b8…fded`, `mapping-1.10.1.txt` attached). The public download stays v1.9.1
+- [ ] The owner's phone check (1.10.0's list above, and below)
 
 Phone check (1.10.1), on the Android 10 tablet:
 
