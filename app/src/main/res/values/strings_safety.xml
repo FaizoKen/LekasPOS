@@ -22,6 +22,11 @@
     <string name="backup_folder_error">The last copy to the folder failed: %1$s</string>
     <string name="backup_folder_done">Copied to the folder.</string>
     <string name="backup_folder_failed">Could not copy to the folder. Is the card or drive still there?</string>
+    <!-- Google Drive missing from the folder picker (an older Drive app): a backup file instead (2026-10) -->
+    <string name="backup_drive_tip">Google Drive not in the folder list? Use ⋮ → Share a backup file, or Save a backup file, and choose Drive.</string>
+    <string name="backup_drive_hint_title">Google Drive not in the list?</string>
+    <string name="backup_drive_hint">On some phones Google Drive cannot be chosen as a folder. Put a backup file in Drive instead: Share → Save to Drive, or Save as a file → Drive.\n\nThis copy is not automatic: make a new one every few days.</string>
+    <string name="backup_cannot_read">This file could not be opened. If it is in Google Drive, connect to the internet and try again.</string>
     <!-- Phone storage (2026-10 review) -->
     <string name="storage_pill">Storage almost full</string>
     <string name="storage_low_title">Phone storage almost full</string>

@@ -288,6 +288,10 @@ sync screen, `forId(meta sync.provider)` for background work.
   `BackupService.protection`: NO_DATA / PROTECTED (a copy off the phone < 3 days old: Drive
   sync `sync.last_ok`, folder `dev.backup_folder_ok`, saved file `dev.backup_export_ok`) /
   AT_RISK ("Not backed up" pill) / DAMAGED. Google login is never required.
+- An older Google Drive app cannot be a folder (it is missing from the folder picker) but takes a backup
+  file: the folder picker closed with no folder set points to Share and "Save as a file", and the Backup
+  screen says so while no folder and no sync are set. A picked file that cannot be read (Drive offline)
+  is told apart from one that is no backup (`BackupService.header` throws vs. null).
 - Archive of old sales: not built yet.
 
 ## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)

@@ -8,11 +8,13 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.lekaspos.R
 import com.lekaspos.core.csv.CsvInput
+import com.lekaspos.util.Log
 import java.io.BufferedInputStream
 import java.io.BufferedWriter
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.Reader
 import java.nio.charset.Charset
@@ -77,9 +79,24 @@ object CsvFiles {
 
     fun writer(file: File): BufferedWriter = BufferedWriter(OutputStreamWriter(file.outputStream(), Charsets.UTF_8), 64 * 1024)
 
-    fun writer(ctx: Context, uri: Uri): BufferedWriter {
-        val out = ctx.contentResolver.openOutputStream(uri, "wt") ?: throw IllegalStateException("cannot write $uri")
-        return BufferedWriter(OutputStreamWriter(out, Charsets.UTF_8), 64 * 1024)
+    fun writer(ctx: Context, uri: Uri): BufferedWriter =
+        BufferedWriter(OutputStreamWriter(openForWriting(ctx, uri), Charsets.UTF_8), 64 * 1024)
+
+    /**
+     * Opens a file the user picked to save into, emptied first ("wt"). A provider that refuses "wt" (some
+     * cloud apps take only "w") gets "w": the picker has just made the file, so it is empty anyway.
+     */
+    fun openForWriting(ctx: Context, uri: Uri): OutputStream {
+        val resolver = ctx.contentResolver
+        val out = try {
+            resolver.openOutputStream(uri, "wt")
+        } catch (e: SecurityException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("The picked file cannot be opened with \"wt\": \"w\" instead", e)
+            resolver.openOutputStream(uri, "w")
+        }
+        return out ?: throw IllegalStateException("cannot write $uri")
     }
 
     fun share(a: Activity, file: File, mime: String = MIME) {

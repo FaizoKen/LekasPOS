@@ -317,8 +317,32 @@ class BackupService(private val graph: AppGraph, private val app: Application) {
     /** Why the last restore was not done, told once (see [Restore.takeFailure]). */
     suspend fun restoreFailure(): String? = withContext(Dispatchers.IO) { Restore.takeFailure(app) }
 
+    /**
+     * The header of the backup file [open] gives, or null when it is no backup. Throws when the file
+     * cannot be read at all — a Google Drive file that could not be downloaded (no internet), a file
+     * gone meanwhile: that was told as "not a LekasPOS backup file".
+     */
     suspend fun header(open: () -> InputStream): BackupFiles.Header? = withContext(Dispatchers.IO) {
-        runCatching { open().use { BackupFiles.readHeader(it) } }.getOrNull()
+        open().use { input ->
+            val source = ReadFailure(input)
+            BackupFiles.readHeader(source) ?: source.failure?.let { throw it }
+        }
+    }
+
+    /** Remembers a failure of the stream underneath: [BackupFiles.readHeader] makes any failure "not a backup". */
+    private class ReadFailure(private val input: InputStream) : InputStream() {
+        var failure: java.io.IOException? = null
+
+        override fun read(): Int = noted { input.read() }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int = noted { input.read(b, off, len) }
+
+        private inline fun noted(read: () -> Int): Int = try {
+            read()
+        } catch (e: java.io.IOException) {
+            if (failure == null) failure = e
+            throw e
+        }
     }
 
     /**

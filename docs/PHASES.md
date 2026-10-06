@@ -1509,6 +1509,16 @@ simple" and "make pay screen a lot more better and simple. currently is hard to 
       from 1.9.1), lint; release APK **1,519,594 bytes** (1.9.1's build 124: 1,514,780 — about +5 KB). Screenshots
       (`pay`, `pay-cash`, `sell`; English and Malay; phone and tablet) reviewed: the owner's selling screen is the
       cashier's; both payment steps whole, nothing to scroll
+- [x] **Google Drive missing from the folder picker** (the owner, 2026-10-06: an Android 10 tablet whose old
+      Drive app cannot be updated shows Drive in the file picker and the share sheet, not in the folder picker).
+      The backup file actions were already there (⋮ → Share a backup file, Save a backup file…, Restore from a
+      file…); now: the folder picker closed with no folder chosen (and none set) → "Google Drive not in the
+      list?" with Share and Save as a file; with no folder and no sync the Backup screen says where to find
+      them; a picked file that cannot be read (a Drive file offline) says so instead of "not a LekasPOS backup
+      file", and "Checking…" shows while Drive downloads it; "Save a backup file…" retries with mode "w" when
+      the app refuses "wt"; a share that failed half-way leaves no half file; a second tap on Share is ignored
+      while the first runs. `BackupTest.aPickedFileThatCannotBeReadIsNotCalledNoBackup`. Local: JVM tests and
+      lint pass, release APK 1,521,421 bytes
 - [ ] Test build v1.10.0 and the owner's phone check (below)
 
 Seen in passing (not changed): on Android 5 the keypad's ⌫ key shows an empty box (the system font has no
@@ -1530,3 +1540,10 @@ such character; the key still deletes, and a long press clears).
    pay the rest with a note. Cancel then asks before dropping the card part.
 7. **Double tap on Pay** → the payment opens and nothing is paid.
 8. Held sideways (phone and tablet): both steps show whole, nothing to scroll.
+9. **Backup to Drive on the old tablet** (no folder set, sync off): Settings → Backup & restore → the top says
+   "Google Drive not in the folder list?…". ⋮ → Daily copy to a folder → Back without choosing → "Google Drive
+   not in the list?" → **Share** → Drive "Save to Drive" → the file `lekaspos-backup-<date>.lekasbak` is in
+   Drive. Again with **Save as a file** → Drive in the picker's side menu → Save → "Backup file saved."
+10. **Restore from Drive:** ⋮ → Restore from a file… → Drive → the file → "Checking…" → the restore question
+   (Cancel leaves everything as it was). A photo or PDF → "This is not a LekasPOS backup file." Wi-Fi off and a
+   Drive file not opened before → "This file could not be opened…", no crash.

@@ -157,6 +157,24 @@ class BackupTest {
     }
 
     @Test
+    fun aPickedFileThatCannotBeReadIsNotCalledNoBackup() = runBlocking {
+        val service = graph.backups
+        sell(1)
+        val bytes = backupBytes()
+        assertNotNull(service.header { ByteArrayInputStream(bytes) })
+        assertNull(service.header { ByteArrayInputStream("hello".toByteArray()) })
+        // A Google Drive file that cannot be downloaded (no internet): failing to open, or to read part-way.
+        assertFailsWith<java.io.FileNotFoundException> { service.header { throw java.io.FileNotFoundException("offline") } }
+        val breaks = object : java.io.InputStream() {
+            private val head = ByteArrayInputStream(bytes, 0, 10)
+
+            override fun read(): Int = head.read().also { if (it < 0) throw java.io.IOException("connection lost") }
+        }
+        assertFailsWith<java.io.IOException> { service.header { breaks } }
+        Unit
+    }
+
+    @Test
     fun theBackupServiceKeepsSevenAutomaticBackups() = runBlocking {
         sell(1)
         val service = graph.backups

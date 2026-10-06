@@ -30,6 +30,7 @@ import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.visible
+import com.lekaspos.util.Log
 import java.io.InputStream
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
@@ -87,7 +88,7 @@ class BackupActivity : ScreenActivity() {
     private fun reload() {
         launchUi {
             val p = graph.backups.refreshProtection()
-            header.text = listOfNotNull(safetyText(p), getString(R.string.backup_help)).joinToString("\n\n")
+            header.text = listOfNotNull(safetyText(p, graph.db().syncEnabled), getString(R.string.backup_help)).joinToString("\n\n")
             val items = graph.backups.list()
             adapter.submit(items)
             empty.visible(items.isEmpty())
@@ -97,8 +98,8 @@ class BackupActivity : ScreenActivity() {
         }
     }
 
-    /** Where the data is safe, or why it is not (D-048). */
-    private fun safetyText(p: BackupService.Protection): String? {
+    /** Where the data is safe, or why it is not (D-048); with no folder and no sync, how to put a copy in Drive. */
+    private fun safetyText(p: BackupService.Protection, sync: Boolean): String? {
         val lines = ArrayList<String>(3)
         when (p.state) {
             BackupService.Protection.State.DAMAGED -> lines.add(getString(R.string.safety_damaged, p.damage ?: ""))
@@ -109,6 +110,7 @@ class BackupActivity : ScreenActivity() {
         }
         p.folderName?.let { lines.add(getString(R.string.backup_folder_on, it.ifBlank { "-" })) }
         p.folderError?.let { lines.add(getString(R.string.backup_folder_error, it)) }
+        if (p.folderName == null && !sync) lines.add(getString(R.string.backup_drive_tip))
         return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
     }
 
@@ -123,6 +125,21 @@ class BackupActivity : ScreenActivity() {
         } catch (e: ActivityNotFoundException) {
             Dialogs.message(this, null, getString(R.string.backup_folder_failed))
         }
+    }
+
+    /**
+     * The folder picker closed with no folder chosen. An older Google Drive app is missing from it (it
+     * cannot give a folder) yet takes a saved or shared backup file (2026-10: a shop's Android 10 tablet).
+     */
+    private fun driveHint() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.backup_drive_hint_title)
+            .setMessage(R.string.backup_drive_hint)
+            .setPositiveButton(R.string.export_share) { _, _ -> share() }
+            .setNeutralButton(R.string.export_save) { _, _ -> saveFile() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+            .trackedBy(this)
     }
 
     private fun copyToFolder() {
@@ -151,7 +168,7 @@ class BackupActivity : ScreenActivity() {
         else -> R.string.backup_reason_other
     }
 
-    /** "Back up now" is running: a second tap made a second whole copy, kept for good (2026-10 review). */
+    /** "Back up now" or a share is running: a second tap made a second whole copy, kept for good (2026-10 review). */
     private var backingUp = false
 
     private fun backupNow() {
@@ -177,12 +194,7 @@ class BackupActivity : ScreenActivity() {
         for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
-                R.string.backup_save_file -> {
-                    startPicker(
-                        Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(MIME).putExtra(Intent.EXTRA_TITLE, fileName()),
-                        REQ_SAVE,
-                    )
-                }
+                R.string.backup_save_file -> saveFile()
                 R.string.backup_share -> share()
                 R.string.backup_folder_pick -> pickFolder()
                 R.string.backup_folder_copy -> copyToFolder()
@@ -204,15 +216,41 @@ class BackupActivity : ScreenActivity() {
         return "lekaspos-backup-${com.lekaspos.core.time.DateText.isoDate(day)}${BackupFiles.EXT}"
     }
 
+    /** The system's "save as" picker (Downloads, Google Drive, a USB drive …); the backup is written in [onActivityResult]. */
+    private fun saveFile() {
+        startPicker(
+            Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(MIME).putExtra(Intent.EXTRA_TITLE, fileName()),
+            REQ_SAVE,
+        )
+    }
+
+    /** A backup file handed to another app: "Save to Drive", e-mail, WhatsApp … */
     private fun share() {
+        // A second tap while the first backup is written made a second one, and a second chooser.
+        if (backingUp) return
+        backingUp = true
         launchUi {
-            toast(R.string.backup_working)
-            val file = withContext(Dispatchers.IO) { CsvFiles.sharedFile(this@BackupActivity, CsvFiles.KIND_BACKUP, fileName()) }
-            graph.backups.export { file.outputStream() }
-            val uri = FileProvider.getUriForFile(this@BackupActivity, "$packageName.files", file)
-            val send = Intent(Intent.ACTION_SEND).setType(MIME).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            send.clipData = ClipData.newRawUri(file.name, uri)
-            startActivity(Intent.createChooser(send, getString(R.string.backup_share)))
+            try {
+                toast(R.string.backup_working)
+                val file = withContext(Dispatchers.IO) { CsvFiles.sharedFile(this@BackupActivity, CsvFiles.KIND_BACKUP, fileName()) }
+                try {
+                    graph.backups.export { file.outputStream() }
+                } catch (e: Exception) {
+                    // Half a backup file is not left in the cache (its share folder) to look like a whole one.
+                    withContext(NonCancellable + Dispatchers.IO) { file.delete() }
+                    throw e
+                }
+                val uri = FileProvider.getUriForFile(this@BackupActivity, "$packageName.files", file)
+                val send = Intent(Intent.ACTION_SEND)
+                    .setType(MIME)
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .putExtra(Intent.EXTRA_SUBJECT, file.name)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                send.clipData = ClipData.newRawUri(file.name, uri)
+                startActivity(Intent.createChooser(send, getString(R.string.backup_share)))
+            } finally {
+                backingUp = false
+            }
         }
     }
 
@@ -220,8 +258,14 @@ class BackupActivity : ScreenActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
-        val uri = data?.data ?: return
-        if (resultCode != RESULT_OK) return
+        val uri = data?.data?.takeIf { resultCode == RESULT_OK }
+        if (uri == null) {
+            if (requestCode == REQ_FOLDER) launchUi {
+                whenLoaded()
+                if (graph.backups.refreshProtection().folderName == null) driveHint()
+            }
+            return
+        }
         when (requestCode) {
             REQ_FOLDER -> launchUi {
                 whenLoaded()
@@ -235,7 +279,7 @@ class BackupActivity : ScreenActivity() {
                 whenLoaded()
                 toast(R.string.backup_working)
                 try {
-                    graph.backups.export { contentResolver.openOutputStream(uri, "wt") ?: throw IllegalStateException("cannot write the file") }
+                    graph.backups.export { CsvFiles.openForWriting(this@BackupActivity, uri) }
                 } catch (e: Exception) {
                     // Half a backup file must never look like a backup (like a failed CSV export).
                     val resolver = contentResolver
@@ -244,17 +288,39 @@ class BackupActivity : ScreenActivity() {
                 }
                 toast(R.string.backup_saved)
             }
-            REQ_OPEN -> launchUi {
-                whenLoaded()
-                val open = { contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read the file") }
-                val h = graph.backups.header(open)
-                if (h == null) {
-                    Dialogs.message(this@BackupActivity, null, getString(R.string.backup_not_a_backup))
-                } else {
-                    confirmRestore(h, open)
-                }
-            }
+            REQ_OPEN -> openPicked(uri)
         }
+    }
+
+    /**
+     * Checks a picked file before anything else: a LekasPOS backup, or why not. A Google Drive file is
+     * downloaded first (seconds to minutes), meanwhile "Checking…" shows; Back gives up.
+     */
+    private fun openPicked(uri: Uri) {
+        val checking = AlertDialog.Builder(this).setMessage(R.string.backup_checking).create()
+        val job = launchUi {
+            val open = { contentResolver.openInputStream(uri) ?: throw IllegalStateException("cannot read the file") }
+            val read = try {
+                whenLoaded()
+                runCatching { graph.backups.header(open) }
+            } finally {
+                checking.setOnCancelListener(null)
+                checking.dismiss()
+            }
+            val h = read.getOrElse { e ->
+                if (e !is Exception || e is kotlinx.coroutines.CancellationException) throw e
+                // No internet for a Drive file, a file deleted meanwhile: not the app's bug, no error report.
+                Log.w("A picked backup file cannot be read", e)
+                Dialogs.message(this@BackupActivity, null, getString(R.string.backup_cannot_read))
+                return@launchUi
+            }
+            confirmRestore(h, open)
+        }
+        checking.setOnCancelListener { job.cancel() }
+        // Only when it takes a moment (a Drive download): a file on the phone is read at once, without a flash.
+        window.decorView.postDelayed({
+            if (job.isActive && Dialogs.canShow(this)) checking.apply { show() }.trackedBy(this)
+        }, CHECKING_DELAY_MS)
     }
 
     /** Explains what a restore does and lets the user choose how this phone continues. */
@@ -354,5 +420,6 @@ class BackupActivity : ScreenActivity() {
         private const val REQ_FOLDER = 33
         const val EXTRA_PICK_FOLDER = "pick_folder"
         private const val MIME = "application/octet-stream"
+        private const val CHECKING_DELAY_MS = 300L
     }
 }

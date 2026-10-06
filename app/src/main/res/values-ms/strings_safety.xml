@@ -22,6 +22,11 @@
     <string name="backup_folder_error">Salinan terakhir ke folder gagal: %1$s</string>
     <string name="backup_folder_done">Disalin ke folder.</string>
     <string name="backup_folder_failed">Tidak dapat menyalin ke folder. Adakah kad atau pemacu masih ada?</string>
+    <!-- Google Drive tiada dalam pemilih folder (aplikasi Drive lama): fail sandaran sebagai ganti (2026-10) -->
+    <string name="backup_drive_tip">Google Drive tiada dalam senarai folder? Gunakan ⋮ → Kongsi fail sandaran, atau Simpan fail sandaran, dan pilih Drive.</string>
+    <string name="backup_drive_hint_title">Google Drive tiada dalam senarai?</string>
+    <string name="backup_drive_hint">Pada sesetengah telefon, Google Drive tidak boleh dipilih sebagai folder. Simpan fail sandaran dalam Drive sebagai ganti: Kongsi → Simpan ke Drive, atau Simpan sebagai fail → Drive.\n\nSalinan ini tidak automatik: buat yang baharu setiap beberapa hari.</string>
+    <string name="backup_cannot_read">Fail ini tidak dapat dibuka. Jika ia dalam Google Drive, sambung ke internet dan cuba lagi.</string>
     <!-- Storan telefon (semakan 2026-10) -->
     <string name="storage_pill">Storan hampir penuh</string>
     <string name="storage_low_title">Storan telefon hampir penuh</string>
