@@ -25,7 +25,8 @@ import kotlinx.coroutines.withContext
  * Access to the store's Google Drive app folder with Google Identity Services'
  * AuthorizationClient (D-014): scope `drive.appdata` only, no ID token, no Google Sign-In SDK.
  * Background syncs ask silently; when Google needs the user (first time, revoked access) the
- * sync status says so and the sync screen shows Google's consent screen.
+ * sync status says so and the sync screen shows Google's consent screen. The daily sales report
+ * asks for its own scope the same way: `drive.file`, only files the app made (D-065).
  */
 object DriveAuth {
 
@@ -44,8 +45,8 @@ object DriveAuth {
     private var securityChecked = false
 
     /** [account]: the store's Google account once known, so a phone with several accounts asks for the right one. */
-    private fun request(account: String?): AuthorizationRequest {
-        val b = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(DriveProvider.SCOPE)))
+    private fun request(account: String?, scope: String): AuthorizationRequest {
+        val b = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(scope)))
         if (account != null) b.setAccount(Account(account, "com.google"))
         return b.build()
     }
@@ -54,7 +55,7 @@ object DriveAuth {
         GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ctx) == ConnectionResult.SUCCESS
 
     /** Blocks on Play Services: never call on the main thread. Throws an IOException when Google cannot be reached. */
-    suspend fun authorize(ctx: Context, account: String? = null): Result = withContext(Dispatchers.IO) {
+    suspend fun authorize(ctx: Context, account: String? = null, scope: String = DriveProvider.SCOPE): Result = withContext(Dispatchers.IO) {
         if (!playServicesAvailable(ctx)) return@withContext Result.Unavailable("Google Play services are not available")
         if (!securityChecked) {
             securityChecked = true // once per app process: it can take a second or more
@@ -67,7 +68,7 @@ object DriveAuth {
         try {
             // Bounded (2026-10 review): a call Play services never answers would hold the sync lock
             // for good — every later round, and turning sync off, would wait behind it.
-            val task = Identity.getAuthorizationClient(ctx).authorize(request(account))
+            val task = Identity.getAuthorizationClient(ctx).authorize(request(account, scope))
             val r = Tasks.await(task, AUTH_TIMEOUT_S, TimeUnit.SECONDS)
             val pending = r.pendingIntent
             val token = r.accessToken
@@ -101,11 +102,12 @@ object DriveAuth {
     }
 
     /** A token for a background sync, or [SignInNeeded] when the user must act first. */
-    suspend fun silentToken(ctx: Context, account: String?): String = when (val r = authorize(ctx, account)) {
-        is Result.Token -> r.token
-        is Result.NeedsUser -> throw SignInNeeded()
-        is Result.Unavailable -> throw IOException(r.message)
-    }
+    suspend fun silentToken(ctx: Context, account: String?, scope: String = DriveProvider.SCOPE): String =
+        when (val r = authorize(ctx, account, scope)) {
+            is Result.Token -> r.token
+            is Result.NeedsUser -> throw SignInNeeded()
+            is Result.Unavailable -> throw IOException(r.message)
+        }
 
     /**
      * Drops a token Google refused from Play services' cache (2026-10 review): asked again, it

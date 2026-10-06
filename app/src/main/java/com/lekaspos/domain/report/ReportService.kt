@@ -75,6 +75,14 @@ class ReportService(private val graph: AppGraph) {
     /** Writes [what] for [p] as CSV (UTF-8 with BOM) to [out]; returns the number of data rows. */
     suspend fun export(what: Export, p: Period, out: Appendable, tz: TimeZone = TimeZone.getDefault()): Long {
         graph.permissions.actor(Perm.REPORTS)
+        return write(what, p, out, tz)
+    }
+
+    /**
+     * [export] without asking who may: for the daily report to Google Drive that the owner turned on
+     * (D-065), which runs in the background with nobody signed in.
+     */
+    suspend fun write(what: Export, p: Period, out: Appendable, tz: TimeZone = TimeZone.getDefault()): Long {
         val currency = graph.settings.store.value.currency
         val db = graph.db()
         out.append(CsvWriter.BOM)

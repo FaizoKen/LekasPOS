@@ -77,16 +77,18 @@ the app owner.
 
 ## Google Cloud / OAuth setup (needed from Phase 6 — Google Drive sync)
 
-The app talks to the Google Drive REST API directly and asks only for the
+The app talks to the Google Drive REST API directly. Sync asks only for the
 `https://www.googleapis.com/auth/drive.appdata` scope (a hidden, app-private folder in the
-store's Google Drive). That scope is *non-sensitive*, so no paid security assessment is needed.
+store's Google Drive); the optional daily sales report (D-065) asks separately for
+`https://www.googleapis.com/auth/drive.file` (only the files the app itself makes, here a visible
+"LekasPOS" folder). Both scopes are *non-sensitive*, so no paid security assessment is needed.
 
 1. In the [Google Cloud console](https://console.cloud.google.com/), create a project
    (e.g. "LekasPOS").
 2. **APIs & Services → Library:** enable the **Google Drive API**.
 3. **OAuth consent screen:** user type *External*; app name "LekasPOS", support email, app logo
-   (optional), links to the privacy policy and home page; add the scope
-   `.../auth/drive.appdata`. Publish the app (move from *Testing* to *In production*): with only
+   (optional), links to the privacy policy and home page; add the scopes
+   `.../auth/drive.appdata` and `.../auth/drive.file`. Publish the app (move from *Testing* to *In production*): with only
    non-sensitive scopes no verification is required (without a logo). While the app is in
    *Testing*, only listed **test users** can sign in, and their sign-in expires after 7 days.
 4. **Credentials → Create credentials → OAuth client ID → Android**, once per signing
@@ -105,6 +107,8 @@ Done for this repository (2026-09-30): project **LekasPOS** (ID `lekaspos`), Dri
 consent screen External with the `drive.appdata` scope only, home page and privacy policy on the
 authorized domain `faizoken.github.io`, Android client "LekasPOS tester builds (test key)" for
 `com.lekaspos.app` with the release key's SHA-1; *In production* since 2026-09-30 (1.0.0, D-051).
+The `drive.file` scope for the daily sales report (1.11.0, D-065) is the owner's step: Google Auth
+Platform → Data access → Add or remove scopes → `.../auth/drive.file` → Update → Save.
 New settings can take from 5 minutes to a few hours to reach Google's servers.
 
 ## License

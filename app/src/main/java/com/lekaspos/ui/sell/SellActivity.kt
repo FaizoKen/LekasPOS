@@ -370,6 +370,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                         Toast.makeText(app, app.getString(R.string.update_done, version), Toast.LENGTH_LONG).show()
                     }
                 }
+                graph.dailyReport.atStart() // the daily sales report to Google Drive, when on (D-065)
             }
             graph.sync.refreshStatus()
             graph.autoSync.start() // the other tills' changes now, and again when the internet comes back (D-053)

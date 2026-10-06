@@ -46,6 +46,7 @@ class SettingsActivity : ScreenActivity() {
     private var reports: Int? = null
     private var reportsRow = 0
     private var updatesRow = 0
+    private var driveReportRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +65,9 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),
             Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
             Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
+            Entry(R.string.drive_report_title, null, null, sub = { DriveReportUi.subtitle(this, graph.dailyReport.status.value) }) {
+                DriveReportUi.open(this)
+            },
             Entry(R.string.error_reports_title, null, null, sub = { reportsLine() }) { chooseReports() },
             // Both are the shop's choices like the other settings: a cashier turned the daily update
             // check or the error reports off (2026-10 review).
@@ -85,6 +89,7 @@ class SettingsActivity : ScreenActivity() {
         this.adapter = adapter
         reportsRow = entries.indexOfFirst { it.title == R.string.error_reports_title }
         updatesRow = entries.indexOfFirst { it.title == R.string.update_settings_title }
+        driveReportRow = entries.indexOfFirst { it.title == R.string.drive_report_title }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -102,12 +107,19 @@ class SettingsActivity : ScreenActivity() {
             updates.load()
             updates.status.collect { adapter?.notifyItemChanged(updatesRow) }
         }
+        // The daily report to Google Drive (D-065): on, off, its last upload.
+        val report = graph.dailyReport
+        scope.launch {
+            report.load()
+            report.status.collect { adapter?.notifyItemChanged(driveReportRow) }
+        }
     }
 
     @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (DriveReportUi.onResult(this, requestCode, resultCode, data)) return // Google's consent (D-065)
         UpdateUi.onResult(this, scope, requestCode) // allowed to install the update (or not)
     }
 

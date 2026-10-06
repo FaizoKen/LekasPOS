@@ -241,7 +241,10 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
 `SyncEngine` talks only to the `SyncProvider` interface. Providers: `DriveProvider` (REST over
 `HttpURLConnection`, `drive.appdata` scope, GIS tokens via `DriveAuth`) and `FolderProvider` (a
 directory; used by tests to simulate several devices). Only `com.lekaspos.sync` knows about
-Drive: other code sees `SyncProviders.connect/finish/forId` and the generic `AuthNeeded`.
+Drive: other code sees `SyncProviders.connect/finish/forId` and the generic `AuthNeeded`. The daily
+sales report to the owner's Drive (D-065) goes through `SyncProviders.connectReports/finishReports/
+reportFolder` (scope `drive.file`) and the `ReportFolder` interface; `DailyReportUpload` +
+`DailyReportWorker`, Settings → Daily sales report to Google Drive (`DriveReportUi`).
 `SyncWorker` and `BackupWorker` (WorkManager, initialised on demand, scheduled after the
 selling screen is usable); `AppGraph.syncSoon()` after each sale. Screens: Settings → Sync,
 Settings → Backup & restore. `BackupService` makes and prunes backups; `Restore` stages a

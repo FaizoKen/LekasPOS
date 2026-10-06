@@ -294,6 +294,19 @@ sync screen, `forId(meta sync.provider)` for background work.
   is told apart from one that is no backup (`BackupService.header` throws vs. null).
 - Archive of old sales: not built yet.
 
+## 12. Daily sales report to the owner's Google Drive (D-065)
+
+- Optional, per till (`meta drive_report.*`, LOCAL; cleared by a restore as a new till). Scope
+  `drive.file` (only files the app made; visible), asked on its own — sync keeps `drive.appdata`.
+  `SyncProviders.connectReports/finishReports/reportFolder`; the domain (`DailyReportUpload`) sees
+  only `ReportFolder`.
+- `LekasPOS/<yyyy-mm> daily-sales.csv` at the top of My Drive = the "Daily sales" export for the
+  month's finished days, replaced on each upload (`DriveProvider.folder` / `putInFolder`).
+  `MonthFiles.due` decides which months (yesterday's; the first 3 days of a month also the one
+  before; the first upload and "Upload now" also the one before; missed months; at most 13).
+- `DailyReportWorker`: every 3 h while online, plus once soon after a start when a day waits.
+  Failures are kept as `SyncEngine.errorCode` and shown in Settings; sign-in needed waits for the owner.
+
 ## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)
 
 N separate databases sharing a `FolderProvider` folder. Scenarios: second till joins with

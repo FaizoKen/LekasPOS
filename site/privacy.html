@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="privasi.html" hreflang="ms">Bahasa Melayu</a></p>
 <h1>LekasPOS privacy policy</h1>
-<p class="updated">Last updated: 3 October 2026</p>
+<p class="updated">Last updated: 6 October 2026</p>
 
 <p>LekasPOS is a free, open-source point-of-sale app for small shops
 (<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
@@ -66,6 +66,15 @@ already holds another shop's data, the app asks before this phone joins that sho
 this phone's products, sales and customers to that shop on every till). Google's
 <a href="https://policies.google.com/privacy">privacy policy</a> applies to data kept in Google
 Drive. Sign-in uses Google Play services.</li>
+<li><strong>Daily sales report to Google Drive (optional).</strong> If you turn it on (Settings →
+Daily sales report to Google Drive) and sign in with a Google account, once a day the app writes a
+file of the month's daily sales totals to the folder “LekasPOS” in that account's Google Drive: for
+each day the number of sales and refunds, net sales, tax, total, discount, cost and gross profit — no
+receipts, products, customers or staff. You see this file in Drive like any other, and so does
+anyone you share it with. The app asks Google only for the files it makes itself (the
+<code>drive.file</code> permission): it cannot see or change your other Drive files. It keeps the
+account's e-mail address on the phone to show it and to connect again. Google's
+<a href="https://policies.google.com/privacy">privacy policy</a> applies.</li>
 <li><strong>Daily copy to a folder (optional).</strong> If you pick a folder (for example on an SD
 card or USB drive), the app writes one backup file a day there and keeps the last 7. It stays on
 that card or drive; nothing is sent anywhere.</li>
@@ -125,6 +134,8 @@ on that phone (including the backups kept on it).</li>
 them, first turn off sync on <em>every</em> till (Settings → Google Drive backup → Turn off sync):
 a till that still syncs puts all its data back. Then open Google Drive on the web → Settings →
 Manage apps → LekasPOS → Options → Delete hidden app data.</li>
+<li>Turning off the daily sales report stops it; its files stay in the “LekasPOS” folder of your
+Google Drive. Delete them there like any other file.</li>
 <li>Backup files copied to a folder you picked (SD card, USB drive) are not deleted with the app;
 delete them in a file manager.</li>
 <li>Backup and CSV files you saved elsewhere are yours to delete.</li>

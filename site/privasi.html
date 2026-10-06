@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><a href="privacy.html" hreflang="en">English</a> · <strong>Bahasa Melayu</strong></p>
 <h1>Dasar privasi LekasPOS</h1>
-<p class="updated">Kemas kini terakhir: 3 Oktober 2026</p>
+<p class="updated">Kemas kini terakhir: 6 Oktober 2026</p>
 
 <p>LekasPOS ialah aplikasi jualan (POS) percuma dan sumber terbuka untuk kedai kecil
 (<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
@@ -71,6 +71,16 @@ produk, jualan dan pelanggan telefon ini kepada kedai itu pada setiap kaunter).
 <a href="https://policies.google.com/privacy?hl=ms">Dasar
 privasi Google</a> terpakai kepada data dalam Google Drive. Log masuk menggunakan perkhidmatan
 Google Play.</li>
+<li><strong>Laporan jualan harian ke Google Drive (pilihan).</strong> Jika anda menghidupkannya
+(Tetapan → Laporan jualan harian ke Google Drive) dan log masuk dengan akaun Google, sekali sehari
+aplikasi menulis fail jumlah jualan harian bulan itu ke folder “LekasPOS” dalam Google Drive akaun
+itu: bagi setiap hari, bilangan jualan dan bayaran balik, jualan bersih, cukai, jumlah, diskaun, kos
+dan untung kasar — tiada resit, produk, pelanggan atau pekerja. Anda melihat fail ini dalam Drive
+seperti fail lain, begitu juga sesiapa yang anda kongsikan. Aplikasi hanya meminta akses kepada
+fail yang dibuatnya sendiri daripada Google (kebenaran <code>drive.file</code>): ia tidak dapat
+melihat atau mengubah fail Drive anda yang lain. Ia menyimpan alamat e-mel akaun itu dalam telefon
+untuk menunjukkannya dan untuk menyambung semula. <a href="https://policies.google.com/privacy?hl=ms">Dasar
+privasi Google</a> terpakai.</li>
 <li><strong>Salinan harian ke folder (pilihan).</strong> Jika anda memilih folder (contohnya dalam
 kad SD atau pemacu USB), aplikasi menulis satu fail sandaran sehari di situ dan menyimpan 7 yang
 terakhir. Ia kekal dalam kad atau pemacu itu; tiada apa-apa dihantar ke mana-mana.</li>
@@ -135,6 +145,8 @@ di situ. Untuk memadamnya, mula-mula matikan segerak pada <em>setiap</em> kaunte
 Sandaran Google Drive → Matikan segerak): kaunter yang masih bersegerak akan menghantar semula
 semua datanya. Kemudian buka Google Drive di web → Tetapan → Urus apl → LekasPOS → Pilihan → Padam
 data apl tersembunyi.</li>
+<li>Mematikan laporan jualan harian menghentikannya; failnya kekal dalam folder “LekasPOS” Google
+Drive anda. Padamkannya di situ seperti fail lain.</li>
 <li>Fail sandaran yang disalin ke folder yang anda pilih (kad SD, pemacu USB) tidak dipadam bersama
 aplikasi; padamkannya dengan pengurus fail.</li>
 <li>Fail sandaran dan CSV yang anda simpan di tempat lain boleh anda padam sendiri.</li>

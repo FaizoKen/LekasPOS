@@ -31,6 +31,8 @@ object Work {
     private const val REPORTS_LATER_2 = "error-reports-later-2"
     private const val UPDATES = "app-updates-daily"
     private const val UPDATES_SOON = "app-updates-soon"
+    private const val DAILY_REPORT = "daily-report-drive"
+    private const val DAILY_REPORT_SOON = "daily-report-drive-soon"
 
     /**
      * Never throws: a till without background jobs still sells (backups and sync then run only
@@ -127,6 +129,33 @@ object Work {
         }
     }
 
+    /**
+     * The daily sales report to Google Drive (D-065) when [on], else none: every 3 hours while online it
+     * writes a day that has ended (most runs find nothing to do); with [soon] also once as soon as the
+     * phone is online. Off the main thread.
+     */
+    fun dailyReport(context: Context, on: Boolean, soon: Boolean) = safely("Scheduling the daily report failed") {
+        val wm = WorkManager.getInstance(context)
+        if (on) {
+            val conditions = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+            val periodic = PeriodicWorkRequestBuilder<DailyReportWorker>(3, TimeUnit.HOURS)
+                .setConstraints(conditions)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+                .build()
+            wm.enqueueUniquePeriodicWork(DAILY_REPORT, ExistingPeriodicWorkPolicy.KEEP, periodic)
+            if (soon) {
+                val once = OneTimeWorkRequestBuilder<DailyReportWorker>()
+                    .setConstraints(conditions)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+                    .build()
+                wm.enqueueUniqueWork(DAILY_REPORT_SOON, ExistingWorkPolicy.KEEP, once)
+            }
+        } else {
+            wm.cancelUniqueWork(DAILY_REPORT)
+            wm.cancelUniqueWork(DAILY_REPORT_SOON)
+        }
+    }
+
     /** The app already synced (auto sync, D-053): the fallback "sync soon" job is not needed. Off the main thread. */
     fun cancelSyncSoon(context: Context) = safely("Cancelling a sync failed") {
         WorkManager.getInstance(context).cancelUniqueWork(SYNC_SOON)
@@ -177,6 +206,25 @@ class ReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
 class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result =
         if (LekasApp.graph(applicationContext).updates.background() || runAttemptCount >= 3) Result.success() else Result.retry()
+}
+
+/**
+ * The daily sales report to Google Drive (D-065): a day that has ended is written; retried while
+ * offline. A needed sign-in waits for the owner (Settings says so), like sync.
+ */
+class DailyReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result = try {
+        LekasApp.graph(applicationContext).dailyReport.upload()
+        Result.success()
+    } catch (e: com.lekaspos.sync.AuthNeeded) {
+        Result.success()
+    } catch (e: java.io.IOException) {
+        Log.w("Daily report upload failed", e) // offline, Google busy: not the app's bug
+        if (runAttemptCount < 5) Result.retry() else Result.success()
+    } catch (e: Exception) {
+        Log.e("Daily report upload failed", e)
+        if (runAttemptCount < 3) Result.retry() else Result.success()
+    }
 }
 
 /** The periodic sync skips a run within this time of a finished round when nothing waits (2026-10). */

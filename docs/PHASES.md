@@ -29,6 +29,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Release 1.8.0**: sixth bug hunt — double taps, a till left on all day, two tills, scanners everywhere; price change from the price check, cash count, "Save and add another" (D-062) | **released** 2026-10-04 — the owner asked to release it; offered in the app to shops on 1.7.0; phone checks still to run |
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
+| — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | in progress — CI, then a test build; the owner adds the `drive.file` scope in Google Cloud |
 
 ## Open questions for the user
 
@@ -1562,3 +1563,47 @@ Phone check (1.10.1), on the Android 10 tablet:
 10. **Restore from Drive:** ⋮ → Restore from a file… → Drive → the file → "Checking…" → the restore question
    (Cancel leaves everything as it was). A photo or PDF → "This is not a LekasPOS backup file." Wi-Fi off and a
    Drive file not opened before → "This file could not be opened…", no crash.
+
+## 1.11.0 — daily sales report to the owner's Google Drive (D-065)
+
+The owner (2026-10-06): the tablet's old Google Drive app cannot be a folder, so the daily folder copy
+cannot go to Drive; "make auto export sales report to google drive even on old device". Chosen with options:
+the Daily sales report, one CSV per month, once a day, CSV.
+
+- [x] Settings → **Daily sales report to Google Drive** (Settings permission or a manager's PIN): Turn on →
+      Google's consent (scope `drive.file`: only files the app makes; sync's account when the shop syncs) →
+      the first upload at once; then the account, the last upload, Upload now, Sign in again, Turn off. On and
+      off are in the activity log
+- [x] Every 3 hours while online (and soon after a start when a day waits) a finished day not written yet
+      goes into `LekasPOS/<yyyy-mm> daily-sales.csv` at the top of My Drive (the "Daily sales" export: a row per
+      day, empty days too), replacing that month's file; the first upload and Upload now also write the month
+      before; the first 3 days of a month rewrite the month before (late-synced sales of other tills); missed
+      months are caught up (`MonthFiles`, `:core`)
+- [x] Straight to Google's Drive API (`DriveProvider.folder` / `putInFolder`), not the Drive app: any Drive app
+      version works; needs Google Play services and internet. Per till (`meta drive_report.*`, LOCAL); a backup
+      restored as a new till does not bring it along. Failures shown like sync's (offline, sign-in, Drive full)
+- [x] Privacy policy (English and Malay, "Last updated 6 October 2026"), Play Data Safety draft, README (OAuth
+      scopes), skill references, D-065
+- [x] Tests: `MonthFilesTest` (7, JVM), `DailyReportUploadTest` (4, instrumented, a folder in memory)
+- [x] Local: JVM tests and lint pass, instrumented tests compile; release APK 1,539,909 bytes (about +17 KB)
+- [ ] **Owner's step before the phone check:** Google Cloud console → project `lekaspos` → Google Auth Platform
+      → Data access → Add or remove scopes → tick `.../auth/drive.file` (or paste
+      `https://www.googleapis.com/auth/drive.file` under "Manually add scopes") → Update → Save. Non-sensitive:
+      no verification. It can take a few minutes to reach Google's servers
+- [ ] CI, test build v1.11.0 and the owner's phone check (below)
+
+### Needs real-device testing (1.11.0)
+
+1. **Turn on (the old Android 10 tablet):** Settings → Daily sales report to Google Drive → Turn on → Google
+   asks for the account (or names the shop's sync account) and "See, edit, create and delete only the
+   specific Google Drive files you use with this app" → Allow → "Uploading to Google Drive…" → "In Google Drive
+   → LekasPOS: 2026-09 daily-sales.csv, 2026-10 daily-sales.csv". The Settings row: "On · account · last
+   upload: …".
+2. **In Drive** (any phone or the web): My Drive → LekasPOS → the two files; open October in Google Sheets →
+   a row for each day to yesterday, with the sales, totals and profit the Reports screen shows for those days.
+3. **The next day:** without touching the app (online, any time after midnight; at most ~3 hours, or at once
+   when the app is opened) → the October file has yesterday's row; still two files, not new copies.
+4. **Upload now** with Wi-Fi off → "The last upload had no internet…", no crash; Wi-Fi on → Upload now works.
+5. **Folder deleted:** delete LekasPOS in Drive → Upload now → a new LekasPOS folder with the files.
+6. **Turn off** → asks first → the row says Off; the files stay in Drive. A cashier: a manager's PIN first.
+7. **Bahasa Melayu:** the row, dialog and messages in Malay.

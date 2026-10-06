@@ -302,6 +302,8 @@ object Restore {
             db.execSQL("DELETE FROM meta WHERE key LIKE 'pin.%'")
             for ((k, v) in carry.pins) Meta.put(db, k, v)
             val published = db.long("SELECT COUNT(*) FROM sync_segment") > 0L
+            // The daily report to Google Drive stays with the till that sends it: a new till does not send it too.
+            if (mode == Mode.NEW_DEVICE) db.execSQL("DELETE FROM meta WHERE key LIKE 'drive_report.%'")
             if (mode == Mode.NEW_DEVICE || published || Meta.get(db, Meta.SYNC_ENABLED) == "1") {
                 newIdentity(db)
             } else {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fasa 6: sandaran, pemulihan dan penyegerakan. -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="backup_title">Sandaran</string>
     <string name="settings_backup_sub">Sandaran dalam telefon ini, salinan harian ke kad SD atau USB, fail sandaran, pulihkan</string>
     <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Ia hilang bersama telefon: simpan salinan di luarnya dengan sandaran Google Drive, salinan harian ke kad SD atau pemacu USB (menu ⋮), atau dengan menyimpan atau berkongsi fail sandaran. Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
@@ -95,4 +95,27 @@
     <string name="sync_join_yes">Sertai kedai ini</string>
     <string name="sync_pill_sign_in">Sandaran: log masuk</string>
     <string name="sync_pill_stale">Tiada sandaran</string>
+    <!-- Laporan jualan harian ke Google Drive (D-065) -->
+    <string name="drive_report_title">Laporan jualan harian ke Google Drive</string>
+    <string name="drive_report_sub_off">Mati</string>
+    <string name="drive_report_sub_on">Hidup · %1$s · muat naik terakhir: %2$s</string>
+    <string name="drive_report_sub_sign_in">Hidup · perlu log masuk Google</string>
+    <string name="drive_report_not_yet">belum</string>
+    <string name="drive_report_help" tools:ignore="TypographyDashes">Setiap hari, jualan hari sebelumnya ditulis ke folder “LekasPOS” dalam Google Drive anda: satu fail sebulan, contohnya “2026-10 daily-sales.csv”, dengan satu baris bagi setiap hari (jualan, bayaran balik, jualan bersih, cukai, jumlah, diskaun, kos, untung kasar). Ia boleh dibuka dalam Google Sheets atau Excel.\n\nIa terus ke Google Drive, jadi ia berfungsi dengan mana-mana aplikasi Google Drive, walaupun versi lama. Ia memerlukan perkhidmatan Google Play dan internet, dan hanya dapat melihat fail yang dibuatnya. Hidupkan pada satu kaunter sahaja.</string>
+    <string name="drive_report_on">Hidup: laporan dihantar ke Google Drive %1$s.</string>
+    <string name="drive_report_last">Muat naik terakhir: %1$s.</string>
+    <string name="drive_report_never">Belum dimuat naik.</string>
+    <string name="drive_report_on_help">Setiap hari, jualan hari sebelumnya dihantar ke folder “LekasPOS” dalam Google Drive ini: satu fail sebulan, diganti setiap hari dengan bulan setakat ini.</string>
+    <string name="drive_report_turn_on">Hidupkan</string>
+    <string name="drive_report_turn_off">Matikan</string>
+    <string name="drive_report_off_confirm">Hentikan laporan jualan harian? Fail yang sudah ada dalam Google Drive kekal.</string>
+    <string name="drive_report_upload_now">Muat naik sekarang</string>
+    <string name="drive_report_sign_in_again">Log masuk semula</string>
+    <string name="drive_report_uploading">Memuat naik ke Google Drive…</string>
+    <string name="drive_report_done">Dalam Google Drive → LekasPOS: %1$s</string>
+    <string name="drive_report_no_play">Laporan harian ke Google Drive memerlukan perkhidmatan Google Play, yang tiada pada telefon ini.</string>
+    <string name="drive_report_sign_in">Google memerlukan anda log masuk semula sebelum laporan boleh dimuat naik.</string>
+    <string name="drive_report_offline">Muat naik terakhir tiada internet. Ia dicuba lagi apabila telefon dalam talian.</string>
+    <string name="drive_report_drive_full">Google Drive ini penuh, jadi laporan tidak dapat dimuat naik. Kosongkan ruang dalam Google Drive: ia diteruskan dengan sendiri.</string>
+    <string name="drive_report_failed">Muat naik terakhir tidak selesai: %1$s. Ia dicuba lagi secara automatik.</string>
 </resources>

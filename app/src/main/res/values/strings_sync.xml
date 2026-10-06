@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Phase 6: backups, restore and sync. -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="backup_title">Backup &amp; restore</string>
     <string name="settings_backup_sub">Backups on this phone, daily copy to SD card or USB, backup files, restore</string>
     <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before every app upgrade or restore. These are lost with the phone: keep a copy off it with Google Drive backup, a daily copy to an SD card or USB drive (⋮ menu), or by saving or sharing a backup file. Tap a backup to restore it; hold to delete it.</string>
@@ -98,4 +98,27 @@
     <string name="sync_join_yes">Join this shop</string>
     <string name="sync_pill_sign_in">Backup: sign in</string>
     <string name="sync_pill_stale">Not backed up</string>
+    <!-- The daily sales report to Google Drive (D-065) -->
+    <string name="drive_report_title">Daily sales report to Google Drive</string>
+    <string name="drive_report_sub_off">Off</string>
+    <string name="drive_report_sub_on">On · %1$s · last upload: %2$s</string>
+    <string name="drive_report_sub_sign_in">On · Google sign-in needed</string>
+    <string name="drive_report_not_yet">not yet</string>
+    <string name="drive_report_help" tools:ignore="TypographyDashes">Every day, the sales of the day before are written to the folder “LekasPOS” in your Google Drive: one file a month, such as “2026-10 daily-sales.csv”, with a row for each day (sales, refunds, net sales, tax, total, discount, cost, gross profit). It opens in Google Sheets or Excel.\n\nIt goes straight to Google Drive, so it works with any Google Drive app, even an old one. It needs Google Play services and internet, and it can see only the files it makes. Use it on one till only.</string>
+    <string name="drive_report_on">On: the report goes to the Google Drive of %1$s.</string>
+    <string name="drive_report_last">Last upload: %1$s.</string>
+    <string name="drive_report_never">Not uploaded yet.</string>
+    <string name="drive_report_on_help">Every day, the sales of the day before go to the folder “LekasPOS” in this Google Drive: one file a month, replaced each day with the month so far.</string>
+    <string name="drive_report_turn_on">Turn on</string>
+    <string name="drive_report_turn_off">Turn off</string>
+    <string name="drive_report_off_confirm">Stop the daily sales report? The files already in Google Drive stay.</string>
+    <string name="drive_report_upload_now">Upload now</string>
+    <string name="drive_report_sign_in_again">Sign in again</string>
+    <string name="drive_report_uploading">Uploading to Google Drive…</string>
+    <string name="drive_report_done">In Google Drive → LekasPOS: %1$s</string>
+    <string name="drive_report_no_play">The daily report to Google Drive needs Google Play services, which this phone does not have.</string>
+    <string name="drive_report_sign_in">Google needs you to sign in again before the report can be uploaded.</string>
+    <string name="drive_report_offline">The last upload had no internet. It is tried again when the phone is online.</string>
+    <string name="drive_report_drive_full">This Google Drive is full, so the report cannot be uploaded. Free space in Google Drive: it continues by itself.</string>
+    <string name="drive_report_failed">The last upload did not finish: %1$s. It is tried again automatically.</string>
 </resources>

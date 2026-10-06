@@ -16,6 +16,7 @@ import com.lekaspos.domain.customer.CustomerService
 import com.lekaspos.domain.inventory.InventoryService
 import com.lekaspos.domain.products.ProductCsvService
 import com.lekaspos.domain.promo.PromotionService
+import com.lekaspos.domain.report.DailyReportUpload
 import com.lekaspos.domain.report.ReportService
 import com.lekaspos.domain.sale.SaleActions
 import com.lekaspos.domain.sell.CartSession
@@ -120,6 +121,9 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
 
     /** New versions from the app's GitHub releases (D-059). */
     val updates: AppUpdates by lazy { AppUpdates(app) }
+
+    /** The daily sales report to the owner's Google Drive (D-065). */
+    val dailyReport: DailyReportUpload by lazy { DailyReportUpload(this, app) }
 
     private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
 

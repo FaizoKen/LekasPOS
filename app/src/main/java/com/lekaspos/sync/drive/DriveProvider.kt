@@ -28,6 +28,9 @@ import kotlinx.coroutines.withContext
  * is read to the end and closed, never disconnected); this till's own files are remembered by
  * id, so replacing its device card is one request; a first upload does not look for the file
  * first; and a listing can ask only for files created after a time.
+ *
+ * With a [FILE_SCOPE] token it also writes the daily sales report into a visible folder of the
+ * user's Drive ([folder], [putInFolder], D-065); that scope sees only the files this app made.
  */
 class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : SyncProvider {
 
@@ -84,13 +87,13 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
     private suspend fun find(name: String): List<RemoteFile> =
         query("name = '${quote(name)}' and trashed = false") { it.name == name }
 
-    /** Every page of the listing [q]; only files [keep] accepts are kept (page by page). */
-    private suspend fun query(q: String, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
+    /** Every page of the listing [q] in [spaces]; only files [keep] accepts are kept (page by page). */
+    private suspend fun query(q: String, spaces: String = APP_DATA, keep: (RemoteFile) -> Boolean): List<RemoteFile> {
         val out = ArrayList<RemoteFile>()
         var page: String? = null
         do {
             // prettyPrint=false and a gzip answer (see [open]): a listing is 3–4 times smaller.
-            val url = "$API/files?spaces=appDataFolder&pageSize=1000&prettyPrint=false" +
+            val url = "$API/files?spaces=$spaces&pageSize=1000&prettyPrint=false" +
                 "&fields=${enc("nextPageToken,files(id,name,size,appProperties,createdTime)")}" +
                 "&q=${enc(q)}" + (page?.let { "&pageToken=${enc(it)}" } ?: "")
             val json = request("GET", url) { null }.let { String(it, Charsets.UTF_8) }
@@ -154,9 +157,9 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
     private suspend fun create(meta: ByteArray, file: File): String =
         if (file.length() <= MULTIPART_MAX) multipart(meta, file) else resumable(meta, file)
 
-    private suspend fun patch(id: String, file: File) {
+    private suspend fun patch(id: String, file: File, mime: String = OCTET) {
         request("PATCH", "$UPLOAD/files/$id?uploadType=media") { c ->
-            c.setRequestProperty("Content-Type", "application/octet-stream")
+            c.setRequestProperty("Content-Type", mime)
             FileBody(file)
         }
     }
@@ -197,6 +200,82 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         return user?.get("emailAddress") as? String
     }
 
+    // ------------------------------------------------------------------ visible files (the daily report, D-065)
+
+    /**
+     * The id of the folder [name] at the top of My Drive that this app made, made now when there is
+     * none (also when the user deleted it, or moved it to the bin). Two made at once: the oldest is used.
+     */
+    internal suspend fun folder(name: String): String {
+        val q = "mimeType = '$FOLDER_MIME' and name = '${quote(name)}' and 'root' in parents and trashed = false"
+        suspend fun oldest(): String? = query(q, DRIVE) { true }.minByOrNull { it.created }?.id
+        oldest()?.let { return it }
+        val meta = json { w ->
+            w.name("name").value(name)
+            w.name("mimeType").value(FOLDER_MIME)
+            w.name("parents").beginArray().value("root").endArray()
+        }
+        return try {
+            createFolder(meta)
+        } catch (e: AnswerLost) {
+            // It may have been made (like [put]): looked up before it is sent once more.
+            oldest() ?: try {
+                createFolder(meta)
+            } catch (again: AnswerLost) {
+                throw again.io
+            }
+        }
+    }
+
+    private suspend fun createFolder(meta: ByteArray): String = idOf(
+        request("POST", "$API/files?fields=id") { c ->
+            c.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            BytesBody(meta)
+        },
+    )
+
+    /**
+     * Writes [file] as [name] into [folder]: the file of that name this app made there gets the new
+     * content (it keeps its place and link in Drive); a second copy (a create whose answer was lost)
+     * is removed.
+     */
+    internal suspend fun putInFolder(folder: String, name: String, file: File, mime: String) {
+        val q = "name = '${quote(name)}' and '${quote(folder)}' in parents and trashed = false"
+        val copies = query(q, DRIVE) { it.name == name }.sortedBy { it.created }
+        val existing = copies.firstOrNull()
+        if (existing != null) {
+            for (extra in copies.drop(1)) delete(extra)
+            patch(existing.id, file, mime)
+            return
+        }
+        val meta = json { w ->
+            w.name("name").value(name)
+            w.name("mimeType").value(mime)
+            w.name("parents").beginArray().value(folder).endArray()
+        }
+        try {
+            multipart(meta, file, mime)
+        } catch (e: AnswerLost) {
+            if (query(q, DRIVE) { it.name == name }.isEmpty()) {
+                try {
+                    multipart(meta, file, mime)
+                } catch (again: AnswerLost) {
+                    throw again.io
+                }
+            }
+        }
+    }
+
+    private fun json(fields: (JsonWriter) -> Unit): ByteArray {
+        val out = ByteArrayOutputStream()
+        JsonWriter(OutputStreamWriter(out, Charsets.UTF_8)).use { w ->
+            w.beginObject()
+            fields(w)
+            w.endObject()
+        }
+        return out.toByteArray()
+    }
+
     // ------------------------------------------------------------------ HTTP
 
     private fun metadata(name: String, props: Map<String, String>): ByteArray {
@@ -215,10 +294,10 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         return out.toByteArray()
     }
 
-    private suspend fun multipart(meta: ByteArray, file: File): String {
+    private suspend fun multipart(meta: ByteArray, file: File, mime: String = OCTET): String {
         val boundary = "lekas${System.nanoTime()}"
         val head = ("--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n").toByteArray() + meta +
-            ("\r\n--$boundary\r\nContent-Type: application/octet-stream\r\n\r\n").toByteArray()
+            ("\r\n--$boundary\r\nContent-Type: $mime\r\n\r\n").toByteArray()
         val tail = "\r\n--$boundary--\r\n".toByteArray()
         val body = request("POST", "$UPLOAD/files?uploadType=multipart&fields=id") { c ->
             c.setRequestProperty("Content-Type", "multipart/related; boundary=$boundary")
@@ -306,6 +385,11 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
     private class FileBody(val file: File) : Body {
         override fun length() = file.length()
         override fun write(out: java.io.OutputStream) = FileInputStream(file).use { it.copyTo(out, 64 * 1024); Unit }
+    }
+
+    private class BytesBody(val bytes: ByteArray) : Body {
+        override fun length() = bytes.size.toLong()
+        override fun write(out: java.io.OutputStream) = out.write(bytes)
     }
 
     private class MultipartBody(val head: ByteArray, val file: File, val tail: ByteArray) : Body {
@@ -459,5 +543,13 @@ class DriveProvider(private val token: suspend (refresh: Boolean) -> String) : S
         private fun utc() = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
             .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
         const val SCOPE = "https://www.googleapis.com/auth/drive.appdata"
+
+        /** Files this app made, visible in the user's Drive (the daily report, D-065); nothing else of theirs. */
+        const val FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+
+        private const val APP_DATA = "appDataFolder"
+        private const val DRIVE = "drive"
+        private const val OCTET = "application/octet-stream"
+        private const val FOLDER_MIME = "application/vnd.google-apps.folder"
     }
 }

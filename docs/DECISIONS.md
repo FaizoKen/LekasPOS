@@ -1271,6 +1271,44 @@ the most common one; keeping the keypad always on step 1 (it pushed the methods 
 phone); "Discount" kept for the owner on the totals bar (the owner asked for one screen); a long-press on a
 bill line for its discount or price (nobody finds it).
 
+### D-065 — Daily sales report to the owner's Google Drive, also on an old tablet (1.11.0, 2026-10-06)
+The owner (2026-10-06): an Android 10 tablet whose old Google Drive app cannot be updated is missing
+from the folder picker, so the daily folder copy cannot go to Drive there (1.10.1 points to Share and
+Save as instead, which are by hand). The owner decided on an automatic daily sales report in Drive
+"even on old device", and chose (asked with options): the **Daily sales** report only, **one CSV file
+per month**, uploaded **once a day**, as **CSV** (not converted to Google Sheets).
+- Straight to Google's Drive REST API with the existing client (`DriveProvider`, D-014), not through
+  the Drive app — so any Drive app version, or none, works. Needs Google Play services (sign-in) and
+  internet, like sync.
+- Its own scope, `drive.file` (files the app made, visible to the owner; non-sensitive like
+  `drive.appdata`, no verification), asked separately from sync's: a shop without sync can use it,
+  and sync's access is unchanged. Tokens are cached per scope and account. The account is sync's
+  when the shop syncs, else the one the owner picks on Google's screen.
+- Files: `LekasPOS/2026-10 daily-sales.csv` at the top of My Drive — the in-app "Daily sales" export
+  (D-041 columns: date, sales, refunds, net sales ex tax, tax, total, discount, cost, gross profit; a
+  row for every day, empty days too), for the month's finished days. Each upload replaces the
+  month's file (same file id: a link or a Sheets import of it keeps working). The folder and files are
+  looked up each time (a deleted or binned folder is made again); two copies (a create whose answer
+  was lost) → the extra one is removed.
+- When: a finished day (yesterday) not written yet → its month; the first upload and "Upload now"
+  also write the month before; in a month's first 3 days the month before is rewritten too (another
+  till's late-synced sales); offline for months → every missed month (at most 13); a clock set back →
+  yesterday's month again (`MonthFiles`, `:core`, unit-tested). WorkManager: every 3 hours while online
+  (most runs find nothing due) and once soon after a start when a day waits; a failure is retried
+  with backoff and shown in Settings (offline, sign-in needed, Drive full, the message).
+- Per till (`meta drive_report.*`, LOCAL): one till of a shop is enough (synced tills report every
+  till's sales); a backup restored as a new till does not bring it along. Turning it on or off needs
+  the Settings permission and is in the activity log. Off stops uploads; the files stay in Drive.
+- UI: Settings → "Daily sales report to Google Drive" (a dialog like App updates): what it does, Turn
+  on (Google's consent, then the first upload at once), the account and last upload, Upload now, Sign
+  in again, Turn off.
+- Privacy policy (both languages) and the Play Data Safety draft say what is sent: daily totals only —
+  no receipts, products, customers or staff.
+Rejected: the folder copy (SAF tree) — the old Drive app cannot be one, the reason for this; the Drive
+app's share sheet on a schedule — Android needs a tap for every share; `drive` (full Drive) scope —
+restricted, needs a paid security assessment; uploading into the hidden sync folder — the owner cannot
+see it; converting to Google Sheets — the owner chose CSV (each upload would also overwrite edits).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

@@ -55,7 +55,9 @@ Google sign-in is public. Going on Play then means:
 ## Data safety (draft answers)
 
 Key facts: no analytics/ads/crash SDKs. Data leaves the device only when the user turns on
-**Google Drive sync** (to their own Drive app folder, over HTTPS), allows **error reports** (D-057:
+**Google Drive sync** (to their own Drive app folder, over HTTPS), turns on the **daily sales report**
+(D-065: the month's daily totals as a CSV in a visible "LekasPOS" folder of their own Drive, scope
+`drive.file`, over HTTPS), allows **error reports** (D-057:
 asked once, off unless allowed; to the developer through the relay), or shares a file themselves.
 The daily **update check** asks GitHub for the latest release (app and Android version only, no
 user data); the Play build drops it (D-059, see Permissions below). Sync files and `.lekasbak`
@@ -69,7 +71,8 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
   - Personal info: *Name* (customers and staff, entered by the shop), *Phone number*, *Email
     address*, *Address* (customers' details, entered by the shop) — optional, app functionality.
   - Personal info: *Email address* (the Google account, kept on the phone to show which account
-    syncs and to connect to the same account again) — optional, app functionality.
+    syncs or receives the daily report and to connect to the same account again) — optional, app
+    functionality.
   - Financial info: *Purchase history* (the shop's sales records) and *Other financial info*
     (customers' credit balances) — optional, app functionality.
   - App activity: *Other actions* (the audit log of sensitive staff actions) — optional, app
@@ -91,7 +94,8 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
 - **Users can request deletion:** yes — uninstall / clear storage deletes local data; for synced
   data, first turn off sync on every till (Settings → Google Drive backup → Turn off sync — a till
   still syncing publishes everything again), then Drive on the web → Settings → Manage apps →
-  LekasPOS → Options → Delete hidden app data (explained in the privacy policy). Error reports:
+  LekasPOS → Options → Delete hidden app data (explained in the privacy policy). The daily report's
+  files are ordinary files in the "LekasPOS" folder of the user's Drive, deleted there. Error reports:
   on request (the privacy policy's contact).
 
 Re-check before submitting: if a later version changes what error reports hold, adds a server, or

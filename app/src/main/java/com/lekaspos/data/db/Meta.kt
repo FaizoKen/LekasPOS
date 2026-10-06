@@ -33,6 +33,15 @@ object Meta {
     const val BACKUP_EXPORT_OK = "dev.backup_export_ok"
     const val DB_PROBLEM = "dev.db_problem"
 
+    // The daily sales report to Google Drive (D-065), LOCAL: on for this till only (no account: off).
+    const val DRIVE_REPORT_ACCOUNT = "drive_report.account"
+
+    /** The last finished day written to Drive (local epoch day). */
+    const val DRIVE_REPORT_DAY = "drive_report.day"
+    const val DRIVE_REPORT_OK = "drive_report.ok"
+    const val DRIVE_REPORT_ERROR = "drive_report.error"
+    const val DRIVE_REPORT_PREFIX = "drive_report."
+
     fun docSeqKey(kind: Int) = "doc_seq_$kind"
 
     fun get(db: SQLiteDatabase, key: String): String? =

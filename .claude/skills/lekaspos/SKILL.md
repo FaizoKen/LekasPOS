@@ -151,8 +151,9 @@ streaming I/O for files (never whole files or whole tables in memory).
   IGNORE` by ID (derived data updated only if the row was new); LWW rows merge per field by
   `(hlc, device_no)`. Stock = last count + movements after it, ordered by HLC.
 - Hybrid logical clock (HLC) timestamps make ordering robust to clock skew.
-- Periodic compacted snapshots let a new device restore quickly. Drive scope:
-  `drive.appdata` only. Sign-in via Google Identity Services `AuthorizationClient`.
+- Periodic compacted snapshots let a new device restore quickly. Sync's Drive scope:
+  `drive.appdata` only; the optional daily sales report asks for `drive.file` on its own (D-065).
+  Sign-in via Google Identity Services `AuthorizationClient`.
 - WorkManager runs sync with backoff; uploads/downloads resume; status is always visible.
 - Local automatic backups and manual backup-file export/import work without Play Services.
 
