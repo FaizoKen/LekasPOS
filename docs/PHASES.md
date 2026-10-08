@@ -32,6 +32,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — waiting for the owner's phone check |
+| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | in progress — CI, then a test build |
 
 ## Open questions for the user
 
@@ -1736,3 +1737,39 @@ and not make cashier confusing... please audit and do your best".
 5. **Forgot to close:** leave a shift open overnight → in the morning sign in (or wait a minute on the screen) →
    "Yesterday's shift is still open" → Count the drawer → today's shift starts; the old one is closed.
 6. **Bahasa Melayu:** the new questions and steps in Malay.
+
+## 1.13.0 — customer screen on a second display (D-069)
+
+The owner (2026-10-08): "i decide to add customer screen feature... i have others screen but only can receive screen
+cast... so can i show customer screen using screen cast (Tablet > other screen) but only showing customer screen on
+other screen, not on tablet".
+
+- [x] **Customer screen** on a second display (Android `Presentation`): Miracast ("Screen mirroring", "Smart View",
+      "Wireless display"), HDMI or USB-C. The tablet keeps the selling screen. Google Home / Chromecast "Cast screen"
+      only mirrors — said in Settings
+- [x] Shows: a **welcome** with the shop's name (also while the till is locked); the **bill** — every line, the item
+      just added large with its picture (or initials on its colour), a bill discount, **Total** / **Total to pay**
+      while the payment is open, the number of items; after the sale **Thank you, Paid, Change** for 30 s or until the
+      next item. In the receipt language; sized to the screen; works standing upright too
+- [x] Stays on the other screen when the cashier opens another screen of the app (it never mirrors the back office);
+      appears when a screen is connected, goes when it is removed
+- [x] Settings → **Customer screen (second screen)**, per till: on (default) / off, whether a screen is connected now,
+      "Connect a screen" (Android's cast settings)
+- [x] Tests: `:core` `CustomerViewTest`; instrumented `CustomerScreenTest` on Android's simulated second display (the
+      welcome, the bill, another screen opened over the selling screen); pictures `en-customer-welcome.png`,
+      `en-customer-bill.png` with the screenshots
+- [x] Local: JVM tests and lint pass, instrumented tests compile
+- [ ] CI, release APK size; test build v1.13.0; the owner's check (below)
+
+### Needs real-device testing (1.13.0)
+
+1. **Connect the TV:** on the tablet, swipe down from the top → "Screen mirroring" / "Smart View" / "Cast" → pick the TV
+   (or Settings → Customer screen → Connect a screen). With LekasPOS open, the TV shows the welcome with the shop's name;
+   the tablet stays the selling screen. Settings → Customer screen says "showing on <the TV>".
+2. **Sell:** scan or tap items → the TV shows each line, the last item large (with its picture if it has one), the total.
+3. **Pay:** Pay → the TV says "Total to pay" → pay cash → "Thank you, Paid RM…, Change RM…" → back to the welcome.
+4. **Other screens:** open Menu → Manage shop → Products or Reports → the TV keeps the customer screen (never the
+   tablet's screen).
+5. **Turn off:** Settings → Customer screen → Turn off → the TV mirrors the tablet again (Android's normal cast); turn on.
+6. If the TV only copies the tablet: the cast is Google Home's "Cast screen" — use Screen mirroring / Smart View, or a
+   cable. Tell us the tablet's and the TV's (or dongle's) make.

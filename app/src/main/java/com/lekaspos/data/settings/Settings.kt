@@ -231,6 +231,8 @@ data class DeviceSettings(
     val lockAfterSale: Boolean = false,
     /** The selling screen's tiles: [TILES_LARGE], [TILES_MEDIUM] or [TILES_SMALL] (D-066). */
     val tileSize: Int = TILES_MEDIUM,
+    /** The customer screen on a second display when one is connected (D-069). */
+    val customerScreen: Boolean = true,
 ) {
     val cols: Int get() = when (paper) { 80 -> 48; 81 -> 42; else -> 32 }
     val dots: Int get() = when (paper) { 80 -> 576; 81 -> 512; else -> 384 }
@@ -279,6 +281,7 @@ data class DeviceSettings(
         private const val AUTO_LOCK = "dev.lock.minutes"
         private const val LOCK_AFTER_SALE = "dev.lock.after_sale"
         private const val TILES = "dev.tiles"
+        private const val CUSTOMER_SCREEN = "dev.customer_screen"
 
         fun load(db: SQLiteDatabase): DeviceSettings {
             val m = HashMap<String, String?>()
@@ -308,6 +311,7 @@ data class DeviceSettings(
                 autoLockMinutes = i(AUTO_LOCK, d.autoLockMinutes).coerceIn(0, 240),
                 lockAfterSale = b(LOCK_AFTER_SALE, d.lockAfterSale),
                 tileSize = i(TILES, d.tileSize).coerceIn(TILES_LARGE, TILES_SMALL),
+                customerScreen = b(CUSTOMER_SCREEN, d.customerScreen),
             )
         }
 
@@ -332,6 +336,7 @@ data class DeviceSettings(
             put(AUTO_LOCK, s.autoLockMinutes.toString())
             put(LOCK_AFTER_SALE, flag(s.lockAfterSale))
             put(TILES, s.tileSize.toString())
+            put(CUSTOMER_SCREEN, flag(s.customerScreen))
         }
     }
 }

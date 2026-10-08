@@ -49,6 +49,7 @@ class SettingsActivity : ScreenActivity() {
     private var updatesRow = 0
     private var driveReportRow = 0
     private var tilesRow = 0
+    private var customerRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,7 @@ class SettingsActivity : ScreenActivity() {
         val entries = listOf(
             Entry(R.string.settings_language, null, null, sub = { languageName(AppLanguage.get(this)) }) { chooseLanguage() },
             Entry(R.string.settings_tiles, null, null, sub = { tileName(graph.settings.device.value.tileSize) }) { chooseTiles() },
+            Entry(R.string.settings_customer_screen, null, null, sub = { customerScreenLine() }) { customerScreen() },
             Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java),
             Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java),
             Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java),
@@ -94,6 +96,7 @@ class SettingsActivity : ScreenActivity() {
         updatesRow = entries.indexOfFirst { it.title == R.string.update_settings_title }
         driveReportRow = entries.indexOfFirst { it.title == R.string.drive_report_title }
         tilesRow = entries.indexOfFirst { it.title == R.string.settings_tiles }
+        customerRow = entries.indexOfFirst { it.title == R.string.settings_customer_screen }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -106,6 +109,7 @@ class SettingsActivity : ScreenActivity() {
 
     /** App updates (D-059): the row follows checks and downloads while the screen is open. */
     override fun onStarted(scope: CoroutineScope) {
+        adapter?.notifyItemChanged(customerRow) // a screen connected meanwhile (the cast settings)
         val updates = graph.updates
         scope.launch {
             updates.load()
@@ -173,6 +177,50 @@ class SettingsActivity : ScreenActivity() {
         }
     }
 
+    /** "On · showing on <display>", "On · no second screen connected" or "Off" (D-069). */
+    private fun customerScreenLine(): String {
+        if (!graph.settings.device.value.customerScreen) return getString(R.string.cs_off)
+        val d = graph.customerDisplay.display()
+        return if (d != null) getString(R.string.cs_on_connected, d.name) else getString(R.string.cs_on_none)
+    }
+
+    /**
+     * The customer screen on a second display (D-069), per till: what it needs (a cable, or Miracast — not Google
+     * Cast's "Cast screen"), on or off, and a way to the phone's cast settings. Only how the till shows: no permission.
+     */
+    private fun customerScreen() {
+        val on = graph.settings.device.value.customerScreen
+        AlertDialog.Builder(this)
+            .setTitle(R.string.settings_customer_screen)
+            .setMessage(getString(R.string.cs_help) + "\n\n" + customerScreenLine())
+            .setPositiveButton(if (on) R.string.cs_turn_off else R.string.cs_turn_on) { _, _ ->
+                launchUi {
+                    graph.settings.saveDevice(graph.settings.device.value.copy(customerScreen = !on))
+                    graph.customerDisplay.refresh()
+                    adapter?.notifyItemChanged(customerRow)
+                }
+            }
+            .setNeutralButton(R.string.cs_connect) { _, _ -> openCastSettings() }
+            .setNegativeButton(R.string.close, null)
+            .show()
+            .trackedBy(this)
+    }
+
+    /** Android's cast (screen mirroring) settings, where this phone has them; else its display settings. */
+    private fun openCastSettings() {
+        for (action in listOf(android.provider.Settings.ACTION_CAST_SETTINGS, WIFI_DISPLAY_SETTINGS, android.provider.Settings.ACTION_DISPLAY_SETTINGS)) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (e: ActivityNotFoundException) {
+                continue // not on this phone: the next
+            } catch (e: SecurityException) {
+                continue
+            }
+        }
+        toast(R.string.cs_no_cast)
+    }
+
     private fun tileName(size: Int): String = getString(
         when (size) {
             DeviceSettings.TILES_LARGE -> R.string.tiles_large
@@ -218,5 +266,8 @@ class SettingsActivity : ScreenActivity() {
 
     private companion object {
         const val WEBSITE_URL = "https://faizoken.github.io/LekasPOS/"
+
+        /** Older Android and some makers: "Wireless display" (Miracast) settings. */
+        const val WIFI_DISPLAY_SETTINGS = "android.settings.WIFI_DISPLAY_SETTINGS"
     }
 }

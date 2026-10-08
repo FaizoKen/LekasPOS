@@ -1411,6 +1411,32 @@ an alarm (shops' hours differ; the new-day count catches a forgotten close); lea
 unrecorded (no way to check the next opening); counting the float on the shift row (a schema change and a synced field
 for something only this till's next opening needs).
 
+### D-069 — Customer screen on a second display (1.13.0, 2026-10-08)
+The owner: "i decide to add customer screen feature... i have others screen but only can receive screen cast... so can
+i show customer screen using screen cast (Tablet > other screen) but only showing customer screen on other screen, not
+on tablet".
+- Android's `Presentation` on any **presentation display**: Miracast ("Screen mirroring", "Smart View", "Wireless
+  display" — the TV or a cast dongle as a second display), HDMI or USB-C. The tablet keeps the selling screen; the
+  other screen shows only the customer screen. Google Cast's "Cast screen" (Google Home, Chromecast) mirrors through
+  MediaProjection and is no display for apps: it cannot (the Settings help says so).
+- `CustomerDisplay` (activity lifecycle callbacks + `DisplayListener`, registered by `LekasApp`): a presentation is
+  shown through an activity, so the customer screen moves to the activity in front when the one holding it stops —
+  without one, Android mirrors the till's own screen (back office: reports, costs) to the customers. Shown again when
+  a display is connected; gone when it is removed or the setting is off.
+- `CustomerScreen`: from `:core` `CustomerView` (the till's state, pure): **Welcome** (the shop's name; also while the
+  till is locked), **Bill** (the lines, the one just added highlighted and large on the side with its picture or
+  initials on its colour (D-066), a bill discount, "Total" / "Total to pay" while the payment is open, the number of
+  items), **Thanks** ("Paid", "Change", for 30 s or until the next item). In the receipt language; sized for 1280 ×
+  720dp and scaled to the display; a screen standing upright puts the list over the total.
+- Settings → "Customer screen (second screen)" per till (`dev.customer_screen`, on by default): what it needs, on or
+  off, "Connect a screen" (Android's cast settings, else the wireless display or display settings), and whether a
+  second screen is connected now.
+- Customers watching each item go on the bill (and off it) is also a check on the till (D-067).
+Rejected: the Google Cast SDK with a web receiver (a hosted page, a Cast developer registration and Play services'
+cast library for a screen most shops cast to with Miracast anyway); a second app on another device fed over the
+network (another device, pairing, a local server); a customer screen inside the till's own screen (the owner wants
+the other screen).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

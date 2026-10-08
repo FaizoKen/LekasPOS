@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The customer screen on a second display (1.13.0, D-069). The cs_ texts on the screen itself are shown in the
+     receipt language (the customer's side). -->
+<resources>
+    <string name="settings_customer_screen">Customer screen (second screen)</string>
+    <string name="cs_off">Off</string>
+    <string name="cs_on_connected">On · showing on %1$s</string>
+    <string name="cs_on_none">On · no second screen connected</string>
+    <string name="cs_help">Customers see the bill, the total and their change on a second screen, while this screen stays the cashier\'s. Connect the screen with a cable (HDMI or USB-C), or cast to it with Screen mirroring, Smart View or Wireless display (Miracast). Google Home\'s "Cast screen" only copies this screen and cannot show the customer screen.</string>
+    <string name="cs_turn_on">Turn on</string>
+    <string name="cs_turn_off">Turn off</string>
+    <string name="cs_connect">Connect a screen</string>
+    <string name="cs_no_cast">This tablet has no screen mirroring settings. Open them from the quick settings (swipe down from the top).</string>
+
+    <string name="cs_welcome">Welcome</string>
+    <string name="cs_thanks">Thank you!</string>
+    <string name="cs_paid">Paid %1$s</string>
+    <string name="cs_change">Change %1$s</string>
+    <string name="cs_discount">Discount −%1$s</string>
+    <string name="cs_total">Total</string>
+    <string name="cs_total_to_pay">Total to pay</string>
+    <string name="cs_items">Items: %1$d</string>
+</resources>

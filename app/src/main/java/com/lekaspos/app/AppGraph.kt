@@ -31,6 +31,7 @@ import com.lekaspos.perf.PerfRunner
 import com.lekaspos.sync.AutoSync
 import com.lekaspos.sync.SyncEngine
 import com.lekaspos.ui.common.PictureCache
+import com.lekaspos.ui.display.CustomerDisplay
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -128,6 +129,9 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
 
     /** Product pictures ready to draw (D-066). */
     val pictures: PictureCache by lazy { PictureCache(this) }
+
+    /** The customer screen on a second display (D-069); LekasApp registers it for the activities. */
+    val customerDisplay: CustomerDisplay by lazy { CustomerDisplay(app, this) }
 
     private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
 

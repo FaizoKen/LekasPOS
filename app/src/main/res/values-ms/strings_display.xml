@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skrin pelanggan pada skrin kedua (1.13.0, D-069). -->
+<resources>
+    <string name="settings_customer_screen">Skrin pelanggan (skrin kedua)</string>
+    <string name="cs_off">Mati</string>
+    <string name="cs_on_connected">Hidup · dipaparkan pada %1$s</string>
+    <string name="cs_on_none">Hidup · tiada skrin kedua disambung</string>
+    <string name="cs_help">Pelanggan melihat bil, jumlah dan baki mereka pada skrin kedua, manakala skrin ini kekal untuk juruwang. Sambung skrin dengan kabel (HDMI atau USB-C), atau hantar ke skrin itu dengan Screen mirroring, Smart View atau Wireless display (Miracast). "Cast screen" Google Home hanya menyalin skrin ini dan tidak boleh memaparkan skrin pelanggan.</string>
+    <string name="cs_turn_on">Hidupkan</string>
+    <string name="cs_turn_off">Matikan</string>
+    <string name="cs_connect">Sambung skrin</string>
+    <string name="cs_no_cast">Tablet ini tiada tetapan screen mirroring. Bukanya dari tetapan pantas (leret ke bawah dari atas).</string>
+
+    <string name="cs_welcome">Selamat datang</string>
+    <string name="cs_thanks">Terima kasih!</string>
+    <string name="cs_paid">Dibayar %1$s</string>
+    <string name="cs_change">Baki %1$s</string>
+    <string name="cs_discount">Diskaun −%1$s</string>
+    <string name="cs_total">Jumlah</string>
+    <string name="cs_total_to_pay">Jumlah perlu dibayar</string>
+    <string name="cs_items">Barang: %1$d</string>
+</resources>

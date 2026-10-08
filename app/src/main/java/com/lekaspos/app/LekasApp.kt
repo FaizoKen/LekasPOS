@@ -22,6 +22,7 @@ class LekasApp : Application(), Configuration.Provider {
         ErrorReports.init(this) // and, if the shop allowed it, to the developer (D-057; no disk work here)
         if (BuildConfig.DEBUG) StrictModeSetup.enable()
         graph = AppGraph(this) // object creation only — no disk or network here (cold-start budget)
+        registerActivityLifecycleCallbacks(graph.customerDisplay) // the customer screen on a second display (D-069)
     }
 
     /** Android is short of memory: product pictures are read again when shown (D-066). */

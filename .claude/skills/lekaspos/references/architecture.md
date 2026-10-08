@@ -328,6 +328,17 @@ restore that `Db.open` applies before opening the database (D-044).
   sync, price changes, a sale, `onStart`); `Beeper` plays on its own thread. Payment dialog: the change
   and a refusal share one slot that keeps its height (nothing moves under the cashier's finger).
 
+## 8c. Customer screen (1.13.0, D-069)
+
+- `ui.display.CustomerDisplay` (registered by `LekasApp` for every activity, and a `DisplayListener`) shows
+  `CustomerScreen` (a `Presentation`) on the first presentation display (Miracast, HDMI, USB-C) while the app is in
+  front, through the activity in front: when the activity holding it stops, the next one takes it over (Android would
+  otherwise mirror the till's screen to the customers). Per till: `dev.customer_screen`. Google Cast's "Cast screen"
+  only mirrors: no display for apps.
+- `CustomerScreen` draws `:core` `CustomerView` (Welcome, Bill, Thanks) from `CartSession.state`, `StaffSession.state`,
+  `CheckoutService.last` and the store settings; texts in the receipt language, scaled to the display.
+  `CustomerScreenTest` uses Android's simulated second display (`overlay_display_devices`).
+
 ## 9. Errors, logging, crash safety
 
 - Data-path exceptions are never swallowed: they propagate to the use case, which reports a
