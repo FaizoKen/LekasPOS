@@ -1378,7 +1378,7 @@ screen, for five minutes; nothing summed any of it per person.
   report in Drive (D-065) gains the day's checks (counts and values, no names).
 - **Held bills** say whose they are (PIN login on).
 Rejected: a manager's PIN to take items off after Pay (customers short of money take items off every day; a
-manager is often not there — on record instead); a shift per person with its own drawer (one drawer per till);
+manager is often not there — on record instead; the owner, asked, left it to us "to make easier", 2026-10-08); a shift per person with its own drawer (one drawer per till);
 restricting voids to today (a manager may need an older one; the staff check shows them); asking card and
 e-wallet terminal totals at close (more counting at every close; the per-method totals are on the report
 to compare with the bank).
