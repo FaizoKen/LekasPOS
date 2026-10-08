@@ -1813,7 +1813,10 @@ Found by the user guide's fact-check (D-070); the owner (2026-10-08): "yup do it
       English and Malay; the website's Download link serves it, SHA-256 checked); smoke baseline (`PREV_APK_URL`) v1.13.1; the user
       guide says "For LekasPOS 1.13.1". Privacy policy unchanged (1.13.1 stores and sends nothing new)
 - [ ] The owner's phone check (below)
-- [ ] Perf FULL on the released code
+- [x] Perf FULL on the released code (run 37805445618, 16f79ec): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok (with the new `audit_exists_detail`); API 21 sale commit p95 12.5 ms (150), multi-word search
+      p95 4.4 ms (50), scan to cart 0.68 ms, report_month 166 ms (1,000), report_year 207 ms (3,000); cold start to a usable till
+      about 0.6 s
 
 ### Needs real-device testing (1.13.1)
 
