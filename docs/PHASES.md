@@ -1589,7 +1589,7 @@ the Daily sales report, one CSV per month, once a day, CSV.
       scopes), skill references, D-065
 - [x] Tests: `MonthFilesTest` (7, JVM), `DailyReportUploadTest` (4, instrumented, a folder in memory)
 - [x] Local: JVM tests and lint pass, instrumented tests compile; release APK 1,539,909 bytes (about +17 KB)
-- [ ] **Owner's step before the phone check:** Google Cloud console → project `lekaspos` → Google Auth Platform
+- [x] **Owner's step before the phone check:** Google Cloud console → project `lekaspos` → Google Auth Platform
       → Data access → Add or remove scopes → tick `.../auth/drive.file` (or paste
       `https://www.googleapis.com/auth/drive.file` under "Manually add scopes") → Update → Save. Non-sensitive:
       no verification. It can take a few minutes to reach Google's servers
@@ -1598,7 +1598,7 @@ the Daily sales report, one CSV per month, once a day, CSV.
       (1.10.1's build 134: 1,522,590 — about +18 KB)
 - [x] Test build **v1.11.0** (pre-release, 2026-10-06; build 136, release key — same certificate; SHA-256 of the APK
       `f2027a8b…66c2`, `mapping-1.11.0.txt` attached). The public download stays v1.9.1
-- [ ] The owner's phone check (below), after the owner's step above. Not yet tried against real Google Drive:
+- [x] The owner's phone check (below), after the owner's step above — done 2026-10-08: "its works auto save report on google drive". Before that, not yet tried against real Google Drive:
       CI has no Google account (the tests use a folder in memory)
 
 ### Needs real-device testing (1.11.0)
@@ -1782,7 +1782,7 @@ other screen, not on tablet".
       English and Malay, covering 1.10.0 to 1.13.0; the website's Download link serves it, SHA-256 checked, and GitHub's
       latest release is v1.13.0); smoke baseline (`PREV_APK_URL`) v1.13.0. Shops on 1.6.1 or later are offered it inside
       the app within a day. Privacy policy already updated for 1.12.0 (8 October 2026); 1.13.0 sends nothing new.
-      Open: the Google Cloud `drive.file` scope step of 1.11.0 (the daily report to Drive) was never confirmed
+      The Google Cloud `drive.file` scope (1.11.0): the owner confirmed the daily report saves to Google Drive (2026-10-08)
 - [x] Perf FULL on the released code (run 37778514740, d3c583c): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
       lines), all 107 query plans ok; API 21 sale commit p95 19.1 ms (150), multi-word search p95 4.8 ms (50), scan to cart
       0.58 ms, report_month 164 ms (1,000), report_year 224 ms (3,000); cold start to a usable till about 0.7 s
