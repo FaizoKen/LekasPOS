@@ -31,7 +31,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
-| — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | in progress — CI, then a test build |
+| — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1718,7 +1718,11 @@ and not make cashier confusing... please audit and do your best".
 - [x] Tests: `:core` `ShiftGuideTest`; instrumented `StaffCheckTest` (opening checked against what was left, yesterday's
       shift closed by today's first count, shifts on for staff, once)
 - [x] Local: `:core` and `:app` JVM tests pass, instrumented tests compile, lint 0 errors
-- [ ] CI, release APK size; test build v1.12.1; the owner's phone check (below, with 1.12.0's list)
+- [x] CI on 6ffe022 (run 37767975160, build 143): **279/279 on API 21 and 36**, tablet, release smoke, lint; release APK
+      **1,589,160 bytes** (1.12.0's build 139: 1,579,610 — about +10 KB)
+- [x] Test build **v1.12.1** (pre-release, 2026-10-08; build 143, release key — same certificate `0a67abec…d4b9`; SHA-256
+      of the APK `6dedb828…847c`, `mapping-1.12.1.txt` attached). The public download stays v1.9.1
+- [ ] The owner's phone check (below, with 1.12.0's list)
 
 ### Needs real-device testing (1.12.1)
 
