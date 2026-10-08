@@ -76,6 +76,9 @@ data class ProductListItem(
     val stockQty: Long?,
     val active: Boolean = true,
     val categoryId: Long? = null,
+    /** The tile's own colour ([com.lekaspos.core.model.TileColor], 0 = none) and picture (D-066). */
+    val color: Int = 0,
+    val imageId: Long? = null,
 )
 
 /** SQL for products, barcodes and product search. See references/database.md §8. */
@@ -217,8 +220,11 @@ object ProductDao {
         args(id), ::sellable,
     )
 
+    /** A tile's colour and picture (D-066): a primary-key lookup per product shown. */
+    private const val LOOK_JOIN = " LEFT JOIN product_look k ON k.id = p.id"
+
     private const val LIST_COLUMNS =
-        "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty, p.active, p.category_id"
+        "p.id, p.name, p.name_key, p.price, p.unit, p.sell_mode, s.qty, p.active, p.category_id, k.color, k.image_id"
 
     /** Upper bound of FTS candidates joined and sorted per search: keeps common prefixes cheap. */
     const val FTS_CANDIDATES = 2000
@@ -236,18 +242,18 @@ object ProductDao {
     /** A one-letter word of the search, as a filter on the candidates: a word of the name starts with it. */
     private const val LETTER = " AND (' ' || p.name_key) LIKE ?"
     private const val FTS_COLUMNS =
-        ") t CROSS JOIN product p ON p.id = t.id LEFT JOIN stock_level s ON s.product_id = p.id ORDER BY t.k, t.id"
+        ") t CROSS JOIN product p ON p.id = t.id LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN ORDER BY t.k, t.id"
     private const val SEARCH_FTS =
         "SELECT $LIST_COLUMNS FROM ($FTS_PAGE AND p.active = 1 ORDER BY p.name_key, p.id LIMIT ?$FTS_COLUMNS"
 
     private const val SEARCH_PREFIX =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.deleted = 0 AND p.active = 1 AND p.name_key >= ? AND p.name_key < ? " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
     private const val SEARCH_BARCODE_PREFIX =
         "SELECT $LIST_COLUMNS FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
-            "LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE b.code >= ? AND b.code < ? AND b.deleted = 0 AND p.deleted = 0 AND p.active = 1 " +
             "ORDER BY b.code LIMIT ?"
 
@@ -257,13 +263,13 @@ object ProductDao {
         "SELECT $LIST_COLUMNS FROM ($FTS_PAGE ORDER BY p.name_key, p.id LIMIT ?$FTS_COLUMNS"
 
     private const val SEARCH_PREFIX_ALL =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.deleted = 0 AND p.name_key >= ? AND p.name_key < ? " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
     private const val SEARCH_BARCODE_PREFIX_ALL =
         "SELECT $LIST_COLUMNS FROM product_barcode b CROSS JOIN product p ON p.id = b.product_id " +
-            "LEFT JOIN stock_level s ON s.product_id = p.id " +
+            "LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE b.code >= ? AND b.code < ? AND b.deleted = 0 AND p.deleted = 0 " +
             "ORDER BY b.code LIMIT ?"
 
@@ -325,14 +331,14 @@ object ProductDao {
     private fun prefixUpper(prefix: String): String = prefix.substring(0, prefix.length - 1) + (prefix.last() + 1)
 
     private const val BY_CATEGORY =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.category_id = ? AND p.deleted = 0 AND p.active = 1 " +
             "AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
     // The same page with switched-off products (a stock count counts what is on the shelf).
     private const val BY_CATEGORY_ALL =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.category_id = ? AND p.deleted = 0 " +
             "AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
             "ORDER BY p.name_key, p.id LIMIT ?"
@@ -361,6 +367,8 @@ object ProductDao {
         stockQty = c.longOrNull(6),
         active = c.bool(7),
         categoryId = c.longOrNull(8),
+        color = if (c.isNull(9)) 0 else c.getInt(9),
+        imageId = c.longOrNull(10),
     )
 
     /** Is [id] a product of this store that has not been deleted? */
@@ -593,7 +601,7 @@ object ProductDao {
         }.distinct().take(5)
 
     private const val MANAGE_PAGE =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.deleted = 0 AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
@@ -605,7 +613,7 @@ object ProductDao {
     }
 
     private const val SELL_PAGE =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.deleted = 0 AND p.active = 1 AND p.name_key >= ? AND (p.name_key > ? OR p.id > ?) " +
             "ORDER BY p.name_key, p.id LIMIT ?"
 
@@ -630,7 +638,7 @@ object ProductDao {
     }
 
     private const val BY_ID_PREFIX =
-        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id " +
+        "SELECT $LIST_COLUMNS FROM product p LEFT JOIN stock_level s ON s.product_id = p.id$LOOK_JOIN " +
             "WHERE p.deleted = 0 AND p.active = 1 AND p.id IN "
 
     /** Sellable products among [ids], in the order of [ids] (deleted and inactive ones left out). */

@@ -112,8 +112,14 @@ class CheckoutService(private val graph: AppGraph) {
         }
     }
 
+    /**
+     * The sale's result was closed (or the next scan came). With "Lock after each sale" on this till the
+     * till locks now (D-067): every sale is made by whoever typed their PIN for it.
+     */
     fun acknowledge() {
+        val done = _outcome.value is Outcome.Completed
         _outcome.value = null
+        if (done && graph.settings.device.value.lockAfterSale) graph.staff.lock() // no effect while PIN login is off
     }
 
     /**

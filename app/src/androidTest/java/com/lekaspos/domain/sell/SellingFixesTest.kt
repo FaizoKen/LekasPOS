@@ -82,23 +82,20 @@ class SellingFixesTest {
         }
     }
 
+    /** D-067: every item taken off is on record with its value, the last one too (it no longer counts as a cleared bill). */
     @Test
-    fun removingTheLastLineIsAuditedLikeACancel() = runBlocking {
+    fun everyLineTakenOffIsAudited() = runBlocking {
         val db = graph.db()
         val roti = TestDb.sellable(db, TestDb.product(db, "Roti", 350L))
         val milo = TestDb.sellable(db, TestDb.product(db, "Milo", 990L))
-        // A line taken off a bill that goes on is a plain change.
         val r = cart.addProduct(roti)
         val m = cart.addProduct(milo)
         cart.remove(r)
-        cart.flush()
-        assertEquals(0L, db.read { AuditDao.countByAction(it, AuditAction.BILL_CANCEL) })
-        // The last one ends the bill: in the audit log like "Cancel bill", with what it was worth.
         cart.remove(m)
         cart.flush()
-        val entry = db.read { AuditDao.byAction(it, AuditAction.BILL_CANCEL, null) }.single()
-        assertEquals(990L, entry.amount)
-        assertEquals("last line removed: Milo", entry.detail)
+        assertEquals(0L, db.read { AuditDao.countByAction(it, AuditAction.BILL_CANCEL) })
+        val entries = db.read { AuditDao.byAction(it, AuditAction.LINE_REMOVE, null) }
+        assertEquals(setOf(350L to "Roti ×1", 990L to "Milo ×1"), entries.map { it.amount to it.detail }.toSet())
         assertTrue(cart.state.value.cart.isEmpty)
     }
 

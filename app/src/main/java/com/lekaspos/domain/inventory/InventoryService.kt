@@ -7,8 +7,14 @@ import com.lekaspos.app.AppGraph
 import com.lekaspos.core.inventory.AdjustReason
 import com.lekaspos.core.inventory.ReceiveDraft
 import com.lekaspos.core.inventory.ReceiveLine
+import com.lekaspos.core.model.AuditAction
+import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.money.Rounding
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.Meta
+import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.purchase.PurchaseDao
 import com.lekaspos.data.purchase.PurchaseIn
 import com.lekaspos.data.purchase.PurchaseLineIn
@@ -64,7 +70,17 @@ class InventoryService(private val graph: AppGraph) {
         val delta = reason.delta(qty, removing)
         val staff = graph.staff.staffId
         return graph.db().write(reserveIds = 4L) { tx ->
-            StockDao.insertMovement(tx, productId, reason.kind, delta, null, null, reason.encode(note), staff, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val id = StockDao.insertMovement(tx, productId, reason.kind, delta, null, null, reason.encode(note), staff, now)
+            // Stock taken off by hand is on record with its value at cost (D-067): "damaged" or "lost"
+            // can hide goods that went out without a sale.
+            if (delta < 0L) {
+                val p = ProductDao.get(tx.db, productId)
+                val value = Rounding.mulDivHalfUp(p?.cost ?: 0L, -delta, 1000L)
+                val detail = "${p?.name ?: "#$productId"}: -${MoneyFormat.formatQty(-delta)} (${reason.encode(note)})"
+                AuditDao.log(tx, AuditAction.STOCK_WRITE_OFF, staff, now, Entity.PRODUCT, productId, value, detail.take(300))
+            }
+            id
         }
     }
 

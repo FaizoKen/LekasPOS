@@ -14,9 +14,12 @@ import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
 import com.lekaspos.core.model.PaymentKind
+import com.lekaspos.core.model.TileColor
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.db.Seed
+import com.lekaspos.data.product.ProductLook
+import com.lekaspos.data.product.ProductLookDao
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
 import com.lekaspos.ui.inventory.InventoryActivity
@@ -90,6 +93,26 @@ class ScreenshotsTest {
                 val items = listOf("Milo Tin 1.5kg" to 3_890L, "Roti Gardenia Putih" to 420L, "Telur Gred A (30 biji)" to 1_650L)
                 for ((name, price) in items) {
                     graph.cart.addProduct(TestDb.sellable(db, TestDb.product(db, name, price)))
+                }
+                // More products for the tiles, with colours and a picture (D-066).
+                val more = listOf(
+                    "Beras Faiza 10kg" to TileColor.BROWN, "Gula Pasir 1kg" to TileColor.NONE, "Minyak Masak Saji 5kg" to TileColor.AMBER,
+                    "Teh Boh 250g" to TileColor.GREEN, "Kopi O Cap Kapal 200g" to TileColor.BROWN, "Maggi Kari 5 pek" to TileColor.ORANGE,
+                    "Sardin Ayam 425g" to TileColor.RED, "Susu Pekat Manis" to TileColor.BLUE, "Air Mineral 1.5L" to TileColor.TEAL,
+                )
+                val picture = android.graphics.Bitmap.createBitmap(240, 240, android.graphics.Bitmap.Config.ARGB_8888).apply {
+                    val c = android.graphics.Canvas(this)
+                    c.drawColor(0xFF8D6E63.toInt())
+                    c.drawCircle(120f, 120f, 80f, android.graphics.Paint().apply { color = 0xFFFFF3CF.toInt() })
+                }
+                val jpeg = java.io.ByteArrayOutputStream().also { picture.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+                for ((i, entry) in more.withIndex()) {
+                    val id = TestDb.product(db, entry.first, 500L + i * 250L)
+                    db.write(reserveIds = 2L) { tx ->
+                        val now = System.currentTimeMillis()
+                        val image = if (i == 0) ProductLookDao.addImage(tx, id, android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP), null, now) else null
+                        ProductLookDao.update(tx, id, ProductLook(), ProductLook(entry.second, image), now)
+                    }
                 }
             }
         }

@@ -497,6 +497,18 @@ class PermissionGate(private val session: StaffSession) {
     /** May the current user do [perm] (by role, or through an open screen's approval)? */
     fun allowed(perm: Long): Boolean = Perm.has(session.perms, perm) || elevated(perm) != null
 
+    /**
+     * Is a control for [perm] shown: [allowed], or a manager helping at the till may do it (D-063). What
+     * the help does not lend ([Perm.TILL_HELP], D-067) still asks for the manager's PIN when tapped.
+     */
+    fun shown(perm: Long): Boolean = allowed(perm) || helping(perm)
+
+    
+    private fun helping(perm: Long): Boolean {
+        endHelpIfExpired()
+        return _helper.value?.let { Perm.has(it.perm, perm) } == true
+    }
+
     /** May the current user's role do [perm], without any approval? */
     fun ownRole(perm: Long): Boolean = Perm.has(session.perms, perm)
 
@@ -532,9 +544,10 @@ class PermissionGate(private val session: StaffSession) {
     private val _helper = MutableStateFlow<Approval?>(null)
 
     /**
-     * A manager helping at the till (D-063): their PIN, given on the selling screen, lets the till do
-     * what they may — the buttons a cashier does not see show — for the bill on it: until it is paid,
-     * held or cleared ([endHelp]), the till locks or someone signs in, or [HELP_MS] has passed.
+     * A manager helping at the till (D-063): their PIN, given on the selling screen, shows the buttons a
+     * cashier does not see and lends the bill's own permissions ([Perm.TILL_HELP], D-067) for the bill on
+     * it: until it is paid, held or cleared ([endHelp]), the till locks or someone signs in, or [HELP_MS]
+     * has passed. Voids, refunds, the drawer and the back office ask for the manager's PIN each time.
      */
     val helper: StateFlow<Approval?> = _helper
     private var helpToken = 0L
@@ -543,7 +556,8 @@ class PermissionGate(private val session: StaffSession) {
     @Synchronized
     fun startHelp(approval: Approval) {
         if (helpToken != 0L) elevations.remove(helpToken)
-        helpToken = elevate(approval)
+        // Only the bill's own business is lent (D-067); the rest shows ([shown]) and asks again.
+        helpToken = elevate(Approval(approval.perm and Perm.TILL_HELP, approval.staffId, approval.name))
         helpUntil = SystemClock.elapsedRealtime() + HELP_MS
         _helper.value = approval
     }

@@ -48,10 +48,24 @@ class SettingsRepo(
     suspend fun load() = loadLock.withLock {
         if (loaded) return@withLock
         val db = graph.db()
-        val (store, device) = db.read { r -> SettingsDao.all(r) to DeviceSettings.load(r) }
+        val (store, device, lockSet) = db.read { r -> Triple(SettingsDao.all(r), DeviceSettings.load(r), Meta.get(r, LOCK_DEFAULT_SET) != null) }
         _store.value = StoreSettings.from(store, defaultLanguage)
-        _device.value = device
+        _device.value = if (lockSet) device else lockByDefault(device)
         loaded = true
+    }
+
+    /**
+     * 1.12.0 (D-067): a till that never locked itself now locks after [DeviceSettings.DEFAULT_LOCK_MINUTES]
+     * idle minutes while PIN login is on — the next person sold under the name of whoever walked away.
+     * Once per till (the owner can choose "Never" again in Settings → Staff).
+     */
+    private suspend fun lockByDefault(device: DeviceSettings): DeviceSettings {
+        val next = if (device.autoLockMinutes == 0) device.copy(autoLockMinutes = DeviceSettings.DEFAULT_LOCK_MINUTES) else device
+        graph.db().write(reserveIds = 0L) { tx ->
+            if (next !== device) DeviceSettings.save(tx, next)
+            Meta.put(tx.db, LOCK_DEFAULT_SET, "1")
+        }
+        return next
     }
 
     /**
@@ -148,5 +162,8 @@ class SettingsRepo(
     private companion object {
         const val SETUP_DONE = "dev.setup_done"
         const val MAX_DETAIL = 300
+
+        /** Set once [lockByDefault] has run on this till (LOCAL meta). */
+        const val LOCK_DEFAULT_SET = "upgrade.lock_default"
     }
 }

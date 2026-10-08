@@ -56,6 +56,8 @@ object Dialogs {
         inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
         message: CharSequence? = null,
         neutral: Pair<CharSequence, () -> Unit>? = null,
+        /** Shown under the field (a category's colours, D-066). */
+        below: View? = null,
         onOk: (String) -> Boolean,
     ): AlertDialog {
         val field = EditText(ctx).apply {
@@ -68,7 +70,11 @@ object Dialogs {
         val d = AlertDialog.Builder(ctx)
             .setTitle(title)
             .setMessage(message)
-            .setView(padded(ctx, field))
+            .setView(padded(ctx, if (below == null) field else android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                addView(field)
+                addView(below)
+            }))
             .setPositiveButton(R.string.ok, null)
             .setNegativeButton(R.string.cancel, null)
             .apply { if (neutral != null) setNeutralButton(neutral.first) { _, _ -> neutral.second() } }

@@ -34,6 +34,8 @@ import com.lekaspos.data.catalog.TaxRateDao
 import com.lekaspos.data.product.Barcode
 import com.lekaspos.data.product.Product
 import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.product.ProductLook
+import com.lekaspos.data.product.ProductLookDao
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.FieldScan
@@ -69,6 +71,7 @@ class ProductEditActivity : ScreenActivity() {
     private var taxes: List<TaxRate> = emptyList()
 
     private lateinit var form: Form
+    private val look = LookEditor(this)
     private lateinit var name: EditText
     private lateinit var price: EditText
     private lateinit var sellMode: Spinner
@@ -98,6 +101,7 @@ class ProductEditActivity : ScreenActivity() {
         productId = intent.getLongExtra(EXTRA_PRODUCT_ID, 0L)
         typed = savedInstanceState?.getBundle(STATE_FORM)
         shownForm = savedInstanceState?.getBundle(STATE_SHOWN)
+        look.restore(savedInstanceState)
         setScreen(getString(if (productId == 0L) R.string.product_new else R.string.product_edit))
         launchUi { load() }
     }
@@ -107,6 +111,7 @@ class ProductEditActivity : ScreenActivity() {
         val now = if (::form.isInitialized) form.save() else typed
         now?.let { outState.putBundle(STATE_FORM, it) }
         shownForm?.let { outState.putBundle(STATE_SHOWN, it) }
+        look.save(outState)
     }
 
     private suspend fun load() {
@@ -119,6 +124,7 @@ class ProductEditActivity : ScreenActivity() {
                 categories = CategoryDao.list(r),
                 taxes = TaxRateDao.list(r),
                 stock = if (id != 0L) StockDao.level(r, id) else null,
+                look = if (id != 0L) ProductLookDao.get(r, id) else ProductLook(),
                 // A barcode another product has too (e.g. added on two tills while offline).
                 shared = codes.filter { it.kind == BarcodeKind.BARCODE }.mapNotNull { b ->
                     ProductDao.codeOwners(r, b.code, id).firstOrNull()?.let { b.code to it.second }
@@ -138,7 +144,7 @@ class ProductEditActivity : ScreenActivity() {
         // clearing the codes for the loaded ones dropped it (2026-10 review).
         for (c in scannedEarly) if (codes.none { it.code == c }) codes.add(Code(null, c, BarcodeKind.BARCODE, 1000L, null))
         scannedEarly.clear()
-        build(data.product, data.stock, data.shared)
+        build(data.product, data.stock, data.shared, data.look)
         shown = data.product?.let { formProduct() ?: it }
         // After [shown]: it is what the screen first showed (the edit's "before"), the typed values are
         // the edit. Only into the same fields (the form can differ, e.g. the opening stock field).
@@ -171,11 +177,12 @@ class ProductEditActivity : ScreenActivity() {
         val categories: List<Category>,
         val taxes: List<TaxRate>,
         val stock: Long?,
+        val look: ProductLook,
         /** Barcode → name of another product that uses it. */
         val shared: List<Pair<String, String>>,
     )
 
-    private fun build(p: Product?, stock: Long?, shared: List<Pair<String, String>>) {
+    private fun build(p: Product?, stock: Long?, shared: List<Pair<String, String>>, shownLook: ProductLook) {
         form = Form(this)
         name = form.text(getString(R.string.product_name), p?.name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         price = form.text(getString(R.string.product_price), p?.let { MoneyFormat.format(it.price, currency, withSymbol = false) }, MONEY_INPUT)
@@ -188,6 +195,10 @@ class ProductEditActivity : ScreenActivity() {
             if (mode != SellMode.WEIGHT && unit.text.toString().trim() == UNIT_KG) unit.setText(UNIT_PCS)
         }
         unit = form.text(getString(R.string.product_unit), p?.unit ?: "pcs", InputType.TYPE_CLASS_TEXT)
+
+        // Its colour and picture on the selling screen (D-066).
+        form.section(getString(R.string.look_section))
+        form.add(look.build(shownLook))
 
         form.section(getString(R.string.product_barcodes))
         codeList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -391,11 +402,17 @@ class ProductEditActivity : ScreenActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (look.onResult(requestCode, resultCode, data)) return // a photo or a picture (D-066)
         if (requestCode == REQ_SCAN && resultCode == RESULT_OK) {
             val code = Gtin.canonical(data?.getStringExtra(CameraScanActivity.EXTRA_CODE) ?: return) // a camera code can end in a line break
             if (codes.none { it.code == code && it.kind == BarcodeKind.BARCODE }) codes.add(Code(null, code, BarcodeKind.BARCODE, 1000L, null))
             if (::codeList.isInitialized) renderCodes() else scannedEarly.add(code) // the form loads after this: kept for it
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        look.onPermission(requestCode, grantResults)
     }
 
     /**
@@ -432,6 +449,7 @@ class ProductEditActivity : ScreenActivity() {
     /** With [next], the form of the next new product opens once this one is saved. */
     private fun save(confirmedDuplicates: Boolean = false, next: Boolean = false) {
         if (saving) return
+        if (look.busy) return toast(R.string.look_reading) // the picture just taken would be left out
         if (!graph.permissions.allowed(Perm.MANAGE_PRODUCTS)) {
             requireAccess(Perm.MANAGE_PRODUCTS) { save(confirmedDuplicates, next) }
             return
@@ -501,6 +519,10 @@ class ProductEditActivity : ScreenActivity() {
         val c = currency
         val seen = shown
         val seenCodes = originalCodes
+        // Colour and picture (D-066): a new picture is stored as a new row the look points at.
+        val picture = look.picture
+        val wantLook = look.edited(null)
+        val seenLook = look.shown
         return graph.db().write(reserveIds = wanted.size + 16L) { tx ->
             val now = System.currentTimeMillis()
             val before = if (p.id != 0L) ProductDao.get(tx.db, p.id) else null
@@ -509,11 +531,15 @@ class ProductEditActivity : ScreenActivity() {
                 val barcodes = wanted.map { Barcode(tx.nextId(), id, it.code, it.kind, it.packQty, it.packPrice) }
                 ProductDao.create(tx, p.copy(id = id), barcodes, now)
                 if (openingQty > 0L && stockAllowed) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
+                val imageId = picture?.let { ProductLookDao.addImage(tx, id, it, staff, now) }
+                ProductLookDao.update(tx, id, ProductLook(), wantLook.copy(imageId = imageId ?: wantLook.imageId), now)
                 id
             } else {
                 // Only what the user changed on this screen is written, against the row as it is now:
                 // a field another till changed while the screen was open keeps that change.
                 val changed = ProductDao.update(tx, seen ?: before, p, before, now)
+                val imageId = picture?.let { ProductLookDao.addImage(tx, p.id, it, staff, now) }
+                ProductLookDao.update(tx, p.id, seenLook, wantLook.copy(imageId = imageId ?: wantLook.imageId), now)
                 val label = if ("name" in changed) p.name else before.name
                 if ("price" in changed) {
                     AuditDao.log(
@@ -531,6 +557,20 @@ class ProductEditActivity : ScreenActivity() {
                 }
                 if ("tax_rate_id" in changed) {
                     AuditDao.log(tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price, "$label: tax rate changed", actor.approvedBy)
+                }
+                // The cost (the profit the reports show) and the barcodes (a dear item's barcode moved onto a
+                // cheap product rings up the cheap price) are on record too (D-067).
+                if ("cost" in changed) {
+                    AuditDao.log(
+                        tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.cost,
+                        "$label: cost ${MoneyFormat.format(before.cost, c)} -> ${MoneyFormat.format(p.cost, c)}", actor.approvedBy,
+                    )
+                }
+                val codesBefore = seenCodes.map { it.code }.toSet()
+                val codesAfter = wanted.map { it.code }.toSet()
+                if (codesBefore != codesAfter) {
+                    val text = (codesAfter - codesBefore).map { "+$it" } + (codesBefore - codesAfter).map { "-$it" }
+                    AuditDao.log(tx, AuditAction.PRODUCT_PRICE_CHANGE, staff, now, Entity.PRODUCT, p.id, p.price, "$label: barcodes ${text.joinToString(" ")}".take(300), actor.approvedBy)
                 }
                 val packsBefore = seenCodes.filter { it.packQty != 1000L || it.packPrice != null }.map { Triple(it.code, it.packQty, it.packPrice) }.toSet()
                 val packsAfter = wanted.filter { it.packQty != 1000L || it.packPrice != null }.map { Triple(it.code, it.packQty, it.packPrice) }.toSet()

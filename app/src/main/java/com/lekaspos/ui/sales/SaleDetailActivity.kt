@@ -92,10 +92,10 @@ class SaleDetailActivity : ScreenActivity() {
             // Only what the person signed in may do (D-063): a refund typed in full before a PIN was
             // asked at the very end was the worst dead end a cashier met.
             val p = graph.permissions
-            print.visible(hasPrinter && p.allowed(Perm.REPRINT))
-            share.visible(p.allowed(Perm.REPRINT))
-            val canRefund = header.kind == SaleKind.SALE && !header.voided && p.allowed(Perm.REFUND)
-            val canVoid = !header.voided && p.allowed(Perm.VOID)
+            print.visible(hasPrinter && p.shown(Perm.REPRINT))
+            share.visible(p.shown(Perm.REPRINT))
+            val canRefund = header.kind == SaleKind.SALE && !header.voided && p.shown(Perm.REFUND)
+            val canVoid = !header.voided && p.shown(Perm.VOID)
             refund.visible(canRefund)
             void.visible(canVoid)
             val gap = if (canRefund) (6 * resources.displayMetrics.density).toInt() else 0

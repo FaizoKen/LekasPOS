@@ -9,4 +9,8 @@
     <files-path
         name="updates"
         path="updates/" />
+    <!-- A product photo, written by the camera app (Pictures.captureFile, D-066). -->
+    <cache-path
+        name="photos"
+        path="photos/" />
 </paths>

@@ -55,10 +55,11 @@ Every synced change is one event appended to `outbox` in the same transaction as
 | `STOCK_MOVE` | movement rows | insert-or-ignore; if new: apply to `stock_level` when after the last count |
 | `STOCK_COUNT` | count rows | insert-or-ignore; if newer than the current count: recompute the product's level |
 | `PURCHASE` | purchase + lines (+ generated movements share line IDs) | insert-or-ignore |
-| `CASH_MOVE`, `CREDIT`, `AUDIT` | row | insert-or-ignore (+ derived balance for credit) |
+| `CASH_MOVE`, `CREDIT`, `AUDIT`, `PRODUCT_IMAGE` | row | insert-or-ignore (+ derived balance for credit); a picture is base64 text in its row (D-066) |
 
 LWW entities: `setting` (per key), `role`, `staff`, `tax_rate`, `category`, `product`,
-`product_barcode`, `supplier`, `customer`, `payment_method`, `shift`, `count_session`.
+`product_barcode`, `supplier`, `customer`, `payment_method`, `shift`, `count_session`, `promotion`,
+`product_look` (colour and picture of a product, id = its id; D-066).
 
 Stock work (D-036): a PURCHASE event regenerates its RECEIVE movements with the purchase-line
 ids; the moving-average cost change travels separately as an ordinary LWW `product.cost` edit,
@@ -131,7 +132,8 @@ Streaming read/write only (`SegmentCodec`).
    is published as an event (`Backfill`, chunks of 300). The outbox is sealed into segments every 10 chunks
    while it runs (the whole history went into the outbox table first: up to a gigabyte, D-056). `meta sync.backfilled = store` marks it
    done; imports are idempotent, so repeating it is harmless.
-1. Seal: one write transaction per segment moves ≤ 2,000 outbox rows into
+1. Seal: one write transaction per segment moves ≤ 2,000 outbox rows (fewer once they hold 2 M
+   characters of payload: pictures, D-066) into
    `files/sync/out/seg-<seq>.ndjson.gz`, records it in `sync_segment`, deletes those rows.
 2. Upload every unsent segment in order (`put` with `replace = false`: an already uploaded name
    is left alone after a crash); mark uploaded; local copies deleted after 14 days (from

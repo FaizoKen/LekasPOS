@@ -41,12 +41,14 @@ object Backfill {
         rows(db, "cash_movement", Entity.CASH_MOVE, "", progress)
         rows(db, "credit_entry", Entity.CREDIT, "", progress)
         rows(db, "audit_log", Entity.AUDIT, "", progress)
+        // Pictures are ~13 KB each: a few per transaction, not a 4 MB page in memory (D-066).
+        rows(db, "product_image", Entity.PRODUCT_IMAGE, "", progress, chunk = 20)
     }
 
     /** Parents before children, so a single importer sees roles before staff and products before barcodes. */
     private fun order(table: String) = listOf(
         "role", "staff", "tax_rate", "category", "payment_method", "supplier", "customer", "product", "product_barcode",
-        "shift", "count_session", "promotion",
+        "shift", "count_session", "promotion", "product_look",
     ).indexOf(table)
 
     private suspend fun settings(db: Db) {
@@ -157,11 +159,11 @@ object Backfill {
         }
     }
 
-    private suspend fun rows(db: Db, table: String, entity: Int, filter: String, progress: suspend (String, Long) -> Unit) {
+    private suspend fun rows(db: Db, table: String, entity: Int, filter: String, progress: suspend (String, Long) -> Unit, chunk: Int = CHUNK) {
         var after = Long.MIN_VALUE
         var done = 0L
         while (true) {
-            val page = db.read { r -> page(r, "SELECT * FROM $table WHERE id > ?$filter ORDER BY id LIMIT $CHUNK", after) }
+            val page = db.read { r -> page(r, "SELECT * FROM $table WHERE id > ?$filter ORDER BY id LIMIT $chunk", after) }
             if (page.isEmpty()) break
             db.write(reserveIds = 0L) { tx ->
                 for (row in page) {

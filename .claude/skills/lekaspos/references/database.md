@@ -101,7 +101,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
   (D-030); store-wide settings are `setting` rows (LWW per key, keys in `SettingKeys`).
 - Receipt numbers are per device and per document kind: `{receipt_prefix}{kind}{seq:06}`.
 
-## 6. Table catalog (schema v8)
+## 6. Table catalog (schema v9)
 
 | Table | Class | Purpose | Key indexes |
 |---|---|---|---|
@@ -114,6 +114,8 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `product` | LWW | catalog | `name_key`, `(category_id, name_key)`, `sku` (all `deleted = 0`) |
 | `product_barcode` | LWW | barcodes, pack barcodes, scale PLUs | `code`, `product_id` (partial) |
 | `product_fts` | DERIVED | FTS4 search text (docid = product id) | FTS |
+| `product_look` | LWW | a product's tile colour (`TileColor`) and picture (`image_id`); id = the product's id (v9, D-066) | PK |
+| `product_image` | EVENT | product pictures: a 240 px JPEG as base64 text, never changed (v9, D-066) | PK |
 | `supplier` | LWW | suppliers | `name_key` |
 | `customer` | LWW | customers (optional feature) | `name_key`, `phone` |
 | `payment_method` | LWW | cash/card/e-wallet/credit/other | — |
@@ -239,4 +241,4 @@ are plain columns without FK constraints because sync can deliver them in any or
   files): Android's default handler deletes the database on SQLITE_CORRUPT (D-055).
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
-- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`), v6 (Phase 8, D-047: `promotion`, `sale_line.promo_id` + `promo_name`, LOCAL `sync_deferred`; sync cursors cleared once).
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`), v6 (Phase 8, D-047: `promotion`, `sale_line.promo_id` + `promo_name`, LOCAL `sync_deferred`; sync cursors cleared once). v7 and v8 (D-058: year and category summaries), v9 (1.12.0, D-066: `product_look`, `product_image` — new entities, so tills not yet updated defer their events instead of dropping fields).

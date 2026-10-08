@@ -1103,6 +1103,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         /** What the selling screen's tiles and chips show: names, prices, categories and stock. */
         private val CATALOG_ENTITIES = setOf(
             Entity.PRODUCT, Entity.CATEGORY, Entity.SALE, Entity.SALE_VOID, Entity.STOCK_MOVE, Entity.STOCK_COUNT, Entity.PURCHASE,
+            Entity.PRODUCT_LOOK, Entity.PRODUCT_IMAGE,
         )
 
         /** "versionCode:day" of the last retry of the events set aside ([applyDeferred]). */

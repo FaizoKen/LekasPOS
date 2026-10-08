@@ -30,6 +30,7 @@ import com.lekaspos.hw.scanner.SppScanner
 import com.lekaspos.perf.PerfRunner
 import com.lekaspos.sync.AutoSync
 import com.lekaspos.sync.SyncEngine
+import com.lekaspos.ui.common.PictureCache
 import com.lekaspos.util.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -125,6 +126,9 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     /** The daily sales report to the owner's Google Drive (D-065). */
     val dailyReport: DailyReportUpload by lazy { DailyReportUpload(this, app) }
 
+    /** Product pictures ready to draw (D-066). */
+    val pictures: PictureCache by lazy { PictureCache(this) }
+
     private val lastSyncSoon = AtomicLong(-SYNC_SOON_GAP_MS)
 
     /**
@@ -156,6 +160,7 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val catalogChanges: StateFlow<Int> = _catalogChanges
 
     fun catalogChanged() {
+        pictures.catalogChanged() // pictures from another till may have arrived
         _catalogChanges.update { it + 1 }
     }
 

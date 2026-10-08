@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Staf berkongsi kaunter: serah terima, semakan staf (1.12.0, D-067). -->
+<resources>
+    <string name="shift_handover">Kira laci apabila juruwang bertukar</string>
+    <string name="shift_handover_help">Apabila seseorang log masuk ketika syif orang lain masih dibuka pada kaunter ini, dia diminta mengira wang tunai dan memulakan syifnya sendiri. Setiap orang bertanggungjawab atas wang tunai dalam syifnya sendiri.</string>
+    <string name="handover_title">Ambil alih kaunter?</string>
+    <string name="handover_message">Syif %1$s masih dibuka pada kaunter ini. Kira wang tunai dalam laci sekarang untuk memulakan syif anda sendiri. Dengan itu, wang yang hilang kemudian ditunjukkan dalam syif seseorang.</string>
+    <string name="handover_count">Kira laci</string>
+    <string name="handover_later">Bukan sekarang</string>
+    <string name="handover_count_hint">Semua wang tunai dalam laci sekarang. Ini menutup syif %1$s dan memulakan syif anda dengan jumlah ini.</string>
+    <string name="handover_done_title">Syif anda telah bermula</string>
+    <string name="handover_done">Laci ada %1$s. Syif anda bermula dengan jumlah itu.</string>
+
+    <string name="staff_check_title">Semakan staf</string>
+    <string name="staff_check_intro">Apa yang dibuat oleh setiap orang di kaunter yang patut disemak. Semua ini bukan bukti kecurian: barang yang salah dibuang setiap hari. Tanya tentang barang yang dibuang selepas pelanggan melihat jumlah, laci dibuka tanpa jualan, wang tunai yang kurang dalam syif, dan seseorang yang jauh lebih banyak daripada orang lain.</string>
+    <string name="staff_check_none">Tiada apa-apa berlaku di kaunter dalam tempoh ini.</string>
+    <string name="check_sales">Jualan (%1$d)</string>
+    <string name="check_after_pay">Dibuang selepas jumlah ditunjuk (%1$d)</string>
+    <string name="check_cleared">Bil dikosongkan (%1$d)</string>
+    <string name="check_removed">Barang dibuang dari bil (%1$d)</string>
+    <string name="check_voids">Pembatalan (%1$d)</string>
+    <string name="check_refunds">Bayaran balik (%1$d)</string>
+    <string name="check_discounts">Diskaun dan tukar harga</string>
+    <string name="check_drawer">Laci dibuka tanpa jualan</string>
+    <string name="check_copies">Salinan resit</string>
+    <string name="check_cash_out">Wang dikeluarkan dari laci (%1$d)</string>
+    <string name="check_write_off">Stok dihapus kira, harga kos (%1$d)</string>
+    <string name="check_continued">Jual dalam syif orang lain tanpa kiraan laci</string>
+    <string name="check_over_short">Tunai lebih / kurang (%1$d syif, %2$d kurang)</string>
+
+    <string name="audit_line_remove">Barang dibuang dari bil</string>
+    <string name="audit_line_remove_after_pay">Barang dibuang selepas jumlah ditunjuk</string>
+    <string name="audit_bill_cancel_after_pay">Bil dibatalkan selepas jumlah ditunjuk</string>
+    <string name="audit_write_off">Stok dihapus kira</string>
+    <string name="audit_shift_continued">Jual dalam syif orang lain tanpa kiraan laci</string>
+</resources>

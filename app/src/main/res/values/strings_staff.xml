@@ -51,10 +51,11 @@
     <string name="staff_pin_after_save">After saving you will set this person\'s PIN.</string>
     <string name="staff_delete_confirm">Remove %1$s? Their sales and history stay.</string>
     <string name="staff_login_off">PIN login is off: the app runs as the owner. Set the owner\'s PIN to turn it on.</string>
-    <string name="staff_login_on">PIN login is on. Lock when idle: %1$s.</string>
-    <string name="staff_autolock">Lock when idle</string>
-    <string name="staff_autolock_never">never</string>
-    <string name="staff_autolock_min">after %1$d min</string>
+    <string name="staff_login_on">PIN login is on. The till locks %1$s.</string>
+    <string name="staff_autolock">When the till locks</string>
+    <string name="staff_autolock_never">only when someone locks it</string>
+    <string name="staff_autolock_min">after %1$d min idle</string>
+    <string name="staff_autolock_sale">after each sale and after %1$d min idle</string>
     <string name="staff_recovery_new">New recovery code</string>
     <string name="staff_recovery_confirm">A new owner recovery code replaces the old one. Continue?</string>
     <string name="staff_change_own_pin">Change my PIN</string>

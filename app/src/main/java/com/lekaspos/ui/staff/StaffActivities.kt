@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.Perm
+import com.lekaspos.data.settings.DeviceSettings
 import com.lekaspos.data.staff.Role
 import com.lekaspos.data.staff.Staff
 import com.lekaspos.domain.StaffSession
@@ -99,9 +100,8 @@ class StaffActivity : ScreenActivity() {
             adapter.submit(staff)
             empty.visible(staff.isEmpty())
             val s = graph.staff.state.value
-            val lock = graph.settings.device.value.autoLockMinutes
             header.text = if (s.loginRequired) {
-                getString(R.string.staff_login_on, if (lock == 0) getString(R.string.staff_autolock_never) else getString(R.string.staff_autolock_min, lock))
+                getString(R.string.staff_login_on, lockText(graph.settings.device.value))
             } else {
                 getString(R.string.staff_login_off)
             }
@@ -124,13 +124,32 @@ class StaffActivity : ScreenActivity() {
         m.show()
     }
 
+    private fun lockText(d: DeviceSettings): String = when {
+        d.lockAfterSale -> getString(R.string.staff_autolock_sale, d.autoLockMinutes.takeIf { it > 0 } ?: DeviceSettings.DEFAULT_LOCK_MINUTES)
+        d.autoLockMinutes == 0 -> getString(R.string.staff_autolock_never)
+        else -> getString(R.string.staff_autolock_min, d.autoLockMinutes)
+    }
+
+    /**
+     * When this till locks (D-067): after each sale (every sale under the PIN of whoever made it, for a
+     * till two people share), after some idle minutes, or only by hand. Changes are in the activity log.
+     */
     private fun chooseAutoLock() {
-        val minutes = listOf(0, 1, 2, 5, 10, 30)
-        val current = minutes.indexOf(graph.settings.device.value.autoLockMinutes).coerceAtLeast(0)
-        val labels = minutes.map { if (it == 0) getString(R.string.staff_autolock_never) else getString(R.string.staff_autolock_min, it) }
-        Dialogs.choose(this, getString(R.string.staff_autolock), labels, current) { i ->
+        val now = graph.settings.device.value
+        val choices = listOf(now.copy(lockAfterSale = true, autoLockMinutes = now.autoLockMinutes.takeIf { it > 0 } ?: DeviceSettings.DEFAULT_LOCK_MINUTES)) +
+            listOf(1, 2, 5, 10, 30, 0).map { now.copy(lockAfterSale = false, autoLockMinutes = it) }
+        val current = choices.indexOfFirst { it.lockAfterSale == now.lockAfterSale && (now.lockAfterSale || it.autoLockMinutes == now.autoLockMinutes) }
+        Dialogs.choose(this, getString(R.string.staff_autolock), choices.map { lockText(it) }, current) { i ->
+            val next = choices[i]
             launchUi {
-                graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = minutes[i]))
+                graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = next.autoLockMinutes, lockAfterSale = next.lockAfterSale))
+                // The activity log's details are English, like the rest of them.
+                val what = when {
+                    next.lockAfterSale -> "after each sale"
+                    next.autoLockMinutes == 0 -> "never by itself"
+                    else -> "after ${next.autoLockMinutes} min idle"
+                }
+                graph.settings.recordChange("till locks $what")
                 reload()
             }
         }

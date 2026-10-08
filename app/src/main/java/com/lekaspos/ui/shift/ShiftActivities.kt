@@ -27,6 +27,7 @@ import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.onNearEnd
+import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.AmountDialog
 import com.lekaspos.ui.sell.visible
 import com.lekaspos.util.Log
@@ -71,6 +72,60 @@ fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () ->
             } catch (e: Exception) {
                 // A refusal (a shift already open) is the rule working: no error report (D-057).
                 if (e is com.lekaspos.domain.sale.ActionRefused) Log.w("Opening the shift refused: ${e.reason}") else Log.e("Opening the shift failed", e)
+                Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
+            }
+        }
+    }.show()
+}
+
+/**
+ * Someone signed in while [shift], another person's, is open on this till (D-067): "Count the drawer"
+ * closes that shift with the cash counted now and opens theirs with it ([com.lekaspos.domain.shift.ShiftService.handover]);
+ * "Not now" sells on in it, on record and not asked again in that shift.
+ */
+fun offerHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, shift: Shift, openedBy: String) {
+    val staffId = graph.staff.staffId
+    android.app.AlertDialog.Builder(a)
+        .setTitle(R.string.handover_title)
+        .setMessage(a.getString(R.string.handover_message, openedBy))
+        .setPositiveButton(R.string.handover_count) { _, _ -> countHandover(a, graph, scope, openedBy) }
+        .setNegativeButton(R.string.handover_later) { _, _ ->
+            scope.launch {
+                try {
+                    graph.shifts.continueShift(staffId, shift)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("Recording a shift carried on failed", e)
+                }
+            }
+        }
+        .setCancelable(false) // one answer or the other: both are on record
+        .create()
+        .trackedBy(a)
+        .also { if (!a.isFinishing && !a.isDestroyed) it.show() }
+}
+
+private fun countHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, openedBy: String) {
+    val currency = graph.settings.store.value.currency
+    var pieces: Map<Long, Long> = emptyMap()
+    AmountDialog(
+        a, a.getString(R.string.handover_count), AmountDialog.Kind.MONEY, currency, message = a.getString(R.string.handover_count_hint, openedBy),
+        allowZero = true, extra = cashCountButton(a, currency) { pieces = it },
+    ) { counted ->
+        val note = if (pieces.isNotEmpty() && CashCount.total(pieces) == counted) {
+            CashCount.summary(pieces) { CashCountDialog.label(a, currency, it) }
+        } else {
+            null
+        }
+        scope.launch {
+            try {
+                graph.shifts.handover(counted, note)
+                Dialogs.message(a, a.getString(R.string.handover_done_title), a.getString(R.string.handover_done, MoneyFormat.format(counted, currency)))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is com.lekaspos.domain.sale.ActionRefused) Log.w("The handover was refused: ${e.reason}") else Log.e("The handover failed", e)
                 Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
             }
         }
@@ -122,7 +177,7 @@ class ShiftActivity : ScreenActivity() {
             form.row(getString(R.string.shift_opened_by), names[s.openedBy] ?: "-")
             form.row(getString(R.string.shift_opened_at), DateText.dateTime(s.openedAt, tz))
             form.row(getString(R.string.shift_float), money(s.openingFloat))
-            if (graph.permissions.allowed(Perm.CASH_MOVE)) {
+            if (graph.permissions.shown(Perm.CASH_MOVE)) {
                 form.button(getString(R.string.shift_cash_in)) { moveCash(CashMoveKind.CASH_IN) }
                 form.button(getString(R.string.shift_cash_out)) { moveCash(CashMoveKind.CASH_OUT) }
                 form.button(getString(R.string.shift_drop)) { moveCash(CashMoveKind.DROP) }

@@ -13,7 +13,12 @@ import com.lekaspos.core.report.Buckets
 import com.lekaspos.core.report.Granularity
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.report.ReportMath
+import com.lekaspos.core.staff.Checks
+import com.lekaspos.core.staff.StaffCheck
+import com.lekaspos.core.staff.Tally
 import com.lekaspos.core.time.DateText
+import com.lekaspos.core.time.Days
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.report.CategoryTotal
 import com.lekaspos.data.report.PaymentTotal
 import com.lekaspos.data.report.ProductTotal
@@ -23,6 +28,8 @@ import com.lekaspos.data.report.SlowMover
 import com.lekaspos.data.report.StaffTotal
 import com.lekaspos.data.report.StockValue
 import com.lekaspos.data.report.Totals
+import com.lekaspos.data.shift.ShiftDao
+import com.lekaspos.data.staff.StaffDao
 import java.util.TimeZone
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
@@ -72,6 +79,16 @@ class ReportService(private val graph: AppGraph) {
         return graph.db().read { r -> stock(r) }
     }
 
+    /**
+     * The staff check of [p] (D-067): per person, their sales, what the owner should look at (bills
+     * cleared, items taken off — after the total was shown above all —, voids, refunds, the drawer opened
+     * without a sale …) and the cash of the shifts they opened. Needs VIEW_AUDIT, like the activity log.
+     */
+    suspend fun staffCheck(p: Period, tz: TimeZone = TimeZone.getDefault()): List<StaffCheck> {
+        graph.permissions.actor(Perm.VIEW_AUDIT)
+        return graph.db().read { r -> staffCheck(r, p, tz) }
+    }
+
     /** Writes [what] for [p] as CSV (UTF-8 with BOM) to [out]; returns the number of data rows. */
     suspend fun export(what: Export, p: Period, out: Appendable, tz: TimeZone = TimeZone.getDefault()): Long {
         graph.permissions.actor(Perm.REPORTS)
@@ -89,7 +106,7 @@ class ReportService(private val graph: AppGraph) {
         val w = CsvWriter(out)
         when (what) {
             Export.SUMMARY -> db.read { r -> summaryCsv(w, build(r, p, 50), stock(r), currency) }
-            Export.DAILY -> db.read { r -> dailyCsv(w, Buckets.of(ReportDao.days(r, p.from, p.to), p, Granularity.DAY), currency) }
+            Export.DAILY -> db.read { r -> dailyCsv(w, Buckets.of(ReportDao.days(r, p.from, p.to), p, Granularity.DAY), currency, dayChecks(r, p, tz)) }
             Export.PRODUCTS -> db.read { r ->
                 w.row("product", "qty", "net_sales_ex_tax", "tax", "cost", "gross_profit")
                 ReportDao.eachProduct(r, p) { t ->
@@ -171,12 +188,63 @@ class ReportService(private val graph: AppGraph) {
             for (x in stock.categories) w.row("stock_value", x.name ?: "-", x.products.toString(), m(ReportMath.value(x.valueMilli, 1L), c))
         }
 
-        private fun dailyCsv(w: CsvWriter, days: List<Bucket>, c: CurrencySpec) {
-            w.row("date", "sales", "refunds", "net_sales_ex_tax", "tax", "total", "discount", "cost", "gross_profit")
+        /** See [ReportService.staffCheck]: everyone with sales, checks or closed shifts in [p], the most to look at first. */
+        fun staffCheck(r: SQLiteDatabase, p: Period, tz: TimeZone): List<StaffCheck> {
+            val from = Days.startOfDay(p.from, tz)
+            val to = Days.startOfDay(p.to, tz)
+            val names = StaffDao.names(r)
+            val sales = ReportDao.byStaff(r, p.from, p.to).associateBy { it.staffId }
+            val audit = AuditDao.totalsByStaff(r, from, to)
+            val shifts = ShiftDao.overShortByOpener(r, from, to)
+            val ids = LinkedHashSet<Long>().apply {
+                addAll(sales.keys)
+                addAll(audit.keys)
+                addAll(shifts.keys)
+            }
+            val list = ids.map { id ->
+                val s = sales[id]
+                val sh = shifts[id]
+                StaffCheck(
+                    staffId = id, name = names[id] ?: s?.name, sales = Tally(s?.saleCount ?: 0L, s?.total ?: 0L),
+                    checks = Checks.of(audit[id].orEmpty()), shifts = sh?.shifts ?: 0L, overShort = sh?.difference ?: 0L,
+                    shortShifts = sh?.short ?: 0L,
+                )
+            }
+            return StaffCheck.rank(list.filter { it.sales.count > 0L || !it.checks.isEmpty || it.shifts > 0L })
+        }
+
+        /** Each day's checks of every till (D-067) and the over/short of the shifts opened that day, for the daily CSV. */
+        private fun dayChecks(r: SQLiteDatabase, p: Period, tz: TimeZone): Map<Long, Pair<Checks, Long>> {
+            val out = HashMap<Long, Pair<Checks, Long>>()
+            var day = p.from
+            while (day < p.to) {
+                val from = Days.startOfDay(day, tz)
+                val to = Days.startOfDay(day + 1, tz)
+                val checks = Checks.of(AuditDao.totalsByStaff(r, from, to).values.flatten())
+                val overShort = ShiftDao.overShortByOpener(r, from, to).values.sumOf { it.difference }
+                out[day] = checks to overShort
+                day++
+            }
+            return out
+        }
+
+        /**
+         * A row per day. The checks columns (D-067) came after the sales ones in 1.12.0: what the owner
+         * reads in Google Drive every morning (D-065) says when bills were cleared or items taken off.
+         */
+        private fun dailyCsv(w: CsvWriter, days: List<Bucket>, c: CurrencySpec, checks: Map<Long, Pair<Checks, Long>>) {
+            w.row(
+                "date", "sales", "refunds", "net_sales_ex_tax", "tax", "total", "discount", "cost", "gross_profit",
+                "bills_cleared", "bills_cleared_value", "items_taken_off", "items_taken_off_value", "after_total_shown",
+                "after_total_shown_value", "drawer_opened_no_sale", "cash_over_short",
+            )
             for (b in days) {
+                val (k, overShort) = checks[b.start] ?: (Checks() to 0L)
                 w.row(
                     date(b.start), b.sales.toString(), b.refunds.toString(), m(b.netEx, c), m(b.tax, c), m(b.total, c),
                     m(b.discount, c), m(b.cost, c), m(b.grossProfit, c),
+                    k.cleared.count.toString(), m(k.cleared.amount, c), k.removed.count.toString(), m(k.removed.amount, c),
+                    k.afterPay.count.toString(), m(k.afterPay.amount, c), k.drawerOpens.toString(), m(overShort, c),
                 )
             }
         }

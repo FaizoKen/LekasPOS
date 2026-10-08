@@ -131,6 +131,11 @@ class AuditLogActivity : ScreenActivity() {
         AuditAction.CREDIT_LIMIT_CHANGE -> R.string.audit_credit_limit
         AuditAction.SETTINGS_CHANGE -> R.string.audit_settings
         AuditAction.CREDIT_PAYMENT -> R.string.audit_credit_payment
+        AuditAction.LINE_REMOVE -> R.string.audit_line_remove
+        AuditAction.LINE_REMOVE_AFTER_PAY -> R.string.audit_line_remove_after_pay
+        AuditAction.BILL_CANCEL_AFTER_PAY -> R.string.audit_bill_cancel_after_pay
+        AuditAction.STOCK_WRITE_OFF -> R.string.audit_write_off
+        AuditAction.SHIFT_CONTINUED -> R.string.audit_shift_continued
         else -> R.string.audit_other
     }
 
@@ -144,13 +149,15 @@ class AuditLogActivity : ScreenActivity() {
             AuditAction.SHIFT_CLOSE, AuditAction.CASH_IN, AuditAction.CASH_OUT, AuditAction.CASH_DROP,
             AuditAction.CREDIT_ADJUST, AuditAction.CREDIT_OVER_LIMIT, AuditAction.OWNER_PIN_RESET,
             AuditAction.CREDIT_LIMIT_CHANGE, AuditAction.CREDIT_PAYMENT, AuditAction.PRODUCT_IMPORT,
-            AuditAction.PROMOTION_CHANGE, AuditAction.SETTINGS_CHANGE,
+            AuditAction.PROMOTION_CHANGE, AuditAction.SETTINGS_CHANGE, AuditAction.LINE_REMOVE, AuditAction.LINE_REMOVE_AFTER_PAY,
+            AuditAction.BILL_CANCEL_AFTER_PAY, AuditAction.STOCK_WRITE_OFF, AuditAction.SHIFT_CONTINUED,
         )
         private val MONEY_ACTIONS = setOf(
             AuditAction.SALE_VOID, AuditAction.REFUND, AuditAction.PRICE_OVERRIDE, AuditAction.PRODUCT_PRICE_CHANGE,
             AuditAction.BILL_CANCEL, AuditAction.SHIFT_OPEN, AuditAction.SHIFT_CLOSE, AuditAction.CASH_IN, AuditAction.CASH_OUT,
             AuditAction.CASH_DROP, AuditAction.CREDIT_ADJUST, AuditAction.CREDIT_OVER_LIMIT, AuditAction.CREDIT_LIMIT_CHANGE,
-            AuditAction.CREDIT_PAYMENT,
+            AuditAction.CREDIT_PAYMENT, AuditAction.LINE_REMOVE, AuditAction.LINE_REMOVE_AFTER_PAY, AuditAction.BILL_CANCEL_AFTER_PAY,
+            AuditAction.STOCK_WRITE_OFF,
         )
     }
 }

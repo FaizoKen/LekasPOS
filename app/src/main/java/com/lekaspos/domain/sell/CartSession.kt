@@ -65,11 +65,16 @@ class CartSession(private val graph: AppGraph) {
         /** The customer the bill is for (customers & credit, D-039). */
         val customerId: Long? = null,
         val customerName: String? = null,
+        /**
+         * The payment screen has shown this bill's total: items taken off or the bill cleared after that
+         * are logged as such (the customer may have paid for what is no longer on the receipt, D-067).
+         */
+        val payShown: Boolean = false,
     ) {
         val canEdit: Boolean get() = loaded && !busy && !paying
     }
 
-    data class HeldBill(val id: Long, val label: String?, val updatedAt: Long, val lines: Int, val total: Long)
+    data class HeldBill(val id: Long, val label: String?, val updatedAt: Long, val lines: Int, val total: Long, val by: String? = null)
 
     sealed class ScanResult {
         data class Added(val key: Long, val name: String) : ScanResult()
@@ -284,12 +289,45 @@ class CartSession(private val graph: AppGraph) {
     /** Sets a line's quantity; false when it is refused (bill frozen, or more than [MAX_QTY]). */
     fun setQty(key: Long, qty: Long): Boolean {
         val st = _state.value
-        if (!st.canEdit || st.cart.item(key) == null || qty > MAX_QTY) return false
+        val item = st.cart.item(key)
+        if (!st.canEdit || item == null || qty > MAX_QTY) return false
         if (qty <= 0L) {
             remove(key)
             return true
         }
-        return putLine(st.cart.setQty(key, qty), key)
+        val cart = st.cart.setQty(key, qty)
+        if (qty >= item.qty) return putLine(cart, key)
+        // Fewer than before: what came off is on record, like a line removed (D-067).
+        val after = price(cart) ?: return false
+        val value = lineAmount(st.cart, st.priced, key) - lineAmount(cart, after, key)
+        val action = if (st.payShown) AuditAction.LINE_REMOVE_AFTER_PAY else AuditAction.LINE_REMOVE
+        val staffId = graph.staff.staffId
+        val detail = "${item.name}: ${qtyText(item)} -> ${qtyText(item.copy(qty = qty))}"
+        return putLine(cart, key) { tx, now -> AuditDao.log(tx, action, staffId, now, Entity.PRODUCT, item.productId, value, detail) }
+    }
+
+    /** What line [key] of [cart] comes to (its price less its own discount), for the activity log. */
+    private fun lineAmount(cart: Cart, priced: PricedCart, key: Long): Long {
+        val pl = priced.lines.getOrNull(cart.items.indexOfFirst { it.key == key }) ?: return 0L
+        return pl.gross - pl.lineDiscount
+    }
+
+    private fun qtyText(item: CartItem): String =
+        if (item.sellMode == SellMode.WEIGHT) "${MoneyFormat.formatQty(item.qty)} ${item.unit ?: "kg"}" else MoneyFormat.formatQty(item.qty)
+
+    /** A bill's items for the activity log: "Milo ×1, Roti ×2, …" (kept short). */
+    private fun itemsText(cart: Cart): String {
+        val sb = StringBuilder()
+        for ((i, item) in cart.items.withIndex()) {
+            val next = "${item.name} ×${qtyText(item)}"
+            if (sb.length + next.length > ITEMS_TEXT_MAX) {
+                sb.append(", +").append(cart.items.size - i)
+                break
+            }
+            if (i > 0) sb.append(", ")
+            sb.append(next)
+        }
+        return sb.toString()
     }
 
     /**
@@ -309,19 +347,22 @@ class CartSession(private val graph: AppGraph) {
         lineNos.remove(key)
         val now = System.currentTimeMillis()
         val left = st.cart.remove(key)
-        // The last line gone ends the bill as "Cancel bill" does, so it is in the audit log the same
-        // way: a bill emptied line by line is never invisible. No PIN is asked: taking a wrong item
-        // off stays one tap (2026-10 review).
+        // Every item taken off is in the activity log with its value, and whether the customer had
+        // seen the total on the payment screen (D-067): a bill emptied line by line is never invisible.
+        // No PIN is asked: taking a wrong item off stays one tap (2026-10 review).
         val emptied = left.isEmpty
         val staffId = graph.staff.staffId
-        val total = st.priced.total
+        val value = lineAmount(st.cart, st.priced, key)
+        val action = if (st.payShown) AuditAction.LINE_REMOVE_AFTER_PAY else AuditAction.LINE_REMOVE
+        val detail = "${item.name} ×${qtyText(item)}"
+        val log: (Db.Tx) -> Unit = { tx -> AuditDao.log(tx, action, staffId, now, Entity.PRODUCT, item.productId, value, detail) }
         if (emptied && st.customerId == null) {
             // The last line is gone: the bill ends here, its discount with it.
             val cartId = st.cartId
             if (cartId != 0L) {
                 enqueue(1L) { tx ->
                     CartDao.deleteCart(tx, cartId)
-                    logEmptied(tx, staffId, now, total, item.name)
+                    log(tx)
                 }
             }
             resetEmpty(st.heldCount)
@@ -333,15 +374,11 @@ class CartSession(private val graph: AppGraph) {
         val next = if (dropDiscount) left.withBillDiscount(Discount.None) else left
         // No line is selected after a removal: the line before took the selection, and on a long bill its
         // Remove button settled right under the finger — a double tap removed two items (2026-10 review).
-        commit(next, 0L, ids = if (emptied) 1L else 0L) { tx, cartId ->
+        commit(next, 0L, ids = 1L) { tx, cartId ->
             CartDao.deleteLine(tx, cartId, key, now)
             if (dropDiscount) CartDao.setBillDiscount(tx, cartId, DiscountKind.NONE, 0L, now)
-            if (emptied) logEmptied(tx, staffId, now, total, item.name)
+            log(tx)
         }
-    }
-
-    private fun logEmptied(tx: Db.Tx, staffId: Long, at: Long, total: Long, lastLine: String) {
-        AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, at, amount = total, detail = "last line removed: $lastLine")
     }
 
     /** Line discount (permission or a manager's [approval], audited). Returns false when not allowed. */
@@ -397,10 +434,13 @@ class CartSession(private val graph: AppGraph) {
         val total = st.priced.total
         val lines = st.cart.items.size
         val staffId = graph.staff.staffId
+        // Which items, and whether the customer had seen the total (D-067).
+        val action = if (st.payShown) AuditAction.BILL_CANCEL_AFTER_PAY else AuditAction.BILL_CANCEL
+        val detail = itemsText(st.cart)
         if (cartId != 0L) {
             enqueue(if (lines > 0) 1L else 0L) { tx ->
                 CartDao.deleteCart(tx, cartId)
-                if (lines > 0) AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, now, amount = total, detail = "$lines lines")
+                if (lines > 0) AuditDao.log(tx, action, staffId, now, amount = total, detail = detail)
             }
         }
         resetEmpty(st.heldCount)
@@ -444,10 +484,11 @@ class CartSession(private val graph: AppGraph) {
         flush()
         val inclTax = graph.settings.store.value.pricesIncludeTax
         val promos = graph.promotions.active()
+        val named = graph.staff.state.value.loginRequired // whose bill, once several people sign in (D-067)
         return graph.db().read { r ->
             CartDao.held(r).map { row ->
                 val total = CartDao.load(r, row.id)?.let { priceOrNull(toCart(it), inclTax, promos)?.total } ?: 0L
-                HeldBill(row.id, row.label, row.updatedAt, row.lines, total)
+                HeldBill(row.id, row.label, row.updatedAt, row.lines, total, row.by.takeIf { named })
             }
         }
     }
@@ -501,7 +542,8 @@ class CartSession(private val graph: AppGraph) {
         enqueue(if (lines > 0) 1L else 0L) { tx ->
             CartDao.deleteCart(tx, heldId)
             if (lines > 0) {
-                AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, now, amount = total, detail = "held bill, $lines lines")
+                val items = bill?.let { itemsText(it) }.orEmpty()
+                AuditDao.log(tx, AuditAction.BILL_CANCEL, staffId, now, amount = total, detail = "held bill: $items")
             }
         }
         flush()
@@ -541,7 +583,10 @@ class CartSession(private val graph: AppGraph) {
     /** Freezes the bill while the payment dialog is open (scans and edits are refused). */
     fun setPaying(on: Boolean) {
         val st = _state.value
-        if (st.paying != on) _state.value = st.copy(paying = on)
+        if (st.paying != on) _state.value = st.copy(paying = on, payShown = st.payShown || on)
+        // Kept with the bill (D-067): parking it, bringing it back or a restart must not clear it.
+        val cartId = st.cartId
+        if (on && !st.payShown && cartId != 0L) enqueue { tx -> CartDao.setPayShown(tx, cartId) }
         if (!on) {
             payment = null
             repriceNow() // a promotion that changed meanwhile applies from here
@@ -627,8 +672,9 @@ class CartSession(private val graph: AppGraph) {
         val staff = graph.staff.staffId
         val openedAt = st.openedAt.takeIf { it > 0L } ?: now
         val customerId = st.customerId
+        val payShown = st.payShown
         val rewrite: (Db.Tx) -> Unit = { tx ->
-            CartDao.rewriteOpen(tx, cartId, staff, openedAt, customerId, kind, value, lines, now)
+            CartDao.rewriteOpen(tx, cartId, staff, openedAt, customerId, kind, value, lines, now, payShown)
         }
         ops.trySend(Op(0L, rewrite, repair = true))
     }
@@ -754,6 +800,7 @@ class CartSession(private val graph: AppGraph) {
             cartId = s.id, openedAt = s.openedAt, cart = cart, priced = priced, lastKey = cart.items.lastOrNull()?.key ?: 0L,
             customerId = if (dropCustomer) null else s.customerId,
             customerName = if (dropCustomer) null else customer?.name,
+            payShown = s.payShown,
         )
     }
 
@@ -781,6 +828,9 @@ class CartSession(private val graph: AppGraph) {
     companion object {
         /** The most of one line: 99,999 pieces (or kg). Far above any real sale, far below an overflow. */
         const val MAX_QTY = 99_999_000L
+
+        /** Characters of item names in a cleared bill's activity-log entry. */
+        private const val ITEMS_TEXT_MAX = 300
 
         fun discountOf(kind: Int, value: Long): Discount = when (kind) {
             DiscountKind.AMOUNT -> if (value > 0L) Discount.Amount(value) else Discount.None

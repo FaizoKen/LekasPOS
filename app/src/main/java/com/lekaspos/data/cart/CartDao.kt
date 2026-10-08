@@ -47,9 +47,12 @@ data class StoredCart(
     val openedAt: Long,
     val updatedAt: Long,
     val lines: List<CartLine>,
+    /** The payment screen showed its total (D-067). */
+    val payShown: Boolean = false,
 )
 
-data class HeldCartRow(val id: Long, val label: String?, val openedAt: Long, val updatedAt: Long, val lines: Int)
+/** A parked bill; [by] = who started it (D-067: the held list says whose bill it is). */
+data class HeldCartRow(val id: Long, val label: String?, val openedAt: Long, val updatedAt: Long, val lines: Int, val by: String? = null)
 
 /**
  * LOCAL tables `cart` / `cart_line`: the open bill and parked (held) bills. IDs are assigned by
@@ -100,6 +103,11 @@ object CartDao {
         tx.update("UPDATE cart SET customer_id = ?, updated_at = ? WHERE id = ?", customerId, now, cartId)
     }
 
+    /** The payment screen showed bill [cartId]'s total: what is taken off it from now on is marked so (D-067). */
+    fun setPayShown(tx: Db.Tx, cartId: Long) {
+        tx.update("UPDATE cart SET pay_shown = 1 WHERE id = ?", cartId)
+    }
+
     fun deleteCart(tx: Db.Tx, cartId: Long) {
         tx.update("DELETE FROM cart WHERE id = ?", cartId) // lines cascade
     }
@@ -120,12 +128,13 @@ object CartDao {
      */
     fun rewriteOpen(
         tx: Db.Tx, id: Long, staffId: Long?, openedAt: Long, customerId: Long?, discKind: Int, discValue: Long,
-        lines: List<CartLine>, now: Long,
+        lines: List<CartLine>, now: Long, payShown: Boolean = false,
     ) {
         if (tx.update(SET_OPEN, CartStatus.OPEN, customerId, discKind, discValue, now, id) == 0) {
             insertCart(tx, id, staffId, openedAt, now)
             tx.update(SET_OPEN, CartStatus.OPEN, customerId, discKind, discValue, now, id)
         }
+        if (payShown) setPayShown(tx, id)
         tx.update("DELETE FROM cart_line WHERE cart_id = ?", id)
         for (l in lines) putLine(tx, id, l, now)
         parkOpen(tx, id, now)
@@ -146,13 +155,13 @@ object CartDao {
 
     fun load(db: SQLiteDatabase, cartId: Long): StoredCart? {
         val header = db.queryOne(
-            "SELECT id, status, label, customer_id, staff_id, bill_disc_kind, bill_disc_value, opened_at, updated_at " +
+            "SELECT id, status, label, customer_id, staff_id, bill_disc_kind, bill_disc_value, opened_at, updated_at, pay_shown " +
                 "FROM cart WHERE id = ?",
             args(cartId),
         ) { c ->
             StoredCart(
                 c.getLong(0), c.getInt(1), c.stringOrNull(2), c.longOrNull(3), c.longOrNull(4), c.getInt(5),
-                c.getLong(6), c.getLong(7), c.getLong(8), emptyList(),
+                c.getLong(6), c.getLong(7), c.getLong(8), emptyList(), payShown = c.getInt(9) != 0,
             )
         } ?: return null
         val lines = db.queryList(
@@ -175,10 +184,10 @@ object CartDao {
 
     /** Parked bills, most recently parked first. */
     fun held(db: SQLiteDatabase): List<HeldCartRow> = db.queryList(
-        "SELECT c.id, c.label, c.opened_at, c.updated_at, (SELECT COUNT(*) FROM cart_line l WHERE l.cart_id = c.id) " +
-            "FROM cart c WHERE c.status = ? ORDER BY c.updated_at DESC",
+        "SELECT c.id, c.label, c.opened_at, c.updated_at, (SELECT COUNT(*) FROM cart_line l WHERE l.cart_id = c.id), s.name " +
+            "FROM cart c LEFT JOIN staff s ON s.id = c.staff_id WHERE c.status = ? ORDER BY c.updated_at DESC",
         args(CartStatus.HELD),
-    ) { c -> HeldCartRow(c.getLong(0), c.stringOrNull(1), c.getLong(2), c.getLong(3), c.getInt(4)) }
+    ) { c -> HeldCartRow(c.getLong(0), c.stringOrNull(1), c.getLong(2), c.getLong(3), c.getInt(4), c.stringOrNull(5)) }
 
     fun heldCount(db: SQLiteDatabase): Int = db.long("SELECT COUNT(*) FROM cart WHERE status = ?", CartStatus.HELD).toInt()
 

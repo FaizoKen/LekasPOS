@@ -29,7 +29,7 @@ object QueryPlans {
     val LARGE_TABLES = setOf(
         "sale", "sale_line", "payment", "sale_void", "stock_movement", "stock_count", "audit_log", "credit_entry",
         "cash_movement", "product", "product_barcode", "sum_day_product", "sum_month_product", "sum_year_product",
-        "purchase", "purchase_line", "customer", "shift",
+        "purchase", "purchase_line", "customer", "shift", "product_look", "product_image",
     )
 
     /**

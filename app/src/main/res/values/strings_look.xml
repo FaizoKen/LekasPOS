@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Product pictures and colours, tile sizes (1.12.0, D-066). -->
+<resources>
+    <string name="color_none">No colour</string>
+    <string name="color_red">Red</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_indigo">Indigo</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_green">Green</string>
+    <string name="color_lime">Lime</string>
+    <string name="color_amber">Amber</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_brown">Brown</string>
+    <string name="color_grey">Grey</string>
+
+    <string name="settings_tiles">Item size on the selling screen</string>
+    <string name="tiles_large">Large (fewer items)</string>
+    <string name="tiles_medium">Medium</string>
+    <string name="tiles_small">Small (more items)</string>
+
+    <string name="look_section">On the selling screen</string>
+    <string name="look_preview">The item\'s picture and colour</string>
+    <string name="look_take_photo">Take photo</string>
+    <string name="look_choose_picture">Choose picture</string>
+    <string name="look_remove_picture">Remove picture</string>
+    <string name="look_color">Colour</string>
+    <string name="look_help">A picture and a colour help the cashier find the item quickly. Without a colour, the item takes its category\'s colour.</string>
+    <string name="look_no_camera_app">There is no camera app on this phone. Use Choose picture.</string>
+    <string name="look_no_gallery">No app on this phone can choose a picture.</string>
+    <string name="look_camera_denied">The camera is not allowed. Allow it in the phone\'s settings, or use Choose picture.</string>
+    <string name="look_unreadable">This picture could not be read. Try another one.</string>
+    <string name="look_reading">The picture is still loading…</string>
+</resources>

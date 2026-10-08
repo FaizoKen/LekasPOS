@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><a href="privacy.html" hreflang="en">English</a> · <strong>Bahasa Melayu</strong></p>
 <h1>Dasar privasi LekasPOS</h1>
-<p class="updated">Kemas kini terakhir: 6 Oktober 2026</p>
+<p class="updated">Kemas kini terakhir: 8 Oktober 2026</p>
 
 <p>LekasPOS ialah aplikasi jualan (POS) percuma dan sumber terbuka untuk kedai kecil
 (<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
@@ -24,10 +24,10 @@ pembangun menerima butiran teknikal tentang masalah dalam aplikasi, bukan data k
 <h2>Apa yang disimpan oleh aplikasi</h2>
 <p>Semua yang anda masukkan atau rekodkan semasa menjalankan kedai: butiran kedai (nama, alamat,
 telefon, e-mel, nombor pendaftaran perniagaan, nombor SST dan nombor pengenalan cukai (TIN)) dan
-logo resit; produk, harga dan stok; jualan, bayaran balik dan bayaran; pembekal (bersama butiran
+logo resit; produk, harga dan stok, serta gambar dan warna yang anda berikan kepada produk; jualan, bayaran balik dan bayaran; pembekal (bersama butiran
 hubungan mereka) dan pembelian; nama, peranan dan PIN kakitangan; pelanggan (nama, nombor telefon,
 alamat e-mel dan alamat pos, nombor cukai, nota dan baki kredit); syif, pergerakan tunai, tetapan
-dan log audit bagi tindakan sensitif. Setiap telefon juga menyimpan alamat Bluetooth pencetak dan
+dan log audit bagi tindakan sensitif (termasuk barang yang dibuang dari bil, bil yang dikosongkan dan siapa log masuk bila). Setiap telefon juga menyimpan alamat Bluetooth pencetak dan
 pengimbas yang dipilih dalam aplikasi dan, jika sandaran Google Drive dihidupkan, alamat e-mel
 akaun Google (untuk menunjukkan akaun yang digunakan dan untuk menyambung semula ke akaun yang
 sama).</p>
@@ -75,7 +75,7 @@ Google Play.</li>
 (Tetapan → Laporan jualan harian ke Google Drive) dan log masuk dengan akaun Google, sekali sehari
 aplikasi menulis fail jumlah jualan harian bulan itu ke folder “LekasPOS” dalam Google Drive akaun
 itu: bagi setiap hari, bilangan jualan dan bayaran balik, jualan bersih, cukai, jumlah, diskaun, kos
-dan untung kasar — tiada resit, produk, pelanggan atau pekerja. Anda melihat fail ini dalam Drive
+dan untung kasar, serta bilangan bil yang dikosongkan, barang yang dibuang dari bil dan kali laci dibuka tanpa jualan (dengan amaunnya) dan tunai lebih atau kurang — tiada resit, produk, pelanggan atau nama pekerja. Anda melihat fail ini dalam Drive
 seperti fail lain, begitu juga sesiapa yang anda kongsikan. Aplikasi hanya meminta akses kepada
 fail yang dibuatnya sendiri daripada Google (kebenaran <code>drive.file</code>): ia tidak dapat
 melihat atau mengubah fail Drive anda yang lain. Ia menyimpan alamat e-mel akaun itu dalam telefon
@@ -124,8 +124,11 @@ untuk dibalas. Ia dihantar dan disimpan dengan cara yang sama seperti laporan ra
 <li><strong>Bluetooth</strong> — untuk mencetak resit dan membaca pengimbas kod bar yang telah
 anda pasangkan dalam tetapan Android. Aplikasi tidak mengimbas peranti berdekatan atau
 menggunakan lokasi anda.</li>
-<li><strong>Kamera</strong> (pilihan) — untuk mengimbas kod bar. Imej diproses dalam telefon dan
-tidak disimpan atau dihantar ke mana-mana.</li>
+<li><strong>Kamera</strong> (pilihan) — untuk mengimbas kod bar, dan untuk mengambil gambar produk apabila
+anda menekan "Ambil foto" (aplikasi kamera Android yang mengambilnya). Imej imbasan diproses dalam
+telefon dan tidak disimpan atau dihantar ke mana-mana. Gambar produk dikecilkan (240 × 240 piksel) dan
+disimpan bersama data kedai: dalam telefon, dalam sandaran dan, jika segerak dihidupkan, dalam Google
+Drive kedai seperti produk itu sendiri. "Pilih gambar" hanya membaca satu gambar yang anda pilih.</li>
 <li><strong>Internet dan keadaan rangkaian</strong> — untuk segerak Google Drive, semakan kemas kini
 dan, jika anda membenarkannya, laporan ralat.</li>
 <li><strong>Pasang aplikasi</strong> — untuk memasang kemas kini LekasPOS sendiri. Android meminta

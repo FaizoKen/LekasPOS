@@ -4,6 +4,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
+import com.lekaspos.core.staff.ActionTotal
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.args
 import com.lekaspos.data.db.long
@@ -80,6 +81,35 @@ object AuditDao {
     fun countByAction(db: SQLiteDatabase, action: Int): Long =
         db.long("SELECT COUNT(*) FROM audit_log WHERE action = ?", action)
 
+    private const val BY_STAFF =
+        "SELECT staff_id, action, COUNT(*), COALESCE(SUM(amount), 0) FROM audit_log WHERE at >= ? AND at < ? GROUP BY staff_id, action"
+
+    /** The activity log from [fromMs] to [toMs] (exclusive) by person and action, for the staff check (D-067). */
+    fun totalsByStaff(db: SQLiteDatabase, fromMs: Long, toMs: Long): Map<Long, List<ActionTotal>> {
+        val out = HashMap<Long, MutableList<ActionTotal>>()
+        db.queryList(BY_STAFF, args(fromMs, toMs)) { c ->
+            if (!c.isNull(0)) out.getOrPut(c.getLong(0)) { ArrayList() }.add(ActionTotal(c.getInt(1), c.getLong(2), c.getLong(3)))
+        }
+        return out
+    }
+
+    private const val OF_TILL =
+        "SELECT action, COUNT(*), COALESCE(SUM(amount), 0) FROM audit_log WHERE at >= ? AND at <= ? AND id >= ? AND id < ? GROUP BY action"
+
+    /**
+     * The activity log of till [deviceNo] from [fromMs] to [toMs] (inclusive) by action: a shift's checks.
+     * A till's entries are the ids it made (`device_no shl 41`, references/database.md §5).
+     */
+    fun totalsOfTill(db: SQLiteDatabase, deviceNo: Int, fromMs: Long, toMs: Long): List<ActionTotal> {
+        val first = deviceNo.toLong() shl 41
+        return db.queryList(OF_TILL, args(fromMs, toMs, first, first + (1L shl 41))) { c -> ActionTotal(c.getInt(0), c.getLong(1), c.getLong(2)) }
+    }
+
+    private const val EXISTS = "SELECT COUNT(*) FROM audit_log WHERE action = ? AND staff_id = ? AND entity_id = ?"
+
+    /** Is there an entry of [action] by [staffId] about [entityId]? (A rare action: its rows by the action index.) */
+    fun exists(db: SQLiteDatabase, action: Int, staffId: Long, entityId: Long): Boolean = db.long(EXISTS, action, staffId, entityId) > 0L
+
     private fun row(c: Cursor) = AuditRow(
         id = c.getLong(0),
         action = c.getInt(1),
@@ -97,5 +127,8 @@ object AuditDao {
         "audit_next" to RECENT_NEXT,
         "audit_action_first" to ACTION_FIRST,
         "audit_action_next" to ACTION_NEXT,
+        "audit_exists" to EXISTS,
+        "audit_by_staff" to BY_STAFF,
+        "audit_of_till" to OF_TILL,
     )
 }

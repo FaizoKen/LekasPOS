@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="privasi.html" hreflang="ms">Bahasa Melayu</a></p>
 <h1>LekasPOS privacy policy</h1>
-<p class="updated">Last updated: 6 October 2026</p>
+<p class="updated">Last updated: 8 October 2026</p>
 
 <p>LekasPOS is a free, open-source point-of-sale app for small shops
 (<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
@@ -24,10 +24,10 @@ problems in the app, never your shop's data.</p>
 <h2>What the app stores</h2>
 <p>Everything you enter or record while running your shop: the store's details (name, address,
 phone, e-mail, business registration, SST and tax identification (TIN) numbers) and receipt logo;
-products, prices and stock; sales, refunds and payments; suppliers (with their contact details) and
+products, prices and stock, and the pictures and colours you give products; sales, refunds and payments; suppliers (with their contact details) and
 purchases; staff names, roles and PINs; customers (names, phone numbers, e-mail and postal
 addresses, tax numbers, notes and credit balances); shifts, cash movements, settings and an audit
-log of sensitive actions. Each phone also keeps the Bluetooth addresses of the printer and scanner
+log of sensitive actions (including items taken off a bill, bills cleared and who signed in when). Each phone also keeps the Bluetooth addresses of the printer and scanner
 chosen in the app and, if Google Drive backup is on, the Google account's e-mail address (to show
 which account is in use and to connect to the same account again).</p>
 <p>Staff PINs are stored only as salted, hashed values, never as the digits themselves. But a PIN
@@ -69,8 +69,9 @@ Drive. Sign-in uses Google Play services.</li>
 <li><strong>Daily sales report to Google Drive (optional).</strong> If you turn it on (Settings →
 Daily sales report to Google Drive) and sign in with a Google account, once a day the app writes a
 file of the month's daily sales totals to the folder “LekasPOS” in that account's Google Drive: for
-each day the number of sales and refunds, net sales, tax, total, discount, cost and gross profit — no
-receipts, products, customers or staff. You see this file in Drive like any other, and so does
+each day the number of sales and refunds, net sales, tax, total, discount, cost and gross profit, and
+how many bills were cleared, items taken off bills and times the drawer was opened without a sale (with
+their amounts) and the cash over or short — no receipts, products, customers or staff names. You see this file in Drive like any other, and so does
 anyone you share it with. The app asks Google only for the files it makes itself (the
 <code>drive.file</code> permission): it cannot see or change your other Drive files. It keeps the
 account's e-mail address on the phone to show it and to connect again. Google's
@@ -115,8 +116,11 @@ kept the same way as error reports.</li>
 <ul>
 <li><strong>Bluetooth</strong> — to print receipts and read barcode scanners you have already
 paired in Android settings. The app does not scan for nearby devices or use your location.</li>
-<li><strong>Camera</strong> (optional) — to scan barcodes. Images are processed on the phone
-and are not stored or sent anywhere.</li>
+<li><strong>Camera</strong> (optional) — to scan barcodes, and to take a product's picture when you
+tap "Take photo" (Android's camera app takes it). Scanned images are processed on the phone and are
+not stored or sent anywhere. A product picture is made small (240 × 240 pixels) and kept with the
+shop's data: on the phone, in backups and, if sync is on, in the shop's Google Drive like the
+products themselves. "Choose picture" reads only the one picture you pick.</li>
 <li><strong>Internet and network state</strong> — for Google Drive sync, update checks and, if you
 allow them, error reports.</li>
 <li><strong>Install apps</strong> — to install LekasPOS's own updates. Android asks you to confirm

@@ -50,10 +50,11 @@
     <string name="staff_pin_after_save">Selepas disimpan, anda akan menetapkan PIN orang ini.</string>
     <string name="staff_delete_confirm">Buang %1$s? Jualan dan sejarahnya kekal.</string>
     <string name="staff_login_off">Log masuk PIN dimatikan: aplikasi berjalan sebagai pemilik. Tetapkan PIN pemilik untuk menghidupkannya.</string>
-    <string name="staff_login_on">Log masuk PIN dihidupkan. Kunci apabila tidak digunakan: %1$s.</string>
-    <string name="staff_autolock">Kunci apabila tidak digunakan</string>
-    <string name="staff_autolock_never">tidak pernah</string>
-    <string name="staff_autolock_min">selepas %1$d min</string>
+    <string name="staff_login_on">Log masuk PIN dihidupkan. Kaunter dikunci %1$s.</string>
+    <string name="staff_autolock">Bila kaunter dikunci</string>
+    <string name="staff_autolock_never">hanya apabila seseorang menguncinya</string>
+    <string name="staff_autolock_min">selepas %1$d min tidak digunakan</string>
+    <string name="staff_autolock_sale">selepas setiap jualan dan selepas %1$d min tidak digunakan</string>
     <string name="staff_recovery_new">Kod pemulihan baharu</string>
     <string name="staff_recovery_confirm">Kod pemulihan pemilik yang baharu menggantikan yang lama. Teruskan?</string>
     <string name="staff_change_own_pin">Tukar PIN saya</string>

@@ -38,6 +38,7 @@ object SettingKeys {
     const val CASH_STEP = "currency.cash_step"
     const val SCALE_TEMPLATES = "scale.templates"
     const val SHIFT_REQUIRED = "shift.required"
+    const val SHIFT_HANDOVER = "shift.handover"
     const val CREDIT_ENABLED = "credit.enabled"
 
     /** Hash of the owner's recovery code (D-037); not part of [StoreSettings]. */
@@ -67,6 +68,11 @@ data class StoreSettings(
     val scaleTemplates: List<String> = DEFAULT_SCALE_TEMPLATES,
     /** Payments need an open shift on this till (D-038). */
     val shiftRequired: Boolean = false,
+    /**
+     * Someone signing in while another person's shift is open on the till is asked to count the drawer
+     * and start their own shift (D-067): each person answers for the cash of their own shift.
+     */
+    val handoverCount: Boolean = true,
     /** Customers and "pay later" credit (D-039). */
     val creditEnabled: Boolean = false,
 ) {
@@ -107,6 +113,7 @@ data class StoreSettings(
         SettingKeys.CASH_STEP to currency.cashStep.toString(),
         SettingKeys.SCALE_TEMPLATES to scaleTemplates.joinToString(","),
         SettingKeys.SHIFT_REQUIRED to flag(shiftRequired),
+        SettingKeys.SHIFT_HANDOVER to flag(handoverCount),
         SettingKeys.CREDIT_ENABLED to flag(creditEnabled),
     )
 
@@ -143,6 +150,7 @@ data class StoreSettings(
                 scaleTemplates = m[SettingKeys.SCALE_TEMPLATES]?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
                     ?: DEFAULT_SCALE_TEMPLATES,
                 shiftRequired = b(SettingKeys.SHIFT_REQUIRED, d.shiftRequired),
+                handoverCount = b(SettingKeys.SHIFT_HANDOVER, d.handoverCount),
                 creditEnabled = b(SettingKeys.CREDIT_ENABLED, d.creditEnabled),
             )
         }
@@ -218,7 +226,11 @@ data class DeviceSettings(
     val scannerName: String? = null,
     val cameraScan: Boolean = true,
     /** Lock the till after this many idle minutes (0 = never) while PIN login is on. */
-    val autoLockMinutes: Int = 0,
+    val autoLockMinutes: Int = DEFAULT_LOCK_MINUTES,
+    /** Lock the till after every sale while PIN login is on: each sale is made by whoever typed their PIN (D-067). */
+    val lockAfterSale: Boolean = false,
+    /** The selling screen's tiles: [TILES_LARGE], [TILES_MEDIUM] or [TILES_SMALL] (D-066). */
+    val tileSize: Int = TILES_MEDIUM,
 ) {
     val cols: Int get() = when (paper) { 80 -> 48; 81 -> 42; else -> 32 }
     val dots: Int get() = when (paper) { 80 -> 576; 81 -> 512; else -> 384 }
@@ -241,6 +253,13 @@ data class DeviceSettings(
         const val MODE_TEXT = 1
         const val MODE_IMAGE = 2
 
+        /** Idle minutes before the till locks itself while PIN login is on (D-067: it never did by default). */
+        const val DEFAULT_LOCK_MINUTES = 5
+
+        const val TILES_LARGE = 0
+        const val TILES_MEDIUM = 1
+        const val TILES_SMALL = 2
+
         private const val P = "dev."
         private const val PRINTER_ADDRESS = "dev.printer.address"
         private const val PRINTER_NAME = "dev.printer.name"
@@ -258,6 +277,8 @@ data class DeviceSettings(
         private const val SCANNER_NAME = "dev.scanner.name"
         private const val CAMERA = "dev.camera.enabled"
         private const val AUTO_LOCK = "dev.lock.minutes"
+        private const val LOCK_AFTER_SALE = "dev.lock.after_sale"
+        private const val TILES = "dev.tiles"
 
         fun load(db: SQLiteDatabase): DeviceSettings {
             val m = HashMap<String, String?>()
@@ -285,6 +306,8 @@ data class DeviceSettings(
                 scannerName = m[SCANNER_NAME],
                 cameraScan = b(CAMERA, d.cameraScan),
                 autoLockMinutes = i(AUTO_LOCK, d.autoLockMinutes).coerceIn(0, 240),
+                lockAfterSale = b(LOCK_AFTER_SALE, d.lockAfterSale),
+                tileSize = i(TILES, d.tileSize).coerceIn(TILES_LARGE, TILES_SMALL),
             )
         }
 
@@ -307,6 +330,8 @@ data class DeviceSettings(
             put(SCANNER_NAME, s.scannerName)
             put(CAMERA, flag(s.cameraScan))
             put(AUTO_LOCK, s.autoLockMinutes.toString())
+            put(LOCK_AFTER_SALE, flag(s.lockAfterSale))
+            put(TILES, s.tileSize.toString())
         }
     }
 }

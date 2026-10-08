@@ -1309,6 +1309,79 @@ app's share sheet on a schedule — Android needs a tap for every share; `drive`
 restricted, needs a paid security assessment; uploading into the hidden sync folder — the owner cannot
 see it; converting to Google Sheets — the owner chose CSV (each upload would also overwrite edits).
 
+### D-066 — Product pictures and colours; more items on the selling screen (1.12.0, 2026-10-08)
+The owner (2026-10-08): "make it can put item image and color to make easier to identify" and "make
+cashier main UI wider to see lot item easier but still easy to select".
+- **Colours:** 12 shades (`:core` `TileColor`, codes 1–12, 0 = none; the shades are the app's, each with
+  white text at 4.5:1 or more). A product's own colour, else its category's (`category.color`, in the
+  schema since v1 and unused until now). A coloured tile is filled with it and its name and price are
+  white; a category with a colour shows a dot on its chip. Chosen in the product form ("On the selling
+  screen") and in the category dialog (`ColorPicker`, swatches 36dp in 48dp targets that wrap).
+- **Pictures:** "Take photo" (the phone's camera app, `ACTION_IMAGE_CAPTURE` into the FileProvider path
+  `photos/`; the CAMERA permission the scanner already asks for) or "Choose picture" (`ACTION_GET_CONTENT`,
+  any gallery or Drive). `Pictures` keeps the middle square, upright (EXIF), on white, as a 240 × 240 JPEG
+  (q80, ~10 KB; ~13 KB as base64 text). A tile shows it on top (3:5 of the tile's width), the name and price
+  below; `PictureCache` (app-scoped LRU, a tenth of the heap, at most 10 MB ≈ 90 pictures at 16 bits)
+  decodes off the main thread; a recycled tile keeps only the picture asked last.
+- **Storage and sync (schema v9):** LWW `product_look` (id = the product's id: `color`, `image_id`) and
+  EVENT `product_image` (`data` = base64 JPEG, never changed: a new picture is a new row the look points
+  at, so whichever till's edit wins, a tile shows one whole picture). In the database, so backups and
+  restores carry them with no new file kind; base64 text, so the outbox, segments, backfill and importer
+  carry them like any row. New **entities** (14, 28), not new `product` columns: a till still on 1.11 keeps
+  their events in `sync_deferred` and applies them once updated, where unknown `product` fields would have
+  been dropped for good. A picture never travels in `product` reads: the list queries join `product_look`
+  by primary key only (plans checked). Segments are sealed early once their events hold 2 M characters
+  (`SyncDao.outboxBatch`): 2,000 pictures were 50 MB of text in memory. A replaced picture's old row
+  stays (~13 KB; a shop changes pictures rarely).
+- **Wider tiles area:** beside the bill (held sideways, tablets), the bill keeps 36 % of the width,
+  320–420dp (one line of line buttons from 300dp, `LineControlsTest`) instead of 40 %: a 1280dp tablet's
+  bill went from 512 to 420dp, its tiles from 5 to 7 a row. **Settings → Item size on the selling screen**
+  (per till, `dev.tiles`): Large (150dp, as before), **Medium (112dp, the default)**, Small (88dp); text,
+  padding and the least height follow (88 / 76 / 64dp, never under the 56dp touch target). A 360dp phone
+  shows 3 a row at Medium (2 before), 4 at Small.
+Rejected: pictures as files synced as their own Drive files (a new file kind for backups, restores and
+sync; a till could hold a look whose file never arrived); a `product.image` BLOB (each product row would
+fill a page: every product scan reads 30× the pages); pictures by web link (no internet at the till);
+a cropping screen (the middle square fits a product photo; one more screen); colour as any RGB (a palette
+keeps white text readable).
+
+### D-067 — Staff on a shared till: what is on record, the handover, the staff check (1.12.0, 2026-10-08)
+The owner (2026-10-08): "same tills can be use different staff in same day... please improve something to
+avoid staff fraud and avoid staff stealing (audit and think properly)". An audit of the code found: items
+taken off a bill or quantities lowered left no trace (a bill cleared left only its total); a till never
+locked by itself (the next person sold under the name of whoever walked away); one shift per till with no
+count between cashiers; a manager's PIN given to help with one bill lent every permission of theirs, on every
+screen, for five minutes; nothing summed any of it per person.
+- **On record (activity log):** every item taken off and every quantity lowered (`LINE_REMOVE`, with the
+  value taken off and "name ×qty"); after the payment screen had shown the bill's total, as
+  `LINE_REMOVE_AFTER_PAY` / `BILL_CANCEL_AFTER_PAY` — the customer may have paid the full amount for less on
+  the receipt, the classic till theft. A cleared bill names its items. Stock taken off by hand
+  (`STOCK_WRITE_OFF`, value at cost), a product's cost and barcodes (a dear item's barcode moved onto a cheap
+  product), the lock settings. Still no PIN to take an item off (D-063): a wrong item is taken off every day.
+- **Locking:** a till that never locked locks after 5 idle minutes (once per till on the update; the default
+  too); "When the till locks" offers **after each sale** (every sale under the PIN of whoever made it, for a
+  till two people use at once).
+- **Handover:** someone signing in while another person's shift is open on the till is asked to **count the
+  drawer** — one count closes that shift (its over/short is its opener's; "closed by" says who counted) and
+  opens theirs with the same cash as its float, in one transaction (no gap to take cash between two counts) —
+  or **Not now** (`SHIFT_CONTINUED`, on record, not asked again in that shift). Store setting "Count the
+  drawer when the cashier changes", on by default.
+- **Manager's help** lends only the bill's own permissions (`Perm.TILL_HELP`: discount, price change,
+  customers, credit sale); voids, refunds, the drawer, cash in/out, receipt copies, products and the back
+  office still show (`PermissionGate.shown`) but ask for the manager's PIN each time.
+- **Staff check** (Reports → Staff check, VIEW_AUDIT): per person for the period — sales; taken off after the
+  total was shown; bills cleared; items taken off; voids; refunds; discounts and price changes; drawer opened
+  without a sale; receipt copies; cash taken out; stock written off; sold on in another's shift; the cash
+  over/short of the shifts they opened — the most to look at first (`:core` `Checks`, `StaffCheck`). The shift
+  report has the same checks for its till and time ("Checks", with the cash: not on a blind close). The daily
+  report in Drive (D-065) gains the day's checks (counts and values, no names).
+- **Held bills** say whose they are (PIN login on).
+Rejected: a manager's PIN to take items off after Pay (customers short of money take items off every day; a
+manager is often not there — on record instead); a shift per person with its own drawer (one drawer per till);
+restricting voids to today (a manager may need an older one; the staff check shows them); asking card and
+e-wallet terminal totals at close (more counting at every close; the per-method totals are on the report
+to compare with the bank).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

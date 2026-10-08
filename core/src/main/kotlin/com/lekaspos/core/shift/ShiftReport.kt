@@ -4,6 +4,8 @@ import com.lekaspos.core.money.Checked
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.receipt.PrintLine
+import com.lekaspos.core.staff.Checks
+import com.lekaspos.core.staff.Tally
 import com.lekaspos.core.text.TextWidth
 import com.lekaspos.core.time.DateText
 import java.util.TimeZone
@@ -66,6 +68,8 @@ data class ShiftReport(
     val creditRepaid: List<MethodTotal> = emptyList(),
     /** What the closer wrote, e.g. why the drawer is over or short (2026-10 review: it could not be said). */
     val note: String? = null,
+    /** What this till's activity log holds for the shift that the owner should look at (D-067). */
+    val checks: Checks = Checks(),
 ) {
     val open: Boolean get() = closedAt == null
 }
@@ -107,6 +111,13 @@ data class ShiftText(
     val creditCharged: String,
     val creditRepaid: String,
     val note: String,
+    val checksSection: String = "Checks",
+    val cleared: String = "Bills cleared",
+    val removed: String = "Items taken off",
+    val afterPay: String = "After the total was shown",
+    val drawerOpens: String = "Drawer opened, no sale",
+    val copies: String = "Receipt copies",
+    val continued: String = "Sold on without a count",
 ) {
     companion object {
         val EN = ShiftText(
@@ -127,6 +138,9 @@ data class ShiftText(
             drops = "Simpanan wang", creditRepayments = "Bayaran hutang tunai", expected = "Tunai dijangka",
             counted = "Tunai dikira", difference = "Lebih / kurang", creditSection = "Kredit pelanggan",
             creditCharged = "Jualan kredit", creditRepaid = "Bayaran hutang", note = "Catatan",
+            checksSection = "Semakan", cleared = "Bil dikosongkan", removed = "Barang dibuang",
+            afterPay = "Selepas jumlah ditunjuk", drawerOpens = "Laci dibuka tanpa jualan", copies = "Salinan resit",
+            continued = "Jual tanpa kiraan laci",
         )
 
         fun forLanguage(lang: String): ShiftText = if (lang == "ms") MS else EN
@@ -194,6 +208,9 @@ class ShiftReportLayout(private val currency: CurrencySpec, private val t: Shift
             for (m in r.creditRepaid) rows.add(ReportRow("${t.creditRepaid}: ${m.name} (${m.count})", money(m.amount)))
             out.add(ReportSection(t.creditSection, rows))
         }
+        // The checks (D-067) with the cash: whoever may see the expected cash, the owner.
+        val checks = if (showCash) checkRows(r.checks) else emptyList()
+        if (checks.isNotEmpty()) out.add(ReportSection(t.checksSection, checks))
         if (!r.note.isNullOrBlank()) out.add(ReportSection(t.note, listOf(ReportRow(r.note.trim(), ""))))
         return out
     }
@@ -212,6 +229,17 @@ class ShiftReportLayout(private val currency: CurrencySpec, private val t: Shift
         out.add(PrintLine.Text(rule('=', cols)))
         return out
     }
+
+    private fun checkRows(c: Checks): List<ReportRow> = listOfNotNull(
+        tally(t.cleared, c.cleared),
+        tally(t.removed, c.removed),
+        if (c.afterPay.count > 0L) ReportRow("${t.afterPay} (${c.afterPay.count})", money(c.afterPay.amount), bold = true) else null,
+        if (c.drawerOpens > 0L) ReportRow(t.drawerOpens, c.drawerOpens.toString(), bold = true) else null,
+        if (c.copies > 0L) ReportRow(t.copies, c.copies.toString()) else null,
+        if (c.continued > 0L) ReportRow(t.continued, c.continued.toString()) else null,
+    )
+
+    private fun tally(label: String, x: Tally): ReportRow? = if (x.count > 0L) ReportRow("$label (${x.count})", money(x.amount)) else null
 
     private fun money(v: Long): String = MoneyFormat.format(v, currency, withSymbol = false)
 

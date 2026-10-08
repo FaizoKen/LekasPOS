@@ -81,7 +81,16 @@ class DailyReportUploadTest {
         // The first upload: last month too, so the owner sees a whole month at once.
         assertEquals(listOf("2026-09 daily-sales.csv", "2026-10 daily-sales.csv"), upload.upload(now = at(20261006), tz = tz))
         val oct = rows(folder.files.getValue("2026-10 daily-sales.csv"))
-        assertEquals(listOf("date", "sales", "refunds", "net_sales_ex_tax", "tax", "total", "discount", "cost", "gross_profit"), oct[0])
+        assertEquals(
+            listOf(
+                "date", "sales", "refunds", "net_sales_ex_tax", "tax", "total", "discount", "cost", "gross_profit",
+                // The checks of each day (D-067).
+                "bills_cleared", "bills_cleared_value", "items_taken_off", "items_taken_off_value", "after_total_shown",
+                "after_total_shown_value", "drawer_opened_no_sale", "cash_over_short",
+            ),
+            oct[0],
+        )
+        assertEquals(listOf("0", "0.00", "0", "0.00", "0", "0.00", "0", "0.00"), oct[1].drop(9))
         // 1–5 October, days without sales too; today's sale (the 6th) is not in it yet.
         assertEquals((1..5).map { "2026-10-0$it" }, oct.drop(1).map { it[0] })
         assertEquals(listOf("1", "0", "0", "0", "1"), oct.drop(1).map { it[1] })

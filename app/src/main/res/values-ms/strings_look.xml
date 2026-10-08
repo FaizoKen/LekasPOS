@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gambar dan warna barang, saiz petak (1.12.0, D-066). -->
+<resources>
+    <string name="color_none">Tiada warna</string>
+    <string name="color_red">Merah</string>
+    <string name="color_pink">Merah jambu</string>
+    <string name="color_purple">Ungu</string>
+    <string name="color_indigo">Indigo</string>
+    <string name="color_blue">Biru</string>
+    <string name="color_teal">Biru kehijauan</string>
+    <string name="color_green">Hijau</string>
+    <string name="color_lime">Hijau muda</string>
+    <string name="color_amber">Kuning tua</string>
+    <string name="color_orange">Oren</string>
+    <string name="color_brown">Coklat</string>
+    <string name="color_grey">Kelabu</string>
+
+    <string name="settings_tiles">Saiz barang di skrin jualan</string>
+    <string name="tiles_large">Besar (kurang barang)</string>
+    <string name="tiles_medium">Sederhana</string>
+    <string name="tiles_small">Kecil (lebih banyak barang)</string>
+
+    <string name="look_section">Di skrin jualan</string>
+    <string name="look_preview">Gambar dan warna barang</string>
+    <string name="look_take_photo">Ambil foto</string>
+    <string name="look_choose_picture">Pilih gambar</string>
+    <string name="look_remove_picture">Buang gambar</string>
+    <string name="look_color">Warna</string>
+    <string name="look_help">Gambar dan warna membantu juruwang mencari barang dengan cepat. Tanpa warna, barang mengikut warna kategorinya.</string>
+    <string name="look_no_camera_app">Tiada aplikasi kamera pada telefon ini. Guna Pilih gambar.</string>
+    <string name="look_no_gallery">Tiada aplikasi pada telefon ini yang boleh memilih gambar.</string>
+    <string name="look_camera_denied">Kamera tidak dibenarkan. Benarkan dalam tetapan telefon, atau guna Pilih gambar.</string>
+    <string name="look_unreadable">Gambar ini tidak dapat dibaca. Cuba gambar lain.</string>
+    <string name="look_reading">Gambar masih dimuatkan…</string>
+</resources>

@@ -219,9 +219,21 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   (selling screen, voids, refunds, reprints, drawer, cash moves, credit); `requireAccess(perm)`
   / `guard(perm)` = a screen keeps the approval until it closes (products, stock, settings,
   staff, audit log, shift report). Approvals are audited (`approved_by`, or an APPROVAL entry).
+- A shared till (D-067): every item taken off or quantity lowered is in the activity log with its value
+  (`LINE_REMOVE`; after the payment screen showed the total `LINE_REMOVE_AFTER_PAY` / `BILL_CANCEL_AFTER_PAY`,
+  `CartSession.State.payShown`); a cleared bill names its items. The idle lock defaults to 5 minutes (a till
+  that never locked was moved to 5 once, `SettingsRepo.lockByDefault`); "after each sale" locks when the
+  sale's result is closed (`CheckoutService.acknowledge`). A manager's help lends only `Perm.TILL_HELP`;
+  `PermissionGate.shown(perm)` decides what controls show (the rest asks for the PIN again).
 - `ShiftService`: one open shift per till; sales/refunds/voids/credit repayments written while
   it is open carry its id; expected cash is recomputed from those events (D-038). Blind close
   for staff without SHIFT_REPORT; the report prints as a PrintJobKind.SHIFT job.
+  Handover (D-067): someone else signing in during a shift is asked (`ShiftService.handoverDue`, once per
+  person and shift) to count the drawer — `handover` closes the shift and opens theirs with the counted cash
+  in one transaction — or "Not now" (`SHIFT_CONTINUED`). The report's "Checks" section (`:core` `Checks`)
+  sums this till's activity log for the shift (`AuditDao.totalsOfTill`: its ids are `device_no shl 41`);
+  Reports → Staff check (`ReportService.staffCheck`, VIEW_AUDIT) sums it per person with their shifts'
+  over/short.
 - `CustomerService` + checkout: credit tenders need the bill's customer, CREDIT_SALE, and over
   the limit a CREDIT_LIMIT approval, all re-checked inside the sale transaction (D-039).
 
@@ -288,8 +300,13 @@ restore that `Db.open` applies before opening the database (D-044).
 - Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from
   `sum_day_product` over 30 days, kept 10 minutes; products read fresh by id). Tiles of products
   on the bill are highlighted with "×n"; picking a search result closes the search.
+- Tiles (D-066): a product's colour (`product_look.color`, else its category's) fills the tile with white
+  text; its picture (`product_image`, a 240 px JPEG as base64) sits on top, decoded off the main thread by
+  `graph.pictures` (`PictureCache`, LRU ≤ 10 MB; a recycled tile keeps only the picture asked last). Sizes
+  per till (Settings → Item size: Large 150 / Medium 112 / Small 88dp least width, `TileSpec`). Beside the
+  bill, the bill pane is 36 % of the width, 320–420dp (`SellActivity.billPaneDp`); the tiles get the rest.
 - Only what the signed-in person may do is shown (D-063): a control needing a permission is hidden
-  when `graph.permissions.allowed(perm)` is false (role, or a manager's help), on the selling screen and
+  when `graph.permissions.shown(perm)` is false (role, or a manager's help), on the selling screen and
   the cashier's screens (shift, sales, customers). New controls follow the same rule. A manager's PIN
   (Menu → "Manager PIN", `ApprovalDialog.help` → `PermissionGate.startHelp`) shows them for the bill on
   the till; `CartSession.resetEmpty` and `resume` end it (also a lock, the pill, 5 minutes). Clearing a bill needs no

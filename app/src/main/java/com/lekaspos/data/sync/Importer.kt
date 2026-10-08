@@ -60,6 +60,7 @@ class Importer(private val db: SQLiteDatabase) {
             Entity.PURCHASE -> purchase(tx, map(p["purchase"]), list(p["lines"]))
             Entity.CASH_MOVE -> insert(tx, "cash_movement", p)
             Entity.AUDIT -> insert(tx, "audit_log", p)
+            Entity.PRODUCT_IMAGE -> insert(tx, "product_image", p)
             Entity.CREDIT -> insert(tx, "credit_entry", p).also { new ->
                 if (new) CustomerDao.applyBalance(tx, p["customer_id"] as Long, CreditMath.delta((p["kind"] as Long).toInt(), p["amount"] as Long))
             }
@@ -206,11 +207,12 @@ class Importer(private val db: SQLiteDatabase) {
             Entity.SHIFT to "shift",
             Entity.COUNT_SESSION to "count_session",
             Entity.PROMOTION to "promotion",
+            Entity.PRODUCT_LOOK to "product_look",
         )
 
         private val EVENT_ENTITIES = setOf(
             Entity.SETTING, Entity.SALE, Entity.SALE_VOID, Entity.STOCK_MOVE, Entity.STOCK_COUNT, Entity.PURCHASE,
-            Entity.CASH_MOVE, Entity.AUDIT, Entity.CREDIT,
+            Entity.CASH_MOVE, Entity.AUDIT, Entity.CREDIT, Entity.PRODUCT_IMAGE,
         )
 
         /** Columns that are versions or local bookkeeping, never fields of a change. */

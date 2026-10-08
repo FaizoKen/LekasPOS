@@ -189,6 +189,18 @@ object ShiftDao {
         note = c.stringOrNull(9),
     )
 
+    /** Cash of closed shifts by who opened them: shifts, counted − expected, shifts short. */
+    data class OverShort(val shifts: Long, val difference: Long, val short: Long)
+
+    private const val OVER_SHORT =
+        "SELECT opened_by, COUNT(*), COALESCE(SUM(counted_cash - expected_cash), 0), " +
+            "SUM(CASE WHEN counted_cash < expected_cash THEN 1 ELSE 0 END) FROM shift " +
+            "WHERE opened_at >= ? AND opened_at < ? AND deleted = 0 AND closed_at IS NOT NULL GROUP BY opened_by"
+
+    /** The shifts opened from [fromMs] to [toMs] (exclusive) and closed since, by who opened them (staff check, D-067). */
+    fun overShortByOpener(db: SQLiteDatabase, fromMs: Long, toMs: Long): Map<Long, OverShort> =
+        db.queryList(OVER_SHORT, args(fromMs, toMs)) { c -> c.getLong(0) to OverShort(c.getLong(1), c.getLong(2), c.getLong(3)) }.toMap()
+
     val HOT_QUERIES: List<Pair<String, String>> = listOf(
         "shift_current" to CURRENT,
         "shift_first" to PAGE_FIRST,
@@ -199,5 +211,6 @@ object ShiftDao {
         "shift_voided_payments" to VOIDED_PAYMENTS,
         "shift_cash_moves" to CASH_MOVES,
         "shift_credit" to CREDIT,
+        "shift_over_short" to OVER_SHORT,
     )
 }

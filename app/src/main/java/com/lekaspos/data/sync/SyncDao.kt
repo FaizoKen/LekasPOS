@@ -42,9 +42,24 @@ data class SegmentRow(
 /** LOCAL sync bookkeeping (D-045): the outbox, this till's segments, import cursors. */
 object SyncDao {
 
-    fun outboxBatch(db: SQLiteDatabase, limit: Int): List<OutboxRow> = db.queryList(
-        "SELECT seq, hlc, entity, op, row_id, payload FROM outbox ORDER BY seq LIMIT ?", args(limit),
-    ) { OutboxRow(it.getLong(0), it.getLong(1), it.getInt(2), it.getInt(3), it.longOrNull(4), it.getString(5)) }
+    /**
+     * The first [limit] events, or fewer once they hold [maxChars] of payload: 2,000 product pictures
+     * (~13 KB each, D-066) were 50 MB of text in memory at once.
+     */
+    fun outboxBatch(db: SQLiteDatabase, limit: Int, maxChars: Long = BATCH_CHARS): List<OutboxRow> =
+        db.rawQuery("SELECT seq, hlc, entity, op, row_id, payload FROM outbox ORDER BY seq LIMIT ?", args(limit)).use { c ->
+            val out = ArrayList<OutboxRow>()
+            var chars = 0L
+            while (chars < maxChars && c.moveToNext()) {
+                val row = OutboxRow(c.getLong(0), c.getLong(1), c.getInt(2), c.getInt(3), c.longOrNull(4), c.getString(5))
+                out.add(row)
+                chars += row.payload.length
+            }
+            out
+        }
+
+    /** Payload text per segment before it is sealed early (about 4 MB in memory). */
+    const val BATCH_CHARS = 2_000_000L
 
     /**
      * Events waiting in the outbox. It only grows at its end and is only emptied from its start (by

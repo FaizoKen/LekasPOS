@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Staff on a shared till: handover, staff check (1.12.0, D-067). -->
+<resources>
+    <string name="shift_handover">Count the drawer when the cashier changes</string>
+    <string name="shift_handover_help">When someone signs in while another person\'s shift is open on this till, they are asked to count the cash and start their own shift. Each person then answers for the cash of their own shift.</string>
+    <string name="handover_title">Take over the till?</string>
+    <string name="handover_message">%1$s\'s shift is still open on this till. Count the cash in the drawer now to start your own shift. Then any cash missing later shows in one person\'s shift.</string>
+    <string name="handover_count">Count the drawer</string>
+    <string name="handover_later">Not now</string>
+    <string name="handover_count_hint">All the cash in the drawer now. This closes %1$s\'s shift and starts yours with this amount.</string>
+    <string name="handover_done_title">Your shift has started</string>
+    <string name="handover_done">The drawer had %1$s. Your shift starts with it.</string>
+
+    <string name="staff_check_title">Staff check</string>
+    <string name="staff_check_intro">What each person did at the till that is worth a look. None of it proves theft: a wrong item is taken off every day. Ask about items taken off after the customer saw the total, a drawer opened without a sale, cash missing from a shift, and one person with far more than the others.</string>
+    <string name="staff_check_none">Nothing happened at the tills in this period.</string>
+    <string name="check_sales">Sales (%1$d)</string>
+    <string name="check_after_pay">Taken off after the total was shown (%1$d)</string>
+    <string name="check_cleared">Bills cleared (%1$d)</string>
+    <string name="check_removed">Items taken off bills (%1$d)</string>
+    <string name="check_voids">Voids (%1$d)</string>
+    <string name="check_refunds">Refunds (%1$d)</string>
+    <string name="check_discounts">Discounts and price changes</string>
+    <string name="check_drawer">Drawer opened without a sale</string>
+    <string name="check_copies">Receipt copies</string>
+    <string name="check_cash_out">Cash taken out of the drawer (%1$d)</string>
+    <string name="check_write_off">Stock written off, at cost (%1$d)</string>
+    <string name="check_continued">Sold in another person\'s shift without a count</string>
+    <string name="check_over_short">Cash over / short (%1$d shifts, %2$d short)</string>
+
+    <string name="audit_line_remove">Item taken off the bill</string>
+    <string name="audit_line_remove_after_pay">Item taken off after the total was shown</string>
+    <string name="audit_bill_cancel_after_pay">Bill cancelled after the total was shown</string>
+    <string name="audit_write_off">Stock written off</string>
+    <string name="audit_shift_continued">Sold in another person\'s shift without a count</string>
+</resources>

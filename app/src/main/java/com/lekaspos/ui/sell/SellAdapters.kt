@@ -1,15 +1,18 @@
 package com.lekaspos.ui.sell
 
 import android.annotation.SuppressLint
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.core.cart.CartItem
 import com.lekaspos.core.model.SellMode
+import com.lekaspos.core.model.TileColor
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.AppliedPromo
@@ -18,6 +21,8 @@ import com.lekaspos.core.pricing.PricedCart
 import com.lekaspos.core.receipt.ReceiptLayout
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.product.ProductListItem
+import com.lekaspos.ui.colorOf
+import com.lekaspos.ui.common.TileColors
 
 /** One row of the bill as shown: the item plus its priced amounts. */
 data class CartRow(val item: CartItem, val amount: Long, val selected: Boolean, val promo: AppliedPromo? = null)
@@ -137,18 +142,65 @@ class CartAdapter(private val actions: LineActions) : RecyclerView.Adapter<CartA
     }
 }
 
-class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : RecyclerView.Adapter<ProductTileAdapter.Holder>() {
+/**
+ * How big the catalogue tiles are (Settings → Item tiles, per till; D-066): text sizes, the tile's least
+ * height and padding, and the height of a picture (from the column's width, so it keeps its shape).
+ */
+data class TileSpec(
+    val nameSp: Float = 15f,
+    val priceSp: Float = 16f,
+    val minHeightDp: Int = 88,
+    val paddingDp: Int = 10,
+    val pictureHeightPx: Int = 0,
+)
+
+/**
+ * The catalogue's tiles. A product's own colour, else its category's, fills the tile with white text
+ * on it, and its picture sits on top (D-066): a cashier finds "the red one with the tin" at a glance.
+ */
+class ProductTileAdapter(
+    private val onClick: (ProductListItem) -> Unit,
+    /** Shows picture id (or none) in the view, read off the main thread (PictureCache.show). */
+    private val showPicture: (ImageView, Long?) -> Unit,
+) : RecyclerView.Adapter<ProductTileAdapter.Holder>() {
 
     class Holder(v: View) : RecyclerView.ViewHolder(v) {
+        val picture: ImageView = v.findViewById(R.id.picture)
+        val texts: View = v.findViewById(R.id.texts)
         val name: TextView = v.findViewById(R.id.name)
         val price: TextView = v.findViewById(R.id.price)
         val stock: TextView = v.findViewById(R.id.stock)
         val inBill: TextView = v.findViewById(R.id.in_bill)
+        val nameColor = name.textColors
+        val priceColor = price.textColors
+        val stockColor = stock.textColors
+
+        /** The [TileSpec] and colour this tile was last laid out with (built again only when they change). */
+        var spec: TileSpec? = null
+        var color = -1
     }
 
     var items: List<ProductListItem> = emptyList()
         private set
     var currency: CurrencySpec = CurrencySpec.MYR
+
+    /** Tile sizes; a change redraws every tile. */
+    var spec: TileSpec = TileSpec()
+        @SuppressLint("NotifyDataSetChanged") // every tile changes size
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyDataSetChanged()
+        }
+
+    /** Category id → its colour: the colour of products without one of their own. */
+    var categoryColors: Map<Long, Int> = emptyMap()
+        @SuppressLint("NotifyDataSetChanged") // a category's colour changed: its tiles
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyDataSetChanged()
+        }
 
     /** Product id → quantity on the bill (selling units, milli). */
     private var onBill: Map<Long, Long> = emptyMap()
@@ -162,6 +214,11 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
         if (old == next) return
         onBill = next
         for ((i, p) in items.withIndex()) if (old[p.id] != next[p.id]) notifyItemChanged(i, BADGE)
+    }
+
+    /** Pictures may have arrived from another till (sync): the tiles that show one are drawn again ([PICTURE]). */
+    fun picturesArrived() {
+        for ((i, p) in items.withIndex()) if (p.imageId != null) notifyItemChanged(i, PICTURE)
     }
 
     @SuppressLint("NotifyDataSetChanged") // a new result set replaces the old one
@@ -197,27 +254,73 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
 
     override fun getItemCount() = items.size
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        Holder(LayoutInflater.from(parent.context).inflate(R.layout.item_product_tile, parent, false))
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_product_tile, parent, false)
+        v.clipToOutline = true // the picture keeps the tile's rounded corners
+        return Holder(v)
+    }
 
     override fun onBindViewHolder(h: Holder, position: Int) {
         val p = items[position]
+        val ctx = h.itemView.context
+        layOut(h)
+        paint(h, TileColor.of(p.color, p.categoryId?.let { categoryColors[it] } ?: TileColor.NONE))
         h.name.text = p.name
         val price = MoneyFormat.format(p.price, currency)
         h.price.text = when (p.sellMode) {
             SellMode.WEIGHT -> "$price/${p.unit}"
-            SellMode.OPEN_PRICE -> h.itemView.context.getString(R.string.tile_open_price)
+            SellMode.OPEN_PRICE -> ctx.getString(R.string.tile_open_price)
             else -> price
         }
         val stock = p.stockQty
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
         h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
+        showPicture(h.picture, p.imageId)
         bindBadge(h, p)
         h.itemView.setOnClickListener { onClick(p) }
     }
 
     override fun onBindViewHolder(h: Holder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isNotEmpty() && payloads.all { it === BADGE }) bindBadge(h, items[position]) else onBindViewHolder(h, position)
+        if (payloads.isEmpty() || payloads.any { it !== BADGE && it !== PICTURE }) return onBindViewHolder(h, position)
+        val p = items[position]
+        if (payloads.any { it === BADGE }) bindBadge(h, p)
+        if (payloads.any { it === PICTURE }) showPicture(h.picture, p.imageId)
+    }
+
+    private fun layOut(h: Holder) {
+        val s = spec
+        if (h.spec == s) return
+        h.spec = s
+        val d = h.itemView.resources.displayMetrics.density
+        h.name.setTextSize(TypedValue.COMPLEX_UNIT_SP, s.nameSp)
+        h.price.setTextSize(TypedValue.COMPLEX_UNIT_SP, s.priceSp)
+        val pad = (s.paddingDp * d).toInt()
+        h.texts.setPadding(pad, pad, pad, pad)
+        h.itemView.minimumHeight = (s.minHeightDp * d).toInt()
+        if (s.pictureHeightPx > 0) h.picture.layoutParams = h.picture.layoutParams.also { it.height = s.pictureHeightPx }
+    }
+
+    /** White text on a coloured tile; the plain tile as before. */
+    private fun paint(h: Holder, color: Int) {
+        if (h.color == color) return
+        h.color = color
+        val ctx = h.itemView.context
+        if (color == TileColor.NONE) {
+            h.itemView.setBackgroundResource(R.drawable.tile_bg)
+            h.name.setTextColor(h.nameColor)
+            h.price.setTextColor(h.priceColor)
+            h.stock.setTextColor(h.stockColor)
+            h.inBill.setBackgroundResource(R.drawable.count_bg)
+            h.inBill.setTextColor(ctx.colorOf(R.color.text_on_brand))
+        } else {
+            h.itemView.background = TileColors.tileBackground(ctx, color)
+            val white = ctx.colorOf(R.color.text_on_brand)
+            h.name.setTextColor(white)
+            h.price.setTextColor(white)
+            h.stock.setTextColor(white)
+            h.inBill.setBackgroundResource(R.drawable.count_bg_light)
+            h.inBill.setTextColor(ctx.colorOf(R.color.text_primary))
+        }
     }
 
     private fun bindBadge(h: Holder, p: ProductListItem) {
@@ -230,6 +333,9 @@ class ProductTileAdapter(private val onClick: (ProductListItem) -> Unit) : Recyc
     private companion object {
         /** Payload: only the "×n on the bill" badge changed. */
         val BADGE = Any()
+
+        /** Payload: only the picture may have changed (it arrived). */
+        val PICTURE = Any()
     }
 }
 
@@ -260,6 +366,12 @@ class CategoryChipAdapter(private val onClick: (Long) -> Unit) : RecyclerView.Ad
         val c = chips[position]
         h.text.text = c.name
         h.text.isSelected = c.id == selected
+        // A category with a colour shows it as a dot: the same colour as its products' tiles (D-066).
+        val dot = if (TileColor.known(c.color) == TileColor.NONE) null else TileColors.swatch(h.text.context, c.color, chosen = false).also {
+            val size = (12 * h.text.resources.displayMetrics.density).toInt()
+            it.setBounds(0, 0, size, size)
+        }
+        h.text.setCompoundDrawablesRelative(dot, null, null, null)
         h.text.setOnClickListener { onClick(c.id) }
     }
 

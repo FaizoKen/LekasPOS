@@ -20,6 +20,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
@@ -56,6 +57,8 @@ import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
 import com.lekaspos.data.sale.SaleDao
+import com.lekaspos.data.settings.DeviceSettings
+import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
@@ -104,6 +107,7 @@ import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.settings.UpdateUi
 import com.lekaspos.ui.shift.ShiftActivity
+import com.lekaspos.ui.shift.offerHandover
 import com.lekaspos.ui.shift.openShift
 import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.LockActivity
@@ -188,7 +192,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var selectedKey = 0L
     private var lastSeenKey = 0L
     private var lastSeenLine: CartItem? = null
-    private val productAdapter = ProductTileAdapter { tapProduct(it) }
+    private val productAdapter = ProductTileAdapter({ tapProduct(it) }) { view, id -> graph.pictures.show(view, id, scope) }
     private val categoryAdapter = CategoryChipAdapter { selectCategory(it) }
     private var selectedCategory = CategoryChipAdapter.ALL
     private var categoryChosen = false
@@ -256,6 +260,14 @@ class SellActivity : Activity(), LineActions, DialogHost {
         customerChip = findViewById(R.id.customer_chip)
         twoPane = findViewById<View>(R.id.cart_side) != null
         hasCamera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+        if (twoPane) {
+            // The bill keeps the width its buttons need; the tiles get the rest (D-066: it took 40 %).
+            val side = findViewById<View>(R.id.cart_side)
+            side.layoutParams = (side.layoutParams as LinearLayout.LayoutParams).apply {
+                width = (billPaneDp() * resources.displayMetrics.density).toInt()
+                weight = 0f
+            }
+        }
 
         cartList.layoutManager = LinearLayoutManager(this)
         cartList.adapter = cartAdapter
@@ -265,7 +277,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         categoryList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         categoryList.adapter = categoryAdapter
         categoryList.setHasFixedSize(true)
+        tileSize = graph.settings.device.value.tileSize
         val grid = GridLayoutManager(this, spanCount())
+        productAdapter.spec = tileSpec(grid.spanCount)
         productGrid.layoutManager = grid
         productGrid.adapter = productAdapter
         productGrid.setHasFixedSize(true)
@@ -378,6 +392,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
+        // Someone else signed in during another person's shift: count the drawer and take it over (D-067).
+        s.launch { graph.staff.state.map { if (it.locked) null else it.current?.id }.distinctUntilChanged().collect { if (it != null) checkHandover(it) } }
         s.launch { combine(graph.staff.state, graph.permissions.helper) { st, h -> st to h }.collect { renderAccess(it.first, it.second) } }
         s.launch { combine(graph.updates.status, graph.staff.state) { u, st -> u to st }.collect { renderUpdate(it.first, it.second) } }
         s.launch {
@@ -396,7 +412,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 render(graph.cart.state.value)
             }
         }
-        s.launch { graph.settings.device.collect { cameraButton.visible(it.cameraScan && hasCamera) } }
+        s.launch {
+            graph.settings.device.collect {
+                cameraButton.visible(it.cameraScan && hasCamera)
+                applyTileSize(it.tileSize)
+            }
+        }
         s.launch { combine(graph.printer.status, graph.printer.pending) { st, n -> st to n }.collect { renderPrinter(it.first, it.second) } }
         s.launch {
             combine(graph.sync.status, graph.backups.protection) { a, b -> a to b }.collect { renderSafety(it.first, it.second) }
@@ -412,6 +433,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         s.launch {
             graph.catalogChanges.drop(1).collect {
                 sellable.clear()
+                productAdapter.picturesArrived() // a picture can come after its tile was drawn (D-066)
                 loadCategories(refresh = true) // read below at once
             }
         }
@@ -594,8 +616,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         if (s.locked) showLock()
     }
 
-    /** May the person signed in do [perm] — by their role, or with the help of a manager ([renderAccess])? */
-    private fun allowed(perm: Long): Boolean = graph.permissions.allowed(perm)
+    /**
+     * Is what needs [perm] offered to the person signed in — by their role, or with the help of a manager
+     * ([renderAccess])? What the help does not lend asks for the manager's PIN when chosen (D-067).
+     */
+    private fun allowed(perm: Long): Boolean = graph.permissions.shown(perm)
 
     /**
      * The selling screen looks the same for the owner and a cashier (D-064); what only some may do is in
@@ -785,11 +810,65 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
 
+    /**
+     * [staffId] just signed in while another person's shift is open on this till: asked once (per person
+     * and shift while the app runs) to count the drawer and start their own shift, or to sell on in it
+     * (D-067). Only when the store asks for it (Settings → Store → "Count the drawer when the cashier changes").
+     */
+    private suspend fun checkHandover(staffId: Long) {
+        val shift = graph.shifts.handoverDue(staffId) ?: return
+        if (!graph.shifts.markAsked(shift.id, staffId)) return
+        val openedBy = graph.db().read { StaffDao.name(it, shift.openedBy) } ?: "?"
+        if (isFinishing || graph.staff.state.value.current?.id != staffId) return
+        offerHandover(this, graph, scope, shift, openedBy)
+    }
+
+    /** Settings → Item tiles on this till (DeviceSettings.TILES_*), as the grid shows it now. */
+    private var tileSize = DeviceSettings.TILES_MEDIUM
+
+    /**
+     * The bill pane's width beside the tiles (D-066): about a third of the screen, at least what its
+     * line buttons and totals need (one line from 300dp, LineControlsTest), at most 420dp. It took 40 %
+     * (a tablet's bill was 510dp wide and the tiles five to a row).
+     */
+    private fun billPaneDp(): Int {
+        val width = resources.configuration.screenWidthDp
+        return (width * 0.36f).toInt().coerceIn(BILL_MIN_DP, BILL_MAX_DP).coerceAtMost(width / 2)
+    }
+
+    /** The width the tiles share (the grid's 4dp padding on each side taken off). */
+    private fun gridDp(): Float =
+        resources.configuration.screenWidthDp - (if (twoPane) billPaneDp() + 1f else 0f) - 8f
+
     private fun spanCount(): Int {
-        val width = resources.configuration.screenWidthDp * (if (twoPane) 0.6f else 1f)
+        val least = when (tileSize) {
+            DeviceSettings.TILES_LARGE -> 150f
+            DeviceSettings.TILES_SMALL -> 88f
+            else -> 112f
+        }
         // Fewer, wider tiles at a large font: names and prices were cut (2026-10 review).
         val scale = resources.configuration.fontScale.coerceAtLeast(1f)
-        return (width / (150f * scale)).toInt().coerceIn(2, 6)
+        return (gridDp() / (least * scale)).toInt().coerceIn(2, 10)
+    }
+
+    /** Text sizes and heights of the tiles at [span] to a row; a picture keeps 3:5 of the tile's width. */
+    private fun tileSpec(span: Int): TileSpec {
+        val tileDp = gridDp() / span - 8f // each tile's 4dp margins
+        val picture = (tileDp * 0.6f).coerceIn(40f, 120f) * resources.displayMetrics.density
+        return when (tileSize) {
+            DeviceSettings.TILES_LARGE -> TileSpec(15f, 16f, 88, 10, picture.toInt())
+            DeviceSettings.TILES_SMALL -> TileSpec(13f, 14f, 64, 6, picture.toInt())
+            else -> TileSpec(14f, 15f, 76, 8, picture.toInt())
+        }
+    }
+
+    /** The tile size was changed in Settings: more or fewer tiles to a row, at once. */
+    private fun applyTileSize(size: Int) {
+        if (size == tileSize) return
+        tileSize = size
+        val grid = productGrid.layoutManager as? GridLayoutManager ?: return
+        grid.spanCount = spanCount()
+        productAdapter.spec = tileSpec(grid.spanCount)
     }
 
     // ------------------------------------------------------------------ panels & back
@@ -940,8 +1019,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
             return
         }
         if (graph.checkout.outcome.value != null) {
-            graph.checkout.acknowledge() // next customer
-            if (graph.staff.lockIfIdle()) return // the idle time ran out during the last payment
+            graph.checkout.acknowledge() // next customer (locks the till after each sale when set so, D-067)
+            if (graph.staff.lockIfIdle() || graph.staff.state.value.locked) return // the idle time ran out during the last payment
         }
         scope.launch {
             when (val r = graph.cart.scan(code)) {
@@ -1188,6 +1267,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val s = started ?: return
         s.launch {
             val cats = graph.db().read { CategoryDao.list(it) }
+            productAdapter.categoryColors = cats.filter { it.color != 0 }.associate { it.id to it.color } // tiles without a colour of their own
             val popular = graph.popular.load().isNotEmpty()
             val chips = ArrayList<Category>(cats.size + 2)
             if (popular) chips.add(Category(CategoryChipAdapter.POPULAR, getString(R.string.sell_popular)))
@@ -1764,5 +1844,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         private const val SEARCH_DEBOUNCE_MS = 150L
         private const val HARDWARE_DELAY_MS = 1500L
         private const val SYNC_STALE_MS = 24L * 60L * 60L * 1000L
+        private const val BILL_MIN_DP = 320
+        private const val BILL_MAX_DP = 420
     }
 }

@@ -9,6 +9,7 @@ import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
+import com.lekaspos.core.model.TileColor
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.staff.PinHash
@@ -28,6 +29,8 @@ import com.lekaspos.data.db.Seed
 import com.lekaspos.data.db.long
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.product.ProductDao
+import com.lekaspos.data.product.ProductLook
+import com.lekaspos.data.product.ProductLookDao
 import com.lekaspos.data.promo.PromotionDao
 import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.data.report.ReportDao
@@ -193,6 +196,40 @@ class SyncMergeTest {
             assertEquals(2L, a.db().read { it.long("SELECT COUNT(*) FROM sale") })
             assertTrue(folder.listFiles().orEmpty().any { it.name.startsWith(SyncNames.devicePrefix(sa ?: "")) })
         }
+    }
+
+    /**
+     * D-066: a product's colour and picture reach every till — those set before sync was turned on too
+     * (the backfill) — and the tiles show them; a colour changed on one till keeps the other's picture.
+     */
+    @Test
+    fun aProductsColourAndPictureReachTheOtherTills() {
+        val a = till()
+        val milo = product(a, "Milo", 1_890L)
+        val picture = android.util.Base64.encodeToString(ByteArray(13_000) { (it * 7).toByte() }, android.util.Base64.NO_WRAP)
+        val look = runBlocking {
+            a.db().write(reserveIds = 4L) { tx ->
+                val now = System.currentTimeMillis()
+                val image = ProductLookDao.addImage(tx, milo, picture, null, now)
+                ProductLookDao.update(tx, milo, ProductLook(), ProductLook(TileColor.RED, image), now)
+                ProductLookDao.get(tx.db, milo)
+            }
+        }
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        syncAll(a, b)
+        runBlocking {
+            assertEquals(look, b.db().read { ProductLookDao.get(it, milo) })
+            val imageId = kotlin.test.assertNotNull(look.imageId)
+            assertEquals(picture, b.db().read { ProductLookDao.imageData(it, imageId) })
+            val tile = b.db().read { ProductDao.listByIds(it, listOf(milo)) }.single()
+            assertEquals(TileColor.RED to imageId, tile.color to tile.imageId)
+            b.db().write(reserveIds = 0L) { tx -> ProductLookDao.update(tx, milo, look, look.copy(color = TileColor.BLUE), System.currentTimeMillis()) }
+        }
+        syncAll(a, b)
+        runBlocking { assertEquals(look.copy(color = TileColor.BLUE), a.db().read { ProductLookDao.get(it, milo) }) }
+        assertConverged(a, b)
     }
 
     /** D-058: a product moved to another category on one till takes all its sales there, on every till. */

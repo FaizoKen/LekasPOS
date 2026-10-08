@@ -30,6 +30,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
+| — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | in progress — CI, then a test build for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1613,3 +1614,73 @@ the Daily sales report, one CSV per month, once a day, CSV.
 5. **Folder deleted:** delete LekasPOS in Drive → Upload now → a new LekasPOS folder with the files.
 6. **Turn off** → asks first → the row says Off; the files stay in Drive. A cashier: a manager's PIN first.
 7. **Bahasa Melayu:** the row, dialog and messages in Malay.
+
+## 1.12.0 — pictures and colours, more items on the screen (D-066); staff on a shared till (D-067)
+
+The owner (2026-10-08): "make it can put item image and color to make easier to identify", "make cashier main
+UI wider to see lot item easier but still easy to select", and "same tills can be use different staff in same
+day... please improve something to avoid staff fraud and avoid staff stealing (audit and think properly)".
+
+- [x] **Pictures and colours (D-066):** product form → "On the selling screen": Take photo (camera app) / Choose
+      picture / Remove picture, and 12 colours; categories get a colour too (their dot on the chip, the colour of
+      their products without one). A coloured tile is filled with it, white text; the picture sits on top.
+      Pictures are 240 px JPEGs (~13 KB) in the database (`product_image`), colours in `product_look` — schema
+      **v9**, new sync entities (tills still on 1.11 keep them aside until updated), in backups like any data.
+      `PictureCache` decodes off the main thread (≤ 10 MB). Sync segments close early at 2 M characters
+- [x] **More items:** beside the bill, the bill is 36 % of the width (320–420dp) instead of 40 %; Settings →
+      "Item size on the selling screen": Large (as before) / **Medium (default)** / Small — a 360dp phone shows 3
+      a row (was 2), a 1280dp tablet 7 (was 5)
+- [x] **Shared till (D-067)**, after a code audit of how cash can go missing:
+      - every item taken off and every quantity lowered is in the activity log with its value; taken off or
+        cleared **after the payment screen showed the total** is marked so (kept with the bill when it is parked
+        or the app restarts, `cart.pay_shown`); a cleared bill names its items
+      - stock written off (value at cost), a product's cost and barcodes are on record
+      - the till locks after 5 idle minutes by default (a till set to "never" moved to 5 once); new choice
+        "after each sale"
+      - someone signing in during another person's shift: **count the drawer** (closes that shift, opens theirs
+        with the counted cash, one transaction) or **Not now** (on record). Store setting, on by default
+      - a manager's PIN for one bill lends only discounts, prices, customers and credit; voids, refunds, the
+        drawer, cash in/out, copies, products and the back office ask for the PIN again
+      - **Reports → Staff check**: per person — sales, taken off after the total, bills cleared, items taken off,
+        voids, refunds, discounts, drawer without a sale, copies, cash out, stock written off, sold in another's
+        shift, cash over/short of their shifts. The shift report gains "Checks"; the daily report in Drive gains
+        the day's checks columns; held bills say whose they are
+- [x] Tests: `:core` `StaffChecksTest` (checks, ranking, shift report section, tile colours); instrumented
+      `StaffCheckTest` (removals and after-pay, the flag through hold/resume/restart, the manager's help, the
+      handover and Not now, handover off, lock after each sale, the once-only lock default, write-offs),
+      `PicturesTest`, `SyncMergeTest.aProductsColourAndPictureReachTheOtherTills` (backfill and merge),
+      `SellingFixesTest.everyLineTakenOffIsAudited`, `DailyReportUploadTest` (new columns); `ScreenshotsTest` adds
+      coloured tiles and a picture; migration v8 → v9 (snapshot `9.sql`)
+- [x] Local: `:core` and `:app` JVM tests pass, instrumented tests compile, lint 0 errors
+- [x] Privacy policy (English and Malay, 8 October 2026): product pictures, the camera's second use, the audit
+      log's new entries, the daily report's checks columns; Play Data Safety draft (Photos)
+- [ ] CI (API 21 + 36, tablet, release smoke), release APK size
+- [ ] Test build v1.12.0 (pre-release), then the owner's phone check (below)
+
+### Needs real-device testing (1.12.0)
+
+1. **Install over 1.11.0** (Settings → App updates → Include test versions): data, staff, settings still there.
+   Settings → Staff: "The till locks after 5 min idle" if it was "never" before.
+2. **Picture by camera:** Manage shop → Products → a product → "Take photo" → allow the camera → take it → the
+   square preview shows → Save. On the selling screen (Items) the tile has the picture on top. Turn the phone
+   while the camera app is open → the picture still arrives in the form.
+3. **Picture from the gallery / Drive:** "Choose picture" → a photo → the preview; "Remove picture" → gone after
+   Save. A PDF or a video → "This picture could not be read".
+4. **Colours:** a product → Red → its tile is red with white text; a category → Blue → its chip has a blue dot and
+   its products without a colour are blue. The "×2" badge stays readable on a coloured tile.
+5. **Item size:** Settings → "Item size on the selling screen" → Small → more tiles a row at once (no restart);
+   Large → as before. On the tablet held sideways the bill is narrower and the tiles take the rest.
+6. **Other till (sync on):** the picture and colours appear on the other till after its next sync.
+7. **Taken off after the total:** add 3 items → Pay → Cancel → remove one → Settings → Activity log: "taken off
+   after the total was shown" with its value; Clear bill after Pay → the cleared bill names its items.
+8. **Lock after each sale:** Settings → Staff → ⋮ → When the till locks → "after each sale" → pay a bill → close
+   the change → the PIN pad. Turn it back.
+9. **Handover:** shift open by the owner → lock → the cashier signs in → "Take over the till?" → Count the drawer
+   → count → "Your shift has started". Shift & cash shows the cashier's shift with that float; the owner's shift
+   report (Shifts) shows "Closed by" the cashier and the over/short. Again with "Not now" → not asked again in
+   that shift. Store settings → "Count the drawer when the cashier changes" off → not asked.
+10. **Manager PIN:** as a cashier, Menu → Manager PIN → a discount works without a second PIN; Open cash drawer
+    and a receipt's Void ask for the PIN again.
+11. **Staff check:** Reports → Today → Staff check → each person's lines (sales, cleared, taken off, drawer …).
+    The shift report shows "Checks". The Drive daily report has the new columns (next upload).
+12. **Bahasa Melayu:** the new screens, buttons and messages in Malay.

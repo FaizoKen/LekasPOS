@@ -239,7 +239,8 @@ fun showHeldBills(
     }
     val tz = TimeZone.getDefault()
     val labels = bills.map {
-        val name = it.label ?: DateText.time(it.updatedAt, tz)
+        // Whose bill it is (D-067): a bill parked by one cashier and paid or thrown away by another.
+        val name = (it.label ?: DateText.time(it.updatedAt, tz)) + (it.by?.let { by -> " · $by" } ?: "")
         a.getString(R.string.held_row, name, it.lines, MoneyFormat.format(it.total, currency))
     }.toTypedArray<CharSequence>()
     fun confirmDelete(position: Int, then: () -> Unit) {

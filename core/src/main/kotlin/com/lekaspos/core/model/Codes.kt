@@ -128,6 +128,33 @@ object AuditAction {
 
     /** A customer paid back credit (amount: paid; detail: customer, method, cash rounding). */
     const val CREDIT_PAYMENT = 28
+
+    /** An item taken off the open bill, or its quantity lowered (amount: the value taken off; D-067). */
+    const val LINE_REMOVE = 29
+
+    /**
+     * [LINE_REMOVE] after the payment screen had shown the bill's total: the customer may have paid the
+     * full amount for less on the receipt — the classic till theft (D-067).
+     */
+    const val LINE_REMOVE_AFTER_PAY = 30
+
+    /** A bill with items cleared after the payment screen had shown its total (amount: the total; D-067). */
+    const val BILL_CANCEL_AFTER_PAY = 31
+
+    /** Stock written off or counted down by hand (amount: its value at cost; detail: item, quantity, reason; D-067). */
+    const val STOCK_WRITE_OFF = 32
+
+    /** Someone signed in and sold on in another person's open shift without counting the drawer (detail: whose; D-067). */
+    const val SHIFT_CONTINUED = 33
+
+    /** Bills cleared ([BILL_CANCEL] and [BILL_CANCEL_AFTER_PAY]). */
+    val CLEARED: Set<Int> = setOf(BILL_CANCEL, BILL_CANCEL_AFTER_PAY)
+
+    /** Items taken off bills ([LINE_REMOVE] and [LINE_REMOVE_AFTER_PAY]). */
+    val REMOVED: Set<Int> = setOf(LINE_REMOVE, LINE_REMOVE_AFTER_PAY)
+
+    /** Taken off or cleared after the customer saw the total. */
+    val AFTER_PAY: Set<Int> = setOf(LINE_REMOVE_AFTER_PAY, BILL_CANCEL_AFTER_PAY)
 }
 
 /** Permission bits stored in `role.perms`. The owner role always has every permission. */
@@ -194,6 +221,14 @@ object Perm {
         MANAGE_STOCK or VIEW_AUDIT or REPORTS
     const val DEFAULT_CASHIER: Long = REPRINT or CUSTOMERS or CREDIT_SALE
 
+    /**
+     * What a manager's help at the till lends the cashier for the bill on it (D-067): discounts, prices,
+     * customers and credit within limits. Money out of the drawer (void, refund, drawer, cash in and
+     * out), receipt copies, products and the back office still ask for the manager's PIN each time: a
+     * PIN typed to help with one bill let the cashier void and refund on other screens in its name.
+     */
+    const val TILL_HELP: Long = DISCOUNT or PRICE_OVERRIDE or CUSTOMERS or CREDIT_SALE
+
     /** What a role may do: the owner role everything, other roles their stored bits. */
     fun effective(sysRole: Int, perms: Long): Long = if (sysRole == SysRole.OWNER) ALL else perms
 
@@ -252,6 +287,9 @@ object Entity {
     const val SHIFT = 11
     const val COUNT_SESSION = 12
     const val PROMOTION = 13
+
+    /** A product's colour and picture on the selling screen (LWW `product_look`, id = product id; v9, D-066). */
+    const val PRODUCT_LOOK = 14
     const val SALE = 20
     const val SALE_VOID = 21
     const val STOCK_MOVE = 22
@@ -260,6 +298,38 @@ object Entity {
     const val CASH_MOVE = 25
     const val CREDIT = 26
     const val AUDIT = 27
+
+    /** A product picture (EVENT `product_image`: a JPEG, never changed; v9, D-066). */
+    const val PRODUCT_IMAGE = 28
+}
+
+/**
+ * Colours of product tiles and categories (`product_look.color`, `category.color`; D-066). 0 = none;
+ * the shades themselves are the app's (each keeps white text readable).
+ */
+object TileColor {
+    const val NONE = 0
+    const val RED = 1
+    const val PINK = 2
+    const val PURPLE = 3
+    const val INDIGO = 4
+    const val BLUE = 5
+    const val TEAL = 6
+    const val GREEN = 7
+    const val LIME = 8
+    const val AMBER = 9
+    const val ORANGE = 10
+    const val BROWN = 11
+    const val GREY = 12
+
+    /** Every colour in the order the pickers show them. */
+    val ALL: List<Int> = (RED..GREY).toList()
+
+    /** A stored value this version can show (a newer till's colour, or garbage, shows as none). */
+    fun known(code: Int): Int = if (code in RED..GREY) code else NONE
+
+    /** The colour a tile shows: its own, else its category's, else none. */
+    fun of(product: Int, category: Int): Int = known(product).takeIf { it != NONE } ?: known(category)
 }
 
 /** Outbox/sync event operations. */

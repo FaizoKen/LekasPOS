@@ -91,6 +91,14 @@ object Migrations {
             for (s in Schema.SUM_PRODUCT_INDEXES + Schema.SUM_CATEGORY) db.execSQL(s)
             for (s in com.lekaspos.data.sale.Summaries.CATEGORIES_FROM_PRODUCTS) db.execSQL(s)
         },
+        // v8 → v9 (1.12.0, D-066): products' colours and pictures on the selling screen. New entities, so
+        // tills still on 1.11 keep their events aside (sync_deferred) and apply them once updated.
+        Migration(8, 9) { db ->
+            db.execSQL(Schema.PRODUCT_LOOK)
+            db.execSQL(Schema.PRODUCT_IMAGE)
+            // D-067: the payment screen showed the bill's total (kept when it is parked or the app restarts).
+            db.execSQL("ALTER TABLE cart ADD COLUMN pay_shown INTEGER NOT NULL DEFAULT 0")
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

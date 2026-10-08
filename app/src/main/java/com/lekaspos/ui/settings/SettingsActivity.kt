@@ -12,6 +12,7 @@ import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.ErrorReports
 import com.lekaspos.core.model.Perm
+import com.lekaspos.data.settings.DeviceSettings
 import com.lekaspos.ui.catalog.CategoriesActivity
 import com.lekaspos.ui.catalog.PaymentMethodsActivity
 import com.lekaspos.ui.catalog.TaxRatesActivity
@@ -47,12 +48,14 @@ class SettingsActivity : ScreenActivity() {
     private var reportsRow = 0
     private var updatesRow = 0
     private var driveReportRow = 0
+    private var tilesRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.settings_title), R.layout.list_plain) ?: return
         val entries = listOf(
             Entry(R.string.settings_language, null, null, sub = { languageName(AppLanguage.get(this)) }) { chooseLanguage() },
+            Entry(R.string.settings_tiles, null, null, sub = { tileName(graph.settings.device.value.tileSize) }) { chooseTiles() },
             Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java),
             Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java),
             Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java),
@@ -90,6 +93,7 @@ class SettingsActivity : ScreenActivity() {
         reportsRow = entries.indexOfFirst { it.title == R.string.error_reports_title }
         updatesRow = entries.indexOfFirst { it.title == R.string.update_settings_title }
         driveReportRow = entries.indexOfFirst { it.title == R.string.drive_report_title }
+        tilesRow = entries.indexOfFirst { it.title == R.string.settings_tiles }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -166,6 +170,29 @@ class SettingsActivity : ScreenActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: ActivityNotFoundException) {
             toast(url)
+        }
+    }
+
+    private fun tileName(size: Int): String = getString(
+        when (size) {
+            DeviceSettings.TILES_LARGE -> R.string.tiles_large
+            DeviceSettings.TILES_SMALL -> R.string.tiles_small
+            else -> R.string.tiles_medium
+        },
+    )
+
+    /**
+     * How big the selling screen's tiles are on this till (D-066): smaller ones show more products at a
+     * time. Only how the screen looks: no permission.
+     */
+    private fun chooseTiles() {
+        val sizes = listOf(DeviceSettings.TILES_LARGE, DeviceSettings.TILES_MEDIUM, DeviceSettings.TILES_SMALL)
+        val current = graph.settings.device.value
+        Dialogs.choose(this, getString(R.string.settings_tiles), sizes.map { tileName(it) }, sizes.indexOf(current.tileSize)) { i ->
+            launchUi {
+                graph.settings.saveDevice(graph.settings.device.value.copy(tileSize = sizes[i]))
+                adapter?.notifyItemChanged(tilesRow)
+            }
         }
     }
 

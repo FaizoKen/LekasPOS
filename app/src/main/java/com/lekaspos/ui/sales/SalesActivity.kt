@@ -73,7 +73,7 @@ class SalesActivity : ScreenActivity() {
 
     override fun onStarted(scope: CoroutineScope) {
         // Its menu entry's name: "Receipts" for whoever may not refund or void (D-063).
-        val refunds = graph.permissions.allowed(Perm.REFUND) || graph.permissions.allowed(Perm.VOID)
+        val refunds = graph.permissions.shown(Perm.REFUND) || graph.permissions.shown(Perm.VOID)
         setScreenTitle(getString(if (refunds) R.string.sales_title else R.string.menu_receipts))
         reload(debounce = false)
     }

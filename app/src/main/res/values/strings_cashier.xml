@@ -63,7 +63,7 @@
     <string name="menu_manager_help">Manager PIN</string>
     <string name="menu_receipts">Receipts</string>
     <string name="helper_pill">Manager: %1$s ✕</string>
-    <string name="help_why">A manager\'s PIN lets the manager\'s jobs be done on this till (in the Menu: discounts and price changes, the cash drawer, Manage shop) until this bill is paid, held or cleared.</string>
+    <string name="help_why">A manager\'s PIN allows discounts and price changes on this bill until it is paid, held or cleared. It also shows the manager\'s other jobs (the cash drawer, refunds, Manage shop); each of those asks for the manager\'s PIN again.</string>
     <string name="help_add_product">Adding a product needs a manager\'s PIN. The manager then adds it, and it goes on this bill.</string>
     <string name="sell_not_found_manager">No product has barcode %1$s yet. A manager can add it now (their PIN first): it is saved for next time and goes on this bill.</string>
     <string name="safety_tell_owner">Please tell the shop owner: they can fix this in Menu → Manage shop → Settings.</string>

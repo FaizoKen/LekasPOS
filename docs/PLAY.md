@@ -77,6 +77,8 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
     (customers' credit balances) — optional, app functionality.
   - App activity: *Other actions* (the audit log of sensitive staff actions) — optional, app
     functionality.
+  - Photos and videos: *Photos* (product pictures the shop takes or picks, D-066: 240 px, kept with the
+    shop's data and synced to its own Drive like products) — optional, app functionality.
   - App info and performance: *Crash logs* and *Diagnostics* (error reports, D-057) — optional
     (the user allows them), purpose *Analytics* (finding and fixing bugs); not shared. A report sent
     by hand from Diagnostics may hold an *Email address* or *Phone number* the user types for a reply
@@ -105,7 +107,8 @@ any SDK that sends data, these answers and the privacy policy change first.
 
 - `BLUETOOTH_CONNECT` (and `BLUETOOTH` ≤ API 30): paired receipt printers and serial scanners;
   no scanning, no location.
-- `CAMERA`: optional barcode scanning, frames processed on the device.
+- `CAMERA`: optional barcode scanning (frames processed on the device) and product photos (D-066:
+  Android's camera app takes the picture the shop asked for; kept small with the shop's data).
 - `INTERNET`, `ACCESS_NETWORK_STATE`: Google Drive sync, error reports when the shop allows them,
   and (downloaded builds only) the daily update check against GitHub releases — the Play build
   drops the update check (D-059, next item).

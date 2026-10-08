@@ -7,8 +7,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.model.TileColor
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
+import com.lekaspos.ui.common.ColorPicker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
@@ -49,15 +51,19 @@ class CategoriesActivity : ScreenActivity() {
     private fun edit(c: Category?) = requireAccess(Perm.MANAGE_PRODUCTS) { editNow(c) }
 
     private fun editNow(c: Category?) {
+        // Its colour: the tiles of its products that have none of their own (D-066).
+        val colors = ColorPicker(this, c?.color ?: TileColor.NONE)
         Dialogs.input(
             this, getString(if (c == null) R.string.category_add else R.string.category_edit), getString(R.string.category_name),
             initial = c?.name ?: "", inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS,
+            below = colors.view,
         ) { name ->
             if (name.isEmpty()) return@input false
+            val color = colors.chosen
             launchUi {
                 graph.db().write(reserveIds = 4L) { tx ->
                     val now = System.currentTimeMillis()
-                    if (c == null) CategoryDao.insert(tx, name, 0, 0, now) else CategoryDao.update(tx, c, c.copy(name = name), now)
+                    if (c == null) CategoryDao.insert(tx, name, color, 0, now) else CategoryDao.update(tx, c, c.copy(name = name, color = color), now)
                 }
                 reload()
             }

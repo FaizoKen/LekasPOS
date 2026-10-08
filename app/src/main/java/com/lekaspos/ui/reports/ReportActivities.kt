@@ -216,6 +216,10 @@ class ReportsActivity : ScreenActivity() {
             f.row(c.name ?: getString(R.string.report_no_category), money(ReportMath.value(c.valueMilli, 1L)))
         }
         f.button(getString(R.string.report_slow_movers)) { startActivity(SlowMoversActivity.intent(this, rep.period)) }
+        // Who cleared bills, took items off or opened the drawer (D-067): with the activity log's permission.
+        if (graph.permissions.shown(Perm.VIEW_AUDIT)) {
+            f.button(getString(R.string.staff_check_title)) { startActivity(StaffCheckActivity.intent(this, rep.period)) }
+        }
         f.info(getString(R.string.report_note))
         body.removeAllViews()
         body.addView(f.view)

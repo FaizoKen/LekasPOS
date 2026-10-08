@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 8
+    const val VERSION = 9
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -70,6 +70,30 @@ object Schema {
             start_day INTEGER,
             end_day INTEGER,
             active INTEGER NOT NULL DEFAULT 1,$LWW
+        )"""
+
+    /**
+     * v9 (D-066): a product's colour ([com.lekaspos.core.model.TileColor]) and picture on the selling screen.
+     * LWW, id = the product's id; a table of its own so tills not yet updated keep these events aside
+     * (sync_deferred) instead of dropping fields of `product` they do not know.
+     */
+    const val PRODUCT_LOOK = """CREATE TABLE product_look (
+            id INTEGER PRIMARY KEY,
+            color INTEGER NOT NULL DEFAULT 0,
+            image_id INTEGER,$LWW
+        )"""
+
+    /**
+     * v9 (D-066): product pictures, a square JPEG as base64 text (it travels in sync files and
+     * backups like any row). EVENT: a picture never changes; a new one is a new row.
+     */
+    const val PRODUCT_IMAGE = """CREATE TABLE product_image (
+            id INTEGER PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            staff_id INTEGER,
+            at INTEGER NOT NULL,
+            hlc INTEGER NOT NULL
         )"""
 
     /** Sync events of a kind this version does not know yet, kept until an update knows it (v6, D-047). */
@@ -159,6 +183,7 @@ object Schema {
         "CREATE INDEX product_barcode_product ON product_barcode(product_id) WHERE deleted = 0",
         // DERIVED: search index, docid = product.id, text normalized by :core SearchText.
         """CREATE VIRTUAL TABLE product_fts USING fts4(body, tokenize=simple, prefix="2,3")""",
+        PRODUCT_LOOK,
         """CREATE TABLE supplier (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
@@ -403,6 +428,7 @@ object Schema {
         )""",
         "CREATE INDEX audit_at ON audit_log(at)",
         "CREATE INDEX audit_action ON audit_log(action, at)",
+        PRODUCT_IMAGE,
 
         // ---------- DERIVED: caches rebuildable from events ----------
         """CREATE TABLE stock_level (
@@ -483,7 +509,8 @@ object Schema {
             bill_disc_value INTEGER NOT NULL DEFAULT 0,
             note TEXT,
             opened_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            updated_at INTEGER NOT NULL,
+            pay_shown INTEGER NOT NULL DEFAULT 0
         )""",
         "CREATE INDEX cart_status ON cart(status, updated_at)",
         """CREATE TABLE cart_line (
@@ -555,11 +582,11 @@ object Schema {
     /** Tables by sync class (every table must appear exactly once; checked by SchemaTest). */
     val LWW_TABLES = listOf(
         "setting", "role", "staff", "tax_rate", "category", "product", "product_barcode",
-        "supplier", "customer", "payment_method", "shift", "count_session", "promotion",
+        "supplier", "customer", "payment_method", "shift", "count_session", "promotion", "product_look",
     )
     val EVENT_TABLES = listOf(
         "cash_movement", "sale", "sale_line", "payment", "sale_void", "stock_movement",
-        "stock_count", "purchase", "purchase_line", "credit_entry", "audit_log",
+        "stock_count", "purchase", "purchase_line", "credit_entry", "audit_log", "product_image",
     )
     val DERIVED_TABLES = listOf(
         "product_fts", "stock_level", "customer_balance", "sum_day", "sum_day_product", "sum_month_product",

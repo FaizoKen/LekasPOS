@@ -48,6 +48,7 @@ class StoreSettingsActivity : ScreenActivity() {
     private lateinit var rounding: Switch
     private lateinit var templates: EditText
     private lateinit var shiftRequired: Switch
+    private lateinit var handover: Switch
     private lateinit var credit: Switch
     private var form: Form? = null
 
@@ -135,6 +136,8 @@ class StoreSettingsActivity : ScreenActivity() {
         f.section(getString(R.string.section_cash))
         shiftRequired = f.switch(getString(R.string.shift_required), s.shiftRequired)
         f.info(getString(R.string.shift_required_help))
+        handover = f.switch(getString(R.string.shift_handover), s.handoverCount)
+        f.info(getString(R.string.shift_handover_help))
         credit = f.switch(getString(R.string.credit_enabled), s.creditEnabled)
         f.info(getString(R.string.credit_enabled_help))
 
@@ -184,6 +187,7 @@ class StoreSettingsActivity : ScreenActivity() {
             currency = old.currency.copy(cashStep = if (rounding.isChecked) CurrencySpec.MYR.cashStep else 0L),
             scaleTemplates = tpl,
             shiftRequired = shiftRequired.isChecked,
+            handoverCount = handover.isChecked,
             creditEnabled = credit.isChecked,
         )
         launchUi {

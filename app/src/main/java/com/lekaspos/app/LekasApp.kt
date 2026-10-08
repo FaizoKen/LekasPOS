@@ -24,6 +24,12 @@ class LekasApp : Application(), Configuration.Provider {
         graph = AppGraph(this) // object creation only — no disk or network here (cold-start budget)
     }
 
+    /** Android is short of memory: product pictures are read again when shown (D-066). */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_RUNNING_LOW && level != TRIM_MEMORY_UI_HIDDEN) graph.pictures.trim()
+    }
+
     /**
      * WorkManager starts on first use with this configuration (its start-up provider is removed).
      * When its own database cannot be used (a full phone storage, say), WorkManager throws on its

@@ -62,7 +62,7 @@
     <string name="menu_manager_help">PIN pengurus</string>
     <string name="menu_receipts">Resit</string>
     <string name="helper_pill">Pengurus: %1$s ✕</string>
-    <string name="help_why">PIN pengurus membolehkan kerja pengurus dibuat pada kaunter ini (dalam Menu: diskaun dan tukar harga, laci wang, Urus kedai) sehingga bil ini dibayar, ditangguh atau dikosongkan.</string>
+    <string name="help_why">PIN pengurus membenarkan diskaun dan tukar harga pada bil ini sehingga bil dibayar, ditangguh atau dikosongkan. Kerja pengurus yang lain (laci wang, bayaran balik, Urus kedai) turut ditunjukkan; setiap satu meminta PIN pengurus sekali lagi.</string>
     <string name="help_add_product">Menambah produk memerlukan PIN pengurus. Pengurus kemudian menambahnya, dan ia masuk ke bil ini.</string>
     <string name="sell_not_found_manager">Belum ada produk dengan kod bar %1$s. Pengurus boleh menambahkannya sekarang (PIN mereka dahulu): ia disimpan untuk lain kali dan masuk ke bil ini.</string>
     <string name="safety_tell_owner">Sila beritahu pemilik kedai: mereka boleh membetulkannya dalam Menu → Urus kedai → Tetapan.</string>
