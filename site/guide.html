@@ -1,0 +1,1587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LekasPOS user guide</title>
+<meta name="description" content="How to use LekasPOS, the free offline point-of-sale app for small shops: selling, payments, receipts, products, stock, staff, shifts, reports, backup and Google Drive.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="alternate" hreflang="ms" href="panduan.html">
+</head>
+<body class="guide">
+<main>
+<p class="lang"><strong>English</strong> · <a href="panduan.html" hreflang="ms" lang="ms">Bahasa Melayu</a> · <a href="index.html">Home</a></p>
+<h1><img class="logo" src="icon.svg" alt="" width="48" height="48"> LekasPOS user guide</h1>
+<p class="updated">For LekasPOS 1.13.0 · Last updated 8 October 2026</p>
+<p>LekasPOS is a free point-of-sale app for small grocery shops and mini markets. It runs on an Android phone or tablet and works fully offline. This guide explains everything it does, for the owner, managers and cashiers. New here? Read <a href="#start">Getting started</a>; cashiers can start with the <a href="#cashier">Quick guide for cashiers</a>. Words in <b>bold</b> are the words you see in the app.</p>
+
+<nav class="toc" id="contents" aria-label="Contents">
+<p><strong>Contents</strong></p>
+<ol>
+<li><a href="#start">Getting started</a>
+<ol><li><a href="#what-you-need">What you need</a></li><li><a href="#install">Install and update</a></li><li><a href="#welcome">The welcome screen (first start)</a></li><li><a href="#first-day">Setting up a new shop — a checklist</a></li><li><a href="#who">Who can do what</a></li></ol></li>
+<li><a href="#cashier">Quick guide for cashiers</a></li>
+<li><a href="#selling">The selling screen</a>
+<ol><li><a href="#screen">What is on the screen</a></li><li><a href="#pills">The pills in the top bar</a></li><li><a href="#add-items">Adding items</a></li><li><a href="#weighed">Weighed items, items priced at the till, packs and scale labels</a></li><li><a href="#unknown">A barcode the till does not know</a></li><li><a href="#change-bill">Changing the bill</a></li><li><a href="#hold">Holding a bill</a></li><li><a href="#discount">Discounts and price changes</a></li><li><a href="#customer-on-bill">A customer on the bill</a></li><li><a href="#price-check">Price check</a></li><li><a href="#menu">The Menu</a></li></ol></li>
+<li><a href="#payment">Taking payment</a>
+<ol><li><a href="#cash">Cash</a></li><li><a href="#other-methods">Card, e-wallet / QR and other methods</a></li><li><a href="#split">Split payment</a></li><li><a href="#credit-pay">Customer credit (pay later)</a></li><li><a href="#after-sale">After the sale</a></li><li><a href="#pay-checks">Questions the till may ask when you tap Pay</a></li></ol></li>
+<li><a href="#receipts">Receipts, the printer and the cash drawer</a>
+<ol><li><a href="#receipt-content">What a receipt shows</a></li><li><a href="#copies">Copies</a></li><li><a href="#share-receipt">Sharing a receipt</a></li><li><a href="#printer">Setting up the printer</a></li><li><a href="#print-queue">When the printer is off</a></li><li><a href="#drawer">The cash drawer</a></li></ol></li>
+<li><a href="#sales">Sales, refunds and voids</a>
+<ol><li><a href="#refund">Refund or return</a></li><li><a href="#void">Void</a></li></ol></li>
+<li><a href="#products">Products</a>
+<ol><li><a href="#product-list">The product list</a></li><li><a href="#product-form">The product form</a></li><li><a href="#sold-by">How products are sold</a></li><li><a href="#barcodes">Barcodes, packs and cartons</a></li><li><a href="#scale-labels">Weighing-scale labels</a></li><li><a href="#pictures">Pictures and colours</a></li><li><a href="#categories">Categories</a></li><li><a href="#tax">Tax rates</a></li><li><a href="#payment-methods">Payment methods</a></li><li><a href="#csv">Many products at once (CSV)</a></li></ol></li>
+<li><a href="#promotions">Promotions</a>
+<ol><li><a href="#promotion-new">Making a promotion</a></li><li><a href="#promotion-rules">Good to know</a></li></ol></li>
+<li><a href="#stock">Stock</a>
+<ol><li><a href="#how-stock">How the app knows your stock</a></li><li><a href="#receive">Receive stock (a delivery)</a></li><li><a href="#adjust">Adjust stock</a></li><li><a href="#count">Stock count (stock take)</a></li><li><a href="#low-stock">Low stock</a></li><li><a href="#suppliers">Suppliers and deliveries</a></li><li><a href="#stock-history">Stock history and stock changes</a></li></ol></li>
+<li><a href="#staff">Staff, PINs and roles</a>
+<ol><li><a href="#pin-login">Turning on PIN login</a></li><li><a href="#sign-in">Signing in and locking</a></li><li><a href="#forgot-pin">Forgotten PIN</a></li><li><a href="#roles">Roles and permissions</a></li><li><a href="#manager-pin">When a cashier needs a manager</a></li></ol></li>
+<li><a href="#shifts">Shifts and cash</a>
+<ol><li><a href="#shift-settings">Do I need shifts?</a></li><li><a href="#open-shift">Opening a shift</a></li><li><a href="#cash-moves">Cash in, cash out and drops</a></li><li><a href="#close-shift">Closing a shift</a></li><li><a href="#handover">Handover between cashiers</a></li><li><a href="#shift-report">The shift report</a></li></ol></li>
+<li><a href="#customers">Customers and credit</a>
+<ol><li><a href="#customer-list">Customers</a></li><li><a href="#credit-sale">Selling on credit</a></li><li><a href="#repayment">Repayments and adjustments</a></li></ol></li>
+<li><a href="#reports">Reports</a>
+<ol><li><a href="#periods">Periods</a></li><li><a href="#figures">What the report shows</a></li><li><a href="#not-sold">Not sold in this period</a></li><li><a href="#staff-check">Staff check</a></li><li><a href="#exports">Exports (CSV)</a></li><li><a href="#drive-report">Daily sales report to Google Drive</a></li></ol></li>
+<li><a href="#activity-log">Activity log</a></li>
+<li><a href="#data">Keeping your data safe: backup, restore, Google Drive</a>
+<ol><li><a href="#drive-backup">Google Drive backup</a></li><li><a href="#phone-backups">Backups on the phone</a></li><li><a href="#folder-copy">Daily copy to an SD card or USB drive</a></li><li><a href="#backup-files">Backup files</a></li><li><a href="#restore">Restoring a backup</a></li><li><a href="#lost-phone">A lost or broken phone</a></li><li><a href="#data-problem">Data problem</a></li><li><a href="#storage">Phone storage</a></li></ol></li>
+<li><a href="#tills">Several tills in one shop</a></li>
+<li><a href="#settings">Settings</a>
+<ol><li><a href="#settings-store">Store &amp; receipt</a></li><li><a href="#settings-printer">Printer &amp; cash drawer</a></li><li><a href="#settings-scanner">Barcode scanner &amp; camera</a></li></ol></li>
+<li><a href="#hardware">Hardware</a>
+<ol><li><a href="#scanner-tips">Barcode scanner tips</a></li><li><a href="#customer-screen">Customer screen on a second display</a></li></ol></li>
+<li><a href="#updates">App updates, error reports and diagnostics</a>
+<ol><li><a href="#app-updates">App updates</a></li><li><a href="#error-reports">Error reports</a></li><li><a href="#diagnostics">Diagnostics</a></li></ol></li>
+<li><a href="#troubleshooting">Troubleshooting and questions</a>
+<ol><li><a href="#ts-selling">Selling</a></li><li><a href="#ts-printer">Printer and drawer</a></li><li><a href="#ts-backup">Backup and Google Drive</a></li><li><a href="#ts-other">Other questions</a></li></ol></li>
+<li><a href="#glossary">Words used in the app</a></li>
+<li><a href="#help">Privacy and getting help</a></li>
+</ol>
+</nav>
+
+<h2 id="start">1. Getting started</h2>
+
+<h3 id="what-you-need">What you need</h3>
+<ul>
+<li>An <b>Android phone or tablet</b>, Android 5.0 or newer. An old phone with 1–2 GB of memory is enough. On a
+tablet, or a phone held sideways, the item list and the bill are shown side by side.</li>
+<li><b>No internet</b> is needed to sell. Internet is used only for Google Drive backup, the daily sales report,
+app updates and error reports (if you allow them).</li>
+<li><b>No account</b> is needed. A Google account is used only if you turn on Google Drive backup or the daily sales
+report.</li>
+<li>Optional hardware (see <a href="#hardware">Hardware</a>): a Bluetooth receipt printer (58 or 80 mm), a cash
+drawer plugged into the printer, a barcode scanner (USB or Bluetooth), a weighing scale that prints barcode
+labels, and a TV or monitor as a customer screen.</li>
+</ul>
+
+<h3 id="install">Install and update</h3>
+<ol>
+<li>On the phone or tablet, open <a href="index.html#download">faizoken.github.io/LekasPOS</a> and tap
+<b>Download LekasPOS</b>.</li>
+<li>Open the downloaded <code>LekasPOS.apk</code>. On Android 8 and newer, allow your browser to
+<b>install unknown apps</b> if Android asks. On Android 5–7, first turn on
+<b>Settings → Security → Unknown sources</b>.</li>
+<li>If Play Protect warns about an unknown app, tap <b>More details → Install anyway</b>. This is normal for
+apps that are not installed from Google Play.</li>
+</ol>
+<p>After that the app <b>updates itself</b>: when a new version is out, an <b>Update</b> button appears at the
+top of the selling screen for the owner — see <a href="#updates">App updates</a>. Your products, sales and
+settings always stay.</p>
+
+<h3 id="welcome">The welcome screen (first start)</h3>
+<div class="shots">
+<figure><img src="img/en-setup.png" alt="The welcome screen" width="240" loading="lazy"><figcaption>The welcome screen appears once, on a new phone.</figcaption></figure>
+</div>
+<p>The first time LekasPOS opens on a new phone it shows <b>Welcome to LekasPOS</b>. Everything on it can be
+changed later in Settings.</p>
+<ol>
+<li><b>App language</b>: <i>Phone's language</i>, <i>English</i> or <i>Bahasa Melayu</i>.</li>
+<li><b>Your shop</b>: the <b>Store name</b> (needed), <b>Phone</b> and <b>Address</b>. They are printed at the top
+of receipts.</li>
+<li><b>Protect your shop's data</b>: <b>Back up to Google Drive (recommended)</b> or <b>Daily copy to SD card or
+USB</b>. Please do one of them — see <a href="#data">Keeping your data safe</a>.</li>
+<li><b>Optional</b>: <b>Set up a receipt printer</b> and <b>Staff and PINs</b>.</li>
+<li>Already using LekasPOS on another till of this shop, or replacing a lost phone? Tap <b>Restore or join my shop
+from Google Drive</b> and turn on Google Drive backup with the shop's Google account: everything comes back.
+Have a backup file or a copy on an SD card or USB drive instead? Type the shop's name, tap <b>Start selling</b>, then
+see <a href="#restore">Restoring a backup</a>.</li>
+<li>Tap <b>Start selling</b>.</li>
+</ol>
+
+<h3 id="first-day">Setting up a new shop — a checklist</h3>
+<ol>
+<li><b>Protect the data</b>: Google Drive backup, or a daily copy to an SD card / USB drive
+(<a href="#data">how</a>).</li>
+<li><b>Shop details for the receipt</b>: Settings → <b>Store &amp; receipt</b> (registration numbers, receipt
+text, logo) — <a href="#settings-store">details</a>.</li>
+<li><b>Printer and cash drawer</b>: pair the printer in Android's Bluetooth settings, then Settings →
+<b>Printer &amp; cash drawer</b> → <b>Choose a paired printer</b> → <b>Print a test page</b>
+(<a href="#printer">details</a>).</li>
+<li><b>Products</b>: scan each product at the till and add it, or enter them in <b>Products</b>, or import a
+spreadsheet (<a href="#products">details</a>). Add categories, colours and pictures to make the item list easy
+to use.</li>
+<li><b>Payment methods</b> you accept, such as DuitNow or Touch ’n Go (<a href="#payment-methods">details</a>).</li>
+<li><b>Staff</b>: give the owner a PIN first and <b>write down the recovery code</b>, then add your cashiers
+(<a href="#staff">details</a>).</li>
+<li>With staff, use <b>shifts</b> so each person counts the cash drawer (<a href="#shifts">details</a>).</li>
+<li>Make a test sale, check the receipt, then <a href="#void">void</a> it so it does not count in the reports.</li>
+</ol>
+
+<h3 id="who">Who can do what</h3>
+<p>Until the owner sets a PIN, everyone using the app <b>is the owner</b> and can do everything. A one-person
+shop can work like that. Once PINs are set, each person signs in and sees only the buttons their
+<b>role</b> allows: <b>Owner</b> (everything), <b>Manager</b> (almost everything except settings and staff) and
+<b>Cashier</b> (selling). When a cashier needs something more, a manager types their PIN. See
+<a href="#staff">Staff, PINs and roles</a>.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="cashier">2. Quick guide for cashiers</h2>
+<p>Everything a cashier needs, on one page.</p>
+<div class="table-wrap"><table>
+<tr><th>To…</th><th>Do this</th></tr>
+<tr><td>Sign in</td><td>Tap your name, type your PIN, tap <b>OK</b>. Not your name? Tap <b>Not you?</b></td></tr>
+<tr><td>Start the day</td><td>If the till asks <b>Start the shift</b>, count the cash in the drawer and tap <b>OK</b>.</td></tr>
+<tr><td>Add an item</td><td>Scan its barcode. Or type its name in <b>Search</b> and tap it. Or tap <b>Items</b> and tap the item.</td></tr>
+<tr><td>Item without a barcode (vegetables, kuih)</td><td>Tap <b>Items</b> (or search), tap it, then type the weight or the price if asked.</td></tr>
+<tr><td>Barcode not found</td><td>The till says <b>Barcode not found</b>. Call a manager: they tap <b>Add product</b>, type their PIN, the name and the price.</td></tr>
+<tr><td>Change how many</td><td>Tap the line, then <b>+</b> or <b>−</b>, or tap the number and type it.</td></tr>
+<tr><td>Take an item off</td><td>Tap the line, then <b>Remove</b>.</td></tr>
+<tr><td>Throw away the whole bill</td><td><b>Menu → Clear bill</b>.</td></tr>
+<tr><td>Customer forgot something</td><td><b>Hold</b> the bill (type a name if you like), serve the next customer, then tap the <b>1 held</b> button at the top to bring it back.</td></tr>
+<tr><td>Take cash</td><td><b>Pay</b> → tap the note the customer gave (e.g. <b>RM50</b>). Another amount: <b>Other amount</b>, type it (5 0 0 0 = RM50.00), <b>Done</b>.</td></tr>
+<tr><td>Card, e-wallet, QR</td><td>Take the payment on your terminal or QR first, then <b>Pay</b> → tap <b>Card</b> or <b>E-wallet / QR</b>.</td></tr>
+<tr><td>Part cash, part card</td><td><b>Pay → Split payment</b> → type the first part → tap its method → pay the rest.</td></tr>
+<tr><td>Give change</td><td>The big <b>Change</b> amount is what to give back. Scan the next customer's first item to start again.</td></tr>
+<tr><td>Customer asks for the change again</td><td>The empty bill shows the <b>Last sale</b> with its change.</td></tr>
+<tr><td>Print the receipt again</td><td><b>Print a copy</b> under the last sale, or <b>Menu → Receipts</b>.</td></tr>
+<tr><td>Check a price without selling</td><td><b>Price check</b> → scan or type.</td></tr>
+<tr><td>A discount or a new price</td><td>Ask a manager: <b>Menu → Manager PIN</b>, then <b>Menu → Discount</b>.</td></tr>
+<tr><td>Leave the till</td><td>Tap your name at the top → <b>Lock / switch user</b> (or <b>Menu → Lock / switch user</b>).</td></tr>
+<tr><td>End of the day</td><td><b>Menu → Close shift</b> → count all the cash → say how much stays in the drawer → take the rest out for the owner.</td></tr>
+</table></div>
+<div class="note"><p>Everything you take off a bill is written in the activity log, especially after the customer has
+seen the total. That is normal — a wrong item is taken off every day — and protects you as much as the shop.</p></div>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="selling">3. The selling screen</h2>
+<p>The selling screen opens when you start the app. Everything about one customer happens here.</p>
+<div class="shots">
+<figure><img src="img/en-sell.png" alt="The selling screen on a phone" width="240" loading="lazy"><figcaption>On a phone: the bill, with the last item's buttons.</figcaption></figure>
+<figure><img src="img/en-sell-empty.png" alt="An empty bill with the last sale" width="240" loading="lazy"><figcaption>An empty bill explains how to start and shows the last sale.</figcaption></figure>
+</div>
+<figure class="wide"><img src="img/en-tablet-sell.png" alt="The selling screen on a tablet" loading="lazy"><figcaption>On a tablet (or a phone held sideways): items on the left, the bill on the right.</figcaption></figure>
+
+<h3 id="screen">What is on the screen</h3>
+<ul>
+<li><b>Top bar</b>: the shop's name, your name (when PINs are on), small coloured buttons (“pills”) when
+something needs attention, and <b>Menu</b>.</li>
+<li><b>Search</b> box with the <b>camera</b> button inside it, <b>Price check</b>, and on phones <b>Items</b>
+(opens the item list; tap again or Back for the bill).</li>
+<li><b>The bill</b>: one line per item with its quantity, price and amount.</li>
+<li><b>Totals</b>: the number of items (plus any discount and tax), the big <b>Total</b>, and the buttons
+<b>Hold</b> and <b>Pay</b>. The owner, managers and cashiers all see the same screen.</li>
+</ul>
+
+<h3 id="pills">The pills in the top bar</h3>
+<p>Pills appear only when there is something to see. Tap one for what it means.</p>
+<div class="table-wrap"><table>
+<tr><th>Pill</th><th>Meaning</th></tr>
+<tr><td><b>2 held</b></td><td>Bills on hold. Tap to bring one back.</td></tr>
+<tr><td><b>Not backed up</b></td><td>The shop's data has not been copied off this phone for 3 days (or Google Drive
+backup has not worked for a day). See <a href="#data">Keeping your data safe</a>.</td></tr>
+<tr><td><b>Backup: sign in</b></td><td>Google wants the shop's account to sign in again for Google Drive backup.</td></tr>
+<tr><td><b>Data problem</b></td><td>The daily check found damage in the database. See
+<a href="#data-problem">Data problem</a>.</td></tr>
+<tr><td><b>Storage almost full</b></td><td>The phone is nearly full. Sales cannot be saved on a full phone: delete
+photos, videos or apps.</td></tr>
+<tr><td><b>Printing…</b></td><td>A receipt is printing now.</td></tr>
+<tr><td><b>3 to print</b></td><td>3 receipts are waiting to print.</td></tr>
+<tr><td><b>Printer offline (3)</b></td><td>The printer cannot be reached and 3 receipts are waiting. Tap any printer pill for
+the printer settings.</td></tr>
+<tr><td><b>Manager: Aminah ✕</b></td><td>A manager is helping with this bill. Tap to end the help.</td></tr>
+<tr><td><b>Update 1.14.0</b></td><td>A new version of LekasPOS is ready (owner only).</td></tr>
+</table></div>
+<p>A cashier who taps a pill about the data sees <i>“Please tell the shop owner…”</i>: the owner fixes it in
+<b>Menu → Manage shop → Settings</b>.</p>
+
+<h3 id="add-items">Adding items</h3>
+<dl>
+<dt>Barcode scanner</dt><dd>Just scan — nothing needs to be tapped first. USB and Bluetooth scanners in
+“keyboard” mode work without any setup. You hear a short beep when the item is added and a low tone when
+something is wrong.</dd>
+<dt>Camera</dt><dd>Tap the camera inside the search box. Hold each barcode inside the frame: each item is
+added with a beep (<b>Added: …</b>). An item that needs a weight or a price, or a barcode the till does not know,
+closes the camera and the till asks you. <b>Torch</b> turns on the light. Go back when done.</dd>
+<dt>Search</dt><dd>Type part of the name (<i>milo 1k</i> finds “Milo 1kg”), or the first digits of a barcode.
+Tap the item. Typing a whole barcode or SKU and pressing Enter adds it directly.</dd>
+<dt>Items (the item list)</dt><dd>On a phone tap <b>Items</b>; on a tablet it is always on the left. The tabs
+are <b>Popular</b> (your best sellers of the last 30 days), <b>All</b>, and one per category. Tap a tile to add
+it. A tile already on the bill shows <b>×2</b>. A tile shows the price and, for counted products, how many are in
+stock.</dd>
+</dl>
+
+<h3 id="weighed">Weighed items, items priced at the till, packs and scale labels</h3>
+<ul>
+<li><b>Weighed items</b> (sold by weight): after the scan or tap, type the weight. The keypad fills from the
+right: <code>1 2 5 0</code> = 1.250 kg. Each weighing is its own line.</li>
+<li><b>Items priced at the till</b>: the tile says <b>Enter price</b>; type the price (<code>1 5 0</code> = RM1.50).</li>
+<li>A product sold by the piece whose price is 0.00 asks for the price, so it is not sold free by mistake. A
+weighed product needs its price per kg: at 0.00 it is sold free.</li>
+<li>A <b>carton or pack barcode</b> adds one line such as “Milo x24” at the pack price.</li>
+<li>A <b>weighing-scale label</b> adds the weighed item with its weight, or with exactly the price printed on
+the label (“label price”). See <a href="#scale-labels">Weighing-scale labels</a>.</li>
+</ul>
+
+<h3 id="unknown">A barcode the till does not know</h3>
+<p>The till beeps low and shows <b>Barcode not found</b>. Tap <b>Add product</b>, type the name and the price,
+and save: the product is kept for next time and goes on this bill. A cashier who may not add products is asked
+for a manager's PIN first; the manager then adds it. Tap <b>Cancel</b> to leave it off.</p>
+<div class="note"><p>Only products in the list can be sold. For things without a barcode (loose vegetables,
+<i>kuih</i>, bags), add a product once — sold by <b>Weight</b> or with the <b>Price entered at the till</b> — and
+pick it from <b>Items</b>.</p></div>
+
+<h3 id="change-bill">Changing the bill</h3>
+<ul>
+<li>The line you scanned or tapped last is highlighted with its buttons: <b>Remove</b>, <b>−</b>, the
+<b>quantity</b>, <b>+</b>. Tap another line to give it the buttons; tap it again to hide them.</li>
+<li><b>+</b> and <b>−</b> change the quantity by one. <b>−</b> stops at 1: use <b>Remove</b> for the last one.</li>
+<li>Tap the <b>quantity</b> to type it (for weighed items, the new weight).</li>
+<li>Scanning the same product again adds 1 to its line.</li>
+<li><b>Menu → Clear bill</b> throws away the whole bill (it asks first). No PIN is needed.</li>
+<li>The bill is safe: if the phone restarts, the app closes or the battery dies, the bill is still there when
+the app opens again.</li>
+</ul>
+<p>Every item taken off and every quantity lowered is written in the <a href="#activity-log">Activity log</a>
+with its value — marked specially when it happens after the payment screen showed the customer the total.</p>
+
+<h3 id="hold">Holding a bill</h3>
+<ol>
+<li>Tap <b>Hold</b>. Type a name if you like (e.g. the customer's) and tap OK. The screen is free for the next
+customer.</li>
+<li>To bring it back, tap the <b>1 held</b> pill (or <b>Menu → Held bills</b>) and tap the bill. A bill already on
+the screen is held in its place.</li>
+<li>To delete a held bill: <b>Delete a bill…</b> in the list (or hold your finger on it).</li>
+</ol>
+<p>Held bills stay on this till (they are not shared with other tills) and survive a restart.</p>
+
+<h3 id="discount">Discounts and price changes</h3>
+<p><b>Menu → Discount</b> (shown to those allowed to give discounts or change prices):</p>
+<ul>
+<li><b>Discount on the whole bill</b> — an <b>Amount</b> or a <b>Percent</b>.</li>
+<li><b>Discount on</b> <i>the selected item</i> — tap the line first.</li>
+<li><b>Change the price of</b> <i>the selected item</i>.</li>
+<li><b>No discount</b> removes a discount.</li>
+</ul>
+<p>A cashier without these permissions does not see <b>Discount</b>. A manager can help: <b>Menu → Manager
+PIN</b> → the manager types their PIN → <b>Discount</b> appears for this bill (until it is paid, held or cleared,
+or for 5 minutes). Discounts and price changes are in the Activity log with who approved them. An item with a
+hand-made discount or price no longer takes part in <a href="#promotions">promotions</a>.</p>
+
+<h3 id="customer-on-bill">A customer on the bill</h3>
+<p>When <b>Customers and credit</b> is switched on (Settings → Store &amp; receipt), the totals show
+<b>Add customer</b>. Tap it to choose a customer (search by name or phone) or create one. The customer's name is
+printed on the receipt and the bill can be paid with <b>Customer credit</b> (“pay later”) — see
+<a href="#customers">Customers and credit</a>.</p>
+
+<h3 id="price-check">Price check</h3>
+<p>Tap <b>Price check</b>, then scan or type a barcode or name and tap <b>Check</b>. It shows the price, pack
+prices, stock and any running promotion, without touching the bill. Staff allowed to edit products also see
+<b>Change price</b>: the new price is used from now on (items already on the bill keep the old one) and is
+recorded in the Activity log.</p>
+
+<h3 id="menu">The Menu</h3>
+<p>The Menu shows only what the signed-in person may do.</p>
+<div class="table-wrap"><table>
+<tr><th>Menu entry</th><th>What it is</th></tr>
+<tr><td><b>Discount</b></td><td>Discounts and price changes on this bill.</td></tr>
+<tr><td><b>Clear bill</b></td><td>Throw away the bill on the screen.</td></tr>
+<tr><td><b>Held bills</b></td><td>Bills on hold.</td></tr>
+<tr><td><b>Sales &amp; refunds</b> (or <b>Receipts</b>)</td><td>Past sales: copies, refunds, voids — <a href="#sales">details</a>.</td></tr>
+<tr><td><b>Customers</b></td><td>When customers and credit are on.</td></tr>
+<tr><td><b>Open shift</b> / <b>Close shift</b></td><td>Start or end your shift — <a href="#shifts">details</a>.</td></tr>
+<tr><td><b>Shift &amp; cash</b></td><td>Cash in, cash out, cash drops, shift reports.</td></tr>
+<tr><td><b>Open cash drawer</b></td><td>Opens the drawer without a sale (recorded).</td></tr>
+<tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on).</td></tr>
+<tr><td><b>Manager PIN</b></td><td>A manager helps with this bill.</td></tr>
+<tr><td><b>Manage shop ›</b></td><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Inventory</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b>.</td></tr>
+</table></div>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="payment">4. Taking payment</h2>
+<div class="shots">
+<figure><img src="img/en-pay.png" alt="The payment, first step" width="240" loading="lazy"><figcaption>Step 1: how the customer pays. One tap on a note pays in cash.</figcaption></figure>
+<figure><img src="img/en-pay-cash.png" alt="The payment keypad with the change" width="240" loading="lazy"><figcaption>Step 2 (only when needed): type the amount; the change shows as you type.</figcaption></figure>
+</div>
+<p>Tap <b>Pay</b>. The bill is frozen while the payment is open. The payment has two steps.</p>
+
+<h3 id="cash">Cash</h3>
+<ul>
+<li>Under <b>Cash: tap what the customer gave</b> are the exact amount and the next notes (e.g. <b>RM59.60</b>,
+<b>RM60</b>, <b>RM100</b>). <b>One tap pays the bill</b> and shows the change.</li>
+<li>Something else? Tap <b>Other amount</b>, type it — the keypad fills from the right, so <code>5 0 0 0</code> is
+RM50.00 — and the <b>Change</b> appears as you type. Tap <b>Done</b>. With nothing typed, Done takes the exact
+amount.</li>
+<li>Cash is rounded to the nearest 5 sen (Malaysian rounding) when <b>Round cash payments to 5 sen</b> is on:
+RM10.02 → RM10.00, RM10.03 → RM10.05. The payment then shows <i>In cash (rounded)</i>, and the receipt prints the
+<b>Rounding</b>. Card and e-wallet always pay the exact amount.</li>
+<li>Typed less than the bill as the first payment? The till asks <i>“Only RM… in cash? Then RM… is still to pay
+with another method.”</i> — tap <b>Part payment</b> to continue, or Cancel if you meant a bigger amount.</li>
+</ul>
+
+<h3 id="other-methods">Card, e-wallet / QR and other methods</h3>
+<p>Under <b>Other ways to pay</b> there is one button per payment method (Card, E-wallet / QR, and any you added,
+such as DuitNow). <b>One tap pays the whole amount</b> with that method.</p>
+<div class="warn"><p>LekasPOS only <b>records</b> card and e-wallet payments — it does not talk to the card
+terminal or the bank. Take the payment first and check it went through, then tap the method.</p></div>
+
+<h3 id="split">Split payment</h3>
+<ol>
+<li>Tap <b>Split payment</b>.</li>
+<li>Type the amount of the first part (e.g. <code>2 0 0 0</code> for RM20.00) and tap its method (e.g.
+<b>Card</b>). With nothing typed, the method pays all that is left.</li>
+<li>The payment now shows <b>Still to pay</b> and <b>Paid: Card RM20.00</b>. Pay the rest the same way (e.g. tap a
+cash note).</li>
+</ol>
+<p><b>Cancel</b> after a part was paid asks whether to cancel those parts; the bill itself stays. A card or QR part the
+customer really paid is then no longer recorded: when you take the payment again, tap that same method for that
+amount, or give the money back on the terminal.</p>
+
+<h3 id="credit-pay">Customer credit (pay later)</h3>
+<p>With a customer on the bill, <b>Customer credit</b> appears among the methods. The amount is added to what the
+customer owes. Over the customer's credit limit the till asks <b>Over the credit limit</b>; <b>Allow</b> needs a
+manager. See <a href="#customers">Customers and credit</a>.</p>
+
+<h3 id="after-sale">After the sale</h3>
+<ul>
+<li>The result shows the <b>Change</b> in big figures (or <b>Paid</b>), <b>Received … · total …</b> and the
+<b>Receipt</b> number.</li>
+<li>The receipt prints by itself (when a printer is set up) and the cash drawer opens for cash.</li>
+<li><b>Print a copy</b> (or <b>Print receipt</b> when receipts are not printed automatically) and <b>Share</b> (as a
+picture or PDF, e.g. by WhatsApp).</li>
+<li>Staff who manage stock also see <b>Running low: …</b> for items of this sale that are at or below their
+low-stock alert level.</li>
+<li><b>New sale</b> closes it — or simply scan the next customer's first item.</li>
+<li>A total of zero (e.g. a 100% discount) shows only <b>Complete sale</b>.</li>
+</ul>
+<div class="note"><p>A sale is saved completely before anything is printed. If saving fails (for example, the
+phone is full), the till says <b>Sale not saved</b>: the sale was not recorded and the bill stays. If the customer
+already paid by card or QR, do not charge them again — fix the problem, tap <b>Pay</b> and tap the same method.</p></div>
+<p><b>Tapped the wrong method or amount?</b> A saved sale cannot be changed. Ask a manager to void it
+(<a href="#void">Void</a>) and ring it up again.</p>
+
+<h3 id="pay-checks">Questions the till may ask when you tap Pay</h3>
+<ul>
+<li><b>No shift open</b> — the shop requires a shift: tap <b>Open shift</b>, count the drawer, then pay.</li>
+<li><b>Check the date and time</b> — the phone's clock looks wrong. A sale is kept under the date it was made,
+for good, so set the date first (<b>Set the date</b>). When the date is impossible (the clock was reset) the sale
+waits until it is fixed; when the clock is only earlier than this till's last sale, <b>Sell anyway</b> is also
+offered.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="receipts">5. Receipts, the printer and the cash drawer</h2>
+<h3 id="receipt-content">What a receipt shows</h3>
+<ul>
+<li>Your logo (optional), the shop's name, address, phone, e-mail, registration no. (SSM), SST no., TIN and your
+header text.</li>
+<li><b>RECEIPT</b>, the receipt number (e.g. <code>KQ-000123</code>; refunds <code>KQ-R000045</code>), the date and
+time, the cashier and the customer.</li>
+<li>Each item with its quantity, price and amount; discounts and promotion savings.</li>
+<li>Number of items, subtotal, discounts, tax, <b>Rounding</b>, the big <b>TOTAL</b>, each payment and the
+<b>Change</b>.</li>
+<li>Your footer text (or <i>Thank you!</i>), and optionally a QR code customers scan to request an e-invoice.</li>
+</ul>
+<p>The receipt is in the <b>Receipt language</b> chosen in Store &amp; receipt (English or Bahasa Melayu),
+whatever the app's own language. Each till has its own two-letter receipt prefix, so receipt numbers never clash
+between tills.</p>
+
+<h3 id="copies">Copies</h3>
+<p>The first receipt of a sale is free to print. Any later print is a <b>copy</b>: it is marked
+<b>*** COPY ***</b>, needs the permission <i>Print receipt copies</i> (cashiers have it) and is recorded in the
+Activity log. Copies come from the last sale on the empty bill, from the sale's result, or from
+<b>Menu → Sales &amp; refunds</b> (or <b>Receipts</b>).</p>
+
+<h3 id="share-receipt">Sharing a receipt</h3>
+<p><b>Share</b> sends the receipt <b>As a picture</b> or <b>As a PDF</b> through any app (WhatsApp, e-mail…). This
+works without a printer.</p>
+
+<h3 id="printer">Setting up the printer</h3>
+<ol>
+<li>Switch the printer on and pair it in <b>Android's Bluetooth settings</b> (the PIN is usually 0000 or 1234).
+Settings → Printer &amp; cash drawer → <b>Pair a new printer (Bluetooth settings)</b> takes you there.</li>
+<li>Back in <b>Printer &amp; cash drawer</b>, tap <b>Choose a paired printer</b> and pick it. On Android 12 and newer,
+allow <b>Nearby devices</b>.</li>
+<li>Choose the <b>Paper width</b>: 58 mm (32 characters) or 80 mm (48 or 42 characters).</li>
+<li>Tap <b>Print a test page</b>. The digit ruler must fit on one line; if not, try the other 80 mm choice.</li>
+<li>Tap <b>Save</b>.</li>
+</ol>
+<p>All the printer options are in <a href="#settings-printer">Settings → Printer &amp; cash drawer</a>.</p>
+
+<h3 id="print-queue">When the printer is off</h3>
+<ul>
+<li>Selling never waits for the printer. Receipts wait in a queue and print when the printer is back; the pill
+shows <b>Printer offline (2)</b>.</li>
+<li>A receipt still waiting after 10 minutes is dropped (so old receipts do not come out between new customers).
+Print a copy from Sales if the customer wants it.</li>
+<li>After 10 failed tries the status says <i>offline, tap Retry</i>. <i>not printing: check the paper and the
+cover</i> means the printer stopped taking data.</li>
+<li><b>Clear the print queue</b> in the printer settings throws away receipts not yet printed (the sales stay).</li>
+</ul>
+
+<h3 id="drawer">The cash drawer</h3>
+<p>The drawer plugs into the printer and opens through it. It opens by itself for payment methods marked
+<b>Opens the cash drawer</b> (cash), refunds paid that way, a voided cash sale, a customer repaying credit in
+cash, a shift's opening float and cash in/out. <b>Menu → Open cash drawer</b> opens it without a sale (needs the
+permission and is recorded). The drawer opens only through the printer: when the printer is off or out of reach the
+drawer stays shut (an opening that waits more than 2 minutes is dropped) — use its key. If it never opens, check
+<b>Cash drawer connected to the printer</b> and try <b>Pin 5</b> instead of Pin 2.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="sales">6. Sales, refunds and voids</h2>
+<p><b>Menu → Sales &amp; refunds</b> (called <b>Receipts</b> for staff who may not refund or void) lists the sales of
+this till, newest first — and of every till of the shop when Google Drive backup is on. Voided sales are tagged
+<b>VOIDED</b>, refunds <b>REFUND</b>.</p>
+<ul>
+<li>Search by <b>Receipt number</b>: the full number (<code>KQ-000123</code>) or just the digits (<code>123</code>);
+<code>R45</code> finds refunds.</li>
+<li>Tap a sale to see the receipt, with <b>Print copy</b>, <b>Share</b>, <b>Refund / return</b> and <b>Void</b> for those
+allowed. A sale with refunds lists them.</li>
+<li>Cashiers do not see <b>Refund / return</b> or <b>Void</b>. Ask a manager to tap <b>Menu → Manager PIN</b> and type
+their PIN, then open the sale: the buttons appear, and the manager types their PIN again to confirm.</li>
+</ul>
+
+<h3 id="refund">Refund or return</h3>
+<ol>
+<li>Open the sale and tap <b>Refund / return</b>.</li>
+<li>For each item coming back, tap the quantity and type how many (or tap <b>All</b>). You can refund part of a
+receipt now and more later.</li>
+<li>Leave <b>Put the returned items back into stock</b> on if they can be sold again; switch it off for damaged
+goods.</li>
+<li>Type the <b>Reason</b> (required) and choose <b>Pay back with</b> (normally the way the customer paid).</li>
+<li>Check <b>To pay back</b> and tap <b>Refund</b>, then confirm.</li>
+</ol>
+<p>The amount is exactly what the customer paid for those items, with discounts, promotions and tax shared fairly
+to the sen; cash is rounded to 5 sen. The refund gets its own number (e.g. <code>KQ-R000045</code>), prints if
+receipts print automatically, goes into the current shift and is recorded in the Activity log. A credit sale is
+paid back to the customer's credit.</p>
+<div class="warn"><p>LekasPOS only <b>records</b> the refund. Paying back by card or e-wallet? Do the refund on the card
+terminal or e-wallet as well. For cash, hand the money back from the drawer.</p></div>
+
+<h3 id="void">Void</h3>
+<p>A void cancels a whole sale as if it never happened — for mistakes such as a test sale or a sale rung up twice.</p>
+<ol>
+<li>Open the sale and tap <b>Void</b>.</li>
+<li>Type why and confirm.</li>
+</ol>
+<ul>
+<li>The sale is removed from the reports, the items go back into stock, and its cash comes off the expected cash
+of the shift that is open now. Credit is given back.</li>
+<li>A sale with refunds cannot be voided: void the refunds first. A refund can itself be voided.</li>
+<li>Voids are recorded in the Activity log and shown in the Staff check.</li>
+<li>A void only corrects the records: give the customer's money back yourself (cash from the drawer; card or
+e-wallet on your terminal or bank app).</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="products">7. Products</h2>
+<p>Everything the till sells is a <b>product</b>. Open the list with <b>Menu → Manage shop › → Products</b>
+(needs the permission <i>Edit products and categories</i>).</p>
+
+<div class="shots">
+<figure><img src="img/en-products.png" alt="The Products list" width="240" loading="lazy"><figcaption>Products: search by name, SKU or barcode, or scan.</figcaption></figure>
+<figure><img src="img/en-product-new.png" alt="The New product form" width="240" loading="lazy"><figcaption>A new product: name, price, how it is sold, picture and colour.</figcaption></figure>
+</div>
+
+<h3 id="product-list">The product list</h3>
+<ul>
+<li><b>Search</b> by name, SKU or barcode. Two or more digits find barcodes that start with them; words find
+names (each word may be the start of a word in the name, in any order). Scanning a barcode on this screen
+puts it in the search box.</li>
+<li>Each row shows the price (for weighed products, the price per kg), <b>In stock</b>, and <b>HIDDEN</b> for
+products hidden from the selling screen. Tap a row to edit it.</li>
+<li><b>+</b> adds a product. To enter many products, tap <b>Save and add another</b> instead of <b>Save</b>: the product
+is saved and a new form opens with the same category and tax.</li>
+<li>Searched a barcode no product has? <i>“No product has the barcode … Tap here to add it.”</i> opens a new
+product with that barcode already filled in.</li>
+<li><b>⋮</b> has <b>Import products (CSV)</b>, <b>Export products (CSV)</b> and <b>Example CSV file</b> — see
+<a href="#csv">Many products at once (CSV)</a>.</li>
+</ul>
+<div class="tip"><p>The quickest way to add a product is at the till: scan its barcode. If the till does not
+know it, it offers <b>Add product</b>; after saving, the product is also on the bill.</p></div>
+
+<h3 id="product-form">The product form</h3>
+<p>Only the <b>Name</b> and the <b>Selling price</b> are needed. Everything else can be added later.</p>
+<dl>
+<dt>Name</dt><dd>What the bill, the receipt and the reports show.</dd>
+<dt>Selling price</dt><dd>The price of one piece (or of one kg for weighed products). Type it like
+<code>12.50</code>. It may be left empty only for products whose price is typed at the till. For a piece product, a
+price of 0.00 makes the till ask for the price every time. A weighed product must have its price per kg: at 0.00 it
+is sold free.</dd>
+<dt>Sold by</dt><dd><b>Piece / pack</b> (the usual), <b>Weight</b> (the till asks the weight, the price is
+per kg), or <b>Price entered at the till</b> (the cashier types the price each time — for things like
+<i>kuih</i> or loose items of different prices). See <a href="#sold-by">How products are sold</a>.</dd>
+<dt>Unit (pcs, kg, pack…)</dt><dd>Shown after quantities and prices, for example <i>RM8.00/kg</i>. Choosing
+<b>Weight</b> changes <i>pcs</i> to <i>kg</i> by itself.</dd>
+<dt>On the selling screen</dt><dd>A <b>picture</b> (<b>Take photo</b>, <b>Choose picture</b>, <b>Remove
+picture</b>) and a <b>Colour</b> for the product's tile. See <a href="#pictures">Pictures and colours</a>.</dd>
+<dt>Barcodes</dt><dd><b>Add barcode</b> (type it, or tap <b>Scan</b> to use the camera). A product may have
+several barcodes. You can also simply scan with a barcode scanner while the form is open: the code is added
+(“Barcode … added”). <b>Add pack barcode</b> is for the barcode on a carton or multipack — see
+<a href="#barcodes">Barcodes, packs and cartons</a>.</dd>
+<dt>Scale PLU</dt><dd>The item code your weighing scale prints on its labels — see
+<a href="#scale-labels">Weighing-scale labels</a>.</dd>
+<dt>More details</dt><dd>
+<b>Category</b> (the tab the product appears under at the till),
+<b>Tax</b> (only if you charge tax at the till — see <a href="#tax">Tax rates</a>),
+<b>Cost price</b> (what you pay the supplier for one piece or one kg; used for profit and stock value, and
+updated by itself when you receive deliveries),
+<b>SKU / item code</b> (your own code; searchable, and scanning it also finds the product),
+<b>Track stock</b> (on by default; off for things you do not count, such as services or plastic bags),
+<b>Low-stock alert at</b> (warns when stock falls to this level; empty or 0 = no alert),
+<b>Opening stock</b> (new products only: how many are on the shelf now).</dd>
+<dt>Show in search and catalogue</dt><dd>Turn off to <b>hide</b> a product from the tiles, the search and the
+price check's name search. A hidden product's barcode <b>still scans and sells</b>; it stays in the product
+list with the tag <b>HIDDEN</b>. Use this for products sold only by scanning, or kept for later. To stop a product
+being sold at all, delete it: its past sales stay in the reports.</dd>
+</dl>
+<p>For an existing product the form also shows <b>In stock now</b>, <b>Stock history</b> and <b>Adjust
+stock</b>, and a <b>Delete</b> button. Deleting asks first (<i>“Past sales keep their lines.”</i>); the
+barcode then no longer scans. With Google Drive backup on, the product disappears on every till.</p>
+<p>When a barcode you add is already used by another product, the app asks <i>“Barcode already used…
+Save anyway?”</i>. If you save anyway, a scan picks the product whose barcode was added last.</p>
+<div class="note"><p>Changes made in this form to price, “sold by”, tax, cost and barcodes (and <b>Change price</b> in
+Price check) are written to the <a href="#activity-log">Activity log</a> as <i>Product price changed</i>, with who
+made them. There is no separate price-history screen: filter the Activity log instead. A CSV import is written once,
+as <i>Products imported</i>.</p></div>
+
+<h3 id="sold-by">How products are sold</h3>
+<div class="table-wrap"><table>
+<tr><th>Sold by</th><th>At the till</th></tr>
+<tr><td>Piece / pack</td><td>A scan or a tap adds 1. Scanning the same product again adds 1 more to the same
+line.</td></tr>
+<tr><td>Weight</td><td>The till asks the weight on a keypad. Digits fill from the right with three decimals:
+typing <code>1 2 5 0</code> gives 1.250 kg. A weighing-scale label already carries the weight or the
+price.</td></tr>
+<tr><td>Price entered at the till</td><td>The tile says <b>Enter price</b>; the cashier types the price each
+time.</td></tr>
+</table></div>
+<p>Selling is never blocked by stock: a product can be sold even when the app thinks there are none left.
+Stock may then go below zero until the next delivery or count puts it right.</p>
+
+<h3 id="barcodes">Barcodes, packs and cartons</h3>
+<ul>
+<li>Barcodes are tidied when saved: spaces and dashes in an EAN/UPC are removed, a leading 0 a spreadsheet
+dropped is put back, and a 14-digit carton GTIN that starts with 0 is stored as its EAN-13.</li>
+<li><b>Add pack barcode</b> asks the <b>Barcode</b>, <b>Pieces in the pack</b> (2 or more) and an optional
+<b>Pack price</b> (empty = pieces × price). Scanning that barcode at the till puts one line
+“<i>name</i> x24” at the pack price and takes 24 pieces off stock. When receiving stock, scanning a carton
+barcode adds all its pieces at once.</li>
+</ul>
+
+<h3 id="scale-labels">Weighing-scale labels</h3>
+<p>Many shops weigh loose goods on a label-printing scale. The label's barcode carries the item code (PLU)
+and the weight or the price. LekasPOS reads these labels:</p>
+<ol>
+<li>On each weighed product, type the scale's item code in <b>Scale PLU</b> (leading zeros do not matter).</li>
+<li>Check the label format in <b>Settings → Store &amp; receipt → Weighing-scale labels → Label formats</b>.
+The defaults suit most scales: <code>20IIIIIWWWWWC</code> (prefix 20, 5-digit item code, weight in grams)
+and <code>21IIIIIPPPPPC</code> (prefix 21, item code, price in sen). In a format, digits are a fixed prefix,
+<code>I</code> the item code, <code>W</code> the weight in grams, <code>P</code> the price in sen,
+<code>X</code> a digit to ignore and <code>C</code> the check digit. Several formats are separated by commas.</li>
+<li>Scan a label at the till: a weight label gives weight × price per kg; a price label gives exactly the
+printed price. A label printed with weight 0 or price 0.00 makes the till ask.</li>
+</ol>
+
+<h3 id="pictures">Pictures and colours</h3>
+<p>A picture and a colour help the cashier find an item quickly on the selling screen.</p>
+<ul>
+<li><b>Take photo</b> opens the phone's camera app (the first time Android asks for the camera).
+<b>Choose picture</b> takes a picture from the gallery, files or Google Drive.</li>
+<li>The picture becomes a small square (the middle of the photo is kept) so it never fills the phone. With
+Google Drive backup on, it reaches the other tills too.</li>
+<li><b>Colour</b>: twelve colours or <b>No colour</b>. A product without its own colour takes its category's
+colour. A coloured tile shows white text.</li>
+<li>The size of the tiles is set per till in <b>Settings → Item size on the selling screen</b>.</li>
+</ul>
+
+<h3 id="categories">Categories</h3>
+<p><b>Menu → Manage shop › → Categories</b>. Categories become the tabs of the selling screen's item list
+(after <b>Popular</b> and <b>All</b>) and group the sales in reports.</p>
+<ul>
+<li><b>+</b> adds one (a name and a colour). Tap a category to rename it or change its colour.</li>
+<li><b>Hold</b> (long-press) a category to delete it. Its products stay, without a category.</li>
+<li>Categories are listed in alphabetical order. Moving a product to another category also moves its past
+sales in the category report.</li>
+</ul>
+
+<h3 id="tax">Tax rates</h3>
+<p><b>Menu → Manage shop › → Tax rates</b> (needs <i>Change settings</i>). Most small grocery shops in
+Malaysia charge no tax at the till: then leave this list empty and choose nothing under <b>Tax</b> on the
+products.</p>
+<ul>
+<li><b>+</b> adds a rate: a name (for example <i>SST</i>) and the <b>Rate in %</b>. Tap a rate to change it;
+hold it to delete it (products using it are then no longer taxed).</li>
+<li>Give each taxed product its rate in the product form (<b>More details → Tax</b>).</li>
+<li><b>Settings → Store &amp; receipt → Prices include tax</b> (on by default) says whether your shelf prices
+already contain the tax (the tax is worked out of the price) or the tax is added on top at the till.</li>
+<li>The receipt prints a tax summary with each rate's name and amount.</li>
+</ul>
+
+<h3 id="payment-methods">Payment methods</h3>
+<p><b>Menu → Manage shop › → Settings → Payment methods</b> (needs <i>Change settings</i>). The app starts with
+<b>Cash</b>, <b>Card</b>, <b>E-wallet / QR</b> and <b>Customer credit</b>. Add your own, such as DuitNow or
+Touch ’n Go, with <b>+</b>:</p>
+<ul>
+<li><b>Name (on the receipt)</b> and <b>Kind</b>: <i>E-wallet or QR (exact amount)</i>, <i>Card (exact amount)</i> or
+<i>Other (exact amount)</i>. All of them pay the exact amount; only cash is rounded to 5 sen and gives change.</li>
+<li><b>Opens the cash drawer</b> — tick it for methods where money goes into the drawer.</li>
+<li><b>Shown at the till</b> — untick to hide a method. Methods cannot be deleted (old sales still name
+them): hide them instead.</li>
+<li>LekasPOS does not connect to a card terminal or an e-wallet: take the payment on your terminal or QR
+standee as usual, then tap the method in LekasPOS to record it. Each method is counted on its own in the
+shift report and the sales reports.</li>
+<li>Renaming a method that was already used also renames it on old receipt copies and reports; the app
+warns you first.</li>
+</ul>
+
+<h3 id="csv">Many products at once (CSV)</h3>
+<p>To enter or change many products, use a spreadsheet (Google Sheets or Excel) and a CSV file.</p>
+<ol>
+<li>In <b>Products → ⋮</b> tap <b>Example CSV file</b> (or <b>Export products (CSV)</b> to start from your
+current products) and <b>Share</b> it to yourself or <b>Save as a file</b>.</li>
+<li>Open it in Google Sheets or Excel. Fill one row per product. Format the barcode column as <b>text</b>,
+otherwise the spreadsheet turns barcodes into numbers like 9.55E+12.</li>
+<li>Save or download it <b>as CSV</b> (in Excel choose <i>CSV UTF-8</i> to keep Malay, Chinese or Tamil
+letters). An Excel file (.xlsx) is not read.</li>
+<li>In <b>Products → ⋮</b> tap <b>Import products (CSV)</b> and choose the file. A preview shows the new
+products, the products to update and every line with a problem (with its line number). Nothing is changed
+yet.</li>
+<li>Tap <b>Import now</b>. The import continues even if you leave the screen; if the app is closed half-way,
+importing the same file again continues where it stopped.</li>
+</ol>
+<div class="table-wrap"><table>
+<tr><th>Column</th><th>What to write</th></tr>
+<tr><td><code>name</code> (required)</td><td>The product name (up to 120 characters).</td></tr>
+<tr><td><code>price</code> (required)</td><td>Selling price, like <code>12.50</code> or <code>RM12.50</code>.</td></tr>
+<tr><td><code>barcodes</code></td><td>One or more, separated by <code>|</code> or <code>;</code>.</td></tr>
+<tr><td><code>sku</code></td><td>Your item code.</td></tr>
+<tr><td><code>category</code></td><td>A category name; new names create new categories.</td></tr>
+<tr><td><code>unit</code></td><td>pcs, kg, pack…</td></tr>
+<tr><td><code>cost</code></td><td>Cost price.</td></tr>
+<tr><td><code>tax</code></td><td>A tax rate's name or percentage (<code>SST</code>, <code>6%</code>), or <code>none</code>. The rate must already exist under Tax rates.</td></tr>
+<tr><td><code>sold by</code></td><td><code>piece</code>, <code>weight</code> or <code>open price</code>.</td></tr>
+<tr><td><code>track stock</code>, <code>active</code></td><td><code>yes</code> or <code>no</code> (<code>active</code> = shown at the till).</td></tr>
+<tr><td><code>stock</code></td><td>For new products, the opening stock.</td></tr>
+<tr><td><code>low stock</code></td><td>The low-stock alert level.</td></tr>
+<tr><td><code>id</code></td><td>Written by the export (<code>#…</code>); keep it to update the right product.</td></tr>
+</table></div>
+<p>Headers may also be in Malay or in common other words (<i>nama</i>, <i>harga</i>, <i>kod bar</i>,
+<i>kategori</i>, <i>kos</i>, <i>stok</i>, <i>selling price</i>, <i>qty</i>…), in any case.</p>
+<ul>
+<li>A row matches an existing product by its <code>id</code>, then a barcode, then the SKU. Otherwise it is a
+new product. So import a file only once: products without id, barcode or SKU would be created twice. To change
+products later, export them first and edit that file.</li>
+<li>For an existing product the name and price are always taken from the file — so start from a fresh
+<b>Export products (CSV)</b>, never an old file. Any other <b>empty cell changes nothing</b>. Barcodes in the file are
+added, never removed. Nothing is ever deleted by an import.</li>
+<li>Stock: new products get the <code>stock</code> column as their opening stock. Existing products change
+stock only if you switch on <b>Also set the stock of existing products to the file's quantity</b> (recorded
+as a stock count). Stock needs the permission <i>Receive, adjust and count stock</i>.</li>
+<li>Rows whose name starts with <code>EXAMPLE</code> or <code>CONTOH</code> are skipped. Up to 100,000 lines
+per file.</li>
+<li>A CSV file cannot set pack barcodes, scale PLUs, pictures or colours: add those in the product form.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="promotions">8. Promotions</h2>
+<p><b>Menu → Manage shop › → Promotions</b>. Promotions are deals the till applies <b>by itself</b> when the
+right items are on the bill — the cashier does nothing.</p>
+<div class="shots">
+<figure><img src="img/en-promotions.png" alt="The Promotions list" width="240" loading="lazy"><figcaption>Promotions: the deals the till applies by itself.</figcaption></figure>
+<figure><img src="img/en-promotion-edit.png" alt="A new promotion" width="240" loading="lazy"><figcaption>A multi-buy: how many, the price for all of them, the products.</figcaption></figure>
+</div>
+<div class="table-wrap"><table>
+<tr><th>Type</th><th>Example</th><th>What the customer gets</th></tr>
+<tr><td><b>Multi-buy or special price</b></td><td>“Milo 3 for RM10”</td><td>Every group of 3 costs RM10. A
+4th item is at the normal price.</td></tr>
+<tr><td><b>Multi-buy</b> with <b>How many to buy</b> = 1</td><td>“Special price RM3.99”</td><td>A special
+price for a single item, for example for one week.</td></tr>
+<tr><td><b>Buy X get Y free</b></td><td>“Buy 1 get 1 free”</td><td>In every set of 2, the cheaper one is
+free.</td></tr>
+</table></div>
+<h3 id="promotion-new">Making a promotion</h3>
+<ol>
+<li>Tap <b>+</b>. Type the <b>Name</b> (it is printed on the bill and the receipt, e.g. <i>Milo 3 for RM10</i>).</li>
+<li>Choose the <b>Type</b>, then <b>How many to buy</b> and either <b>Price for all of them</b> or <b>How many
+free</b>.</li>
+<li><b>Add a product</b> — one or more. Any mix of these products counts towards the deal (for example
+“any 3 flavours for RM10”).</li>
+<li>Optional <b>Dates</b>: <b>Starts</b> and <b>Ends</b> (the last day the deal runs). Without dates it runs
+until you switch it off.</li>
+<li>Leave <b>Running</b> on and tap <b>Save</b>.</li>
+</ol>
+<h3 id="promotion-rules">Good to know</h3>
+<ul>
+<li>Only products <b>sold by the piece</b> take part. Weighed items, items priced at the till, pack barcodes
+and scale labels are left out.</li>
+<li>A line given a hand-made discount or a changed price drops out of the deal (your change wins).</li>
+<li>When items of different prices are mixed, the customer gets the bigger saving. A deal never makes a
+group cost more than its normal price.</li>
+<li>The saving shows on the bill line (“· <i>promotion name</i> −RM…”) and on the receipt. A bill discount is
+taken after the promotions.</li>
+<li>A refund of one item from a promotion pays back what that item really cost.</li>
+<li>If one product is in two running promotions, only one of them applies.</li>
+<li><b>Price check</b> shows the promotion that applies to a product.</li>
+<li>With several tills, update <b>every</b> till: tills on LekasPOS 1.6.1 or older do not apply a special
+price.</li>
+<li>Switch <b>Running</b> off to pause a deal; delete it with <b>Delete</b>. Sales already made keep their prices.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="stock">9. Stock</h2>
+<p><b>Menu → Manage shop › → Inventory</b>, for staff with the permission <i>Receive, adjust and count stock</i>
+(owner and manager by default).</p>
+<figure class="wide"><img src="img/en-inventory.png" alt="The Inventory screen" width="240" loading="lazy"><figcaption>Inventory: everything about stock in one place.</figcaption></figure>
+
+<h3 id="how-stock">How the app knows your stock</h3>
+<p>Stock of a product = the <b>last count</b> + deliveries and adjustments since then − sales since then +
+refunds put back on the shelf. Voided sales do not count. Stock can go below zero (selling is never blocked); a
+count puts it right.</p>
+<p>Sales never change the stock of a product with <b>Track stock</b> off, and it gets no low-stock alert. Do not
+receive or count such products: their stock figure would only grow.</p>
+
+<h3 id="receive">Receive stock (a delivery)</h3>
+<ol>
+<li><b>Inventory → Receive stock</b>.</li>
+<li>Tap the supplier button to choose the <b>Supplier</b> (or <b>New supplier</b>), and type the
+<b>Invoice / DO no.</b> if you like (you can scan the DO's barcode into it).</li>
+<li>Scan each product: <b>each scan adds one piece</b> (a <b>carton barcode</b> adds all its pieces). Or tap
+<b>Add item</b>, pick the product and type how many. Weighed products always ask the weight. Scanning or adding the
+same product again adds to its line.</li>
+<li>Tap a line to change the <b>Quantity</b>, the <b>Cost per unit</b>, or the <b>Line amount (from the
+invoice)</b> — typing the invoice's amount keeps it exact and works out the cost per unit. <b>Remove</b>
+takes the line off.</li>
+<li>Tap <b>Save delivery</b> and confirm. Stock goes up and each product's <b>cost price</b> is updated.</li>
+</ol>
+<div class="note"><p>The new cost price is the <b>average</b> of the stock on hand and the delivery (moving
+average). If there was no stock, no cost yet, or the product does not track stock, it becomes the
+delivery's cost.</p></div>
+<div class="tip"><p>A half-entered delivery is kept even if the phone rings, the app closes or the phone
+restarts: open <b>Receive stock</b> again to continue. <b>×</b> (Discard) throws it away. A saved delivery
+cannot be edited or deleted; use <a href="#adjust">Adjust stock</a> for mistakes.</p></div>
+
+<h3 id="adjust">Adjust stock</h3>
+<p>For stock that leaves or arrives without a sale or a delivery: <b>Inventory → Adjust stock</b> → pick the
+product (or <b>Adjust stock</b> in the product form).</p>
+<ul>
+<li>Choose a reason: <b>Damaged</b>, <b>Expired</b>, <b>Lost</b>, <b>Theft</b>, <b>Own use</b>,
+<b>Returned to supplier</b> (these always remove), <b>Found</b> (always adds), or <b>Correction</b> /
+<b>Other</b> (choose <b>Remove</b> or <b>Add</b>).</li>
+<li>Type the quantity, an optional note, and <b>Save</b>.</li>
+<li>Every removal is written to the <a href="#activity-log">Activity log</a> as <i>Stock written off</i> with its
+value at cost, so the owner sees stock taken off by hand.</li>
+</ul>
+
+<h3 id="count">Stock count (stock take)</h3>
+<ol>
+<li><b>Inventory → Stock count → +</b>. Give it a name (today's date is filled in) and choose <b>All
+products</b> or one category. Tap <b>Start</b>.</li>
+<li>Scan or tap a product, type the <b>total</b> on the shelf, and tap OK. OK with nothing typed records 0.</li>
+<li>Counting a product again <b>replaces</b> its count — add up a product kept in two places first. Products you do
+not count keep their stock.</li>
+<li>Each count applies <b>at once</b>, so you can keep selling while counting. Several people can count at
+the same time on different tills.</li>
+<li><b>Count report</b> shows each product's <i>expected</i> and <i>counted</i> quantity and the value
+<b>found</b>, <b>missing</b> and <b>net</b> at cost.</li>
+<li>When done, open the report and tap <b>×</b> (<b>Finish count</b>). Finishing only closes the count; the
+stock was already set.</li>
+</ol>
+
+<h3 id="low-stock">Low stock</h3>
+<p><b>Inventory → Low stock</b> lists products at or below their <b>Low-stock alert</b> level (set it in the
+product form). After a sale, staff who may manage stock also see <i>“Running low: …”</i> on the sale's
+result.</p>
+
+<h3 id="suppliers">Suppliers and deliveries</h3>
+<ul>
+<li><b>Inventory → Suppliers</b>: name, contact person, phone, e-mail, address and a note. Tap to edit, hold
+to delete (past deliveries keep their records). <b>Deliveries</b> in a supplier shows what came from them.</li>
+<li><b>Inventory → Deliveries</b>: everything received, newest first; tap one for its lines and total.</li>
+</ul>
+
+<h3 id="stock-history">Stock history and stock changes</h3>
+<ul>
+<li><b>Stock history</b> (from the product form, or tap a product in Low stock): every sale, refund,
+delivery, adjustment and count of one product, with the stock after each. Tap a sale to open its receipt.</li>
+<li><b>Inventory → Stock changes</b>: every delivery, adjustment, write-off and opening stock of all products.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="staff">10. Staff, PINs and roles</h2>
+<p><b>Menu → Manage shop › → Settings → Staff</b> (needs <i>Manage staff and roles</i> — by default only the owner).</p>
+<figure class="wide"><img src="img/en-staff.png" alt="The Staff screen" width="240" loading="lazy"><figcaption>Staff: while no PIN is set, the app runs as the owner.</figcaption></figure>
+
+<h3 id="pin-login">Turning on PIN login</h3>
+<p>While nobody has a PIN, the app runs as the owner with every permission — fine for a one-person shop. To give
+each person their own sign-in:</p>
+<ol>
+<li>Settings → Staff → tap <b>Owner</b>. To use your own name, type it and tap <b>Save</b>, then tap the owner again.
+Tap <b>Set PIN</b> and type a 4–6 digit PIN twice. Avoid 1234 or a birthday.</li>
+<li>The app shows the <b>Owner recovery code</b> (like <code>7KQM-3HXP-9RTA</code>). <b>Write it down and keep it
+safe</b>: it is shown only once. Without it, only another owner can give the owner a new PIN. Tap <b>I wrote it
+down</b>.</li>
+<li>PIN login is now on and you are signed in. Add each person with <b>+</b> (<b>New staff</b>): name, <b>Role</b>,
+<b>Active (may sign in)</b>, then their PIN.</li>
+</ol>
+<p>The first PIN must be an owner's. At least one owner who can sign in always remains: the app refuses to remove
+the last one's PIN, role or access.</p>
+
+<h3 id="sign-in">Signing in and locking</h3>
+<ul>
+<li>The sign-in screen asks <b>Who is using the till?</b> Tap your name and type your PIN. <b>Not you?</b> goes back
+to the names.</li>
+<li>After <b>5 wrong PINs</b> for one person, the till makes them wait 30 seconds, then 1, 2, 4, 8 and at most 15
+minutes after each further wrong PIN. Changing the phone's clock does not shorten the wait. From the 5th wrong
+PIN, each one is recorded in the Activity log (<i>Too many wrong PINs</i>).</li>
+<li>Lock the till with your name at the top → <b>Lock / switch user</b>, or <b>Menu → Lock / switch user</b>. Your
+name at the top also offers <b>Change my PIN</b>.</li>
+<li>The till locks by itself after <b>5 minutes</b> without use. Change it per till in Staff → <b>⋮ → When the till
+locks</b>: after 1, 2, 5, 10 or 30 minutes idle, <b>after each sale</b> (good for a till shared by several
+people), or <b>only when someone locks it</b>. It never locks in the middle of a payment.</li>
+</ul>
+
+<h3 id="forgot-pin">Forgotten PIN</h3>
+<ul>
+<li>A cashier or manager: the owner (or anyone allowed to manage staff) sets a new PIN in Settings → Staff → the
+person → <b>Change PIN</b>.</li>
+<li>The owner: on the sign-in screen choose the owner → <b>Forgot PIN?</b> → type the recovery code → a new PIN
+twice. Staff → <b>⋮ → New recovery code</b> makes a new code (the old one stops working).</li>
+</ul>
+
+<h3 id="roles">Roles and permissions</h3>
+<p>Each person has a role. <b>Staff → ⋮ → Roles</b> lists them; tap one to change what it <b>May do</b>, or add
+your own role with <b>+</b> (for example “Senior cashier”).</p>
+<div class="table-wrap"><table>
+<tr><th>Permission</th><th>Allows</th><th>Owner</th><th>Manager</th><th>Cashier</th></tr>
+<tr><td>Give discounts</td><td>Bill and item discounts</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Change prices on a bill</td><td>Change an item's price on the bill</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Void sales</td><td>Void a sale or refund</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Refunds</td><td>Refunds and returns</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Print receipt copies</td><td>Receipt copies and sharing old receipts</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Open the cash drawer</td><td>Open the drawer without a sale</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Cash in, cash out and drops</td><td>Cash movements during a shift</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>See expected cash and shift reports</td><td>Shift reports, past shifts, over/short</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Manage customers, take repayments</td><td>Add/edit customers, repayments</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Sell on credit</td><td>Pay with customer credit within the limit</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Go over credit limits, adjust balances</td><td>Over-limit sales, credit limits, balance adjustments</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Edit products and categories</td><td>Products, categories, promotions, CSV, price check price changes</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Receive, adjust and count stock</td><td>Inventory</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>See sales reports, profit and stock value</td><td>Reports and exports</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>See the activity log</td><td>Activity log, Staff check</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Change settings</td><td>All settings, tax rates, payment methods, backup, updates, diagnostics</td><td>✓</td><td></td><td></td></tr>
+<tr><td>Manage staff and roles</td><td>Staff, PINs, roles</td><td>✓</td><td></td><td></td></tr>
+</table></div>
+<ul>
+<li>The <b>Owner</b> role can always do everything. Owner, Manager and Cashier cannot be deleted, but Manager and
+Cashier can be changed.</li>
+<li>Only an owner can make someone an owner or change an owner. Nobody can widen their own role or give
+permissions they do not have themselves.</li>
+<li>A removed person can no longer sign in; their name stays on their sales, receipts and in the Activity log.</li>
+</ul>
+
+<h3 id="manager-pin">When a cashier needs a manager</h3>
+<ul>
+<li><b>One action</b>: when a cashier taps something their role does not allow (for example <b>Allow</b> over a
+customer's credit limit), the till shows <b>Manager approval</b> with a list of people who may do it. The manager
+types their PIN; the action is recorded as the cashier's, “approved by” the manager.</li>
+<li><b>A whole bill</b>: <b>Menu → Manager PIN</b>. For this bill the cashier may give discounts, change prices
+and handle customers and credit, until the bill is paid, held or cleared (or 5 minutes pass). The top bar shows
+<b>Manager: name ✕</b> — tap it to end the help. The manager's other jobs appear too (Open cash drawer, the
+<b>Refund / return</b> and <b>Void</b> buttons on a receipt, Manage shop), but each asks for the manager's PIN again.
+Cashiers never see refunds and voids otherwise.</li>
+<li><b>A back-office screen</b> (Products, Inventory, Reports…): the manager's PIN is asked once and holds until
+that screen is closed.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="shifts">11. Shifts and cash</h2>
+<p>A <b>shift</b> is one person's time at one till, from counting the cash drawer at the start to counting it at
+the end. The app works out how much cash <b>should</b> be in the drawer, so any difference is seen at once.</p>
+<figure class="wide"><img src="img/en-shift.png" alt="The Shift and cash screen" width="240" loading="lazy"><figcaption>Shift &amp; cash: open a shift, cash movements, reports.</figcaption></figure>
+
+<h3 id="shift-settings">Do I need shifts?</h3>
+<p>In <b>Settings → Store &amp; receipt → Shifts and customers</b>:</p>
+<ul>
+<li><b>Require an open shift to take payments</b> — off by default, and switched on by itself once a cashier or
+manager can sign in with a PIN. The owner can switch it off again; a new till joining the shop may switch it on
+again, so check it after adding a till.</li>
+<li><b>Count the drawer when the cashier changes</b> — on by default (see <a href="#handover">Handover</a>).</li>
+</ul>
+
+<h3 id="open-shift">Opening a shift</h3>
+<p>When the shop requires shifts, the till asks by itself when someone starts using it: <b>Start the shift</b>.
+You can always use <b>Menu → Open shift</b>.</p>
+<ol>
+<li>Count the cash in the drawer — the change for customers (the <b>float</b>) — and type it. <b>Count notes &amp;
+coins</b> lets you type how many of each note and coin instead.</li>
+<li>If the last close left an amount in the drawer, it is already filled in: press OK if that is what you
+counted. If you count something else, the till asks <b>Not what was left</b>: <b>Count again</b>, or <b>Keep</b> your
+count (the difference is recorded for the owner).</li>
+</ol>
+
+<h3 id="cash-moves">Cash in, cash out and drops</h3>
+<p><b>Menu → Shift &amp; cash</b>, while a shift is open on this till (needs <i>Cash in, cash out and drops</i>):</p>
+<ul>
+<li><b>Cash in</b> — money put into the drawer (e.g. more change).</li>
+<li><b>Cash out</b> — money taken out for something (e.g. paying a supplier); a reason is required.</li>
+<li><b>Cash drop</b> — money taken to the safe or the bank during the day.</li>
+</ul>
+<p>Each opens the drawer, changes the expected cash and is recorded with who did it.</p>
+
+<h3 id="close-shift">Closing a shift</h3>
+<p><b>Menu → Close shift</b>, in three steps:</p>
+<ol>
+<li><b>Count the drawer</b>: count all the cash and type the total (or <b>Count notes &amp; coins</b>).</li>
+<li><b>Leave in the drawer</b>: how much stays as change for the next shift (filled in with this shift's float).</li>
+<li>Check <i>Counted / Leave in the drawer / Take out for the owner</i>, add a note if you like (e.g. why it is
+short), and confirm.</li>
+</ol>
+<p>A cashier then sees only <i>“Take out RM… for the owner and leave RM… in the drawer”</i> (a “blind” close — they
+are not told what was expected). Staff allowed to see shift reports get the <b>shift report</b>. It prints by
+itself when receipts print after every sale; otherwise tap <b>Print report</b>.</p>
+<div class="tip"><p>Forgot to close yesterday? In the morning the till says <b>Yesterday's shift is still open</b>:
+<b>Count the drawer</b> closes it and starts today's shift with the same count.</p></div>
+
+<h3 id="handover">Handover between cashiers</h3>
+<p>When someone signs in while another person's shift is open on that till, the till asks <b>Take over the
+till?</b></p>
+<ul>
+<li><b>Count the drawer</b> — closes the other person's shift with this count and starts yours with it. Each person
+then answers only for the cash of their own shift.</li>
+<li><b>Not now</b> — you sell on in their shift; this is recorded (<i>Sold in another person's shift without a
+count</i>).</li>
+</ul>
+
+<h3 id="shift-report">The shift report</h3>
+<p><b>Shift &amp; cash → Shift report</b> (current shift) or <b>Past shifts</b> (all tills). It shows sales, refunds,
+voids, discounts, tax, each payment method, and the cash drawer:</p>
+<div class="table-wrap"><table>
+<tr><th>Line</th><th>Meaning</th></tr>
+<tr><td>Opening float</td><td>Cash counted at the start.</td></tr>
+<tr><td>+ Cash sales, Cash refunds (−), Voided (cash) (−)</td><td>Cash taken and paid back in this shift.</td></tr>
+<tr><td>+ Cash in, − Cash out, − Cash drops</td><td>Cash movements.</td></tr>
+<tr><td>+ Credit repaid in cash</td><td>Customers paying their debt in cash.</td></tr>
+<tr><td><b>Expected cash</b></td><td>What should be in the drawer.</td></tr>
+<tr><td><b>Counted cash</b></td><td>What was counted at the close.</td></tr>
+<tr><td><b>Over / short</b></td><td>Counted − expected (+ = more than expected).</td></tr>
+</table></div>
+<p>Only <b>Cash</b> counts towards the drawer. Card, e-wallet, credit and any method you added are listed under the
+payments but are not in the expected cash, even if they open the drawer. A <b>Checks</b> part
+lists things worth a look during the shift: bills cleared, items taken off (especially after the total was shown),
+the drawer opened without a sale, receipt copies, selling without a count, and a float different from what was
+left. <b>Print report</b> prints it.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="customers">12. Customers and credit</h2>
+<p>For shops that let regular customers pay later (<i>hutang</i>). Switch it on in <b>Settings → Store &amp; receipt →
+Customers and credit (pay later)</b>. The Menu then shows <b>Customers</b> and the selling screen <b>Add customer</b>.</p>
+
+<h3 id="customer-list">Customers</h3>
+<ul>
+<li><b>Menu → Customers</b>. The title shows how many owe and how much in total. Search by name or phone
+(012…, 6012… and +6012… all match).</li>
+<li><b>+</b> adds a customer: <b>Name</b>, phone, e-mail, address, <b>Tax ID (TIN)</b> (for e-invoices), a note and
+the <b>Credit limit</b> — the most this customer may owe.</li>
+<li>An empty credit limit means <b>no limit</b>: the customer can owe any amount. Only staff with <i>Go over credit
+limits</i> see this field, so check the limit of customers a cashier added.</li>
+<li>Tap a customer to see <b>Owes</b> (what they owe), their limit and their statement: every purchase on credit,
+return, repayment and adjustment with the balance after it.</li>
+</ul>
+
+<h3 id="credit-sale">Selling on credit</h3>
+<ol>
+<li>On the selling screen tap <b>Add customer</b> and choose the customer.</li>
+<li><b>Pay → Customer credit</b> (or split: part cash, part credit).</li>
+<li>Over the limit, the till asks <b>Over the credit limit</b> — <b>Allow</b> needs a manager.</li>
+</ol>
+<p>The receipt names the customer and the result shows what they now owe.</p>
+
+<h3 id="repayment">Repayments and adjustments</h3>
+<ul>
+<li>Open the customer → <b>⋮ → Take a repayment</b> → the amount (filled in with all they owe) → <b>Paid with</b>.
+Cash is rounded to 5 sen; paying off the whole debt in cash leaves exactly 0.00. A cash repayment goes into the
+open shift.</li>
+<li><b>Adjust balance</b> (<b>Owes more</b> / <b>Owes less</b>, with a reason) corrects a balance or gives a customer
+credit.</li>
+<li>A void gives the credit back by itself. For a refund of a credit sale, keep <b>Pay back with</b> on
+<b>Customer credit</b>: the amount then comes off what the customer owes.</li>
+<li>A customer can be deleted only when their balance is 0.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="reports">13. Reports</h2>
+<p><b>Menu → Manage shop › → Reports</b> (needs <i>See sales reports</i>). Reports include the sales of every till of
+the shop (with Google Drive backup on).</p>
+<figure class="wide"><img src="img/en-reports.png" alt="The Reports screen" width="240" loading="lazy"><figcaption>Reports: pick a period at the top.</figcaption></figure>
+
+<h3 id="periods">Periods</h3>
+<p><b>Today</b>, <b>Yesterday</b>, <b>This week</b>, <b>Last week</b>, <b>This month</b>, <b>Last month</b>, <b>This
+year</b>, <b>Last year</b> or <b>Choose dates</b>. Weeks start on Monday.</p>
+
+<h3 id="figures">What the report shows</h3>
+<div class="table-wrap"><table>
+<tr><th>Line</th><th>Meaning</th></tr>
+<tr><td>Sales (N)</td><td>Number of sales and their takings before refunds.</td></tr>
+<tr><td>Refunds (N)</td><td>Money paid back.</td></tr>
+<tr><td>Voided sales</td><td>How many were voided. Voided sales are left out of every figure.</td></tr>
+<tr><td>Discounts</td><td>Discounts and promotion savings given.</td></tr>
+<tr><td>Net sales (without tax)</td><td>After discounts and refunds, without tax.</td></tr>
+<tr><td>Tax, Rounding</td><td>Tax charged; cash rounding.</td></tr>
+<tr><td><b>Total (after refunds)</b></td><td>The money taken.</td></tr>
+<tr><td>Cost of goods</td><td>What the items sold cost you (their average cost when sold).</td></tr>
+<tr><td><b>Gross profit</b>, Gross margin</td><td>Net sales − cost of goods; and as a percentage of net sales.</td></tr>
+<tr><td>Average sale</td><td>Takings per sale.</td></tr>
+<tr><td>Change vs …</td><td>The total compared with the period before. Days and weeks are compared with the same number
+of days just before (Monday to Wednesday of this week against the Friday to Sunday before it). Months and years are
+compared with the same days of the month or year before (1–8 October against 1–8 September).</td></tr>
+</table></div>
+<p>Below: the total <b>By day</b>, <b>By week</b> or <b>By month</b>; <b>Payment methods</b>; <b>Cashiers</b>;
+<b>Categories</b> (with profit); <b>Best sellers</b> (top 20); and <b>Stock on hand</b> — the value of the stock you
+have today, at cost, by category (the same for every period).</p>
+<div class="note"><p>Profit is only as good as the <b>cost prices</b>: products with no cost show their whole price as
+profit. Receiving deliveries keeps costs up to date.</p></div>
+
+<h3 id="not-sold">Not sold in this period</h3>
+<p>Lists products with stock that did not sell at all in the period, highest stock value first — candidates for a
+promotion or for not re-ordering. Tap one to open it.</p>
+
+<h3 id="staff-check">Staff check</h3>
+<p><b>Reports → Staff check</b> (needs <i>See the activity log</i>) shows, per person and for the chosen period, what
+is worth a look: sales, items taken off <b>after the total was shown</b>, bills cleared, items taken off, voids,
+refunds, discounts and price changes, the drawer opened without a sale, receipt copies, cash taken out, stock
+written off, selling in someone else's shift without a count, a float different from what was left, and the cash
+over/short of their shifts. People with the most to look at come first.</p>
+<p>None of it proves theft — a wrong item is taken off every day. Ask about items taken off after the customer saw
+the total, a drawer opened without a sale, cash missing from a shift, and one person with far more than the
+others.</p>
+
+<h3 id="exports">Exports (CSV)</h3>
+<p>The <b>⋮</b> on Reports exports the chosen period as a CSV file for Google Sheets or Excel — <b>Share</b> it
+(WhatsApp, e-mail, Drive) or <b>Save as a file</b>:</p>
+<ul>
+<li><b>Summary (CSV)</b> — the figures above, payments, cashiers, categories, top products, stock value.</li>
+<li><b>Sales per day (CSV)</b> — one row per day: the <b>number</b> of sales and of refunds, net sales, tax, total
+(the money taken), discount, cost, gross profit, and the day's checks.</li>
+<li><b>Products sold (CSV)</b> — every product sold with quantity, net sales, tax, cost and profit.</li>
+<li><b>Receipts – for the monthly e-invoice (CSV)</b> — every receipt with date, cashier, customer and TIN,
+amounts and payments, for LHDN's monthly consolidated e-invoice. Voided sales are listed too (status
+<i>voided</i>): leave them out. Refunds are listed with minus amounts.</li>
+</ul>
+<p>The files are UTF-8, so Malay and Chinese names show correctly in Excel.</p>
+
+<h3 id="drive-report">Daily sales report to Google Drive</h3>
+<p>Want the day's figures without opening the app? <b>Settings → Daily sales report to Google Drive → Turn on</b>
+and allow Google. Every day the sales of the day before are written to a folder <b>LekasPOS</b> in your Google Drive:
+one file per month, such as <code>2026-10 daily-sales.csv</code>, with a row for each day (the Sales per day
+export: <i>sales</i> and <i>refunds</i> are counts, <i>total</i> is the money). It opens in Google Sheets on any
+phone or computer. Turn it on <b>on one till only</b> (with Google Drive
+backup on, every till's sales are already in it). It needs Google Play services and internet, and can see only
+the files it makes.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="activity-log">14. Activity log</h2>
+<p><b>Settings → Activity log</b> (needs <i>See the activity log</i>) records sensitive actions on every till, newest
+first, with who did it, who approved it, the amount and the details. <b>Filter</b> (the search icon) shows one kind
+of action.</p>
+<p>Recorded: voids, refunds, discounts and price changes, items taken off a bill or bills cleared (marked when
+after the total was shown), the drawer opened without a sale, receipt copies, product price/cost/barcode changes,
+deleted products, imports, promotions, stock written off, sign-ins and too many wrong PINs, staff and role
+changes, shifts, cash in/out/drops, float differences, credit limits, repayments and adjustments, over-limit
+credit sales, manager approvals and settings changes (including backups restored).</p>
+<p>Entries cannot be edited or deleted.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="data">15. Keeping your data safe: backup, restore, Google Drive</h2>
+<p>All of the shop's data — products, sales, stock, customers, staff — lives <b>on the phone</b>. If the phone is
+lost, broken, reset, or the app is removed, the data goes with it <b>unless a copy exists somewhere else</b>.
+LekasPOS makes copies on the phone every day, but those are lost with the phone too. So please choose at least one
+way to keep a copy <b>off the phone</b>:</p>
+<div class="table-wrap"><table>
+<tr><th>Way</th><th>Good for</th><th>Needs</th></tr>
+<tr><td><b>Google Drive backup</b> (recommended)</td><td>Automatic, every few minutes; restores a lost phone in
+full; keeps several tills the same</td><td>A Google account, Google Play services, internet now and then</td></tr>
+<tr><td><b>Daily copy to a folder</b> (SD card / USB drive)</td><td>Automatic, daily; no Google needed. Safe when the
+phone breaks or is reset — but a card or drive inside the phone is lost if the phone is lost or stolen: take it out
+now and then, or use Google Drive backup as well</td><td>An SD card or USB drive that stays plugged in</td></tr>
+<tr><td><b>Backup file</b> (save or share by hand)</td><td>An extra copy anywhere: Drive, e-mail, WhatsApp, a
+computer</td><td>Remembering to do it every few days</td></tr>
+</table></div>
+<p>While no copy has left the phone for 3 days, the selling screen shows <b>Not backed up</b>.</p>
+
+<h3 id="drive-backup">Google Drive backup</h3>
+<ol>
+<li><b>Settings → Google Drive backup</b> (needs <i>Change settings</i>).</li>
+<li>Type a <b>Name of this till</b> (e.g. “Counter 1”).</li>
+<li>Tap <b>Turn on sync</b> and choose the <b>shop's Google account</b>. Allow access when Google asks.</li>
+<li>The first backup runs in the background (on a big shop it can take a few minutes). The status then says
+<b>Everything is backed up</b>.</li>
+</ol>
+<ul>
+<li>Data goes to a <b>hidden app folder</b> in that Google Drive: it does not appear among your files and no other app
+can read it. LekasPOS asks Google only for that folder.</li>
+<li>It runs by itself shortly after each change while the app is open, and every 30 minutes otherwise — whenever
+the phone is online. Selling never waits for it; a till that is offline catches up later.</li>
+<li>The screen shows the <b>Google account</b>, <b>This till</b>, <b>Last backup</b>, <b>Changes waiting to upload</b>
+and <b>Other tills</b>. <b>Sync now</b> sends at once. <b>Tills in this store</b> lists every till with its last
+sync and app version.</li>
+<li><b>Sign in again</b> appears (and the pill <b>Backup: sign in</b>) when Google needs the account again, for example
+after a password change.</li>
+<li><b>Turn off sync</b> stops it on this till; its data stays on the phone.</li>
+<li>Use a strong password and 2-Step Verification on the shop's Google account: the backup holds all the shop's data.</li>
+<li>It needs <b>Google Play services</b>. On phones without them, use the daily copy to a folder.</li>
+</ul>
+
+<h3 id="phone-backups">Backups on the phone</h3>
+<figure class="wide"><img src="img/en-backup.png" alt="The Backup and restore screen" width="240" loading="lazy"><figcaption>Backup &amp; restore: the backups on this phone and how safe the data is.</figcaption></figure>
+<p><b>Settings → Backup &amp; restore</b> (in Malay just <i>Sandaran</i>) lists the backups kept on this phone:</p>
+<ul>
+<li><b>Automatic</b>: one a day, after checking the database for damage; the last 7 are kept. It waits for a quiet
+moment (no open bill).</li>
+<li><b>Before an app upgrade</b>: made when an update changes the database; the last 3 are kept.</li>
+<li><b>Before a restore</b>: the data that a restore replaced; the last 3 are kept.</li>
+<li><b>Made by hand</b>: the <b>+</b> button (<b>Back up now</b>). These are never deleted by the app.</li>
+</ul>
+<p>Hold your finger on a backup to delete it. Remember: these are lost with the phone.</p>
+
+<h3 id="folder-copy">Daily copy to an SD card or USB drive</h3>
+<ol>
+<li><b>Backup &amp; restore → ⋮ → Daily copy to a folder (SD card / USB)…</b></li>
+<li>Android's folder picker opens. Go to the SD card or USB drive, <b>create a new folder</b> (e.g. “LekasPOS”) —
+Android 11 and newer do not allow the top level of the card or the Download folder itself — open it and tap
+<b>Use this folder</b> → <b>Allow</b>.</li>
+<li>The app copies the newest daily backup there at once (<i>Copied to the folder.</i>). From then on, each day's
+backup is copied as <code>lekaspos-YYYY-MM-DD-HHMM.lekasbak</code>; the newest 7 are kept there.</li>
+</ol>
+<p><b>Copy to the folder now</b> copies the newest daily backup again; <b>Stop copying to the folder</b> stops (files
+already there stay). If the card is removed, the backup screen shows <i>The last copy to the folder failed</i>.</p>
+<div class="warn"><p>The daily backup can be up to a day old. For a copy of everything up to now (for example before
+giving the phone for repair), use <b>Save a backup file…</b> instead.</p></div>
+<div class="tip"><p><b>Google Drive not in the folder list?</b> On some phones (an old Google Drive app) Drive cannot
+be chosen as a folder. Use a backup file instead: <b>⋮ → Share a backup file → Save to Drive</b>, or
+<b>Save a backup file… → Drive</b>. This is not automatic — make a new one every few days. Or use Google Drive
+backup, which does not need the Drive app.</p></div>
+
+<h3 id="backup-files">Backup files</h3>
+<ul>
+<li><b>⋮ → Save a backup file…</b> saves a file named <code>lekaspos-backup-YYYY-MM-DD.lekasbak</code> wherever you
+choose (Downloads, Google Drive, a USB drive).</li>
+<li><b>⋮ → Share a backup file</b> sends it by any app (Save to Drive, e-mail, WhatsApp to yourself).</li>
+<li>Both stop the <b>Not backed up</b> warning for 3 days — even if the file stayed on this phone (Downloads) or the
+share was cancelled. Save it to Google Drive, a USB drive or a computer, or send it to another phone.</li>
+</ul>
+<div class="warn"><p>Backup files are <b>not encrypted</b>. Anyone who has one can read all the shop's data, including
+customers. Keep them private.</p></div>
+
+<h3 id="restore">Restoring a backup</h3>
+<ol>
+<li><b>Backup &amp; restore</b> → tap a backup in the list, or <b>⋮ → Restore from a file…</b> and choose a
+<code>.lekasbak</code> file.</li>
+<li>The app shows what the backup holds (date, shop, number of sales and products) and asks how to restore. Both
+choices <b>replace everything on this phone</b> with the backup:
+<ul>
+<li><b>Restore this till</b> (a backup of this phone) or <b>Replace the old phone</b> (a backup of another phone) —
+this phone takes the old till's place; the old phone is no longer used.</li>
+<li><b>Add as a new till</b> — the same data, but this phone becomes another till, so both phones can be used.</li>
+</ul></li>
+<li>The backup is checked; then <b>Restart now</b>. The app restarts with the backup's data.</li>
+</ol>
+<ul>
+<li>Before restoring, the current data is saved as <b>Before a restore</b>: restoring that undoes the restore. Only the
+last 3 are kept, so before trying several backups, tap <b>+</b> (<b>Back up now</b>) first — hand-made backups are never
+deleted.</li>
+<li>After a restore nobody is signed in; the print queue is empty.</li>
+<li>A till that used Google Drive backup (or a backup that had synced) comes back as a <b>new till</b> with Google Drive
+backup turned off: turn it on again.</li>
+<li>A backup made by a newer version of LekasPOS needs the app updated first.</li>
+<li>Printer, scanner and other per-till settings stored in the database come back too; the receipt logo picture
+and the app language do not.</li>
+</ul>
+
+<h3 id="lost-phone">A lost or broken phone</h3>
+<ul>
+<li><b>With Google Drive backup:</b> install LekasPOS on the new phone → on the welcome screen tap <b>Restore or join
+my shop from Google Drive</b> (or Settings → Google Drive backup) → name the till → <b>Turn on sync</b> → choose the
+<b>same Google account</b>. Products, sales, stock, customers, staff, promotions and settings come back. The new
+phone is a new till with a new receipt prefix. Set up its printer, receipt logo, scanner and daily copy again.</li>
+<li><b>With a folder copy or a backup file:</b> install LekasPOS → Settings → Backup &amp; restore → ⋮ → Restore from
+a file… → the newest <code>.lekasbak</code> → <b>Replace the old phone</b>.</li>
+</ul>
+<p>Anything sold after the last copy left the old phone is lost — that is why a frequent copy matters. If the old
+phone was stolen, change the Google account's password and remove LekasPOS's access in the Google account's security
+settings.</p>
+
+<h3 id="data-problem">Data problem</h3>
+<p>Every day, before the automatic backup, the app checks the database. If it finds damage, the selling screen
+shows <b>Data problem</b>, no new backup replaces the good ones, and Backup &amp; restore explains. Please <b>get help
+before restoring</b> (see <a href="#help">Getting help</a>); usually the fix is to restore the newest
+<b>Automatic</b> backup from before the problem.</p>
+<div class="warn"><p>If the till opens <b>empty</b> with <b>Data problem</b>, your data was set aside, not deleted — do not
+start again from scratch. Get help and restore within <b>7 days</b>: after that, new daily backups start to replace
+the good ones.</p></div>
+
+<h3 id="storage">Phone storage</h3>
+<p>Sales cannot be saved on a full phone. The till warns early with <b>Storage almost full</b>. Delete photos, videos
+or apps you do not need, or old hand-made backups. If a sale fails because the phone is full, the till says so and
+keeps the bill.</p>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="tills">16. Several tills in one shop</h2>
+<p>Several phones or tablets in one shop share the same products, prices, staff, customers and stock through
+Google Drive backup:</p>
+<ol>
+<li>Set up the first till and turn on Google Drive backup with the shop's Google account.</li>
+<li>On each other till, install LekasPOS, tap <b>Restore or join my shop from Google Drive</b> on the welcome screen,
+give the till its own name and turn on sync with the <b>same Google account</b>. It receives everything.</li>
+</ol>
+<div class="warn"><p>Join with a <b>new, empty</b> phone: do not add products or sell on it first. If the phone already has
+products or sales, the app asks <b>Join another shop?</b> — joining adds them to the shop on every till for good, and
+products entered on both phones stay twice.</p></div>
+<ul>
+<li>Each till keeps its own receipt numbers (its own prefix such as <code>KQ-</code>, <code>MB-</code>), its own
+shift, held bills, printer, scanner, item size and lock setting.</li>
+<li>Products, prices, promotions, staff and PINs, customers, settings, sales, stock and the activity log are shared.
+Reports show the whole shop.</li>
+<li>A till sends its changes within seconds; another till that is not selling may take up to 30 minutes to get
+them. After changing prices, tap <b>Sync now</b> on the other tills (Settings → Google Drive backup). A till can sell
+offline all day and catch up later; nothing is lost and nothing is counted twice. Stock is right on every till once
+they have synced.</li>
+<li>When two people change the same thing on two tills, the later change wins — field by field (a price change on
+one till and a name change on another both stay).</li>
+<li>A new, empty phone joining the shop takes the shop's staff and PINs (any PIN set on it before is removed — it
+tells you).</li>
+<li>Keep every till on the same version of LekasPOS. One Google account holds one shop: to keep two shops apart, use
+two Google accounts.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="settings">17. Settings</h2>
+<p><b>Menu → Manage shop › → Settings</b>. Most settings need the permission <i>Change settings</i> (only the owner by
+default; others are asked for an owner's PIN). Settings marked <b>this till</b> apply only to the phone they are
+changed on; the others apply to the whole shop and reach every till through Google Drive backup.</p>
+<figure class="wide"><img src="img/en-settings.png" alt="The Settings screen" width="240" loading="lazy"><figcaption>Settings, in the order they appear.</figcaption></figure>
+<div class="table-wrap"><table>
+<tr><th>Setting</th><th>What it does</th><th>Applies to</th></tr>
+<tr><td><b>App language</b></td><td><i>Phone's language</i>, <i>English</i> or <i>Bahasa Melayu</i> for the screens. Receipts have their own language.</td><td>this phone</td></tr>
+<tr><td><b>Item size on the selling screen</b></td><td><i>Large (fewer items)</i>, <i>Medium</i> (default) or <i>Small (more items)</i> tiles.</td><td>this till</td></tr>
+<tr><td><b>Customer screen (second screen)</b></td><td>Shows the bill to customers on a second display — <a href="#customer-screen">details</a>. On by default.</td><td>this till</td></tr>
+<tr><td><b>Store &amp; receipt</b></td><td>Shop details, receipt, tax, rounding, shifts, customers, scale labels — <a href="#settings-store">below</a>.</td><td>shop</td></tr>
+<tr><td><b>Printer &amp; cash drawer</b></td><td>Receipt printer and drawer — <a href="#settings-printer">below</a>.</td><td>this till</td></tr>
+<tr><td><b>Barcode scanner &amp; camera</b></td><td>Test a scanner, serial scanner, camera scanning — <a href="#settings-scanner">below</a>.</td><td>this till</td></tr>
+<tr><td><b>Staff</b></td><td>Staff, PINs, roles, when the till locks — <a href="#staff">chapter 10</a>.</td><td>shop (lock: this till)</td></tr>
+<tr><td><b>Shift &amp; cash</b></td><td><a href="#shifts">Chapter 11</a>.</td><td>this till</td></tr>
+<tr><td><b>Customers</b></td><td><a href="#customers">Chapter 12</a>.</td><td>shop</td></tr>
+<tr><td><b>Tax rates</b></td><td><a href="#tax">Tax rates</a>.</td><td>shop</td></tr>
+<tr><td><b>Payment methods</b></td><td><a href="#payment-methods">Payment methods</a>.</td><td>shop</td></tr>
+<tr><td><b>Categories</b></td><td><a href="#categories">Categories</a>.</td><td>shop</td></tr>
+<tr><td><b>Activity log</b></td><td><a href="#activity-log">Chapter 14</a>.</td><td>shop</td></tr>
+<tr><td><b>Google Drive backup</b></td><td><a href="#drive-backup">Google Drive backup</a>.</td><td>this till</td></tr>
+<tr><td><b>Backup &amp; restore</b></td><td><a href="#phone-backups">Backups, folder copy, files, restore</a>.</td><td>this till</td></tr>
+<tr><td><b>Daily sales report to Google Drive</b></td><td><a href="#drive-report">Daily sales report</a>.</td><td>this till</td></tr>
+<tr><td><b>Error reports</b></td><td><a href="#error-reports">Error reports</a>.</td><td>this phone</td></tr>
+<tr><td><b>App updates</b></td><td><a href="#updates">App updates</a>.</td><td>this phone</td></tr>
+<tr><td><b>Diagnostics</b></td><td><a href="#diagnostics">Diagnostics</a>.</td><td>this phone</td></tr>
+<tr><td><b>About</b></td><td>Version, licence, website and privacy policy.</td><td>—</td></tr>
+</table></div>
+
+<h3 id="settings-store">Store &amp; receipt</h3>
+<figure class="wide"><img src="img/en-store.png" alt="Store and receipt settings" width="240" loading="lazy"><figcaption>Store &amp; receipt: printed at the top of every receipt.</figcaption></figure>
+<dl>
+<dt>Store</dt><dd><b>Store name</b> (also the title of the selling screen), <b>Address</b>, <b>Phone</b>, <b>Email</b>,
+<b>Business registration no. (SSM)</b>, <b>SST registration no.</b>, <b>Tax identification no. (TIN)</b>. Empty fields
+are left off the receipt.</dd>
+<dt>Receipt</dt><dd><b>Receipt header text</b> and <b>Receipt footer text</b> (empty footer = “Thank you!”);
+<b>Receipt language</b> (English or Bahasa Melayu); <b>Receipt copies</b> (1–3, for the automatic receipt after a
+sale); <b>Print the logo</b> with <b>Choose logo picture</b> / <b>Remove logo</b> — the logo picture is kept on
+the phone it was chosen on, so choose it on each till; <b>Print an e-invoice request QR code</b> with its <b>QR
+link</b> — in the link, <code>{receipt}</code>, <code>{total}</code> and <code>{date}</code> are filled in for each
+sale.</dd>
+<dt>Tax and rounding</dt><dd><b>Prices include tax</b> (on by default) and <b>Round cash payments to 5 sen</b> (on by
+default).</dd>
+<dt>Shifts and customers</dt><dd><b>Require an open shift to take payments</b>, <b>Count the drawer when the cashier
+changes</b>, <b>Customers and credit (pay later)</b>.</dd>
+<dt>Weighing-scale labels</dt><dd><b>Label formats</b> — <a href="#scale-labels">details</a>.</dd>
+</dl>
+<p>Tap <b>Save</b>. Changes are recorded in the Activity log. The currency is Malaysian ringgit (RM).</p>
+
+<h3 id="settings-printer">Printer &amp; cash drawer</h3>
+<p>The top line shows the printer's <b>Status</b> (ready, connected, printing, offline…) with <b>Retry</b> when it is
+offline.</p>
+<div class="table-wrap"><table>
+<tr><th>Option</th><th>Choices (default first)</th></tr>
+<tr><td><b>Choose a paired printer</b> / <b>Pair a new printer (Bluetooth settings)</b></td><td>Bluetooth printers paired in Android.</td></tr>
+<tr><td><b>Paper width</b></td><td>58 mm (32 characters); 80 mm (48 characters); 80 mm (42 characters).</td></tr>
+<tr><td><b>Print as</b></td><td><i>Automatic (text; picture when needed)</i>; <i>Text (fastest)</i>; <i>Picture (any language)</i>. Automatic prints a picture only when a receipt has letters the printer cannot print (Chinese, Tamil, €…).</td></tr>
+<tr><td><b>Printer has Chinese characters (GB18030)</b></td><td>Off. Turn on for a Chinese printer to print Chinese as text.</td></tr>
+<tr><td><b>Code page number</b></td><td>0 (usually right).</td></tr>
+<tr><td><b>Cut the paper</b></td><td>On.</td></tr>
+<tr><td><b>Blank lines after the receipt</b></td><td>4.</td></tr>
+<tr><td><b>Print a receipt after every sale</b></td><td>On. Off: tap <b>Print receipt</b> after a sale when the customer wants one.</td></tr>
+<tr><td><b>Printer draws QR codes itself</b></td><td>Off.</td></tr>
+<tr><td><b>Cash drawer connected to the printer</b></td><td>On.</td></tr>
+<tr><td><b>Drawer pin</b></td><td>Pin 2 (most drawers); Pin 5.</td></tr>
+</table></div>
+<p>Buttons: <b>Save</b>, <b>Print a test page</b>, <b>Open the drawer</b>, and <b>Clear the print queue</b> while
+receipts are waiting.</p>
+
+<h3 id="settings-scanner">Barcode scanner &amp; camera</h3>
+<ul>
+<li><b>Keyboard-mode scanners</b> (USB, or Bluetooth HID) need no setup: plug in or pair and scan.</li>
+<li><b>Test a scanner</b>: tap the field and scan; it shows exactly what the scanner sent.</li>
+<li><b>Serial (SPP) Bluetooth scanner</b>: <b>Choose a paired scanner</b> for scanners in serial mode, then tap
+<b>Save</b>. <b>Stop using the serial scanner</b> and <b>Save</b> forgets it.</li>
+<li><b>Scan barcodes with the camera</b>: on by default; off hides the camera button on the selling screen.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="hardware">18. Hardware</h2>
+<div class="table-wrap"><table>
+<tr><th>Hardware</th><th>What works</th></tr>
+<tr><td>Phone or tablet</td><td>Android 5.0 or newer, 5-inch phones to 10-inch tablets, upright or sideways.</td></tr>
+<tr><td>Receipt printer</td><td>Bluetooth thermal printers using ESC/POS commands (most cheap 58 mm and 80 mm
+printers), paired in Android's Bluetooth settings. USB, Wi-Fi/LAN and Bluetooth LE-only printers are not
+supported.</td></tr>
+<tr><td>Cash drawer</td><td>A drawer plugged into the printer's drawer port (pin 2 or pin 5).</td></tr>
+<tr><td>Barcode scanner</td><td>USB or Bluetooth scanners in keyboard (HID) mode — no setup; or Bluetooth serial (SPP)
+scanners chosen in Settings. Ideally set to send Enter after each code.</td></tr>
+<tr><td>Camera</td><td>The phone's back camera reads EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39 and QR codes.</td></tr>
+<tr><td>Weighing scale</td><td>No cable connection: a label-printing scale prints barcodes with the weight or price
+(<a href="#scale-labels">set up</a>).</td></tr>
+<tr><td>Customer screen</td><td>A TV or monitor as a second display: HDMI, USB-C, or Miracast (“Screen mirroring”,
+“Smart View”, “Wireless display”).</td></tr>
+<tr><td>Backup storage</td><td>An SD card or USB OTG drive for the daily folder copy.</td></tr>
+</table></div>
+
+<h3 id="scanner-tips">Barcode scanner tips</h3>
+<ul>
+<li>Pair Bluetooth scanners in Android's Bluetooth settings. Most scanners come in keyboard mode: they work at once
+on the selling screen.</li>
+<li>While a keyboard-mode scanner is connected, Android may hide the on-screen keyboard. The app then shows <b>No
+keyboard?</b> → <b>Keyboard settings</b>: turn on <i>Use on-screen keyboard</i> (or <i>Show virtual keyboard</i>).</li>
+<li>Scanning works on the selling screen, the price check, the product list and the product form (adds the
+barcode), Receive stock, stock counts, and whenever you pick a product (Adjust stock, a promotion's products).</li>
+<li>Connecting or disconnecting a scanner never resets the screen or the bill.</li>
+</ul>
+
+<h3 id="customer-screen">Customer screen on a second display</h3>
+<figure class="wide"><img src="img/customer-bill.png" alt="The customer screen showing a bill" loading="lazy"><figcaption>What customers see: each item as it is added, the item just added, and the total.</figcaption></figure>
+<ol>
+<li>Connect the TV or monitor with an <b>HDMI or USB-C</b> cable, or cast to it with <b>Screen mirroring</b> /
+<b>Smart View</b> / <b>Wireless display</b> (swipe down from the top of the tablet, or Settings → Customer screen →
+<b>Connect a screen</b>).</li>
+<li>With LekasPOS open, the second screen shows <b>Welcome</b> with the shop's name, while the tablet stays the
+cashier's screen.</li>
+<li>While selling, customers see each line, the item just added (large, with its picture), any bill discount, the
+<b>Total</b> (<b>Total to pay</b> during payment) and, after paying, <b>Thank you!</b>, <b>Paid</b> and their
+<b>Change</b>.</li>
+</ol>
+<ul>
+<li>The customer screen uses the receipt language. While it is on, customers see only the customer screen, never
+the back office (reports, costs).</li>
+<li>Google Home's or Chromecast's <b>Cast screen</b> only copies the tablet's screen and cannot show the customer
+screen: use Screen mirroring (Miracast) or a cable.</li>
+<li>Turn it off per till in Settings → Customer screen (second screen). Then also unplug or stop casting to the
+second screen: otherwise Android copies the tablet's own screen to it, reports and costs included.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="updates">19. App updates, error reports and diagnostics</h2>
+
+<h3 id="app-updates">App updates</h3>
+<ul>
+<li>Once a day LekasPOS checks GitHub, where it is published, for a new version, and downloads it in the
+background. Only the request is sent — nothing about your shop.</li>
+<li>When a new version is ready, the owner (anyone allowed to change settings) sees <b>Update 1.x.y</b> at the top of
+the selling screen. Tap it to see <b>What's new</b>, then <b>Update now</b>. Finish or hold the bill first.</li>
+<li>The first time on Android 8 and newer, Android asks to allow LekasPOS to install apps: tap <b>Continue</b> and
+turn on <b>Allow from this source</b>, then go back. Android then asks to confirm the update. LekasPOS closes while
+Android installs it; then tap <b>Open</b>. All data stays (a backup is made first when the update changes the
+database).</li>
+<li>Every download is checked (size, fingerprint and signature) before it is offered.</li>
+<li><b>Settings → App updates</b> shows the version, <b>Look every day</b> (on), <b>Include test versions (for
+testers)</b> (off) and <b>Check now</b>.</li>
+<li>Your version is shown in <b>Settings → About</b>.</li>
+</ul>
+
+<h3 id="error-reports">Error reports</h3>
+<p>Once, the app asks <b>Help fix problems?</b> With <b>Send reports</b>, when the app stops, freezes or shows an error,
+the phone sends a short technical report to the LekasPOS developer: what went wrong, the app version, the phone
+model, Android version and memory. It <b>never</b> holds your sales, products, prices, customers, staff, PINs or
+Google account. Change your answer any time in <b>Settings → Error reports</b>.</p>
+
+<h3 id="diagnostics">Diagnostics</h3>
+<p><b>Settings → Diagnostics</b> (or Manage shop › Diagnostics) is for solving problems:</p>
+<ul>
+<li><b>Share the error log</b> — sends the phone's technical error log (no shop data) to whoever is helping you.</li>
+<li><b>Send a report to the developer</b> — with what happened and, if you want a reply, your phone or e-mail.</li>
+<li><b>Quick test</b> and <b>Full test</b> — measure how fast this phone is with a large shop's data. They use a
+separate test database and never touch your shop's data; <b>Delete test data</b> afterwards. The full test needs
+about 350 MB and 5–20 minutes, on the charger.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="troubleshooting">20. Troubleshooting and questions</h2>
+
+<h3 id="ts-selling">Selling</h3>
+<dl>
+<dt>The scanner beeps but nothing is added / “Barcode not found”.</dt>
+<dd>The product does not have that barcode yet. Add it with <b>Add product</b> (a manager's PIN for cashiers), or add
+the barcode to the existing product in Products. Carton barcodes need <b>Add pack barcode</b>.</dd>
+<dt>The scanner types into the search box, or nothing happens.</dt>
+<dd>Check the scanner in Settings → Barcode scanner &amp; camera → <b>Test a scanner</b>. Set the scanner to send Enter
+after each code (see its manual). A serial (SPP) scanner must be chosen there; a keyboard-mode one needs no setup.</dd>
+<dt>The on-screen keyboard disappeared.</dt>
+<dd>A keyboard-mode scanner is connected. Turn on <i>Use on-screen keyboard</i> in Android's keyboard settings (the app
+offers <b>Keyboard settings</b>).</dd>
+<dt>I cannot find Discount or Open cash drawer in the Menu, or Refund / Void on a receipt.</dt>
+<dd>Your role does not allow it, so it is hidden. Ask a manager to tap <b>Menu → Manager PIN</b> and type their PIN: the
+buttons appear (refunds, voids and the drawer ask for the manager's PIN again). Or the manager signs in with
+<b>Lock / switch user</b>.</dd>
+<dt>The till says “Check the date and time”.</dt>
+<dd>The phone's clock is wrong (often after the battery ran flat). Sales are kept under the date they were made, so set
+the right date and time first — best with automatic date and time on.</dd>
+<dt>The till says “No shift open”.</dt>
+<dd>The shop requires a shift: tap <b>Open shift</b>, count the drawer, then pay. To stop requiring shifts: Settings →
+Store &amp; receipt → <b>Require an open shift to take payments</b> off. A new till joining the shop may switch it on
+again: check it after adding a till.</dd>
+<dt>“Sale not saved”.</dt>
+<dd>The sale was not recorded and the bill is kept. Read the reason (often the phone is full), fix it and tap Pay
+again. If the customer already paid by card or e-wallet on your terminal, do not charge them again: just tap the same
+method.</dd>
+<dt>A customer was charged twice / a test sale.</dt>
+<dd>A manager opens Menu → Sales &amp; refunds → the sale → <b>Void</b>. A void only corrects the records: give the
+customer's money back yourself (cash from the drawer; card or e-wallet on your terminal or bank app).</dd>
+<dt>The app locks too often / never.</dt>
+<dd>Settings → Staff → ⋮ → <b>When the till locks</b> (per till).</dd>
+</dl>
+
+<h3 id="ts-printer">Printer and drawer</h3>
+<dl>
+<dt>“No paired devices” when choosing a printer.</dt>
+<dd>Pair it first in Android's Bluetooth settings (PIN usually 0000 or 1234), then <b>Choose a paired printer</b>.</dd>
+<dt>“Printer offline” / “offline, tap Retry”.</dt>
+<dd>Is the printer on, charged and near? Is Bluetooth on? Is it connected to another phone? Tap <b>Retry</b> in the
+printer settings. On Android 12+, allow <b>Nearby devices</b> (Open settings → Permissions).</dd>
+<dt>“not printing: check the paper and the cover”.</dt>
+<dd>Out of paper, cover open or overheated. Fix it; printing continues by itself.</dd>
+<dt>Receipts that were waiting never printed.</dt>
+<dd>Automatic receipts waiting more than 10 minutes are dropped. Print a copy from <b>Sales &amp; refunds</b>.</dd>
+<dt>Question marks or wrong letters on the receipt.</dt>
+<dd>Set <b>Print as</b> to <i>Automatic</i> or <i>Picture</i>. For a Chinese printer turn on <b>Printer has Chinese
+characters</b>. Keep the code page at 0.</dd>
+<dt>Lines are cut or wrap.</dt>
+<dd>Choose the right <b>Paper width</b>; for 80 mm try both 48 and 42 characters with <b>Print a test page</b>.</dd>
+<dt>The cash drawer does not open.</dt>
+<dd>Check <b>Cash drawer connected to the printer</b> is on, try <b>Pin 5</b>, and check the payment method has <b>Opens the
+cash drawer</b> ticked. The printer must be connected.</dd>
+</dl>
+
+<h3 id="ts-backup">Backup and Google Drive</h3>
+<dl>
+<dt>“Not backed up” will not go away.</dt>
+<dd>Turn on Google Drive backup or the daily folder copy — or save/share a backup file. With Google Drive backup on,
+open its screen: the status says what is wrong (no internet, sign in, Drive full).</dd>
+<dt>“Backup: sign in”.</dt>
+<dd>Settings → Google Drive backup → <b>Sign in again</b> with the <b>same</b> Google account.</dd>
+<dt>“Google Drive backup needs Google Play services”.</dt>
+<dd>This phone has no Google Play services: use the daily copy to an SD card or USB drive.</dd>
+<dt>“The Google Drive of this store is full”.</dt>
+<dd>Free space in that Google Drive or buy more storage; backup continues by itself.</dd>
+<dt>“This phone's date or time is wrong”.</dt>
+<dd>Turn on automatic date and time in Android's settings.</dd>
+<dt>Google Drive is not in the folder list.</dt>
+<dd>Use <b>Share a backup file → Save to Drive</b> instead, or Google Drive backup.</dd>
+<dt>“This is not a LekasPOS backup file” / “damaged or incomplete”.</dt>
+<dd>Choose a <code>.lekasbak</code> file; try another copy if it was cut short.</dd>
+<dt>Changes on one till do not appear on the other.</dt>
+<dd>Both tills need Google Drive backup on with the <b>same</b> Google account and internet. Tap <b>Sync now</b> on both.
+<b>Tills in this store</b> shows when each till last synced.</dd>
+</dl>
+
+<h3 id="ts-other">Other questions</h3>
+<dl>
+<dt>Is my data sent to the developer?</dt>
+<dd>No. Shop data stays on the phone and, if you turn on Google Drive backup or the daily sales report, in your own
+Google Drive. Error reports (only if you allow them) hold technical details only. See the
+<a href="privacy.html">privacy policy</a>.</dd>
+<dt>Do I need internet?</dt>
+<dd>Not to sell. Only for Google Drive backup, the daily sales report, updates and error reports (if you allow
+them).</dd>
+<dt>Does it cost anything?</dt>
+<dd>No. LekasPOS is free and open source (GPL-3.0).</dd>
+<dt>Can I use it for e-invoicing (LHDN)?</dt>
+<dd>LekasPOS does not send e-invoices to LHDN itself. The receipt can print a QR code to your own e-invoice request page
+(set the link in Store &amp; receipt), and the <b>Receipts – for the monthly e-invoice</b> export lists every receipt so
+you or your accountant can submit the monthly consolidated e-invoice (leave out the voided ones).</dd>
+<dt>The owner forgot the PIN and lost the recovery code.</dt>
+<dd>Another person with the Owner role can set a new PIN for them (Settings → Staff). Without another owner there is no
+way back in — please <a href="#help">ask for help</a> before clearing or reinstalling the app, which deletes the data
+on that phone. Keep the recovery code safe, and consider giving a second trusted person the Owner role.</dd>
+<dt>How do I move to a new phone?</dt>
+<dd>First finish selling on the old phone. With Google Drive backup, wait until the old phone's Google Drive backup
+screen says <b>Everything is backed up</b>, then set up the new phone as in <a href="#lost-phone">A lost or broken
+phone</a>. Without it, save a backup file on the old phone after the last sale and restore it on the new one with
+<b>Replace the old phone</b>. Do not sell on the old phone after that.</dd>
+</dl>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="glossary">21. Words used in the app</h2>
+<div class="table-wrap"><table>
+<tr><th>English</th><th>Bahasa Melayu</th><th>Meaning</th></tr>
+<tr><td>Till</td><td>Kaunter</td><td>One phone or tablet used for selling.</td></tr>
+<tr><td>Bill</td><td>Bil</td><td>The items of the customer being served.</td></tr>
+<tr><td>Hold / held bill</td><td>Tangguh / bil ditangguh</td><td>A bill put aside to serve someone else.</td></tr>
+<tr><td>Clear bill</td><td>Kosongkan bil</td><td>Throw away the bill on the screen.</td></tr>
+<tr><td>Change</td><td>Baki</td><td>Money given back to the customer.</td></tr>
+<tr><td>Split payment</td><td>Pecah bayaran</td><td>A bill paid with more than one method.</td></tr>
+<tr><td>Rounding</td><td>Pembundaran</td><td>Cash rounded to the nearest 5 sen.</td></tr>
+<tr><td>Receipt copy</td><td>Salinan resit</td><td>Any print of a receipt after the first.</td></tr>
+<tr><td>Refund / return</td><td>Bayaran balik / pulangan</td><td>Money paid back for items returned.</td></tr>
+<tr><td>Void</td><td>Batalkan</td><td>Cancel a whole sale as if it never happened.</td></tr>
+<tr><td>Price check</td><td>Semak harga</td><td>See a price without selling.</td></tr>
+<tr><td>Popular</td><td>Laris</td><td>The best sellers of the last 30 days.</td></tr>
+<tr><td>Promotion</td><td>Promosi</td><td>A deal the till applies by itself.</td></tr>
+<tr><td>Shift</td><td>Syif</td><td>One person's time at one till, from count to count.</td></tr>
+<tr><td>Float</td><td>Wang apungan</td><td>The change in the drawer at the start of a shift.</td></tr>
+<tr><td>Cash drop</td><td>Simpanan wang</td><td>Cash taken from the drawer to the safe or bank.</td></tr>
+<tr><td>Expected cash / over / short</td><td>Tunai dijangka / lebih / kurang</td><td>What should be in the drawer, and the difference.</td></tr>
+<tr><td>Customer credit</td><td>Kredit pelanggan</td><td>Pay later; the customer owes the shop.</td></tr>
+<tr><td>Owner / Manager / Cashier</td><td>Pemilik / Pengurus / Juruwang</td><td>The built-in roles.</td></tr>
+<tr><td>Manager approval</td><td>Kelulusan pengurus</td><td>A manager's PIN for something the cashier may not do.</td></tr>
+<tr><td>Recovery code</td><td>Kod pemulihan</td><td>The owner's way back in after a forgotten PIN.</td></tr>
+<tr><td>Activity log</td><td>Log aktiviti</td><td>The record of sensitive actions.</td></tr>
+<tr><td>Receive stock / delivery</td><td>Terima stok / penghantaran</td><td>Goods arriving from a supplier.</td></tr>
+<tr><td>Adjust stock / written off</td><td>Laras stok / dihapus kira</td><td>Stock changed by hand (damaged, expired…).</td></tr>
+<tr><td>Stock count</td><td>Kiraan stok</td><td>Counting what is on the shelves.</td></tr>
+<tr><td>Cost price</td><td>Harga kos</td><td>What one piece or kg costs you.</td></tr>
+<tr><td>Gross profit</td><td>Untung kasar</td><td>Net sales minus the cost of the goods sold.</td></tr>
+<tr><td>Google Drive backup / sync</td><td>Sandaran Google Drive / segerak</td><td>Copying the shop's data to Google Drive and between tills.</td></tr>
+<tr><td>Backup &amp; restore</td><td>Sandaran</td><td>Copies of the data and bringing one back.</td></tr>
+</table></div>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+
+<h2 id="help">22. Privacy and getting help</h2>
+<ul>
+<li><b>Privacy:</b> your shop's data stays on your phone and, only if you turn on Google Drive backup or the daily sales
+report, in your own Google Drive. The developer never receives it. Read the <a href="privacy.html">privacy policy</a>.</li>
+<li><b>Problems or ideas:</b> <a href="https://github.com/FaizoKen/LekasPOS/issues">report them on GitHub</a>, or send a
+report from the app (Settings → Diagnostics → <b>Send a report to the developer</b>, with your phone or e-mail if you
+want a reply).</li>
+<li><b>Source code:</b> <a href="https://github.com/FaizoKen/LekasPOS">github.com/FaizoKen/LekasPOS</a> (GPL-3.0).</li>
+<li><b>Download and install:</b> <a href="index.html#download">the LekasPOS home page</a>.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Contents</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panduan pengguna LekasPOS</title>
+<meta name="description" content="Cara menggunakan LekasPOS, aplikasi jualan (POS) percuma tanpa internet untuk kedai kecil: jualan, bayaran, resit, produk, stok, kakitangan, syif, laporan, sandaran dan Google Drive.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="alternate" hreflang="en" href="guide.html">
+</head>
+<body class="guide">
+<main>
+<p class="lang"><a href="guide.html" hreflang="en" lang="en">English</a> · <strong>Bahasa Melayu</strong> · <a href="index.html">Laman utama</a></p>
+<h1><img class="logo" src="icon.svg" alt="" width="48" height="48"> Panduan pengguna LekasPOS</h1>
+<p class="updated">Untuk LekasPOS 1.13.0 · Kemas kini terakhir 8 Oktober 2026</p>
+<p>LekasPOS ialah aplikasi jualan (POS) percuma untuk kedai runcit kecil dan pasar mini. Ia berjalan pada telefon
+atau tablet Android dan berfungsi sepenuhnya tanpa internet. Panduan ini menerangkan semua yang boleh dilakukannya,
+untuk pemilik, pengurus dan juruwang. Pengguna baharu? Baca <a href="#start">Bermula</a>; juruwang boleh mula
+dengan <a href="#cashier">Panduan ringkas untuk juruwang</a>. Perkataan dalam <b>huruf tebal</b> ialah perkataan
+yang anda lihat dalam aplikasi.</p>
+
+<nav class="toc" id="contents" aria-label="Kandungan">
+<p><strong>Kandungan</strong></p>
+<ol>
+<li><a href="#start">Bermula</a>
+<ol><li><a href="#what-you-need">Apa yang anda perlukan</a></li><li><a href="#install">Pasang dan kemas kini</a></li><li><a href="#welcome">Skrin selamat datang (kali pertama)</a></li><li><a href="#first-day">Menyediakan kedai baharu — senarai semak</a></li><li><a href="#who">Siapa boleh buat apa</a></li></ol></li>
+<li><a href="#cashier">Panduan ringkas untuk juruwang</a></li>
+<li><a href="#selling">Skrin jualan</a>
+<ol><li><a href="#screen">Apa yang ada di skrin</a></li><li><a href="#pills">Pil di bar atas</a></li><li><a href="#add-items">Menambah barang</a></li><li><a href="#weighed">Barang ditimbang, barang yang harganya dimasukkan di kaunter, pek dan label penimbang</a></li><li><a href="#unknown">Kod bar yang belum dikenali kaunter</a></li><li><a href="#change-bill">Mengubah bil</a></li><li><a href="#hold">Menangguh bil</a></li><li><a href="#discount">Diskaun dan perubahan harga</a></li><li><a href="#customer-on-bill">Pelanggan pada bil</a></li><li><a href="#price-check">Semak harga</a></li><li><a href="#menu">Menu</a></li></ol></li>
+<li><a href="#payment">Menerima bayaran</a>
+<ol><li><a href="#cash">Tunai</a></li><li><a href="#other-methods">Kad, e-dompet / QR dan kaedah lain</a></li><li><a href="#split">Pecah bayaran</a></li><li><a href="#credit-pay">Kredit pelanggan (bayar kemudian)</a></li><li><a href="#after-sale">Selepas jualan</a></li><li><a href="#pay-checks">Soalan yang mungkin ditanya kaunter apabila anda ketik Bayar</a></li></ol></li>
+<li><a href="#receipts">Resit, pencetak dan laci wang</a>
+<ol><li><a href="#receipt-content">Apa yang ditunjukkan pada resit</a></li><li><a href="#copies">Salinan</a></li><li><a href="#share-receipt">Berkongsi resit</a></li><li><a href="#printer">Menyediakan pencetak</a></li><li><a href="#print-queue">Apabila pencetak dimatikan</a></li><li><a href="#drawer">Laci wang</a></li></ol></li>
+<li><a href="#sales">Jualan, bayaran balik dan pembatalan</a>
+<ol><li><a href="#refund">Bayaran balik atau pulangan</a></li><li><a href="#void">Membatalkan jualan</a></li></ol></li>
+<li><a href="#products">Produk</a>
+<ol><li><a href="#product-list">Senarai produk</a></li><li><a href="#product-form">Borang produk</a></li><li><a href="#sold-by">Cara produk dijual</a></li><li><a href="#barcodes">Kod bar, pek dan karton</a></li><li><a href="#scale-labels">Label penimbang</a></li><li><a href="#pictures">Gambar dan warna</a></li><li><a href="#categories">Kategori</a></li><li><a href="#tax">Kadar cukai</a></li><li><a href="#payment-methods">Kaedah bayaran</a></li><li><a href="#csv">Banyak produk sekali gus (CSV)</a></li></ol></li>
+<li><a href="#promotions">Promosi</a>
+<ol><li><a href="#promotion-new">Membuat promosi</a></li><li><a href="#promotion-rules">Perkara yang perlu diketahui</a></li></ol></li>
+<li><a href="#stock">Stok</a>
+<ol><li><a href="#how-stock">Bagaimana aplikasi mengetahui stok anda</a></li><li><a href="#receive">Terima stok (penghantaran)</a></li><li><a href="#adjust">Laras stok</a></li><li><a href="#count">Kiraan stok (stock take)</a></li><li><a href="#low-stock">Stok rendah</a></li><li><a href="#suppliers">Pembekal dan penghantaran</a></li><li><a href="#stock-history">Sejarah stok dan perubahan stok</a></li></ol></li>
+<li><a href="#staff">Kakitangan, PIN dan peranan</a>
+<ol><li><a href="#pin-login">Menghidupkan log masuk PIN</a></li><li><a href="#sign-in">Log masuk dan mengunci kaunter</a></li><li><a href="#forgot-pin">Lupa PIN</a></li><li><a href="#roles">Peranan dan kebenaran</a></li><li><a href="#manager-pin">Apabila juruwang memerlukan pengurus</a></li></ol></li>
+<li><a href="#shifts">Syif dan wang tunai</a>
+<ol><li><a href="#shift-settings">Perlukah saya menggunakan syif?</a></li><li><a href="#open-shift">Membuka syif</a></li><li><a href="#cash-moves">Wang masuk, wang keluar dan simpanan wang</a></li><li><a href="#close-shift">Menutup syif</a></li><li><a href="#handover">Pertukaran juruwang</a></li><li><a href="#shift-report">Laporan syif</a></li></ol></li>
+<li><a href="#customers">Pelanggan dan kredit</a>
+<ol><li><a href="#customer-list">Pelanggan</a></li><li><a href="#credit-sale">Menjual secara kredit</a></li><li><a href="#repayment">Bayaran hutang dan pelarasan</a></li></ol></li>
+<li><a href="#reports">Laporan</a>
+<ol><li><a href="#periods">Tempoh</a></li><li><a href="#figures">Apa yang ditunjukkan dalam laporan</a></li><li><a href="#not-sold">Tidak terjual dalam tempoh ini</a></li><li><a href="#staff-check">Semakan staf</a></li><li><a href="#exports">Eksport (CSV)</a></li><li><a href="#drive-report">Laporan jualan harian ke Google Drive</a></li></ol></li>
+<li><a href="#activity-log">Log aktiviti</a></li>
+<li><a href="#data">Menjaga keselamatan data anda: sandaran, pemulihan, Google Drive</a>
+<ol><li><a href="#drive-backup">Sandaran Google Drive</a></li><li><a href="#phone-backups">Sandaran dalam telefon</a></li><li><a href="#folder-copy">Salinan harian ke kad SD atau pemacu USB</a></li><li><a href="#backup-files">Fail sandaran</a></li><li><a href="#restore">Memulihkan sandaran</a></li><li><a href="#lost-phone">Telefon hilang atau rosak</a></li><li><a href="#data-problem">Masalah data</a></li><li><a href="#storage">Storan telefon</a></li></ol></li>
+<li><a href="#tills">Beberapa kaunter dalam satu kedai</a></li>
+<li><a href="#settings">Tetapan</a>
+<ol><li><a href="#settings-store">Kedai &amp; resit</a></li><li><a href="#settings-printer">Pencetak &amp; laci wang</a></li><li><a href="#settings-scanner">Pengimbas kod bar &amp; kamera</a></li></ol></li>
+<li><a href="#hardware">Perkakasan</a>
+<ol><li><a href="#scanner-tips">Petua pengimbas kod bar</a></li><li><a href="#customer-screen">Skrin pelanggan pada paparan kedua</a></li></ol></li>
+<li><a href="#updates">Kemas kini aplikasi, laporan ralat dan diagnostik</a>
+<ol><li><a href="#app-updates">Kemas kini aplikasi</a></li><li><a href="#error-reports">Laporan ralat</a></li><li><a href="#diagnostics">Diagnostik</a></li></ol></li>
+<li><a href="#troubleshooting">Penyelesaian masalah dan soalan lazim</a>
+<ol><li><a href="#ts-selling">Menjual</a></li><li><a href="#ts-printer">Pencetak dan laci</a></li><li><a href="#ts-backup">Sandaran dan Google Drive</a></li><li><a href="#ts-other">Soalan lain</a></li></ol></li>
+<li><a href="#glossary">Istilah dalam aplikasi</a></li>
+<li><a href="#help">Privasi dan mendapatkan bantuan</a></li>
+</ol>
+</nav>
+
+<h2 id="start">1. Bermula</h2>
+
+<h3 id="what-you-need">Apa yang anda perlukan</h3>
+<ul>
+<li><b>Telefon atau tablet Android</b>, Android 5.0 atau lebih baharu. Telefon lama dengan memori 1–2 GB pun sudah
+cukup. Pada tablet, atau telefon yang dipegang secara melintang, senarai barang dan bil dipaparkan bersebelahan.</li>
+<li><b>Tidak perlu internet</b> untuk menjual. Internet hanya digunakan untuk sandaran Google Drive, laporan jualan
+harian, kemas kini aplikasi dan laporan ralat (jika anda membenarkannya).</li>
+<li><b>Tidak perlu akaun</b>. Akaun Google hanya digunakan jika anda menghidupkan sandaran Google Drive atau laporan
+jualan harian.</li>
+<li>Perkakasan pilihan (lihat <a href="#hardware">Perkakasan</a>): pencetak resit Bluetooth (58 atau 80 mm), laci
+wang yang disambung ke pencetak, pengimbas kod bar (USB atau Bluetooth), penimbang yang mencetak label kod bar,
+dan TV atau monitor sebagai skrin pelanggan.</li>
+</ul>
+
+<h3 id="install">Pasang dan kemas kini</h3>
+<ol>
+<li>Pada telefon atau tablet, buka <a href="index.html#download">faizoken.github.io/LekasPOS</a> dan ketik
+<b>Download LekasPOS</b>.</li>
+<li>Buka fail <code>LekasPOS.apk</code> yang dimuat turun. Pada Android 8 dan lebih baharu, benarkan pelayar anda
+<b>memasang aplikasi tidak diketahui</b> jika Android bertanya. Pada Android 5–7, hidupkan dahulu
+<b>Tetapan → Keselamatan → Sumber tidak diketahui</b>.</li>
+<li>Jika Play Protect memberi amaran tentang aplikasi yang tidak dikenali, ketik <b>Butiran lanjut → Pasang juga</b>.
+Ini biasa bagi aplikasi yang tidak dipasang dari Google Play.</li>
+</ol>
+<p>Selepas itu aplikasi <b>mengemas kini dirinya sendiri</b>: apabila versi baharu keluar, butang <b>Kemas kini</b>
+muncul di bahagian atas skrin jualan untuk pemilik — lihat <a href="#updates">Kemas kini aplikasi</a>. Produk,
+jualan dan tetapan anda sentiasa kekal.</p>
+
+<h3 id="welcome">Skrin selamat datang (kali pertama)</h3>
+<div class="shots">
+<figure><img src="img/ms-setup.png" alt="Skrin selamat datang" width="240" loading="lazy"><figcaption>Skrin selamat datang muncul sekali sahaja, pada telefon baharu.</figcaption></figure>
+</div>
+<p>Kali pertama LekasPOS dibuka pada telefon baharu, ia memaparkan <b>Selamat datang ke LekasPOS</b>. Semua pilihan
+di skrin ini boleh diubah kemudian dalam Tetapan.</p>
+<ol>
+<li><b>Bahasa aplikasi</b>: <i>Bahasa telefon</i>, <i>English</i> atau <i>Bahasa Melayu</i>.</li>
+<li><b>Kedai anda</b>: <b>Nama kedai</b> (wajib), <b>Telefon</b> dan <b>Alamat</b>. Semuanya dicetak di bahagian
+atas resit.</li>
+<li><b>Lindungi data kedai anda</b>: <b>Sandaran ke Google Drive (disyorkan)</b> atau <b>Salinan harian ke kad SD
+atau USB</b>. Sila pilih salah satu — lihat <a href="#data">Menjaga keselamatan data anda</a>.</li>
+<li><b>Pilihan</b>: <b>Sediakan pencetak resit</b> dan <b>Kakitangan dan PIN</b>.</li>
+<li>Sudah menggunakan LekasPOS di kaunter lain di kedai ini, atau menggantikan telefon yang hilang? Ketik
+<b>Pulihkan atau sertai kedai saya dari Google Drive</b> dan hidupkan sandaran Google Drive dengan akaun Google
+kedai: semuanya akan kembali. Ada fail sandaran, atau salinan pada kad SD atau pemacu USB? Taip nama kedai, ketik
+<b>Mula menjual</b>, kemudian lihat <a href="#restore">Memulihkan sandaran</a>.</li>
+<li>Ketik <b>Mula menjual</b>.</li>
+</ol>
+
+<h3 id="first-day">Menyediakan kedai baharu — senarai semak</h3>
+<ol>
+<li><b>Lindungi data</b>: sandaran Google Drive, atau salinan harian ke kad SD / pemacu USB
+(<a href="#data">caranya</a>).</li>
+<li><b>Butiran kedai untuk resit</b>: Tetapan → <b>Kedai &amp; resit</b> (nombor pendaftaran, teks resit,
+logo) — <a href="#settings-store">butiran</a>.</li>
+<li><b>Pencetak dan laci wang</b>: pasangkan pencetak dalam tetapan Bluetooth Android, kemudian Tetapan →
+<b>Pencetak &amp; laci wang</b> → <b>Pilih pencetak yang telah dipasangkan</b> → <b>Cetak halaman ujian</b>
+(<a href="#printer">butiran</a>).</li>
+<li><b>Produk</b>: imbas setiap produk di kaunter dan tambahkannya, atau masukkan dalam <b>Produk</b>, atau import
+hamparan (<a href="#products">butiran</a>). Tambah kategori, warna dan gambar supaya senarai barang mudah
+digunakan.</li>
+<li><b>Kaedah bayaran</b> yang anda terima, seperti DuitNow atau Touch ’n Go (<a href="#payment-methods">butiran</a>).</li>
+<li><b>Kakitangan</b>: tetapkan PIN pemilik dahulu dan <b>catat kod pemulihan</b>, kemudian tambah juruwang anda
+(<a href="#staff">butiran</a>).</li>
+<li>Jika ada pekerja, gunakan <b>syif</b> supaya setiap orang mengira laci wang (<a href="#shifts">butiran</a>).</li>
+<li>Buat satu jualan percubaan, semak resitnya, kemudian <a href="#void">batalkan</a> jualan itu supaya ia tidak
+dikira dalam laporan.</li>
+</ol>
+
+<h3 id="who">Siapa boleh buat apa</h3>
+<p>Selagi pemilik belum menetapkan PIN, semua orang yang menggunakan aplikasi <b>dikira sebagai pemilik</b> dan boleh
+melakukan semuanya. Kedai yang dijalankan seorang diri boleh terus begitu. Setelah PIN ditetapkan, setiap orang log
+masuk dan hanya melihat butang yang dibenarkan oleh <b>peranan</b> mereka: <b>Pemilik</b> (semuanya),
+<b>Pengurus</b> (hampir semuanya kecuali tetapan dan kakitangan) dan <b>Juruwang</b> (menjual). Apabila juruwang
+memerlukan sesuatu yang lebih, pengurus menaip PIN mereka. Lihat <a href="#staff">Kakitangan, PIN dan
+peranan</a>.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="cashier">2. Panduan ringkas untuk juruwang</h2>
+<p>Semua yang juruwang perlu tahu, dalam satu halaman.</p>
+<div class="table-wrap"><table>
+<tr><th>Untuk…</th><th>Lakukan ini</th></tr>
+<tr><td>Log masuk</td><td>Ketik nama anda, taip PIN anda, ketik <b>OK</b>. Bukan nama anda? Ketik <b>Bukan anda?</b></td></tr>
+<tr><td>Mula hari</td><td>Jika kaunter meminta <b>Mulakan syif</b>, kira wang tunai dalam laci dan ketik <b>OK</b>.</td></tr>
+<tr><td>Tambah barang</td><td>Imbas kod barnya. Atau taip namanya di <b>Cari</b> dan ketik barang itu. Atau ketik <b>Barang</b> dan ketik barang itu.</td></tr>
+<tr><td>Barang tanpa kod bar (sayur, kuih)</td><td>Ketik <b>Barang</b> (atau cari), ketik barang itu, kemudian taip berat atau harga jika diminta.</td></tr>
+<tr><td>Kod bar tidak dijumpai</td><td>Kaunter memaparkan <b>Kod bar tidak dijumpai</b>. Panggil pengurus: pengurus ketik <b>Tambah produk</b>, taip PINnya, nama dan harga.</td></tr>
+<tr><td>Tukar kuantiti</td><td>Ketik baris itu, kemudian <b>+</b> atau <b>−</b>, atau ketik nombornya dan taip kuantiti.</td></tr>
+<tr><td>Buang satu barang</td><td>Ketik baris itu, kemudian <b>Buang</b>.</td></tr>
+<tr><td>Buang seluruh bil</td><td><b>Menu → Kosongkan bil</b>.</td></tr>
+<tr><td>Pelanggan terlupa sesuatu</td><td><b>Tangguh</b> bil itu (taip nama jika mahu), layan pelanggan seterusnya, kemudian ketik butang <b>1 ditangguh</b> di bahagian atas untuk membukanya semula.</td></tr>
+<tr><td>Terima tunai</td><td><b>Bayar</b> → ketik wang kertas yang diberi pelanggan (cth. <b>RM50</b>). Amaun lain: <b>Jumlah lain</b>, taip amaunnya (5 0 0 0 = RM50.00), <b>Selesai</b>.</td></tr>
+<tr><td>Kad, e-dompet, QR</td><td>Terima bayaran di terminal atau QR anda dahulu, kemudian <b>Bayar</b> → ketik <b>Kad</b> atau <b>E-dompet / QR</b>.</td></tr>
+<tr><td>Sebahagian tunai, sebahagian kad</td><td><b>Bayar → Pecah bayaran</b> → taip bahagian pertama → ketik kaedahnya → bayar selebihnya.</td></tr>
+<tr><td>Beri baki</td><td>Amaun <b>Baki</b> yang besar ialah wang yang perlu dipulangkan. Imbas barang pertama pelanggan seterusnya untuk mula semula.</td></tr>
+<tr><td>Pelanggan tanya baki sekali lagi</td><td>Bil kosong menunjukkan <b>Jualan terakhir</b> bersama bakinya.</td></tr>
+<tr><td>Cetak resit sekali lagi</td><td><b>Cetak salinan</b> di bawah jualan terakhir, atau <b>Menu → Resit</b>.</td></tr>
+<tr><td>Semak harga tanpa menjual</td><td><b>Semak harga</b> → imbas atau taip.</td></tr>
+<tr><td>Diskaun atau harga baharu</td><td>Minta bantuan pengurus: <b>Menu → PIN pengurus</b>, kemudian <b>Menu → Diskaun</b>.</td></tr>
+<tr><td>Tinggalkan kaunter</td><td>Ketik nama anda di bahagian atas → <b>Kunci / tukar pengguna</b> (atau <b>Menu → Kunci / tukar pengguna</b>).</td></tr>
+<tr><td>Akhir hari</td><td><b>Menu → Tutup syif</b> → kira semua wang tunai → nyatakan berapa yang ditinggalkan dalam laci → keluarkan selebihnya untuk pemilik.</td></tr>
+</table></div>
+<div class="note"><p>Semua yang anda buang daripada bil dicatat dalam log aktiviti, terutamanya selepas pelanggan melihat
+jumlahnya. Itu perkara biasa — barang yang salah dibuang setiap hari — dan ia melindungi anda sama seperti ia
+melindungi kedai.</p></div>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="selling">3. Skrin jualan</h2>
+<p>Skrin jualan terbuka apabila anda memulakan aplikasi. Semua urusan dengan seorang pelanggan berlaku di sini.</p>
+<div class="shots">
+<figure><img src="img/ms-sell.png" alt="Skrin jualan pada telefon" width="240" loading="lazy"><figcaption>Pada telefon: bil, dengan butang untuk barang terakhir.</figcaption></figure>
+<figure><img src="img/ms-sell-empty.png" alt="Bil kosong dengan jualan terakhir" width="240" loading="lazy"><figcaption>Bil kosong menerangkan cara bermula dan menunjukkan jualan terakhir.</figcaption></figure>
+</div>
+<figure class="wide"><img src="img/ms-tablet-sell.png" alt="Skrin jualan pada tablet" loading="lazy"><figcaption>Pada tablet (atau telefon yang dipegang secara melintang): barang di sebelah kiri, bil di sebelah kanan.</figcaption></figure>
+
+<h3 id="screen">Apa yang ada di skrin</h3>
+<ul>
+<li><b>Bar atas</b>: nama kedai, nama anda (apabila PIN digunakan), butang kecil berwarna (“pil”) apabila ada
+sesuatu yang perlu diberi perhatian, dan <b>Menu</b>.</li>
+<li>Kotak <b>Cari</b> dengan butang <b>kamera</b> di dalamnya, <b>Semak harga</b>, dan pada telefon, <b>Barang</b>
+(membuka senarai barang; ketik sekali lagi atau tekan Kembali untuk melihat bil).</li>
+<li><b>Bil</b>: satu baris bagi setiap barang, dengan kuantiti, harga dan amaunnya.</li>
+<li><b>Bahagian jumlah</b>: bilangan barang (serta diskaun dan cukai, jika ada), <b>Jumlah</b> yang besar, dan butang
+<b>Tangguh</b> dan <b>Bayar</b>. Pemilik, pengurus dan juruwang semuanya melihat skrin yang sama.</li>
+</ul>
+
+<h3 id="pills">Pil di bar atas</h3>
+<p>Pil hanya muncul apabila ada sesuatu untuk dilihat. Ketik pil untuk mengetahui maksudnya.</p>
+<div class="table-wrap"><table>
+<tr><th>Pil</th><th>Maksud</th></tr>
+<tr><td><b>2 ditangguh</b></td><td>Bil yang ditangguh. Ketik untuk membuka semula salah satunya.</td></tr>
+<tr><td><b>Tiada sandaran</b></td><td>Data kedai belum disalin keluar dari telefon ini selama 3 hari (atau sandaran Google
+Drive tidak berjaya selama sehari). Lihat <a href="#data">Menjaga keselamatan data anda</a>.</td></tr>
+<tr><td><b>Sandaran: log masuk</b></td><td>Google mahu akaun kedai log masuk semula untuk sandaran Google Drive.</td></tr>
+<tr><td><b>Masalah data</b></td><td>Semakan harian menemui kerosakan dalam pangkalan data. Lihat
+<a href="#data-problem">Masalah data</a>.</td></tr>
+<tr><td><b>Storan hampir penuh</b></td><td>Telefon hampir penuh. Jualan tidak boleh disimpan pada telefon yang penuh:
+padam foto, video atau aplikasi.</td></tr>
+<tr><td><b>Mencetak…</b></td><td>Resit sedang dicetak.</td></tr>
+<tr><td><b>3 untuk dicetak</b></td><td>3 resit sedang menunggu untuk dicetak.</td></tr>
+<tr><td><b>Pencetak luar talian (3)</b></td><td>Pencetak tidak dapat dihubungi dan 3 resit sedang menunggu. Ketik
+mana-mana pil pencetak untuk membuka tetapan pencetak.</td></tr>
+<tr><td><b>Pengurus: Aminah ✕</b></td><td>Seorang pengurus sedang membantu dengan bil ini. Ketik untuk menamatkan bantuan itu.</td></tr>
+<tr><td><b>Kemas kini 1.14.0</b></td><td>Versi baharu LekasPOS sudah sedia (pemilik sahaja).</td></tr>
+</table></div>
+<p>Juruwang yang mengetik pil tentang data akan melihat <i>“Sila beritahu pemilik kedai…”</i>: pemilik membetulkannya
+dalam <b>Menu → Urus kedai → Tetapan</b>.</p>
+
+<h3 id="add-items">Menambah barang</h3>
+<dl>
+<dt>Pengimbas kod bar</dt><dd>Imbas sahaja — tiada apa-apa perlu diketik dahulu. Pengimbas USB dan Bluetooth dalam
+mod “papan kekunci” berfungsi tanpa sebarang tetapan. Anda mendengar bunyi bip pendek apabila barang ditambah dan
+nada rendah apabila ada masalah.</dd>
+<dt>Kamera</dt><dd>Ketik kamera di dalam kotak carian. Letakkan setiap kod bar di dalam bingkai: setiap barang
+ditambah dengan bunyi bip (<b>Ditambah: …</b>). Barang yang memerlukan berat atau harga, atau kod bar yang belum
+dikenali kaunter, akan menutup kamera dan kaunter bertanya kepada anda. <b>Lampu suluh</b> menghidupkan lampu. Tekan Kembali apabila selesai.</dd>
+<dt>Cari</dt><dd>Taip sebahagian nama (<i>milo 1k</i> menjumpai “Milo 1kg”), atau digit pertama kod bar. Ketik
+barang itu. Menaip kod bar atau SKU yang penuh dan menekan Enter terus menambahnya.</dd>
+<dt>Barang (senarai barang)</dt><dd>Pada telefon, ketik <b>Barang</b>; pada tablet, senarai ini sentiasa di sebelah
+kiri. Tabnya ialah <b>Laris</b> (barang paling laku anda dalam 30 hari lepas), <b>Semua</b>, dan satu tab bagi
+setiap kategori. Ketik petak barang untuk menambahnya. Petak yang sudah ada dalam bil menunjukkan <b>×2</b>. Petak
+menunjukkan harga dan, bagi produk yang stoknya dikira, bilangan yang ada dalam stok.</dd>
+</dl>
+
+<h3 id="weighed">Barang ditimbang, barang yang harganya dimasukkan di kaunter, pek dan label penimbang</h3>
+<ul>
+<li><b>Barang ditimbang</b> (dijual mengikut berat): selepas imbas atau ketik, taip beratnya. Pad kekunci diisi dari
+kanan: <code>1 2 5 0</code> = 1.250 kg. Setiap timbangan menjadi baris tersendiri.</li>
+<li><b>Barang yang harganya dimasukkan di kaunter</b>: petaknya menunjukkan <b>Masukkan harga</b>; taip harganya (<code>1 5 0</code> = RM1.50).</li>
+<li>Produk yang dijual mengikut unit dengan harga 0.00 meminta harga, supaya ia tidak terjual percuma secara tidak
+sengaja. Produk yang ditimbang mesti ada harga sekilogram: pada harga 0.00 ia dijual percuma.</li>
+<li><b>Kod bar karton atau pek</b> menambah satu baris seperti “Milo x24” pada harga pek.</li>
+<li><b>Label penimbang</b> menambah barang yang ditimbang bersama beratnya, atau tepat dengan harga yang dicetak pada
+label (“harga label”). Lihat <a href="#scale-labels">Label penimbang</a>.</li>
+</ul>
+
+<h3 id="unknown">Kod bar yang belum dikenali kaunter</h3>
+<p>Kaunter berbunyi bip rendah dan memaparkan <b>Kod bar tidak dijumpai</b>. Ketik <b>Tambah produk</b>, taip nama dan
+harga, kemudian simpan: produk itu disimpan untuk lain kali dan masuk ke bil ini. Juruwang yang tidak dibenarkan
+menambah produk akan diminta PIN pengurus dahulu; pengurus kemudian menambahnya. Ketik <b>Batal</b> untuk tidak
+memasukkannya.</p>
+<div class="note"><p>Hanya produk dalam senarai boleh dijual. Untuk barang tanpa kod bar (sayur,
+<i>kuih</i>, beg plastik), tambah produk sekali sahaja — dijual mengikut <b>Berat</b> atau dengan <b>Harga dimasukkan di kaunter</b> — dan
+pilihnya dari <b>Barang</b>.</p></div>
+
+<h3 id="change-bill">Mengubah bil</h3>
+<ul>
+<li>Baris yang terakhir diimbas atau diketik diserlahkan bersama butangnya: <b>Buang</b>, <b>−</b>,
+<b>kuantiti</b>, <b>+</b>. Ketik baris lain untuk memindahkan butang itu ke baris tersebut; ketik sekali lagi untuk
+menyembunyikannya.</li>
+<li><b>+</b> dan <b>−</b> mengubah kuantiti sebanyak satu. <b>−</b> berhenti pada 1: gunakan <b>Buang</b> untuk yang terakhir.</li>
+<li>Ketik <b>kuantiti</b> untuk menaipnya (bagi barang ditimbang, berat yang baharu).</li>
+<li>Mengimbas produk yang sama sekali lagi menambah 1 pada barisnya.</li>
+<li><b>Menu → Kosongkan bil</b> membuang seluruh bil (ia bertanya dahulu). PIN tidak diperlukan.</li>
+<li>Bil anda selamat: jika telefon dimulakan semula, aplikasi tertutup atau bateri habis, bil masih ada apabila
+aplikasi dibuka semula.</li>
+</ul>
+<p>Setiap barang yang dibuang dan setiap kuantiti yang dikurangkan dicatat dalam <a href="#activity-log">Log aktiviti</a>
+bersama nilainya — dan ditanda khas jika ia berlaku selepas skrin bayaran menunjukkan jumlah kepada pelanggan.</p>
+
+<h3 id="hold">Menangguh bil</h3>
+<ol>
+<li>Ketik <b>Tangguh</b>. Taip nama jika mahu (cth. nama pelanggan) dan ketik OK. Skrin kini kosong untuk pelanggan
+seterusnya.</li>
+<li>Untuk membukanya semula, ketik pil <b>1 ditangguh</b> (atau <b>Menu → Bil ditangguh</b>) dan ketik bil itu. Bil yang
+sedang ada di skrin akan ditangguh sebagai gantinya.</li>
+<li>Untuk memadam bil yang ditangguh: <b>Padam bil…</b> dalam senarai (atau tekan lama pada bil itu).</li>
+</ol>
+<p>Bil ditangguh kekal di kaunter ini (ia tidak dikongsi dengan kaunter lain) dan tidak hilang walaupun telefon
+dimulakan semula.</p>
+
+<h3 id="discount">Diskaun dan perubahan harga</h3>
+<p><b>Menu → Diskaun</b> (dipaparkan kepada mereka yang dibenarkan memberi diskaun atau menukar harga):</p>
+<ul>
+<li><b>Diskaun untuk seluruh bil</b> — sama ada <b>Amaun</b> atau <b>Peratus</b>.</li>
+<li><b>Diskaun untuk</b> <i>barang yang dipilih</i> — ketik baris itu dahulu.</li>
+<li><b>Tukar harga</b> <i>barang yang dipilih</i>.</li>
+<li><b>Tiada diskaun</b> membuang diskaun.</li>
+</ul>
+<p>Juruwang tanpa kebenaran ini tidak melihat <b>Diskaun</b>. Pengurus boleh membantu: <b>Menu → PIN
+pengurus</b> → pengurus menaip PIN mereka → <b>Diskaun</b> muncul untuk bil ini (sehingga bil dibayar, ditangguh
+atau dikosongkan, atau selama 5 minit). Diskaun dan perubahan harga dicatat dalam Log aktiviti bersama nama orang
+yang meluluskannya. Barang yang diberi diskaun atau harga secara manual tidak lagi termasuk dalam
+<a href="#promotions">promosi</a>.</p>
+
+<h3 id="customer-on-bill">Pelanggan pada bil</h3>
+<p>Apabila <b>Pelanggan dan kredit</b> dihidupkan (Tetapan → Kedai &amp; resit), bahagian jumlah menunjukkan
+<b>Tambah pelanggan</b>. Ketik untuk memilih pelanggan (cari mengikut nama atau telefon) atau mencipta pelanggan baharu.
+Nama pelanggan dicetak pada resit dan bil boleh dibayar dengan <b>Kredit pelanggan</b> (“bayar kemudian”) — lihat
+<a href="#customers">Pelanggan dan kredit</a>.</p>
+
+<h3 id="price-check">Semak harga</h3>
+<p>Ketik <b>Semak harga</b>, kemudian imbas atau taip kod bar atau nama dan ketik <b>Semak</b>. Ia menunjukkan harga,
+harga pek, stok dan sebarang promosi yang sedang berjalan, tanpa menyentuh bil. Kakitangan yang dibenarkan menyunting
+produk juga melihat <b>Tukar harga</b>: harga baharu digunakan mulai sekarang (barang yang sudah ada dalam bil kekal
+dengan harga lama) dan dicatat dalam Log aktiviti.</p>
+
+<h3 id="menu">Menu</h3>
+<p>Menu hanya menunjukkan apa yang boleh dilakukan oleh orang yang sedang log masuk.</p>
+<div class="table-wrap"><table>
+<tr><th>Pilihan menu</th><th>Kegunaannya</th></tr>
+<tr><td><b>Diskaun</b></td><td>Diskaun dan perubahan harga pada bil ini.</td></tr>
+<tr><td><b>Kosongkan bil</b></td><td>Buang bil yang ada di skrin.</td></tr>
+<tr><td><b>Bil ditangguh</b></td><td>Bil yang sedang ditangguh.</td></tr>
+<tr><td><b>Jualan &amp; bayaran balik</b> (atau <b>Resit</b>)</td><td>Jualan lepas: salinan, bayaran balik, pembatalan — <a href="#sales">butiran</a>.</td></tr>
+<tr><td><b>Pelanggan</b></td><td>Apabila pelanggan dan kredit dihidupkan.</td></tr>
+<tr><td><b>Buka syif</b> / <b>Tutup syif</b></td><td>Mula atau tamatkan syif anda — <a href="#shifts">butiran</a>.</td></tr>
+<tr><td><b>Syif &amp; tunai</b></td><td>Wang masuk, wang keluar, simpanan wang, laporan syif.</td></tr>
+<tr><td><b>Buka laci wang</b></td><td>Membuka laci tanpa jualan (direkodkan).</td></tr>
+<tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan).</td></tr>
+<tr><td><b>PIN pengurus</b></td><td>Pengurus membantu dengan bil ini.</td></tr>
+<tr><td><b>Urus kedai ›</b></td><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Inventori</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b>.</td></tr>
+</table></div>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="payment">4. Menerima bayaran</h2>
+<div class="shots">
+<figure><img src="img/ms-pay.png" alt="Bayaran, langkah pertama" width="240" loading="lazy"><figcaption>Langkah 1: cara pelanggan membayar. Satu ketikan pada wang kertas terus membayar secara tunai.</figcaption></figure>
+<figure><img src="img/ms-pay-cash.png" alt="Pad kekunci bayaran dengan baki" width="240" loading="lazy"><figcaption>Langkah 2 (hanya jika perlu): taip amaun; baki dipaparkan semasa anda menaip.</figcaption></figure>
+</div>
+<p>Ketik <b>Bayar</b>. Bil dibekukan selagi skrin bayaran terbuka. Bayaran ada dua langkah.</p>
+
+<h3 id="cash">Tunai</h3>
+<ul>
+<li>Di bawah <b>Tunai: ketik wang yang diberi</b> ada amaun tepat dan nilai wang kertas yang seterusnya (cth. <b>RM59.60</b>,
+<b>RM60</b>, <b>RM100</b>). <b>Satu ketikan terus membayar bil</b> dan menunjukkan baki.</li>
+<li>Amaun lain? Ketik <b>Jumlah lain</b>, taip amaunnya — pad kekunci diisi dari kanan, jadi <code>5 0 0 0</code> ialah
+RM50.00 — dan <b>Baki</b> muncul semasa anda menaip. Ketik <b>Selesai</b>. Jika tiada apa-apa ditaip, Selesai mengambil
+amaun tepat.</li>
+<li>Tunai dibundarkan kepada 5 sen yang terdekat (pembundaran Malaysia) apabila <b>Bundarkan bayaran tunai kepada 5 sen</b> dihidupkan:
+RM10.02 → RM10.00, RM10.03 → RM10.05. Skrin bayaran kemudian menunjukkan <i>Tunai (dibundarkan)</i>, dan resit mencetak
+<b>Pembundaran</b>. Kad dan e-dompet sentiasa membayar amaun tepat.</li>
+<li>Menaip amaun yang kurang daripada bil sebagai bayaran pertama? Kaunter bertanya <i>“Hanya RM… tunai? Maka RM… masih perlu
+dibayar dengan kaedah lain.”</i> — ketik <b>Bayaran sebahagian</b> untuk meneruskan, atau Batal jika anda maksudkan amaun yang lebih besar.</li>
+</ul>
+
+<h3 id="other-methods">Kad, e-dompet / QR dan kaedah lain</h3>
+<p>Di bawah <b>Cara bayar lain</b> ada satu butang bagi setiap kaedah bayaran (Kad, E-dompet / QR, dan sebarang kaedah
+yang anda tambah, seperti DuitNow). <b>Satu ketikan membayar seluruh amaun</b> dengan kaedah itu.</p>
+<div class="warn"><p>LekasPOS hanya <b>merekod</b> bayaran kad dan e-dompet — ia tidak berhubung dengan terminal kad
+atau bank. Terima bayaran dahulu dan pastikan ia berjaya, kemudian ketik kaedah itu.</p></div>
+
+<h3 id="split">Pecah bayaran</h3>
+<ol>
+<li>Ketik <b>Pecah bayaran</b>.</li>
+<li>Taip amaun bahagian pertama (cth. <code>2 0 0 0</code> untuk RM20.00) dan ketik kaedahnya (cth.
+<b>Kad</b>). Jika tiada apa-apa ditaip, kaedah itu membayar semua yang masih berbaki.</li>
+<li>Skrin bayaran kini menunjukkan <b>Baki perlu dibayar</b> dan <b>Sudah dibayar: Kad RM20.00</b>. Bayar selebihnya
+dengan cara yang sama (cth. ketik nilai wang kertas).</li>
+</ol>
+<p><b>Batal</b> selepas sebahagian sudah dibayar akan bertanya sama ada mahu membatalkan bahagian itu; bil itu sendiri kekal. Bahagian kad atau QR yang
+benar-benar sudah dibayar pelanggan kemudian tidak lagi direkodkan: apabila anda menerima bayaran semula, ketik kaedah
+yang sama untuk amaun itu, atau pulangkan wang itu melalui terminal.</p>
+
+<h3 id="credit-pay">Kredit pelanggan (bayar kemudian)</h3>
+<p>Apabila ada pelanggan pada bil, <b>Kredit pelanggan</b> muncul antara kaedah bayaran. Amaun itu ditambah kepada
+hutang pelanggan. Jika melebihi had kredit pelanggan, kaunter bertanya <b>Melebihi had kredit</b>; <b>Benarkan</b>
+memerlukan pengurus. Lihat <a href="#customers">Pelanggan dan kredit</a>.</p>
+
+<h3 id="after-sale">Selepas jualan</h3>
+<ul>
+<li>Hasilnya menunjukkan <b>Baki</b> dalam angka besar (atau <b>Dibayar</b>), <b>Diterima … · jumlah …</b> dan nombor
+<b>Resit</b>.</li>
+<li>Resit dicetak dengan sendirinya (jika pencetak sudah disediakan) dan laci wang terbuka untuk tunai.</li>
+<li><b>Cetak salinan</b> (atau <b>Cetak resit</b> jika resit tidak dicetak secara automatik) dan <b>Kongsi</b>
+(sebagai gambar atau PDF, cth. melalui WhatsApp).</li>
+<li>Kakitangan yang mengurus stok juga melihat <b>Hampir habis: …</b> bagi barang dalam jualan ini yang stoknya pada
+atau di bawah paras amaran stok rendah.</li>
+<li><b>Jualan baru</b> menutup hasil itu — atau imbas sahaja barang pertama pelanggan seterusnya.</li>
+<li>Jumlah sifar (cth. diskaun 100%) hanya menunjukkan <b>Selesai jualan</b>.</li>
+</ul>
+<div class="note"><p>Jualan disimpan sepenuhnya sebelum apa-apa dicetak. Jika penyimpanan gagal (contohnya,
+telefon penuh), kaunter memaparkan <b>Jualan tidak disimpan</b>: jualan itu tidak direkodkan dan bil kekal. Jika
+pelanggan sudah membayar dengan kad atau QR, jangan caj mereka sekali lagi — betulkan masalahnya, ketik <b>Bayar</b>
+dan ketik kaedah yang sama.</p></div>
+<p><b>Tersalah ketik kaedah atau amaun?</b> Jualan yang sudah disimpan tidak boleh diubah. Minta pengurus
+membatalkannya (<a href="#void">Membatalkan jualan</a>) dan masukkan semula jualan itu.</p>
+
+<h3 id="pay-checks">Soalan yang mungkin ditanya kaunter apabila anda ketik Bayar</h3>
+<ul>
+<li><b>Tiada syif dibuka</b> — kedai mewajibkan syif: ketik <b>Buka syif</b>, kira laci, kemudian bayar.</li>
+<li><b>Semak tarikh dan masa</b> — jam telefon kelihatan salah. Jualan disimpan di bawah tarikh ia dibuat, buat
+selama-lamanya, jadi betulkan tarikh dahulu (<b>Tetapkan tarikh</b>). Apabila tarikh itu mustahil (jam telah ditetapkan
+semula), jualan menunggu sehingga tarikh dibetulkan; apabila jam hanya lebih awal daripada jualan terakhir kaunter
+ini, <b>Jual juga</b> turut ditawarkan.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="receipts">5. Resit, pencetak dan laci wang</h2>
+<h3 id="receipt-content">Apa yang ditunjukkan pada resit</h3>
+<ul>
+<li>Logo anda (pilihan), nama kedai, alamat, telefon, e-mel, no. pendaftaran (SSM), no. SST, TIN dan teks kepala
+resit anda.</li>
+<li><b>RESIT</b>, nombor resit (cth. <code>KQ-000123</code>; bayaran balik <code>KQ-R000045</code>), tarikh dan
+masa, juruwang dan pelanggan.</li>
+<li>Setiap barang dengan kuantiti, harga dan amaunnya; diskaun dan penjimatan promosi.</li>
+<li>Bilangan barang, jumlah kecil, diskaun, cukai, <b>Pembundaran</b>, <b>JUMLAH</b> yang besar, setiap bayaran dan
+<b>Baki</b>.</li>
+<li>Teks kaki resit anda (atau <i>Terima kasih!</i>), dan jika mahu, kod QR yang diimbas pelanggan untuk meminta e-invois.</li>
+</ul>
+<p>Resit dicetak dalam <b>Bahasa resit</b> yang dipilih dalam Kedai &amp; resit (English atau Bahasa Melayu),
+tidak kira apa bahasa aplikasi. Setiap kaunter mempunyai awalan resit dua huruf sendiri, jadi nombor resit tidak
+pernah bertindih antara kaunter.</p>
+
+<h3 id="copies">Salinan</h3>
+<p>Resit pertama sesuatu jualan boleh dicetak tanpa sebarang syarat. Setiap cetakan selepas itu ialah <b>salinan</b>:
+ia ditanda <b>*** SALINAN ***</b>, memerlukan kebenaran <i>Cetak salinan resit</i> (juruwang memilikinya) dan
+direkodkan dalam Log aktiviti. Salinan boleh dicetak dari jualan terakhir pada bil kosong, dari hasil jualan, atau dari
+<b>Menu → Jualan &amp; bayaran balik</b> (atau <b>Resit</b>).</p>
+
+<h3 id="share-receipt">Berkongsi resit</h3>
+<p><b>Kongsi</b> menghantar resit <b>Sebagai gambar</b> atau <b>Sebagai PDF</b> melalui mana-mana aplikasi
+(WhatsApp, e-mel…). Ini berfungsi tanpa pencetak.</p>
+
+<h3 id="printer">Menyediakan pencetak</h3>
+<ol>
+<li>Hidupkan pencetak dan pasangkannya dalam <b>tetapan Bluetooth Android</b> (PIN biasanya 0000 atau 1234).
+Tetapan → Pencetak &amp; laci wang → <b>Pasangkan pencetak baru (tetapan Bluetooth)</b> membawa anda ke sana.</li>
+<li>Kembali ke <b>Pencetak &amp; laci wang</b>, ketik <b>Pilih pencetak yang telah dipasangkan</b> dan pilih pencetak
+itu. Pada Android 12 dan lebih baharu, benarkan <b>Peranti berdekatan</b>.</li>
+<li>Pilih <b>Lebar kertas</b>: 58 mm (32 aksara) atau 80 mm (48 atau 42 aksara).</li>
+<li>Ketik <b>Cetak halaman ujian</b>. Pembaris digit mesti muat dalam satu baris; jika tidak, cuba pilihan 80 mm yang satu lagi.</li>
+<li>Ketik <b>Simpan</b>.</li>
+</ol>
+<p>Semua pilihan pencetak ada dalam <a href="#settings-printer">Tetapan → Pencetak &amp; laci wang</a>.</p>
+
+<h3 id="print-queue">Apabila pencetak dimatikan</h3>
+<ul>
+<li>Jualan tidak pernah menunggu pencetak. Resit menunggu dalam baris gilir dan dicetak apabila pencetak kembali; pil
+menunjukkan <b>Pencetak luar talian (2)</b>.</li>
+<li>Resit yang masih menunggu selepas 10 minit akan dibuang (supaya resit lama tidak keluar di tengah-tengah pelanggan
+baharu). Cetak salinan dari senarai Jualan jika pelanggan mahukannya.</li>
+<li>Selepas 10 kali cubaan gagal, status menunjukkan <i>luar talian, tekan Cuba semula</i>. <i>tidak mencetak: semak
+kertas dan penutup</i> bermakna pencetak berhenti menerima data.</li>
+<li><b>Kosongkan baris gilir cetakan</b> dalam tetapan pencetak membuang resit yang belum dicetak (jualannya tetap kekal).</li>
+</ul>
+
+<h3 id="drawer">Laci wang</h3>
+<p>Laci disambung ke pencetak dan dibuka melaluinya. Ia terbuka sendiri untuk kaedah bayaran yang ditanda
+<b>Membuka laci wang</b> (tunai), bayaran balik yang dibayar dengan kaedah itu, jualan tunai yang dibatalkan,
+pelanggan yang membayar hutang kredit secara tunai, wang apungan semasa syif dibuka, serta wang masuk/keluar.
+<b>Menu → Buka laci wang</b> membukanya tanpa jualan (memerlukan kebenaran dan direkodkan). Laci hanya terbuka melalui
+pencetak: apabila pencetak dimatikan atau di luar jangkauan, laci kekal tertutup (arahan membuka yang menunggu lebih
+daripada 2 minit dibuang) — gunakan kuncinya. Jika laci tidak pernah terbuka, semak <b>Laci wang disambung ke pencetak</b> dan cuba <b>Pin 5</b> sebagai ganti Pin 2.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="sales">6. Jualan, bayaran balik dan pembatalan</h2>
+<p><b>Menu → Jualan &amp; bayaran balik</b> (dipanggil <b>Resit</b> bagi kakitangan yang tidak dibenarkan membuat
+bayaran balik atau pembatalan) menyenaraikan jualan kaunter ini, yang terbaru dahulu — dan jualan semua kaunter kedai
+apabila sandaran Google Drive dihidupkan. Jualan yang dibatalkan ditanda <b>DIBATALKAN</b>, dan bayaran balik ditanda <b>BAYARAN BALIK</b>.</p>
+<ul>
+<li>Cari mengikut <b>Nombor resit</b>: nombor penuh (<code>KQ-000123</code>) atau digitnya sahaja (<code>123</code>);
+<code>R45</code> menjumpai bayaran balik.</li>
+<li>Ketik jualan untuk melihat resitnya, dengan <b>Cetak salinan</b>, <b>Kongsi</b>, <b>Bayaran balik / pulangan</b> dan
+<b>Batalkan</b> bagi mereka yang dibenarkan. Jualan yang ada bayaran balik turut menyenaraikannya.</li>
+<li>Juruwang tidak melihat <b>Bayaran balik / pulangan</b> atau <b>Batalkan</b>. Minta pengurus mengetik <b>Menu → PIN
+pengurus</b> dan menaip PIN mereka, kemudian buka jualan itu: butang itu muncul, dan pengurus menaip PIN mereka sekali
+lagi untuk mengesahkan.</li>
+</ul>
+
+<h3 id="refund">Bayaran balik atau pulangan</h3>
+<ol>
+<li>Buka jualan itu dan ketik <b>Bayaran balik / pulangan</b>.</li>
+<li>Bagi setiap barang yang dipulangkan, ketik kuantiti dan taip bilangannya (atau ketik <b>Semua</b>). Anda boleh
+membuat bayaran balik untuk sebahagian resit sekarang dan selebihnya kemudian.</li>
+<li>Biarkan <b>Kembalikan item yang dipulangkan ke stok</b> dihidupkan jika barang itu boleh dijual semula; matikannya
+untuk barang yang rosak.</li>
+<li>Taip <b>Sebab</b> (wajib) dan pilih <b>Bayar balik dengan</b> (biasanya cara pelanggan membayar).</li>
+<li>Semak <b>Perlu dibayar balik</b> dan ketik <b>Bayar balik</b>, kemudian sahkan.</li>
+</ol>
+<p>Amaunnya tepat seperti yang dibayar pelanggan untuk barang itu, dengan diskaun, promosi dan cukai dibahagikan
+secara adil hingga ke sen; tunai dibundarkan kepada 5 sen. Bayaran balik mendapat nombornya sendiri (cth.
+<code>KQ-R000045</code>), dicetak jika resit dicetak secara automatik, dimasukkan ke dalam syif semasa dan direkodkan
+dalam Log aktiviti. Jualan kredit dibayar balik ke kredit pelanggan.</p>
+<div class="warn"><p>LekasPOS hanya <b>merekod</b> bayaran balik. Membayar balik melalui kad atau e-dompet? Buat juga
+bayaran balik di terminal kad atau e-dompet itu. Bagi tunai, pulangkan wang dari laci.</p></div>
+
+<h3 id="void">Membatalkan jualan</h3>
+<p>Pembatalan membatalkan seluruh jualan seolah-olah ia tidak pernah berlaku — untuk kesilapan seperti jualan
+percubaan atau jualan yang dimasukkan dua kali.</p>
+<ol>
+<li>Buka jualan itu dan ketik <b>Batalkan</b>.</li>
+<li>Taip sebabnya dan sahkan.</li>
+</ol>
+<ul>
+<li>Jualan itu dikeluarkan daripada laporan, barangnya kembali ke stok, dan tunainya ditolak daripada tunai dijangka
+bagi syif yang sedang dibuka sekarang. Kredit dikembalikan.</li>
+<li>Jualan yang ada bayaran balik tidak boleh dibatalkan: batalkan bayaran balik itu dahulu. Bayaran balik itu sendiri
+boleh dibatalkan.</li>
+<li>Pembatalan direkodkan dalam Log aktiviti dan ditunjukkan dalam Semakan staf.</li>
+<li>Pembatalan hanya membetulkan rekod: pulangkan sendiri wang pelanggan (tunai dari laci; kad atau e-dompet melalui
+terminal atau aplikasi bank anda).</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="products">7. Produk</h2>
+<p>Semua yang dijual di kaunter ialah <b>produk</b>. Buka senarainya dengan <b>Menu → Urus kedai › → Produk</b>
+(memerlukan kebenaran <i>Sunting produk dan kategori</i>).</p>
+
+<div class="shots">
+<figure><img src="img/ms-products.png" alt="Senarai Produk" width="240" loading="lazy"><figcaption>Produk: cari mengikut nama, SKU atau kod bar, atau imbas.</figcaption></figure>
+<figure><img src="img/ms-product-new.png" alt="Borang Produk baru" width="240" loading="lazy"><figcaption>Produk baharu: nama, harga, cara ia dijual, gambar dan warna.</figcaption></figure>
+</div>
+
+<h3 id="product-list">Senarai produk</h3>
+<ul>
+<li><b>Cari</b> mengikut nama, SKU atau kod bar. Dua digit atau lebih menjumpai kod bar yang bermula dengan digit itu;
+perkataan menjumpai nama (setiap perkataan boleh menjadi permulaan sesuatu perkataan dalam nama, dalam apa-apa
+susunan). Mengimbas kod bar di skrin ini memasukkannya ke dalam kotak carian.</li>
+<li>Setiap baris menunjukkan harga (bagi produk yang ditimbang, harga sekilogram), <b>Stok</b>, dan <b>TERSEMBUNYI</b> bagi
+produk yang disembunyikan dari skrin jualan. Ketik baris untuk menyuntingnya.</li>
+<li><b>+</b> menambah produk. Untuk memasukkan banyak produk, ketik <b>Simpan dan tambah lagi</b> sebagai ganti
+<b>Simpan</b>: produk itu disimpan dan borang baharu dibuka dengan kategori dan cukai yang sama.</li>
+<li>Mencari kod bar yang tiada pada mana-mana produk? <i>“Tiada produk dengan kod bar … Ketik di sini untuk menambahnya.”</i>
+membuka produk baharu dengan kod bar itu sudah diisi.</li>
+<li><b>⋮</b> mengandungi <b>Import produk (CSV)</b>, <b>Eksport produk (CSV)</b> dan <b>Contoh fail CSV</b> — lihat
+<a href="#csv">Banyak produk sekali gus (CSV)</a>.</li>
+</ul>
+<div class="tip"><p>Cara paling cepat untuk menambah produk ialah di kaunter: imbas kod barnya. Jika kaunter belum
+mengenalinya, ia menawarkan <b>Tambah produk</b>; selepas disimpan, produk itu juga masuk ke bil.</p></div>
+
+<h3 id="product-form">Borang produk</h3>
+<p>Hanya <b>Nama</b> dan <b>Harga jualan</b> yang wajib. Yang lain boleh ditambah kemudian.</p>
+<dl>
+<dt>Nama</dt><dd>Nama yang ditunjukkan pada bil, resit dan laporan.</dd>
+<dt>Harga jualan</dt><dd>Harga seunit (atau sekilogram bagi produk yang ditimbang). Taip seperti
+<code>12.50</code>. Ia boleh dibiarkan kosong hanya bagi produk yang harganya ditaip di kaunter. Bagi produk unit,
+harga 0.00 menyebabkan kaunter meminta harga setiap kali. Produk yang ditimbang mesti ada harga sekilogram: pada harga
+0.00 ia dijual percuma.</dd>
+<dt>Dijual mengikut</dt><dd><b>Unit / pek</b> (yang biasa), <b>Berat</b> (kaunter meminta berat, harganya bagi
+sekilogram), atau <b>Harga dimasukkan di kaunter</b> (juruwang menaip harga setiap kali — untuk barang seperti
+<i>kuih</i> atau barang longgar yang berlainan harga). Lihat <a href="#sold-by">Cara produk dijual</a>.</dd>
+<dt>Unit (pcs, kg, pek…)</dt><dd>Dipaparkan selepas kuantiti dan harga, contohnya <i>RM8.00/kg</i>. Memilih
+<b>Berat</b> menukar <i>pcs</i> kepada <i>kg</i> dengan sendirinya.</dd>
+<dt>Di skrin jualan</dt><dd><b>Gambar</b> (<b>Ambil foto</b>, <b>Pilih gambar</b>, <b>Buang
+gambar</b>) dan <b>Warna</b> untuk petak produk itu. Lihat <a href="#pictures">Gambar dan warna</a>.</dd>
+<dt>Kod bar</dt><dd><b>Tambah kod bar</b> (taip, atau ketik <b>Imbas</b> untuk menggunakan kamera). Satu produk boleh
+ada beberapa kod bar. Anda juga boleh terus mengimbas dengan pengimbas kod bar semasa borang dibuka: kod itu ditambah
+(“Kod bar … ditambah”). <b>Tambah kod bar pek</b> adalah untuk kod bar pada karton atau pek berbilang — lihat
+<a href="#barcodes">Kod bar, pek dan karton</a>.</dd>
+<dt>PLU timbangan</dt><dd>Kod item yang dicetak oleh penimbang anda pada labelnya — lihat
+<a href="#scale-labels">Label penimbang</a>.</dd>
+<dt>Maklumat lanjut</dt><dd>
+<b>Kategori</b> (tab tempat produk itu muncul di kaunter),
+<b>Cukai</b> (hanya jika anda mengenakan cukai di kaunter — lihat <a href="#tax">Kadar cukai</a>),
+<b>Harga kos</b> (harga yang anda bayar kepada pembekal untuk seunit atau sekilogram; digunakan untuk keuntungan dan
+nilai stok, dan dikemas kini dengan sendirinya apabila anda menerima penghantaran),
+<b>SKU / kod item</b> (kod anda sendiri; boleh dicari, dan mengimbasnya juga menjumpai produk itu),
+<b>Jejak stok</b> (hidup secara lalai; matikan untuk barang yang anda tidak kira, seperti perkhidmatan atau beg plastik),
+<b>Amaran stok rendah pada</b> (memberi amaran apabila stok turun ke paras ini; kosong atau 0 = tiada amaran),
+<b>Stok permulaan</b> (produk baharu sahaja: berapa banyak yang ada di rak sekarang).</dd>
+<dt>Papar dalam carian dan katalog</dt><dd>Matikan untuk <b>menyembunyikan</b> produk daripada petak, carian dan
+carian nama dalam semak harga. Kod bar produk yang tersembunyi <b>masih boleh diimbas dan dijual</b>; produk itu kekal dalam senarai
+produk dengan tanda <b>TERSEMBUNYI</b>. Gunakan ini untuk produk yang hanya dijual dengan mengimbas, atau yang disimpan
+untuk kemudian. Untuk menghentikan sesuatu produk daripada dijual langsung, padamkannya: jualan lepasnya kekal dalam
+laporan.</dd>
+</dl>
+<p>Bagi produk sedia ada, borang juga menunjukkan <b>Stok sekarang</b>, <b>Sejarah stok</b> dan <b>Laras
+stok</b>, serta butang <b>Padam</b>. Memadam akan bertanya dahulu (<i>“Jualan lalu kekal dengan barisnya.”</i>); selepas
+itu kod barnya tidak lagi boleh diimbas. Jika sandaran Google Drive dihidupkan, produk itu hilang dari setiap kaunter.</p>
+<p>Apabila kod bar yang anda tambah sudah digunakan oleh produk lain, aplikasi bertanya <i>“Kod bar sudah digunakan…
+Simpan juga?”</i>. Jika anda tetap menyimpannya, imbasan akan memilih produk yang kod barnya ditambah terakhir.</p>
+<div class="note"><p>Perubahan yang dibuat dalam borang ini pada harga, “dijual mengikut”, cukai, kos dan kod bar (serta
+<b>Tukar harga</b> dalam Semak harga) dicatat dalam <a href="#activity-log">Log aktiviti</a> sebagai <i>Harga produk
+diubah</i>, bersama nama orang yang membuatnya. Tiada skrin sejarah harga yang berasingan: tapis Log aktiviti sebagai
+gantinya. Import CSV dicatat sekali sahaja, sebagai <i>Produk diimport</i>.</p></div>
+
+<h3 id="sold-by">Cara produk dijual</h3>
+<div class="table-wrap"><table>
+<tr><th>Dijual mengikut</th><th>Di kaunter</th></tr>
+<tr><td>Unit / pek</td><td>Satu imbasan atau ketikan menambah 1. Mengimbas produk yang sama sekali lagi menambah 1 lagi pada
+baris yang sama.</td></tr>
+<tr><td>Berat</td><td>Kaunter meminta berat pada pad kekunci. Digit diisi dari kanan dengan tiga tempat perpuluhan:
+menaip <code>1 2 5 0</code> memberi 1.250 kg. Label penimbang sudah membawa berat atau
+harga.</td></tr>
+<tr><td>Harga dimasukkan di kaunter</td><td>Petaknya menunjukkan <b>Masukkan harga</b>; juruwang menaip harga setiap
+kali.</td></tr>
+</table></div>
+<p>Jualan tidak pernah disekat oleh stok: produk boleh dijual walaupun aplikasi menganggap stoknya sudah habis.
+Stok mungkin menjadi kurang daripada sifar sehingga penghantaran atau kiraan seterusnya membetulkannya.</p>
+
+<h3 id="barcodes">Kod bar, pek dan karton</h3>
+<ul>
+<li>Kod bar dikemaskan semasa disimpan: ruang dan sengkang dalam EAN/UPC dibuang, angka 0 di hadapan yang dibuang
+oleh hamparan dikembalikan, dan GTIN karton 14 digit yang bermula dengan 0 disimpan sebagai EAN-13nya.</li>
+<li><b>Tambah kod bar pek</b> meminta <b>Kod bar</b>, <b>Bilangan unit dalam pek</b> (2 atau lebih) dan <b>Harga pek</b>
+pilihan (kosong = unit × harga). Mengimbas kod bar itu di kaunter memasukkan satu baris
+“<i>nama</i> x24” pada harga pek dan menolak 24 unit daripada stok. Semasa menerima stok, mengimbas kod bar karton
+menambah semua unitnya sekali gus.</li>
+</ul>
+
+<h3 id="scale-labels">Label penimbang</h3>
+<p>Banyak kedai menimbang barang longgar pada penimbang yang mencetak label. Kod bar pada label membawa kod item (PLU)
+dan berat atau harga. LekasPOS boleh membaca label ini:</p>
+<ol>
+<li>Pada setiap produk yang ditimbang, taip kod item penimbang dalam <b>PLU timbangan</b> (sifar di hadapan tidak penting).</li>
+<li>Semak format label dalam <b>Tetapan → Kedai &amp; resit → Label penimbang → Format label</b>.
+Format lalai sesuai untuk kebanyakan penimbang: <code>20IIIIIWWWWWC</code> (awalan 20, kod item 5 digit, berat dalam gram)
+dan <code>21IIIIIPPPPPC</code> (awalan 21, kod item, harga dalam sen). Dalam sesuatu format, digit ialah awalan tetap,
+<code>I</code> kod item, <code>W</code> berat dalam gram, <code>P</code> harga dalam sen,
+<code>X</code> digit yang diabaikan dan <code>C</code> digit semak. Beberapa format dipisahkan dengan koma.</li>
+<li>Imbas label di kaunter: label berat memberi berat × harga sekilogram; label harga memberi harga yang dicetak
+dengan tepat. Label yang dicetak dengan berat 0 atau harga 0.00 menyebabkan kaunter bertanya.</li>
+</ol>
+
+<h3 id="pictures">Gambar dan warna</h3>
+<p>Gambar dan warna membantu juruwang mencari barang dengan cepat di skrin jualan.</p>
+<ul>
+<li><b>Ambil foto</b> membuka aplikasi kamera telefon (kali pertama, Android meminta kebenaran kamera).
+<b>Pilih gambar</b> mengambil gambar dari galeri, fail atau Google Drive.</li>
+<li>Gambar dijadikan segi empat sama yang kecil (bahagian tengah foto dikekalkan) supaya ia tidak memenuhkan telefon.
+Jika sandaran Google Drive dihidupkan, gambar itu sampai ke kaunter lain juga.</li>
+<li><b>Warna</b>: dua belas warna atau <b>Tiada warna</b>. Produk tanpa warnanya sendiri mengambil warna kategorinya.
+Petak berwarna menunjukkan teks putih.</li>
+<li>Saiz petak ditetapkan bagi setiap kaunter dalam <b>Tetapan → Saiz barang di skrin jualan</b>.</li>
+</ul>
+
+<h3 id="categories">Kategori</h3>
+<p><b>Menu → Urus kedai › → Kategori</b>. Kategori menjadi tab dalam senarai barang di skrin jualan
+(selepas <b>Laris</b> dan <b>Semua</b>) dan mengumpulkan jualan dalam laporan.</p>
+<ul>
+<li><b>+</b> menambah kategori (nama dan warna). Ketik kategori untuk menukar nama atau warnanya.</li>
+<li><b>Tekan dan tahan</b> (tekan lama) kategori untuk memadamnya. Produknya kekal, tanpa kategori.</li>
+<li>Kategori disenaraikan mengikut abjad. Memindahkan produk ke kategori lain turut memindahkan jualan lepasnya
+dalam laporan kategori.</li>
+</ul>
+
+<h3 id="tax">Kadar cukai</h3>
+<p><b>Menu → Urus kedai › → Kadar cukai</b> (memerlukan <i>Ubah tetapan</i>). Kebanyakan kedai runcit kecil di
+Malaysia tidak mengenakan cukai di kaunter: jika begitu, biarkan senarai ini kosong dan jangan pilih apa-apa di bawah
+<b>Cukai</b> pada produk.</p>
+<ul>
+<li><b>+</b> menambah kadar: nama (contohnya <i>SST</i>) dan <b>Kadar dalam %</b>. Ketik kadar untuk mengubahnya;
+tekan lama untuk memadamnya (produk yang menggunakannya tidak lagi dikenakan cukai).</li>
+<li>Berikan kadar kepada setiap produk yang dikenakan cukai dalam borang produk (<b>Maklumat lanjut → Cukai</b>).</li>
+<li><b>Tetapan → Kedai &amp; resit → Harga termasuk cukai</b> (hidup secara lalai) menentukan sama ada harga di rak
+anda sudah termasuk cukai (cukai dikira daripada harga itu) atau cukai ditambah di atas harga di kaunter.</li>
+<li>Resit mencetak ringkasan cukai dengan nama dan amaun bagi setiap kadar.</li>
+</ul>
+
+<h3 id="payment-methods">Kaedah bayaran</h3>
+<p><b>Menu → Urus kedai › → Tetapan → Kaedah bayaran</b> (memerlukan <i>Ubah tetapan</i>). Aplikasi bermula dengan
+<b>Tunai</b>, <b>Kad</b>, <b>E-dompet / QR</b> dan <b>Kredit pelanggan</b>. Tambah kaedah anda sendiri, seperti DuitNow atau
+Touch ’n Go, dengan <b>+</b>:</p>
+<ul>
+<li><b>Nama (pada resit)</b> dan <b>Jenis</b>: <i>E-dompet atau QR (jumlah tepat)</i>, <i>Kad (jumlah tepat)</i> atau
+<i>Lain-lain (jumlah tepat)</i>. Semuanya membayar amaun tepat; hanya tunai yang dibundarkan kepada 5 sen dan memberi baki.</li>
+<li><b>Membuka laci wang</b> — tandakan untuk kaedah yang wangnya dimasukkan ke dalam laci.</li>
+<li><b>Dipaparkan di kaunter</b> — nyahtanda untuk menyembunyikan kaedah. Kaedah tidak boleh dipadam (jualan lama masih
+menyebut namanya): sembunyikan sahaja.</li>
+<li>LekasPOS tidak bersambung dengan terminal kad atau e-dompet: terima bayaran di terminal atau papan QR anda
+seperti biasa, kemudian ketik kaedah itu dalam LekasPOS untuk merekodkannya. Setiap kaedah dikira berasingan dalam
+laporan syif dan laporan jualan.</li>
+<li>Menukar nama kaedah yang sudah digunakan juga menukar namanya pada salinan resit lama dan laporan; aplikasi
+memberi amaran dahulu.</li>
+</ul>
+
+<h3 id="csv">Banyak produk sekali gus (CSV)</h3>
+<p>Untuk memasukkan atau mengubah banyak produk, gunakan hamparan (Google Sheets atau Excel) dan fail CSV.</p>
+<ol>
+<li>Dalam <b>Produk → ⋮</b> ketik <b>Contoh fail CSV</b> (atau <b>Eksport produk (CSV)</b> untuk bermula daripada
+produk sedia ada anda) dan <b>Kongsi</b> kepada diri sendiri atau <b>Simpan sebagai fail</b>.</li>
+<li>Buka fail itu dalam Google Sheets atau Excel. Isi satu baris bagi setiap produk. Formatkan lajur kod bar sebagai <b>teks</b>;
+jika tidak, hamparan akan menukar kod bar menjadi nombor seperti 9.55E+12.</li>
+<li>Simpan atau muat turunnya <b>sebagai CSV</b> (dalam Excel pilih <i>CSV UTF-8</i> untuk mengekalkan huruf Melayu, Cina
+atau Tamil). Fail Excel (.xlsx) tidak boleh dibaca.</li>
+<li>Dalam <b>Produk → ⋮</b> ketik <b>Import produk (CSV)</b> dan pilih fail itu. Pratonton menunjukkan produk
+baharu, produk yang akan dikemas kini dan setiap baris yang bermasalah (dengan nombor barisnya). Belum ada apa-apa
+yang diubah.</li>
+<li>Ketik <b>Import sekarang</b>. Import diteruskan walaupun anda meninggalkan skrin itu; jika aplikasi tertutup separuh jalan,
+mengimport fail yang sama sekali lagi akan menyambung dari tempat ia berhenti.</li>
+</ol>
+<div class="table-wrap"><table>
+<tr><th>Lajur</th><th>Apa yang perlu ditulis</th></tr>
+<tr><td><code>name</code> (wajib)</td><td>Nama produk (hingga 120 aksara).</td></tr>
+<tr><td><code>price</code> (wajib)</td><td>Harga jualan, seperti <code>12.50</code> atau <code>RM12.50</code>.</td></tr>
+<tr><td><code>barcodes</code></td><td>Satu atau lebih, dipisahkan dengan <code>|</code> atau <code>;</code>.</td></tr>
+<tr><td><code>sku</code></td><td>Kod item anda.</td></tr>
+<tr><td><code>category</code></td><td>Nama kategori; nama baharu mencipta kategori baharu.</td></tr>
+<tr><td><code>unit</code></td><td>pcs, kg, pek…</td></tr>
+<tr><td><code>cost</code></td><td>Harga kos.</td></tr>
+<tr><td><code>tax</code></td><td>Nama atau peratusan kadar cukai (<code>SST</code>, <code>6%</code>), atau <code>none</code>. Kadar itu mesti sudah wujud dalam Kadar cukai.</td></tr>
+<tr><td><code>sold by</code></td><td><code>piece</code>, <code>weight</code> atau <code>open price</code>.</td></tr>
+<tr><td><code>track stock</code>, <code>active</code></td><td><code>yes</code> atau <code>no</code> (<code>active</code> = dipaparkan di kaunter).</td></tr>
+<tr><td><code>stock</code></td><td>Bagi produk baharu, stok permulaan.</td></tr>
+<tr><td><code>low stock</code></td><td>Paras amaran stok rendah.</td></tr>
+<tr><td><code>id</code></td><td>Ditulis oleh eksport (<code>#…</code>); kekalkannya supaya produk yang betul dikemas kini.</td></tr>
+</table></div>
+<p>Tajuk lajur juga boleh ditulis dalam bahasa Melayu atau perkataan lain yang biasa (<i>nama</i>, <i>harga</i>, <i>kod bar</i>,
+<i>kategori</i>, <i>kos</i>, <i>stok</i>, <i>selling price</i>, <i>qty</i>…), dalam huruf besar atau kecil.</p>
+<ul>
+<li>Baris dipadankan dengan produk sedia ada mengikut <code>id</code>, kemudian kod bar, kemudian SKU. Jika tiada
+padanan, ia dianggap produk baharu. Jadi, import sesuatu fail sekali sahaja: produk tanpa id, kod bar atau SKU akan
+dicipta dua kali. Untuk mengubah produk kemudian, eksport produk dahulu dan sunting fail itu.</li>
+<li>Bagi produk sedia ada, nama dan harga sentiasa diambil daripada fail — jadi mulakan dengan
+<b>Eksport produk (CSV)</b> yang baharu, jangan fail lama. Mana-mana <b>sel kosong yang lain tidak mengubah
+apa-apa</b>. Kod bar dalam fail ditambah, tidak pernah dibuang. Import tidak pernah memadam apa-apa.</li>
+<li>Stok: produk baharu mendapat lajur <code>stock</code> sebagai stok permulaannya. Stok produk sedia ada hanya berubah
+jika anda menghidupkan <b>Tetapkan juga stok produk sedia ada mengikut kuantiti dalam fail</b> (direkodkan
+sebagai kiraan stok). Stok memerlukan kebenaran <i>Terima, laras dan kira stok</i>.</li>
+<li>Baris yang namanya bermula dengan <code>EXAMPLE</code> atau <code>CONTOH</code> dilangkau. Sehingga 100,000 baris
+bagi setiap fail.</li>
+<li>Fail CSV tidak boleh menetapkan kod bar pek, PLU timbangan, gambar atau warna: tambah semua itu dalam borang produk.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="promotions">8. Promosi</h2>
+<p><b>Menu → Urus kedai › → Promosi</b>. Promosi ialah tawaran yang digunakan oleh kaunter <b>dengan sendirinya</b> apabila
+barang yang betul ada dalam bil — juruwang tidak perlu buat apa-apa.</p>
+<div class="shots">
+<figure><img src="img/ms-promotions.png" alt="Senarai Promosi" width="240" loading="lazy"><figcaption>Promosi: tawaran yang digunakan kaunter dengan sendirinya.</figcaption></figure>
+<figure><img src="img/ms-promotion-edit.png" alt="Promosi baharu" width="240" loading="lazy"><figcaption>Harga beli banyak: berapa banyak, harga untuk semuanya, dan produknya.</figcaption></figure>
+</div>
+<div class="table-wrap"><table>
+<tr><th>Jenis</th><th>Contoh</th><th>Apa yang pelanggan dapat</th></tr>
+<tr><td><b>Harga beli banyak atau harga istimewa</b></td><td>“Milo 3 untuk RM10”</td><td>Setiap kumpulan 3 berharga RM10.
+Barang ke-4 dijual pada harga biasa.</td></tr>
+<tr><td><b>Harga beli banyak atau harga istimewa</b> dengan <b>Bilangan dibeli</b> = 1</td><td>“Harga istimewa RM3.99”</td><td>Harga
+istimewa untuk satu barang, contohnya selama seminggu.</td></tr>
+<tr><td><b>Beli X percuma Y</b></td><td>“Beli 1 percuma 1”</td><td>Dalam setiap set 2, yang lebih murah
+adalah percuma.</td></tr>
+</table></div>
+<h3 id="promotion-new">Membuat promosi</h3>
+<ol>
+<li>Ketik <b>+</b>. Taip <b>Nama</b> (nama ini dicetak pada bil dan resit, cth. <i>Milo 3 untuk RM10</i>).</li>
+<li>Pilih <b>Jenis</b>, kemudian <b>Bilangan dibeli</b> dan sama ada <b>Harga untuk semuanya</b> atau <b>Bilangan
+percuma</b>.</li>
+<li><b>Tambah produk</b> — satu atau lebih. Sebarang campuran produk ini dikira untuk tawaran itu (contohnya
+“mana-mana 3 perisa untuk RM10”).</li>
+<li><b>Tarikh</b> (pilihan): <b>Bermula</b> dan <b>Tamat</b> (hari terakhir tawaran berjalan). Tanpa tarikh, tawaran
+berjalan sehingga anda mematikannya.</li>
+<li>Biarkan <b>Berjalan</b> dihidupkan dan ketik <b>Simpan</b>.</li>
+</ol>
+<h3 id="promotion-rules">Perkara yang perlu diketahui</h3>
+<ul>
+<li>Hanya produk yang <b>dijual mengikut unit</b> layak. Barang yang ditimbang, barang yang harganya dimasukkan di kaunter,
+kod bar pek dan label penimbang tidak termasuk.</li>
+<li>Baris yang diberi diskaun manual atau harga yang diubah terkeluar daripada tawaran (perubahan anda yang diutamakan).</li>
+<li>Apabila barang yang berlainan harga dicampur, pelanggan mendapat penjimatan yang lebih besar. Tawaran tidak pernah
+menjadikan sesuatu kumpulan lebih mahal daripada harga biasanya.</li>
+<li>Penjimatan ditunjukkan pada baris bil (“· <i>nama promosi</i> −RM…”) dan pada resit. Diskaun bil dikira
+selepas promosi.</li>
+<li>Bayaran balik satu barang daripada promosi membayar balik harga sebenar barang itu.</li>
+<li>Jika satu produk berada dalam dua promosi yang sedang berjalan, hanya satu daripadanya yang digunakan.</li>
+<li><b>Semak harga</b> menunjukkan promosi yang digunakan pada sesuatu produk.</li>
+<li>Jika ada beberapa kaunter, kemas kini <b>setiap</b> kaunter: kaunter yang menggunakan LekasPOS 1.6.1 atau lebih lama
+tidak menggunakan harga istimewa.</li>
+<li>Matikan <b>Berjalan</b> untuk menghentikan tawaran buat sementara; padamkannya dengan <b>Padam</b>. Jualan yang sudah dibuat kekal dengan harganya.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="stock">9. Stok</h2>
+<p><b>Menu → Urus kedai › → Inventori</b>, untuk kakitangan yang mempunyai kebenaran <i>Terima, laras dan kira stok</i>
+(pemilik dan pengurus secara lalai).</p>
+<figure class="wide"><img src="img/ms-inventory.png" alt="Skrin Inventori" width="240" loading="lazy"><figcaption>Inventori: semua tentang stok di satu tempat.</figcaption></figure>
+
+<h3 id="how-stock">Bagaimana aplikasi mengetahui stok anda</h3>
+<p>Stok sesuatu produk = <b>kiraan terakhir</b> + penghantaran dan pelarasan sejak itu − jualan sejak itu +
+bayaran balik yang dikembalikan ke rak. Jualan yang dibatalkan tidak dikira. Stok boleh menjadi kurang daripada sifar
+(jualan tidak pernah disekat); kiraan stok membetulkannya.</p>
+<p>Jualan tidak pernah mengubah stok produk dengan <b>Jejak stok</b> dimatikan, dan produk itu tidak mendapat amaran stok
+rendah. Jangan terima atau kira stok produk sebegini: angka stoknya hanya akan terus bertambah.</p>
+
+<h3 id="receive">Terima stok (penghantaran)</h3>
+<ol>
+<li><b>Inventori → Terima stok</b>.</li>
+<li>Ketik butang pembekal untuk memilih <b>Pembekal</b> (atau <b>Pembekal baru</b>), dan taip
+<b>No. invois / DO</b> jika mahu (anda boleh mengimbas kod bar pada DO ke dalamnya).</li>
+<li>Imbas setiap produk: <b>setiap imbasan menambah satu unit</b> (<b>kod bar karton</b> menambah semua unitnya). Atau
+ketik <b>Tambah item</b>, pilih produk itu dan taip bilangannya. Produk yang ditimbang sentiasa meminta berat. Mengimbas
+atau menambah produk yang sama sekali lagi menambah pada barisnya.</li>
+<li>Ketik baris untuk menukar <b>Kuantiti</b>, <b>Kos seunit</b>, atau <b>Amaun baris (daripada
+invois)</b> — menaip amaun dalam invois memastikan jumlahnya tepat dan mengira kos seunit dengan sendirinya. <b>Buang</b>
+mengeluarkan baris itu.</li>
+<li>Ketik <b>Simpan penghantaran</b> dan sahkan. Stok bertambah dan <b>harga kos</b> setiap produk dikemas kini.</li>
+</ol>
+<div class="note"><p>Harga kos yang baharu ialah <b>purata</b> bagi stok yang ada dan penghantaran itu (purata
+bergerak). Jika tiada stok, belum ada kos, atau produk itu tidak menjejak stok, harga kos menjadi kos
+penghantaran itu.</p></div>
+<div class="tip"><p>Penghantaran yang separuh dimasukkan tetap disimpan walaupun telefon berdering, aplikasi tertutup
+atau telefon dimulakan semula: buka <b>Terima stok</b> sekali lagi untuk meneruskan. <b>×</b> (Buang) membuangnya.
+Penghantaran yang sudah disimpan tidak boleh disunting atau dipadam; gunakan <a href="#adjust">Laras stok</a> untuk membetulkan kesilapan.</p></div>
+
+<h3 id="adjust">Laras stok</h3>
+<p>Untuk stok yang keluar atau masuk tanpa jualan atau penghantaran: <b>Inventori → Laras stok</b> → pilih
+produk (atau <b>Laras stok</b> dalam borang produk).</p>
+<ul>
+<li>Pilih sebab: <b>Rosak</b>, <b>Luput</b>, <b>Hilang</b>, <b>Kecurian</b>, <b>Kegunaan sendiri</b>,
+<b>Dipulangkan kepada pembekal</b> (semua ini sentiasa mengurangkan stok), <b>Dijumpai</b> (sentiasa menambah), atau <b>Pembetulan</b> /
+<b>Lain-lain</b> (pilih <b>Keluarkan</b> atau <b>Tambah</b>).</li>
+<li>Taip kuantiti, nota (pilihan), dan <b>Simpan</b>.</li>
+<li>Setiap pengurangan dicatat dalam <a href="#activity-log">Log aktiviti</a> sebagai <i>Stok dihapus kira</i> bersama
+nilainya pada harga kos, supaya pemilik nampak stok yang dikeluarkan secara manual.</li>
+</ul>
+
+<h3 id="count">Kiraan stok (stock take)</h3>
+<ol>
+<li><b>Inventori → Kiraan stok → +</b>. Beri nama (tarikh hari ini sudah diisi) dan pilih <b>Semua
+produk</b> atau satu kategori. Ketik <b>Mula</b>.</li>
+<li>Imbas atau ketik produk, taip <b>jumlah</b> yang ada di rak, dan ketik OK. OK tanpa menaip apa-apa merekodkan 0.</li>
+<li>Mengira produk sekali lagi <b>menggantikan</b> kiraannya — jumlahkan dahulu produk yang disimpan di dua tempat.
+Produk yang tidak anda kira kekal dengan stoknya.</li>
+<li>Setiap kiraan berkuat kuasa <b>serta-merta</b>, jadi anda boleh terus menjual semasa mengira. Beberapa orang boleh
+mengira pada masa yang sama di kaunter yang berlainan.</li>
+<li><b>Laporan kiraan</b> menunjukkan kuantiti <i>dijangka</i> dan <i>dikira</i> bagi setiap produk serta nilai
+<b>lebih</b>, <b>kurang</b> dan <b>bersih</b> pada harga kos.</li>
+<li>Apabila selesai, buka laporan itu dan ketik <b>×</b> (<b>Tamatkan kiraan</b>). Menamatkan kiraan hanya menutupnya;
+stok sudah pun ditetapkan.</li>
+</ol>
+
+<h3 id="low-stock">Stok rendah</h3>
+<p><b>Inventori → Stok rendah</b> menyenaraikan produk yang berada pada atau di bawah paras <b>Amaran stok rendah</b>
+(tetapkan dalam borang produk). Selepas jualan, kakitangan yang dibenarkan mengurus stok juga melihat
+<i>“Hampir habis: …”</i> pada hasil jualan.</p>
+
+<h3 id="suppliers">Pembekal dan penghantaran</h3>
+<ul>
+<li><b>Inventori → Pembekal</b>: nama, orang untuk dihubungi, telefon, e-mel, alamat dan nota. Ketik untuk menyunting,
+tekan lama untuk memadam (rekod penghantaran lalu kekal). <b>Penghantaran</b> dalam pembekal menunjukkan apa yang
+datang daripadanya.</li>
+<li><b>Inventori → Penghantaran</b>: semua yang diterima, yang terbaru dahulu; ketik satu untuk melihat baris dan jumlahnya.</li>
+</ul>
+
+<h3 id="stock-history">Sejarah stok dan perubahan stok</h3>
+<ul>
+<li><b>Sejarah stok</b> (dari borang produk, atau ketik produk dalam Stok rendah): setiap jualan, bayaran balik,
+penghantaran, pelarasan dan kiraan bagi satu produk, dengan baki stok selepas setiap satu. Ketik jualan untuk membuka resitnya.</li>
+<li><b>Inventori → Perubahan stok</b>: setiap penghantaran, pelarasan, hapus kira dan stok permulaan bagi semua produk.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="staff">10. Kakitangan, PIN dan peranan</h2>
+<p><b>Menu → Urus kedai › → Tetapan → Kakitangan</b> (perlu kebenaran <i>Urus kakitangan dan peranan</i> — secara lalai hanya pemilik).</p>
+<figure class="wide"><img src="img/ms-staff.png" alt="Skrin Kakitangan" width="240" loading="lazy"><figcaption>Kakitangan: selagi belum ada PIN, aplikasi berjalan sebagai pemilik.</figcaption></figure>
+
+<h3 id="pin-login">Menghidupkan log masuk PIN</h3>
+<p>Selagi tiada sesiapa yang mempunyai PIN, aplikasi berjalan sebagai pemilik dengan semua kebenaran — sesuai untuk kedai
+yang diuruskan seorang diri. Untuk memberi setiap orang log masuk sendiri:</p>
+<ol>
+<li>Tetapan → Kakitangan → ketik <b>Pemilik</b>. Untuk menggunakan nama anda sendiri, taip nama itu dan ketik
+<b>Simpan</b>, kemudian ketik pemilik sekali lagi. Ketik <b>Tetapkan PIN</b> dan taip PIN 4–6 digit dua kali. Elakkan
+1234 atau tarikh lahir.</li>
+<li>Aplikasi memaparkan <b>Kod pemulihan pemilik</b> (contohnya <code>7KQM-3HXP-9RTA</code>). <b>Catat kod ini dan simpan di
+tempat selamat</b>: ia ditunjukkan sekali sahaja. Tanpa kod ini, hanya pemilik lain boleh memberi pemilik PIN baharu. Ketik
+<b>Saya sudah catat</b>.</li>
+<li>Log masuk PIN kini hidup dan anda sudah log masuk. Tambah setiap orang dengan <b>+</b> (<b>Kakitangan baharu</b>): nama, <b>Peranan</b>,
+<b>Aktif (boleh log masuk)</b>, kemudian PIN mereka.</li>
+</ol>
+<p>PIN pertama mestilah PIN pemilik. Sekurang-kurangnya seorang pemilik yang boleh log masuk akan sentiasa kekal: aplikasi tidak
+membenarkan PIN, peranan atau akses pemilik yang terakhir dibuang.</p>
+
+<h3 id="sign-in">Log masuk dan mengunci kaunter</h3>
+<ul>
+<li>Skrin log masuk bertanya <b>Siapa yang menggunakan kaunter?</b> Ketik nama anda dan taip PIN anda. <b>Bukan anda?</b> membawa anda
+kembali ke senarai nama.</li>
+<li>Selepas <b>5 kali PIN salah</b> bagi seseorang, kaunter membuatnya menunggu 30 saat, kemudian 1, 2, 4, 8 dan paling lama 15
+minit selepas setiap PIN salah yang berikutnya. Menukar jam telefon tidak memendekkan masa menunggu. Mulai PIN salah
+yang ke-5, setiap satu direkodkan dalam Log aktiviti (<i>Terlalu banyak PIN salah</i>).</li>
+<li>Kunci kaunter melalui nama anda di bahagian atas → <b>Kunci / tukar pengguna</b>, atau <b>Menu → Kunci / tukar pengguna</b>. Nama
+anda di bahagian atas juga menawarkan <b>Tukar PIN saya</b>.</li>
+<li>Kaunter terkunci sendiri selepas <b>5 minit</b> tidak digunakan. Tukar tetapan ini bagi setiap kaunter di Kakitangan → <b>⋮ → Bila kaunter
+dikunci</b>: selepas 1, 2, 5, 10 atau 30 minit tidak digunakan, <b>selepas setiap jualan</b> (sesuai untuk kaunter yang dikongsi beberapa
+orang), atau <b>hanya apabila seseorang menguncinya</b>. Kaunter tidak akan terkunci di tengah-tengah pembayaran.</li>
+</ul>
+
+<h3 id="forgot-pin">Lupa PIN</h3>
+<ul>
+<li>Juruwang atau pengurus: pemilik (atau sesiapa yang dibenarkan mengurus kakitangan) menetapkan PIN baharu di Tetapan → Kakitangan → orang
+itu → <b>Tukar PIN</b>.</li>
+<li>Pemilik: di skrin log masuk, pilih pemilik → <b>Lupa PIN?</b> → taip kod pemulihan → taip PIN baharu dua kali. Kakitangan → <b>⋮ → Kod
+pemulihan baharu</b> membuat kod baharu (kod lama tidak lagi berfungsi).</li>
+</ul>
+
+<h3 id="roles">Peranan dan kebenaran</h3>
+<p>Setiap orang ada satu peranan. <b>Kakitangan → ⋮ → Peranan</b> menyenaraikan semua peranan; ketik satu peranan untuk mengubah apa yang
+<b>Boleh</b> dilakukannya, atau tambah peranan anda sendiri dengan <b>+</b> (contohnya “Juruwang kanan”).</p>
+<div class="table-wrap"><table>
+<tr><th>Kebenaran</th><th>Membenarkan</th><th>Pemilik</th><th>Pengurus</th><th>Juruwang</th></tr>
+<tr><td>Beri diskaun</td><td>Diskaun bil dan diskaun barang</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Ubah harga dalam bil</td><td>Mengubah harga barang dalam bil</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Batalkan jualan</td><td>Membatalkan jualan atau bayaran balik</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Bayaran balik</td><td>Bayaran balik dan pemulangan barang</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Cetak salinan resit</td><td>Salinan resit dan berkongsi resit lama</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Buka laci wang</td><td>Membuka laci tanpa jualan</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Wang masuk, wang keluar dan simpanan</td><td>Pergerakan tunai semasa syif</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Lihat tunai dijangka dan laporan syif</td><td>Laporan syif, syif lepas, lebih/kurang</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Urus pelanggan, terima bayaran hutang</td><td>Tambah/sunting pelanggan, bayaran hutang</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Jual secara kredit</td><td>Bayar dengan kredit pelanggan dalam had</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Melebihi had kredit, laraskan baki</td><td>Jualan melebihi had, had kredit, pelarasan baki</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Sunting produk dan kategori</td><td>Produk, kategori, promosi, CSV, perubahan harga dalam Semak harga</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Terima, laras dan kira stok</td><td>Inventori</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Lihat laporan jualan, untung dan nilai stok</td><td>Laporan dan eksport</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Lihat log aktiviti</td><td>Log aktiviti, Semakan staf</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Ubah tetapan</td><td>Semua tetapan, kadar cukai, kaedah bayaran, sandaran, kemas kini, diagnostik</td><td>✓</td><td></td><td></td></tr>
+<tr><td>Urus kakitangan dan peranan</td><td>Kakitangan, PIN, peranan</td><td>✓</td><td></td><td></td></tr>
+</table></div>
+<ul>
+<li>Peranan <b>Pemilik</b> sentiasa boleh melakukan semuanya. Pemilik, Pengurus dan Juruwang tidak boleh dipadam, tetapi Pengurus dan
+Juruwang boleh diubah.</li>
+<li>Hanya pemilik boleh menjadikan seseorang pemilik atau mengubah pemilik. Tiada sesiapa boleh meluaskan peranannya sendiri atau memberi
+kebenaran yang dia sendiri tiada.</li>
+<li>Orang yang telah dibuang tidak lagi boleh log masuk; namanya kekal pada jualan dan resitnya serta dalam Log aktiviti.</li>
+</ul>
+
+<h3 id="manager-pin">Apabila juruwang memerlukan pengurus</h3>
+<ul>
+<li><b>Satu tindakan</b>: apabila juruwang mengetik sesuatu yang tidak dibenarkan oleh peranannya (contohnya <b>Benarkan</b>
+apabila melebihi had kredit pelanggan), kaunter memaparkan <b>Kelulusan pengurus</b> dengan senarai orang yang boleh melakukannya. Pengurus menaip PIN mereka; tindakan itu direkodkan atas
+nama juruwang, “diluluskan oleh” pengurus.</li>
+<li><b>Satu bil penuh</b>: <b>Menu → PIN pengurus</b>. Untuk bil ini, juruwang boleh memberi diskaun, mengubah harga dan menguruskan pelanggan
+serta kredit, sehingga bil dibayar, ditangguh atau dikosongkan (atau selepas 5 minit). Bar atas memaparkan <b>Pengurus: nama ✕</b> — ketik
+untuk menamatkan bantuan itu. Tugas lain pengurus turut dipaparkan (Buka laci wang, butang <b>Bayaran balik /
+pulangan</b> dan <b>Batalkan</b> pada resit, Urus kedai), tetapi setiap satu meminta PIN pengurus sekali lagi. Selain
+cara ini, juruwang tidak pernah melihat bayaran balik dan pembatalan.</li>
+<li><b>Skrin pengurusan</b> (Produk, Inventori, Laporan…): PIN pengurus diminta sekali dan kekal sah sehingga skrin itu ditutup.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="shifts">11. Syif dan wang tunai</h2>
+<p><b>Syif</b> ialah masa seseorang bertugas di satu kaunter, dari mengira laci wang pada permulaan hingga mengiranya semula pada
+akhirnya. Aplikasi mengira berapa banyak wang tunai yang <b>sepatutnya</b> ada dalam laci, jadi sebarang perbezaan terus kelihatan.</p>
+<figure class="wide"><img src="img/ms-shift.png" alt="Skrin Syif dan tunai" width="240" loading="lazy"><figcaption>Syif &amp; tunai: buka syif, pergerakan tunai, laporan.</figcaption></figure>
+
+<h3 id="shift-settings">Perlukah saya menggunakan syif?</h3>
+<p>Di <b>Tetapan → Kedai &amp; resit → Syif dan pelanggan</b>:</p>
+<ul>
+<li><b>Wajibkan syif dibuka untuk menerima bayaran</b> — mati secara lalai, dan hidup dengan sendirinya sebaik sahaja juruwang atau
+pengurus boleh log masuk dengan PIN. Pemilik boleh mematikannya semula; kaunter baharu yang menyertai kedai mungkin
+menghidupkannya semula, jadi semak tetapan ini selepas menambah kaunter.</li>
+<li><b>Kira laci apabila juruwang bertukar</b> — hidup secara lalai (lihat <a href="#handover">Pertukaran juruwang</a>).</li>
+</ul>
+
+<h3 id="open-shift">Membuka syif</h3>
+<p>Apabila kedai mewajibkan syif, kaunter bertanya dengan sendirinya apabila seseorang mula menggunakannya: <b>Mulakan
+syif</b>. Anda sentiasa boleh menggunakan <b>Menu → Buka syif</b>.</p>
+<ol>
+<li>Kira wang tunai dalam laci — wang kecil untuk baki pelanggan (<b>wang apungan</b>) — dan taip jumlahnya. <b>Kira wang &amp;
+syiling</b> membolehkan anda menaip bilangan setiap jenis wang kertas dan syiling sebagai ganti.</li>
+<li>Jika penutupan syif yang lepas meninggalkan sejumlah wang dalam laci, jumlah itu sudah diisi: tekan OK jika itu yang anda kira. Jika
+kiraan anda berbeza, kaunter bertanya <b>Tidak sama dengan yang ditinggalkan</b>: <b>Kira semula</b>, atau <b>Kekalkan</b> kiraan anda
+(perbezaannya direkodkan untuk pemilik).</li>
+</ol>
+
+<h3 id="cash-moves">Wang masuk, wang keluar dan simpanan wang</h3>
+<p><b>Menu → Syif &amp; tunai</b>, semasa syif dibuka di kaunter ini (perlu kebenaran <i>Wang masuk, wang keluar dan simpanan</i>):</p>
+<ul>
+<li><b>Wang masuk</b> — wang yang dimasukkan ke dalam laci (cth. tambahan wang kecil).</li>
+<li><b>Wang keluar</b> — wang yang dikeluarkan untuk sesuatu tujuan (cth. membayar pembekal); sebab wajib diisi.</li>
+<li><b>Simpanan wang</b> — wang yang dibawa ke peti besi atau ke bank semasa kedai beroperasi.</li>
+</ul>
+<p>Setiap satu membuka laci, mengubah tunai dijangka dan direkodkan bersama nama orang yang melakukannya.</p>
+
+<h3 id="close-shift">Menutup syif</h3>
+<p><b>Menu → Tutup syif</b>, dalam tiga langkah:</p>
+<ol>
+<li><b>Kira laci</b>: kira semua wang tunai dan taip jumlahnya (atau <b>Kira wang &amp; syiling</b>).</li>
+<li><b>Tinggal dalam laci</b>: berapa yang ditinggalkan sebagai wang kecil untuk syif seterusnya (sudah diisi dengan wang apungan syif ini).</li>
+<li>Semak <i>Dikira / Tinggal dalam laci / Keluarkan untuk pemilik</i>, tambah catatan jika mahu (cth. sebab wang kurang), dan
+sahkan.</li>
+</ol>
+<p>Juruwang kemudian hanya melihat <i>“Keluarkan RM… untuk pemilik dan tinggalkan RM… dalam laci”</i> (penutupan “buta” — mereka tidak
+diberitahu jumlah yang dijangka). Kakitangan yang dibenarkan melihat laporan syif mendapat <b>laporan syif</b>. Laporan
+ini dicetak dengan sendirinya jika resit dicetak selepas setiap jualan; jika tidak, ketik <b>Cetak laporan</b>.</p>
+<div class="tip"><p>Terlupa menutup syif semalam? Pada waktu pagi kaunter memaparkan <b>Syif semalam masih dibuka</b>:
+<b>Kira laci</b> menutup syif itu dan memulakan syif hari ini dengan kiraan yang sama.</p></div>
+
+<h3 id="handover">Pertukaran juruwang</h3>
+<p>Apabila seseorang log masuk ketika syif orang lain masih dibuka di kaunter itu, kaunter bertanya <b>Ambil alih
+kaunter?</b></p>
+<ul>
+<li><b>Kira laci</b> — menutup syif orang itu dengan kiraan ini dan memulakan syif anda dengan kiraan yang sama. Dengan itu, setiap orang
+hanya bertanggungjawab atas wang tunai dalam syifnya sendiri.</li>
+<li><b>Bukan sekarang</b> — anda terus menjual dalam syif orang itu; perkara ini direkodkan (<i>Jual dalam syif orang lain tanpa
+kiraan laci</i>).</li>
+</ul>
+
+<h3 id="shift-report">Laporan syif</h3>
+<p><b>Syif &amp; tunai → Laporan syif</b> (syif semasa) atau <b>Syif lepas</b> (semua kaunter). Laporan ini menunjukkan jualan, bayaran balik,
+pembatalan, diskaun, cukai, setiap kaedah bayaran, dan laci wang:</p>
+<div class="table-wrap"><table>
+<tr><th>Baris</th><th>Maksud</th></tr>
+<tr><td>Wang apungan</td><td>Wang tunai yang dikira pada permulaan syif.</td></tr>
+<tr><td>+ Jualan tunai, Bayaran balik tunai (−), Dibatalkan (tunai) (−)</td><td>Wang tunai yang diterima dan dibayar balik dalam syif ini.</td></tr>
+<tr><td>+ Wang masuk, − Wang keluar, − Simpanan wang</td><td>Pergerakan tunai.</td></tr>
+<tr><td>+ Bayaran hutang tunai</td><td>Pelanggan yang membayar hutang mereka secara tunai.</td></tr>
+<tr><td><b>Tunai dijangka</b></td><td>Jumlah yang sepatutnya ada dalam laci.</td></tr>
+<tr><td><b>Tunai dikira</b></td><td>Jumlah yang dikira semasa syif ditutup.</td></tr>
+<tr><td><b>Lebih / kurang</b></td><td>Dikira − dijangka (+ = lebih daripada yang dijangka).</td></tr>
+</table></div>
+<p>Hanya <b>Tunai</b> dikira dalam laci. Kad, e-dompet, kredit dan sebarang kaedah yang anda tambah disenaraikan di bawah
+bayaran tetapi tidak termasuk dalam tunai dijangka, walaupun kaedah itu membuka laci. Bahagian <b>Semakan</b>
+menyenaraikan perkara yang patut disemak dalam syif itu: bil dikosongkan, barang dibuang (terutamanya selepas jumlah ditunjuk),
+laci dibuka tanpa jualan, salinan resit, jualan tanpa kiraan laci, dan wang apungan yang berbeza daripada yang ditinggalkan.
+<b>Cetak laporan</b> mencetaknya.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="customers">12. Pelanggan dan kredit</h2>
+<p>Untuk kedai yang membenarkan pelanggan tetap membayar kemudian (<i>hutang</i>). Hidupkannya di <b>Tetapan → Kedai &amp; resit →
+Pelanggan dan kredit (bayar kemudian)</b>. Menu kemudian memaparkan <b>Pelanggan</b> dan skrin jualan memaparkan <b>Tambah pelanggan</b>.</p>
+
+<h3 id="customer-list">Pelanggan</h3>
+<ul>
+<li><b>Menu → Pelanggan</b>. Tajuknya menunjukkan berapa orang yang berhutang dan jumlah keseluruhan hutang. Cari mengikut nama atau
+nombor telefon (012…, 6012… dan +6012… semuanya sepadan).</li>
+<li><b>+</b> menambah pelanggan: <b>Nama</b>, telefon, e-mel, alamat, <b>No. cukai (TIN)</b> (untuk e-invois), catatan dan
+<b>Had kredit</b> — jumlah hutang paling banyak yang dibenarkan bagi pelanggan ini.</li>
+<li>Had kredit yang kosong bermakna <b>tiada had</b>: pelanggan boleh berhutang berapa banyak pun. Hanya kakitangan yang
+mempunyai kebenaran <i>Melebihi had kredit</i> melihat ruangan ini, jadi semak had kredit pelanggan yang ditambah oleh
+juruwang.</li>
+<li>Ketik seorang pelanggan untuk melihat <b>Hutang</b> (jumlah yang mereka hutang), had kredit dan penyata mereka:
+setiap pembelian secara kredit, pulangan, bayaran hutang dan pelarasan, bersama baki selepas setiap satu.</li>
+</ul>
+
+<h3 id="credit-sale">Menjual secara kredit</h3>
+<ol>
+<li>Di skrin jualan, ketik <b>Tambah pelanggan</b> dan pilih pelanggan.</li>
+<li><b>Bayar → Kredit pelanggan</b> (atau pecah bayaran: sebahagian tunai, sebahagian kredit).</li>
+<li>Jika melebihi had, kaunter bertanya <b>Melebihi had kredit</b> — <b>Benarkan</b> memerlukan pengurus.</li>
+</ol>
+<p>Resit mencatat nama pelanggan, dan skrin selepas bayaran menunjukkan jumlah hutang terkini mereka.</p>
+
+<h3 id="repayment">Bayaran hutang dan pelarasan</h3>
+<ul>
+<li>Buka pelanggan → <b>⋮ → Terima bayaran hutang</b> → jumlahnya (sudah diisi dengan seluruh hutang) → <b>Dibayar dengan</b>.
+Tunai dibundarkan kepada 5 sen; melunaskan seluruh hutang secara tunai menjadikan baki tepat 0.00. Bayaran hutang tunai masuk ke dalam
+syif yang sedang dibuka.</li>
+<li><b>Laraskan baki</b> (<b>Hutang bertambah</b> / <b>Hutang berkurang</b>, dengan sebab) membetulkan baki atau memberi kredit kepada
+pelanggan.</li>
+<li>Pembatalan memulangkan kredit dengan sendirinya. Bagi bayaran balik jualan kredit, biarkan <b>Bayar balik dengan</b>
+pada <b>Kredit pelanggan</b>: amaun itu kemudian ditolak daripada hutang pelanggan.</li>
+<li>Pelanggan hanya boleh dipadam apabila bakinya 0.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="reports">13. Laporan</h2>
+<p><b>Menu → Urus kedai › → Laporan</b> (perlu kebenaran <i>Lihat laporan jualan</i>). Laporan merangkumi jualan semua kaunter di
+kedai (jika Sandaran Google Drive dihidupkan).</p>
+<figure class="wide"><img src="img/ms-reports.png" alt="Skrin Laporan" width="240" loading="lazy"><figcaption>Laporan: pilih tempoh di bahagian atas.</figcaption></figure>
+
+<h3 id="periods">Tempoh</h3>
+<p><b>Hari ini</b>, <b>Semalam</b>, <b>Minggu ini</b>, <b>Minggu lepas</b>, <b>Bulan ini</b>, <b>Bulan lepas</b>, <b>Tahun
+ini</b>, <b>Tahun lepas</b> atau <b>Pilih tarikh</b>. Minggu bermula pada hari Isnin.</p>
+
+<h3 id="figures">Apa yang ditunjukkan dalam laporan</h3>
+<div class="table-wrap"><table>
+<tr><th>Baris</th><th>Maksud</th></tr>
+<tr><td>Jualan (N)</td><td>Bilangan jualan dan hasilnya sebelum bayaran balik.</td></tr>
+<tr><td>Bayaran balik (N)</td><td>Wang yang dibayar balik.</td></tr>
+<tr><td>Jualan dibatalkan</td><td>Berapa banyak jualan yang dibatalkan. Jualan yang dibatalkan tidak dikira dalam mana-mana angka.</td></tr>
+<tr><td>Diskaun</td><td>Diskaun dan penjimatan promosi yang diberi.</td></tr>
+<tr><td>Jualan bersih (tanpa cukai)</td><td>Selepas diskaun dan bayaran balik, tanpa cukai.</td></tr>
+<tr><td>Cukai, Pembundaran</td><td>Cukai yang dikenakan; pembundaran tunai.</td></tr>
+<tr><td><b>Jumlah (selepas bayaran balik)</b></td><td>Wang yang diterima.</td></tr>
+<tr><td>Kos barang</td><td>Kos barang yang dijual kepada anda (kos puratanya semasa dijual).</td></tr>
+<tr><td><b>Untung kasar</b>, Margin kasar</td><td>Jualan bersih − kos barang; dan sebagai peratusan jualan bersih.</td></tr>
+<tr><td>Purata jualan</td><td>Hasil bagi setiap jualan.</td></tr>
+<tr><td>Perubahan berbanding …</td><td>Jumlah berbanding tempoh sebelumnya. Hari dan minggu dibandingkan dengan
+bilangan hari yang sama sejurus sebelumnya (Isnin hingga Rabu minggu ini berbanding Jumaat hingga Ahad sebelumnya).
+Bulan dan tahun dibandingkan dengan hari yang sama pada bulan atau tahun sebelumnya (1–8 Oktober berbanding
+1–8 September).</td></tr>
+</table></div>
+<p>Di bawahnya: jumlah <b>Mengikut hari</b>, <b>Mengikut minggu</b> atau <b>Mengikut bulan</b>; <b>Cara bayaran</b>; <b>Juruwang</b>;
+<b>Kategori</b> (dengan untung); <b>Paling laris</b> (20 teratas); dan <b>Stok di tangan</b> — nilai stok yang anda ada
+hari ini pada harga kos, mengikut kategori (sama bagi setiap tempoh).</p>
+<div class="note"><p>Angka untung hanya setepat <b>harga kos</b> anda: produk tanpa kos menunjukkan seluruh harganya sebagai
+untung. Menerima penghantaran memastikan kos sentiasa terkini.</p></div>
+
+<h3 id="not-sold">Tidak terjual dalam tempoh ini</h3>
+<p>Menyenaraikan produk yang ada stok tetapi langsung tidak terjual dalam tempoh itu, bermula dengan nilai stok tertinggi — calon untuk
+promosi atau untuk tidak dipesan semula. Ketik satu untuk membukanya.</p>
+
+<h3 id="staff-check">Semakan staf</h3>
+<p><b>Laporan → Semakan staf</b> (perlu kebenaran <i>Lihat log aktiviti</i>) menunjukkan, bagi setiap orang dan untuk tempoh yang dipilih,
+perkara yang patut disemak: jualan, barang dibuang <b>selepas jumlah ditunjuk</b>, bil dikosongkan, barang dibuang, pembatalan, bayaran
+balik, diskaun dan tukar harga, laci dibuka tanpa jualan, salinan resit, wang dikeluarkan, stok dihapus kira, jualan dalam syif orang
+lain tanpa kiraan laci, wang apungan yang berbeza daripada yang ditinggalkan, dan tunai lebih/kurang dalam syif mereka. Orang yang paling
+banyak perlu disemak disenaraikan dahulu.</p>
+<p>Semua ini bukan bukti kecurian — barang yang salah dibuang setiap hari. Tanya tentang barang yang dibuang selepas pelanggan melihat
+jumlah, laci dibuka tanpa jualan, wang tunai yang kurang dalam syif, dan seseorang yang jauh lebih banyak daripada orang
+lain.</p>
+
+<h3 id="exports">Eksport (CSV)</h3>
+<p><b>⋮</b> di skrin Laporan mengeksport tempoh yang dipilih sebagai fail CSV untuk Google Sheets atau Excel — <b>Kongsi</b> fail itu
+(WhatsApp, e-mel, Drive) atau <b>Simpan sebagai fail</b>:</p>
+<ul>
+<li><b>Ringkasan (CSV)</b> — angka di atas, bayaran, juruwang, kategori, produk teratas, nilai stok.</li>
+<li><b>Jualan harian (CSV)</b> — satu baris bagi setiap hari: <b>bilangan</b> jualan dan bayaran balik, jualan bersih,
+cukai, jumlah (wang yang diterima), diskaun, kos, untung kasar, dan semakan hari itu.</li>
+<li><b>Produk terjual (CSV)</b> — setiap produk yang dijual dengan kuantiti, jualan bersih, cukai, kos dan untung.</li>
+<li><b>Resit – untuk e-invois bulanan (CSV)</b> — setiap resit dengan tarikh, juruwang, pelanggan dan TIN,
+amaun dan bayaran, untuk e-invois disatukan bulanan LHDN. Jualan yang dibatalkan turut disenaraikan (status
+<i>voided</i>): tinggalkan jualan itu. Bayaran balik disenaraikan dengan amaun negatif.</li>
+</ul>
+<p>Fail-fail ini dalam format UTF-8, jadi nama dalam bahasa Melayu dan Cina dipaparkan dengan betul dalam Excel.</p>
+
+<h3 id="drive-report">Laporan jualan harian ke Google Drive</h3>
+<p>Mahu melihat angka jualan harian tanpa membuka aplikasi? <b>Tetapan → Laporan jualan harian ke Google Drive → Hidupkan</b>
+dan benarkan akses Google. Setiap hari, jualan hari sebelumnya ditulis ke folder <b>LekasPOS</b> dalam Google Drive anda:
+satu fail sebulan, contohnya <code>2026-10 daily-sales.csv</code>, dengan satu baris bagi setiap hari (sama seperti eksport Jualan harian: <i>sales</i> dan <i>refunds</i> ialah bilangan,
+<i>total</i> ialah wang).
+Fail ini boleh dibuka dalam Google Sheets pada mana-mana telefon atau komputer. Hidupkannya <b>pada satu kaunter sahaja</b> (jika Sandaran
+Google Drive dihidupkan, jualan semua kaunter sudah termasuk di dalamnya). Ia memerlukan perkhidmatan Google Play dan internet, dan hanya
+dapat melihat fail yang dibuatnya.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="activity-log">14. Log aktiviti</h2>
+<p><b>Tetapan → Log aktiviti</b> (perlu kebenaran <i>Lihat log aktiviti</i>) merekodkan tindakan sensitif di semua kaunter, yang terbaharu
+dahulu, bersama siapa yang melakukannya, siapa yang meluluskannya, amaun dan butirannya. <b>Tapis</b> (ikon carian) menunjukkan satu jenis
+tindakan sahaja.</p>
+<p>Yang direkodkan: pembatalan, bayaran balik, diskaun dan tukar harga, barang dibuang daripada bil atau bil dikosongkan (ditandakan jika
+selepas jumlah ditunjuk), laci dibuka tanpa jualan, salinan resit, perubahan harga/kos/kod bar produk, produk dipadam, import, promosi,
+stok dihapus kira, log masuk dan terlalu banyak PIN salah, perubahan kakitangan dan peranan, syif, wang masuk/keluar/simpanan,
+perbezaan wang apungan, had kredit, bayaran hutang dan pelarasan, jualan kredit melebihi had, kelulusan pengurus dan perubahan tetapan
+(termasuk sandaran yang dipulihkan).</p>
+<p>Rekod tidak boleh disunting atau dipadam.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="data">15. Menjaga keselamatan data anda: sandaran, pemulihan, Google Drive</h2>
+<p>Semua data kedai — produk, jualan, stok, pelanggan, kakitangan — disimpan <b>dalam telefon</b>. Jika telefon hilang, rosak,
+ditetapkan semula, atau aplikasi dipadam, data itu turut hilang <b>kecuali ada salinannya di tempat lain</b>.
+LekasPOS membuat salinan dalam telefon setiap hari, tetapi salinan itu juga hilang bersama telefon. Jadi, sila pilih sekurang-kurangnya
+satu cara untuk menyimpan salinan <b>di luar telefon</b>:</p>
+<div class="table-wrap"><table>
+<tr><th>Cara</th><th>Sesuai untuk</th><th>Keperluan</th></tr>
+<tr><td><b>Sandaran Google Drive</b> (disyorkan)</td><td>Automatik, setiap beberapa minit; memulihkan sepenuhnya telefon yang
+hilang; memastikan beberapa kaunter sentiasa sama</td><td>Akaun Google, perkhidmatan Google Play, internet sekali-sekala</td></tr>
+<tr><td><b>Salinan harian ke folder</b> (kad SD / pemacu USB)</td><td>Automatik, setiap hari; tidak perlukan Google. Selamat jika
+telefon rosak atau ditetapkan semula — tetapi kad atau pemacu di dalam telefon turut hilang jika telefon hilang atau
+dicuri: keluarkannya sekali-sekala, atau gunakan juga Sandaran Google Drive</td><td>Kad SD atau pemacu USB yang
+sentiasa dipasang</td></tr>
+<tr><td><b>Fail sandaran</b> (simpan atau kongsi sendiri)</td><td>Salinan tambahan di mana-mana: Drive, e-mel, WhatsApp,
+komputer</td><td>Perlu ingat untuk melakukannya setiap beberapa hari</td></tr>
+</table></div>
+<p>Jika tiada salinan keluar dari telefon selama 3 hari, skrin jualan memaparkan <b>Tiada sandaran</b>.</p>
+
+<h3 id="drive-backup">Sandaran Google Drive</h3>
+<ol>
+<li><b>Tetapan → Sandaran Google Drive</b> (perlu kebenaran <i>Ubah tetapan</i>).</li>
+<li>Taip <b>Nama kaunter ini</b> (cth. “Kaunter 1”).</li>
+<li>Ketik <b>Hidupkan segerak</b> dan pilih <b>akaun Google kedai</b>. Benarkan akses apabila Google meminta.</li>
+<li>Sandaran pertama berjalan di latar belakang (bagi kedai yang besar, ia boleh mengambil masa beberapa minit). Status kemudian menyatakan
+<b>Semua sudah disandarkan</b>.</li>
+</ol>
+<ul>
+<li>Data dihantar ke <b>folder aplikasi tersembunyi</b> dalam Google Drive itu: ia tidak kelihatan antara fail anda dan tiada aplikasi lain
+boleh membacanya. LekasPOS hanya meminta akses kepada folder itu daripada Google.</li>
+<li>Ia berjalan sendiri sejurus selepas setiap perubahan semasa aplikasi dibuka, dan setiap 30 minit pada masa lain — bila-bila masa
+telefon dalam talian. Jualan tidak pernah menunggunya; kaunter yang tiada internet akan dikemas kini kemudian.</li>
+<li>Skrin ini menunjukkan <b>Akaun Google</b>, <b>Kaunter ini</b>, <b>Sandaran terakhir</b>, <b>Perubahan menunggu dimuat naik</b>
+dan <b>Kaunter lain</b>. <b>Segerak sekarang</b> menghantar dengan serta-merta. <b>Kaunter dalam kedai ini</b> menyenaraikan setiap kaunter
+bersama segerak terakhir dan versi aplikasinya.</li>
+<li><b>Log masuk semula</b> muncul (bersama penanda <b>Sandaran: log masuk</b>) apabila Google memerlukan akaun itu semula, contohnya
+selepas kata laluan ditukar.</li>
+<li><b>Matikan segerak</b> menghentikannya pada kaunter ini; datanya kekal dalam telefon.</li>
+<li>Gunakan kata laluan yang kukuh dan Pengesahan 2 Langkah pada akaun Google kedai: sandaran itu menyimpan semua data kedai.</li>
+<li>Ia memerlukan <b>perkhidmatan Google Play</b>. Pada telefon yang tiada perkhidmatan ini, gunakan salinan harian ke folder.</li>
+</ul>
+
+<h3 id="phone-backups">Sandaran dalam telefon</h3>
+<figure class="wide"><img src="img/ms-backup.png" alt="Skrin Sandaran" width="240" loading="lazy"><figcaption>Sandaran: sandaran dalam telefon ini dan tahap keselamatan data anda.</figcaption></figure>
+<p><b>Tetapan → Sandaran</b> (dalam versi Inggeris <i>Backup &amp; restore</i>) menyenaraikan sandaran yang disimpan dalam telefon ini:</p>
+<ul>
+<li><b>Automatik</b>: satu sehari, selepas pangkalan data diperiksa untuk kerosakan; 7 yang terakhir disimpan. Ia menunggu saat yang
+lapang (tiada bil terbuka).</li>
+<li><b>Sebelum naik taraf aplikasi</b>: dibuat apabila kemas kini mengubah pangkalan data; 3 yang terakhir disimpan.</li>
+<li><b>Sebelum pemulihan</b>: data yang digantikan oleh pemulihan; 3 yang terakhir disimpan.</li>
+<li><b>Dibuat sendiri</b>: butang <b>+</b> (<b>Buat sandaran sekarang</b>). Sandaran ini tidak pernah dipadam oleh aplikasi.</li>
+</ul>
+<p>Tekan lama pada sandaran untuk memadamnya. Ingat: sandaran ini hilang bersama telefon.</p>
+
+<h3 id="folder-copy">Salinan harian ke kad SD atau pemacu USB</h3>
+<ol>
+<li><b>Sandaran → ⋮ → Salinan harian ke folder (kad SD / USB)…</b></li>
+<li>Pemilih folder Android dibuka. Pergi ke kad SD atau pemacu USB, <b>cipta folder baharu</b> (cth. “LekasPOS”) —
+Android 11 dan yang lebih baharu tidak membenarkan tahap teratas kad atau folder Download itu sendiri — buka folder itu dan ketik
+<b>Gunakan folder ini</b> → <b>Benarkan</b>.</li>
+<li>Aplikasi terus menyalin sandaran harian yang terbaharu ke sana (<i>Disalin ke folder.</i>). Selepas itu, sandaran setiap hari
+disalin sebagai <code>lekaspos-YYYY-MM-DD-HHMM.lekasbak</code>; 7 yang terbaharu disimpan di sana.</li>
+</ol>
+<p><b>Salin ke folder sekarang</b> menyalin sandaran harian yang terbaharu sekali lagi; <b>Berhenti menyalin ke folder</b>
+menghentikannya (fail yang sudah ada kekal). Jika kad dikeluarkan, skrin sandaran memaparkan <i>Salinan terakhir ke folder
+gagal</i>.</p>
+<div class="warn"><p>Sandaran harian mungkin sudah berusia sehingga sehari. Untuk salinan semua data sehingga saat ini
+(contohnya sebelum menghantar telefon untuk dibaiki), gunakan <b>Simpan fail sandaran…</b> sebagai ganti.</p></div>
+<div class="tip"><p><b>Google Drive tiada dalam senarai folder?</b> Pada sesetengah telefon (aplikasi Google Drive versi lama), Drive tidak
+boleh dipilih sebagai folder. Gunakan fail sandaran sebagai ganti: <b>⋮ → Kongsi fail sandaran → Simpan ke Drive</b>, atau
+<b>Simpan fail sandaran… → Drive</b>. Cara ini tidak automatik — buat yang baharu setiap beberapa hari. Atau gunakan Sandaran Google
+Drive, yang tidak memerlukan aplikasi Drive.</p></div>
+
+<h3 id="backup-files">Fail sandaran</h3>
+<ul>
+<li><b>⋮ → Simpan fail sandaran…</b> menyimpan fail bernama <code>lekaspos-backup-YYYY-MM-DD.lekasbak</code> di mana-mana tempat
+pilihan anda (Downloads, Google Drive, pemacu USB).</li>
+<li><b>⋮ → Kongsi fail sandaran</b> menghantarnya melalui mana-mana aplikasi (Simpan ke Drive, e-mel, WhatsApp kepada diri sendiri).</li>
+<li>Kedua-duanya menghentikan amaran <b>Tiada sandaran</b> selama 3 hari — walaupun fail itu kekal dalam telefon ini
+(Downloads) atau perkongsian itu dibatalkan. Simpan fail itu ke Google Drive, pemacu USB atau komputer, atau hantarnya ke
+telefon lain.</li>
+</ul>
+<div class="warn"><p>Fail sandaran <b>tidak disulitkan</b>. Sesiapa yang memilikinya boleh membaca semua data kedai, termasuk
+data pelanggan. Jangan kongsikan fail ini dengan orang lain.</p></div>
+
+<h3 id="restore">Memulihkan sandaran</h3>
+<ol>
+<li><b>Sandaran</b> → ketik satu sandaran dalam senarai, atau <b>⋮ → Pulihkan daripada fail…</b> dan pilih fail
+<code>.lekasbak</code>.</li>
+<li>Aplikasi menunjukkan kandungan sandaran (tarikh, kedai, bilangan jualan dan produk) dan bertanya cara memulihkannya. Kedua-dua
+pilihan <b>menggantikan semua data dalam telefon ini</b> dengan sandaran itu:
+<ul>
+<li><b>Pulihkan kaunter ini</b> (sandaran telefon ini) atau <b>Ganti telefon lama</b> (sandaran telefon lain) — telefon
+ini mengambil tempat kaunter lama; telefon lama tidak digunakan lagi.</li>
+<li><b>Tambah sebagai kaunter baharu</b> — data yang sama, tetapi telefon ini menjadi kaunter lain, jadi kedua-dua telefon
+boleh digunakan.</li>
+</ul></li>
+<li>Sandaran diperiksa; kemudian <b>Mula semula sekarang</b>. Aplikasi dimulakan semula dengan data daripada sandaran.</li>
+</ol>
+<ul>
+<li>Sebelum memulihkan, data semasa disimpan sebagai <b>Sebelum pemulihan</b>: memulihkan sandaran itu membatalkan pemulihan tadi.
+Hanya 3 yang terakhir disimpan, jadi sebelum mencuba beberapa sandaran, ketik <b>+</b> (<b>Buat sandaran sekarang</b>)
+dahulu — sandaran yang dibuat sendiri tidak pernah dipadam.</li>
+<li>Selepas pemulihan, tiada sesiapa yang log masuk; baris gilir cetakan kosong.</li>
+<li>Kaunter yang menggunakan Sandaran Google Drive (atau sandaran yang telah bersegerak) kembali sebagai <b>kaunter baharu</b> dengan Sandaran
+Google Drive dimatikan: hidupkannya semula.</li>
+<li>Sandaran yang dibuat oleh versi LekasPOS yang lebih baharu memerlukan aplikasi dikemas kini dahulu.</li>
+<li>Tetapan pencetak, pengimbas dan tetapan lain bagi setiap kaunter yang disimpan dalam pangkalan data turut kembali; gambar logo resit
+dan bahasa aplikasi tidak.</li>
+</ul>
+
+<h3 id="lost-phone">Telefon hilang atau rosak</h3>
+<ul>
+<li><b>Dengan Sandaran Google Drive:</b> pasang LekasPOS pada telefon baharu → di skrin selamat datang, ketik <b>Pulihkan atau sertai
+kedai saya dari Google Drive</b> (atau Tetapan → Sandaran Google Drive) → namakan kaunter → <b>Hidupkan segerak</b> → pilih
+<b>akaun Google yang sama</b>. Produk, jualan, stok, pelanggan, kakitangan, promosi dan tetapan akan kembali. Telefon
+baharu menjadi kaunter baharu dengan awalan resit baharu. Sediakan semula pencetak, logo resit, pengimbas dan salinan
+hariannya.</li>
+<li><b>Dengan salinan folder atau fail sandaran:</b> pasang LekasPOS → Tetapan → Sandaran → ⋮ → Pulihkan daripada
+fail… → fail <code>.lekasbak</code> yang terbaharu → <b>Ganti telefon lama</b>.</li>
+</ul>
+<p>Apa-apa yang dijual selepas salinan terakhir keluar dari telefon lama akan hilang — sebab itulah salinan yang kerap amat penting. Jika
+telefon lama dicuri, tukar kata laluan akaun Google itu dan buang akses LekasPOS dalam tetapan keselamatan akaun
+Google.</p>
+
+<h3 id="data-problem">Masalah data</h3>
+<p>Setiap hari, sebelum sandaran automatik, aplikasi memeriksa pangkalan data. Jika ia menemui kerosakan, skrin jualan
+memaparkan <b>Masalah data</b>, tiada sandaran baharu menggantikan sandaran yang baik, dan skrin Sandaran memberi penjelasan. Sila
+<b>dapatkan bantuan sebelum memulihkan</b> (lihat <a href="#help">Mendapatkan bantuan</a>); biasanya penyelesaiannya ialah
+memulihkan sandaran <b>Automatik</b> yang terbaharu dari sebelum masalah itu berlaku.</p>
+<div class="warn"><p>Jika kaunter dibuka dalam keadaan <b>kosong</b> dengan <b>Masalah data</b>, data anda diketepikan, bukan
+dipadam — jangan mula semula dari awal. Dapatkan bantuan dan pulihkan dalam masa <b>7 hari</b>: selepas itu, sandaran
+harian yang baharu mula menggantikan sandaran yang baik.</p></div>
+
+<h3 id="storage">Storan telefon</h3>
+<p>Jualan tidak dapat disimpan jika storan telefon penuh. Kaunter memberi amaran awal dengan <b>Storan hampir penuh</b>. Padam foto, video
+atau aplikasi yang tidak diperlukan, atau sandaran lama yang dibuat sendiri. Jika jualan gagal kerana telefon penuh, kaunter akan
+memberitahu anda dan menyimpan bil itu.</p>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="tills">16. Beberapa kaunter dalam satu kedai</h2>
+<p>Beberapa telefon atau tablet dalam satu kedai boleh berkongsi produk, harga, kakitangan, pelanggan dan stok yang sama melalui
+Sandaran Google Drive:</p>
+<ol>
+<li>Sediakan kaunter pertama dan hidupkan Sandaran Google Drive dengan akaun Google kedai.</li>
+<li>Pada setiap kaunter lain, pasang LekasPOS, ketik <b>Pulihkan atau sertai kedai saya dari Google Drive</b> di skrin selamat datang,
+beri kaunter itu namanya sendiri dan hidupkan segerak dengan <b>akaun Google yang sama</b>. Kaunter itu akan menerima semuanya.</li>
+</ol>
+<div class="warn"><p>Sertai dengan telefon yang <b>baharu dan kosong</b>: jangan tambah produk atau menjual padanya dahulu.
+Jika telefon itu sudah ada produk atau jualan, aplikasi bertanya <b>Sertai kedai lain?</b> — menyertai akan menambahkannya
+ke dalam kedai di setiap kaunter buat selama-lamanya, dan produk yang dimasukkan pada kedua-dua telefon akan wujud dua
+kali.</p></div>
+<ul>
+<li>Setiap kaunter mempunyai nombor resitnya sendiri (awalannya sendiri seperti <code>KQ-</code>, <code>MB-</code>), serta syif, bil ditangguh,
+pencetak, pengimbas, saiz barang dan tetapan kuncinya sendiri.</li>
+<li>Produk, harga, promosi, kakitangan dan PIN, pelanggan, tetapan, jualan, stok dan log aktiviti dikongsi.
+Laporan menunjukkan keseluruhan kedai.</li>
+<li>Kaunter menghantar perubahannya dalam beberapa saat; kaunter lain yang tidak sedang menjual mungkin mengambil masa
+sehingga 30 minit untuk menerimanya. Selepas mengubah harga, ketik <b>Segerak sekarang</b> di kaunter lain (Tetapan →
+Sandaran Google Drive). Kaunter boleh menjual tanpa internet sepanjang
+hari dan dikemas kini kemudian; tiada apa yang hilang dan tiada apa yang dikira dua kali. Stok tepat di setiap kaunter sebaik sahaja
+semuanya selesai bersegerak.</li>
+<li>Apabila dua orang mengubah perkara yang sama di dua kaunter, perubahan yang terkemudian menang — ruangan demi ruangan (perubahan harga di
+satu kaunter dan perubahan nama di kaunter lain kedua-duanya kekal).</li>
+<li>Telefon baharu yang kosong dan menyertai kedai mengambil kakitangan dan PIN kedai (sebarang PIN yang ditetapkan padanya sebelum itu dibuang — ia
+akan memberitahu anda).</li>
+<li>Pastikan semua kaunter menggunakan versi LekasPOS yang sama. Satu akaun Google menyimpan satu kedai: untuk mengasingkan dua kedai,
+gunakan dua akaun Google.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="settings">17. Tetapan</h2>
+<p><b>Menu → Urus kedai › → Tetapan</b>. Kebanyakan tetapan memerlukan kebenaran <i>Ubah tetapan</i> (secara lalai hanya pemilik;
+orang lain diminta PIN pemilik). Tetapan bertanda <b>kaunter ini</b> hanya berkuat kuasa pada telefon tempat ia diubah;
+yang lain berkuat kuasa untuk seluruh kedai dan sampai ke setiap kaunter melalui Sandaran Google Drive.</p>
+<figure class="wide"><img src="img/ms-settings.png" alt="Skrin Tetapan" width="240" loading="lazy"><figcaption>Tetapan, mengikut susunan ia dipaparkan.</figcaption></figure>
+<div class="table-wrap"><table>
+<tr><th>Tetapan</th><th>Fungsinya</th><th>Berkuat kuasa untuk</th></tr>
+<tr><td><b>Bahasa aplikasi</b></td><td><i>Bahasa telefon</i>, <i>English</i> atau <i>Bahasa Melayu</i> untuk skrin aplikasi. Resit mempunyai bahasanya sendiri.</td><td>telefon ini</td></tr>
+<tr><td><b>Saiz barang di skrin jualan</b></td><td>Petak barang <i>Besar (kurang barang)</i>, <i>Sederhana</i> (lalai) atau <i>Kecil (lebih banyak barang)</i>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Skrin pelanggan (skrin kedua)</b></td><td>Menunjukkan bil kepada pelanggan pada paparan kedua — <a href="#customer-screen">butiran</a>. Hidup secara lalai.</td><td>kaunter ini</td></tr>
+<tr><td><b>Kedai &amp; resit</b></td><td>Butiran kedai, resit, cukai, pembundaran, syif, pelanggan, label penimbang — <a href="#settings-store">di bawah</a>.</td><td>kedai</td></tr>
+<tr><td><b>Pencetak &amp; laci wang</b></td><td>Pencetak resit dan laci — <a href="#settings-printer">di bawah</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Pengimbas kod bar &amp; kamera</b></td><td>Uji pengimbas, pengimbas bersiri, imbasan kamera — <a href="#settings-scanner">di bawah</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Kakitangan</b></td><td>Kakitangan, PIN, peranan, bila kaunter dikunci — <a href="#staff">bab 10</a>.</td><td>kedai (kunci: kaunter ini)</td></tr>
+<tr><td><b>Syif &amp; tunai</b></td><td><a href="#shifts">Bab 11</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Pelanggan</b></td><td><a href="#customers">Bab 12</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kadar cukai</b></td><td><a href="#tax">Kadar cukai</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kaedah bayaran</b></td><td><a href="#payment-methods">Kaedah bayaran</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kategori</b></td><td><a href="#categories">Kategori</a>.</td><td>kedai</td></tr>
+<tr><td><b>Log aktiviti</b></td><td><a href="#activity-log">Bab 14</a>.</td><td>kedai</td></tr>
+<tr><td><b>Sandaran Google Drive</b></td><td><a href="#drive-backup">Sandaran Google Drive</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Sandaran</b></td><td><a href="#phone-backups">Sandaran, salinan ke folder, fail, pemulihan</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Laporan jualan harian ke Google Drive</b></td><td><a href="#drive-report">Laporan jualan harian</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Laporan ralat</b></td><td><a href="#error-reports">Laporan ralat</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Kemas kini aplikasi</b></td><td><a href="#updates">Kemas kini aplikasi</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Diagnostik</b></td><td><a href="#diagnostics">Diagnostik</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Perihal</b></td><td>Versi, lesen, laman web dan dasar privasi.</td><td>—</td></tr>
+</table></div>
+
+<h3 id="settings-store">Kedai &amp; resit</h3>
+<figure class="wide"><img src="img/ms-store.png" alt="Tetapan kedai dan resit" width="240" loading="lazy"><figcaption>Kedai &amp; resit: dicetak di bahagian atas setiap resit.</figcaption></figure>
+<dl>
+<dt>Kedai</dt><dd><b>Nama kedai</b> (juga tajuk skrin jualan), <b>Alamat</b>, <b>Telefon</b>, <b>E-mel</b>,
+<b>No. pendaftaran perniagaan (SSM)</b>, <b>No. pendaftaran SST</b>, <b>No. pengenalan cukai (TIN)</b>. Ruangan yang kosong
+tidak dicetak pada resit.</dd>
+<dt>Resit</dt><dd><b>Teks kepala resit</b> dan <b>Teks kaki resit</b> (kaki kosong = “Terima kasih!”);
+<b>Bahasa resit</b> (English atau Bahasa Melayu); <b>Salinan resit</b> (1–3, untuk resit automatik selepas
+jualan); <b>Cetak logo</b> dengan <b>Pilih gambar logo</b> / <b>Buang logo</b> — gambar logo disimpan pada
+telefon tempat ia dipilih, jadi pilih gambar itu pada setiap kaunter; <b>Cetak kod QR permintaan e-invois</b> bersama <b>Pautan
+QR</b> — dalam pautan itu, <code>{receipt}</code>, <code>{total}</code> dan <code>{date}</code> diisi untuk setiap
+jualan.</dd>
+<dt>Cukai dan pembundaran</dt><dd><b>Harga termasuk cukai</b> (hidup secara lalai) dan <b>Bundarkan bayaran tunai kepada 5 sen</b> (hidup secara
+lalai).</dd>
+<dt>Syif dan pelanggan</dt><dd><b>Wajibkan syif dibuka untuk menerima bayaran</b>, <b>Kira laci apabila juruwang
+bertukar</b>, <b>Pelanggan dan kredit (bayar kemudian)</b>.</dd>
+<dt>Label penimbang</dt><dd><b>Format label</b> — <a href="#scale-labels">butiran</a>.</dd>
+</dl>
+<p>Ketik <b>Simpan</b>. Perubahan direkodkan dalam Log aktiviti. Mata wang ialah ringgit Malaysia (RM).</p>
+
+<h3 id="settings-printer">Pencetak &amp; laci wang</h3>
+<p>Baris paling atas menunjukkan <b>Status</b> pencetak (sedia, disambung, mencetak, luar talian…) bersama butang <b>Cuba semula</b> apabila
+pencetak luar talian.</p>
+<div class="table-wrap"><table>
+<tr><th>Tetapan</th><th>Pilihan (lalai disenaraikan dahulu)</th></tr>
+<tr><td><b>Pilih pencetak yang telah dipasangkan</b> / <b>Pasangkan pencetak baru (tetapan Bluetooth)</b></td><td>Pencetak Bluetooth yang telah dipasangkan dalam Android.</td></tr>
+<tr><td><b>Lebar kertas</b></td><td>58 mm (32 aksara); 80 mm (48 aksara); 80 mm (42 aksara).</td></tr>
+<tr><td><b>Cetak sebagai</b></td><td><i>Automatik (teks; gambar jika perlu)</i>; <i>Teks (paling pantas)</i>; <i>Gambar (sebarang bahasa)</i>. Automatik mencetak gambar hanya apabila resit mengandungi huruf yang tidak dapat dicetak oleh pencetak (Cina, Tamil, €…).</td></tr>
+<tr><td><b>Pencetak ada aksara Cina (GB18030)</b></td><td>Mati. Hidupkan untuk pencetak Cina supaya tulisan Cina dicetak sebagai teks.</td></tr>
+<tr><td><b>Nombor halaman kod</b></td><td>0 (biasanya betul).</td></tr>
+<tr><td><b>Potong kertas</b></td><td>Hidup.</td></tr>
+<tr><td><b>Baris kosong selepas resit</b></td><td>4.</td></tr>
+<tr><td><b>Cetak resit selepas setiap jualan</b></td><td>Hidup. Jika dimatikan: ketik <b>Cetak resit</b> selepas jualan apabila pelanggan mahukan resit.</td></tr>
+<tr><td><b>Pencetak melukis kod QR sendiri</b></td><td>Mati.</td></tr>
+<tr><td><b>Laci wang disambung ke pencetak</b></td><td>Hidup.</td></tr>
+<tr><td><b>Pin laci</b></td><td>Pin 2 (kebanyakan laci); Pin 5.</td></tr>
+</table></div>
+<p>Butang: <b>Simpan</b>, <b>Cetak halaman ujian</b>, <b>Buka laci</b>, dan <b>Kosongkan baris gilir cetakan</b> semasa ada
+resit yang menunggu.</p>
+
+<h3 id="settings-scanner">Pengimbas kod bar &amp; kamera</h3>
+<ul>
+<li><b>Pengimbas mod papan kekunci</b> (USB, atau Bluetooth HID) tidak perlu ditetapkan: sambungkan atau pasangkan, kemudian terus imbas.</li>
+<li><b>Uji pengimbas</b>: ketik ruangan itu dan imbas; ia menunjukkan dengan tepat apa yang dihantar oleh pengimbas.</li>
+<li><b>Pengimbas Bluetooth bersiri (SPP)</b>: <b>Pilih pengimbas yang telah dipasangkan</b> untuk pengimbas dalam mod bersiri, kemudian ketik
+<b>Simpan</b>. <b>Berhenti guna pengimbas bersiri</b> dan <b>Simpan</b> melupakannya.</li>
+<li><b>Imbas kod bar dengan kamera</b>: hidup secara lalai; jika dimatikan, butang kamera di skrin jualan disembunyikan.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="hardware">18. Perkakasan</h2>
+<div class="table-wrap"><table>
+<tr><th>Perkakasan</th><th>Yang boleh digunakan</th></tr>
+<tr><td>Telefon atau tablet</td><td>Android 5.0 atau lebih baharu, dari telefon 5 inci hingga tablet 10 inci, menegak atau melintang.</td></tr>
+<tr><td>Pencetak resit</td><td>Pencetak terma Bluetooth yang menggunakan arahan ESC/POS (kebanyakan pencetak murah 58 mm dan 80 mm),
+dipasangkan dalam tetapan Bluetooth Android. Pencetak USB, Wi-Fi/LAN dan pencetak Bluetooth LE sahaja tidak
+disokong.</td></tr>
+<tr><td>Laci wang</td><td>Laci yang disambung ke port laci pencetak (pin 2 atau pin 5).</td></tr>
+<tr><td>Pengimbas kod bar</td><td>Pengimbas USB atau Bluetooth dalam mod papan kekunci (HID) — tidak perlu ditetapkan; atau pengimbas Bluetooth bersiri (SPP)
+yang dipilih dalam Tetapan. Sebaik-baiknya ditetapkan untuk menghantar Enter selepas setiap kod.</td></tr>
+<tr><td>Kamera</td><td>Kamera belakang telefon membaca kod EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39 dan kod QR.</td></tr>
+<tr><td>Penimbang</td><td>Tanpa sambungan kabel: penimbang yang mencetak label mencetak kod bar dengan berat atau harga
+(<a href="#scale-labels">cara menyediakan</a>).</td></tr>
+<tr><td>Skrin pelanggan</td><td>TV atau monitor sebagai paparan kedua: HDMI, USB-C, atau Miracast (“Screen mirroring”,
+“Smart View”, “Wireless display”).</td></tr>
+<tr><td>Storan sandaran</td><td>Kad SD atau pemacu USB OTG untuk salinan harian ke folder.</td></tr>
+</table></div>
+
+<h3 id="scanner-tips">Petua pengimbas kod bar</h3>
+<ul>
+<li>Pasangkan pengimbas Bluetooth dalam tetapan Bluetooth Android. Kebanyakan pengimbas datang dalam mod papan kekunci: ia terus berfungsi
+di skrin jualan.</li>
+<li>Semasa pengimbas mod papan kekunci disambung, Android mungkin menyembunyikan papan kekunci pada skrin. Aplikasi kemudian memaparkan <b>Tiada
+papan kekunci?</b> → <b>Tetapan papan kekunci</b>: hidupkan <i>Gunakan papan kekunci pada skrin</i> (atau <i>Tunjukkan papan kekunci maya</i>).</li>
+<li>Pengimbasan berfungsi di skrin jualan, semak harga, senarai produk dan borang produk (untuk menambah kod bar), Terima
+stok, kiraan stok, dan setiap kali anda memilih produk (Laras stok, produk sesuatu promosi).</li>
+<li>Menyambung atau memutuskan sambungan pengimbas tidak pernah menetapkan semula skrin atau bil.</li>
+</ul>
+
+<h3 id="customer-screen">Skrin pelanggan pada paparan kedua</h3>
+<figure class="wide"><img src="img/customer-bill.png" alt="Skrin pelanggan memaparkan bil" loading="lazy"><figcaption>Apa yang dilihat pelanggan: setiap barang semasa ia ditambah, barang yang baru ditambah, dan jumlah.</figcaption></figure>
+<ol>
+<li>Sambungkan TV atau monitor dengan kabel <b>HDMI atau USB-C</b>, atau hantar paparan ke skrin itu dengan <b>Screen mirroring</b> /
+<b>Smart View</b> / <b>Wireless display</b> (leret ke bawah dari bahagian atas tablet, atau Tetapan → Skrin pelanggan →
+<b>Sambung skrin</b>).</li>
+<li>Semasa LekasPOS dibuka, skrin kedua memaparkan <b>Selamat datang</b> bersama nama kedai, manakala tablet kekal sebagai
+skrin juruwang.</li>
+<li>Semasa menjual, pelanggan melihat setiap baris, barang yang baru ditambah (besar, dengan gambarnya), sebarang diskaun bil,
+<b>Jumlah</b> (<b>Jumlah perlu dibayar</b> semasa pembayaran) dan, selepas membayar, <b>Terima kasih!</b>, <b>Dibayar</b> dan
+<b>Baki</b> mereka.</li>
+</ol>
+<ul>
+<li>Skrin pelanggan menggunakan bahasa resit. Semasa ia dihidupkan, pelanggan hanya melihat skrin pelanggan, tidak pernah
+bahagian pengurusan (laporan, kos).</li>
+<li><b>Cast screen</b> Google Home atau Chromecast hanya menyalin skrin tablet dan tidak boleh memaparkan skrin pelanggan:
+gunakan Screen mirroring (Miracast) atau kabel.</li>
+<li>Matikannya bagi setiap kaunter di Tetapan → Skrin pelanggan (skrin kedua). Kemudian cabut juga kabelnya atau hentikan
+penghantaran paparan ke skrin kedua: jika tidak, Android menyalin skrin tablet itu sendiri ke sana, termasuk laporan dan
+kos.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="updates">19. Kemas kini aplikasi, laporan ralat dan diagnostik</h2>
+
+<h3 id="app-updates">Kemas kini aplikasi</h3>
+<ul>
+<li>Sekali sehari, LekasPOS menyemak GitHub, tempat ia diterbitkan, untuk mencari versi baharu, dan memuat turunnya di latar
+belakang. Hanya permintaan itu yang dihantar — tiada apa-apa tentang kedai anda.</li>
+<li>Apabila versi baharu sudah sedia, pemilik (sesiapa yang dibenarkan mengubah tetapan) melihat <b>Kemas kini 1.x.y</b> di bahagian atas
+skrin jualan. Ketik untuk melihat <b>Apa yang baharu</b>, kemudian <b>Kemas kini sekarang</b>. Selesaikan atau tangguhkan bil dahulu.</li>
+<li>Kali pertama pada Android 8 dan yang lebih baharu, Android meminta anda membenarkan LekasPOS memasang aplikasi: ketik <b>Teruskan</b> dan
+hidupkan <b>Benarkan daripada sumber ini</b>, kemudian kembali. Android kemudian meminta anda mengesahkan kemas kini. LekasPOS ditutup semasa
+Android memasangnya; kemudian ketik <b>Buka</b>. Semua data kekal (sandaran dibuat dahulu jika kemas kini mengubah pangkalan data).</li>
+<li>Setiap muat turun diperiksa (saiz, cap jari dan tandatangan) sebelum ditawarkan.</li>
+<li><b>Tetapan → Kemas kini aplikasi</b> menunjukkan versi, <b>Semak setiap hari</b> (hidup), <b>Termasuk versi ujian (untuk
+penguji)</b> (mati) dan <b>Semak sekarang</b>.</li>
+<li>Versi anda ditunjukkan dalam <b>Tetapan → Perihal</b>.</li>
+</ul>
+
+<h3 id="error-reports">Laporan ralat</h3>
+<p>Sekali sahaja, aplikasi bertanya <b>Bantu baiki masalah?</b> Jika anda memilih <b>Hantar laporan</b>, apabila aplikasi berhenti, tersekat atau menunjukkan ralat,
+telefon menghantar laporan teknikal yang ringkas kepada pembangun LekasPOS: apa yang tidak kena, versi aplikasi, model telefon,
+versi Android dan memori. Laporan ini <b>tidak sekali-kali</b> mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau
+akaun Google anda. Tukar jawapan anda bila-bila masa di <b>Tetapan → Laporan ralat</b>.</p>
+
+<h3 id="diagnostics">Diagnostik</h3>
+<p><b>Tetapan → Diagnostik</b> (atau Urus kedai › Diagnostik) digunakan untuk menyelesaikan masalah:</p>
+<ul>
+<li><b>Kongsi log ralat</b> — menghantar log ralat teknikal telefon (tiada data kedai) kepada orang yang membantu anda.</li>
+<li><b>Hantar laporan kepada pembangun</b> — bersama apa yang berlaku dan, jika anda mahu dibalas, nombor telefon atau e-mel anda.</li>
+<li><b>Ujian pantas</b> dan <b>Ujian penuh</b> — mengukur kelajuan telefon ini dengan data kedai yang besar. Ujian ini menggunakan
+pangkalan data ujian yang berasingan dan tidak pernah menyentuh data kedai anda; ketik <b>Padam data ujian</b> selepas itu. Ujian penuh
+memerlukan kira-kira 350 MB dan 5–20 minit, sambil telefon dicas.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="troubleshooting">20. Penyelesaian masalah dan soalan lazim</h2>
+
+<h3 id="ts-selling">Menjual</h3>
+<dl>
+<dt>Pengimbas berbunyi tetapi tiada barang ditambah / “Kod bar tidak dijumpai”.</dt>
+<dd>Produk itu belum mempunyai kod bar tersebut. Tambahkannya dengan <b>Tambah produk</b> (juruwang perlu PIN pengurus), atau tambah
+kod bar itu pada produk sedia ada dalam Produk. Kod bar karton memerlukan <b>Tambah kod bar pek</b>.</dd>
+<dt>Pengimbas menaip ke dalam kotak carian, atau tiada apa-apa berlaku.</dt>
+<dd>Periksa pengimbas di Tetapan → Pengimbas kod bar &amp; kamera → <b>Uji pengimbas</b>. Tetapkan pengimbas supaya menghantar Enter
+selepas setiap kod (lihat manualnya). Pengimbas bersiri (SPP) mesti dipilih di situ; pengimbas mod papan kekunci tidak perlu ditetapkan.</dd>
+<dt>Papan kekunci pada skrin hilang.</dt>
+<dd>Pengimbas mod papan kekunci sedang disambung. Hidupkan <i>Gunakan papan kekunci pada skrin</i> dalam tetapan papan kekunci Android (aplikasi
+menawarkan <b>Tetapan papan kekunci</b>).</dd>
+<dt>Saya tidak jumpa Diskaun atau Buka laci wang dalam Menu, atau Bayaran balik / Batalkan pada resit.</dt>
+<dd>Peranan anda tidak membenarkannya, jadi ia disembunyikan. Minta pengurus mengetik <b>Menu → PIN pengurus</b> dan menaip
+PIN mereka: butang itu muncul (bayaran balik, pembatalan dan laci meminta PIN pengurus sekali lagi). Atau pengurus log
+masuk melalui <b>Kunci / tukar pengguna</b>.</dd>
+<dt>Kaunter memaparkan “Semak tarikh dan masa”.</dt>
+<dd>Jam telefon salah (selalunya selepas bateri habis sepenuhnya). Jualan disimpan di bawah tarikh ia dibuat, jadi tetapkan
+tarikh dan masa yang betul dahulu — sebaik-baiknya dengan tarikh dan masa automatik dihidupkan.</dd>
+<dt>Kaunter memaparkan “Tiada syif dibuka”.</dt>
+<dd>Kedai mewajibkan syif: ketik <b>Buka syif</b>, kira laci, kemudian bayar. Untuk berhenti mewajibkan syif: Tetapan →
+Kedai &amp; resit → matikan <b>Wajibkan syif dibuka untuk menerima bayaran</b>. Kaunter baharu yang menyertai kedai
+mungkin menghidupkannya semula: semak tetapan ini selepas menambah kaunter.</dd>
+<dt>“Jualan tidak disimpan”.</dt>
+<dd>Jualan itu tidak direkodkan dan bil masih disimpan. Baca sebabnya (selalunya storan telefon penuh), betulkan, dan ketik
+Bayar sekali lagi. Jika pelanggan sudah membayar dengan kad atau e-dompet di terminal anda, jangan caj mereka sekali lagi:
+ketik sahaja kaedah yang sama.</dd>
+<dt>Pelanggan dicaj dua kali / jualan percubaan.</dt>
+<dd>Pengurus membuka Menu → Jualan &amp; bayaran balik → jualan itu → <b>Batalkan</b>. Pembatalan hanya membetulkan rekod:
+pulangkan sendiri wang pelanggan (tunai dari laci; kad atau e-dompet melalui terminal atau aplikasi bank anda).</dd>
+<dt>Aplikasi terlalu kerap dikunci / tidak pernah dikunci.</dt>
+<dd>Tetapan → Kakitangan → ⋮ → <b>Bila kaunter dikunci</b> (bagi setiap kaunter).</dd>
+</dl>
+
+<h3 id="ts-printer">Pencetak dan laci</h3>
+<dl>
+<dt>“Tiada peranti dipasangkan” semasa memilih pencetak.</dt>
+<dd>Pasangkan pencetak dahulu dalam tetapan Bluetooth Android (PIN biasanya 0000 atau 1234), kemudian <b>Pilih pencetak yang telah dipasangkan</b>.</dd>
+<dt>“Pencetak luar talian” / “luar talian, tekan Cuba semula”.</dt>
+<dd>Adakah pencetak dihidupkan, dicas dan berdekatan? Adakah Bluetooth dihidupkan? Adakah ia disambung ke telefon lain? Ketik <b>Cuba semula</b> dalam
+tetapan pencetak. Pada Android 12 ke atas, benarkan <b>Peranti berdekatan</b> (Buka tetapan → Kebenaran).</dd>
+<dt>“tidak mencetak: semak kertas dan penutup”.</dt>
+<dd>Kertas habis, penutup terbuka atau pencetak terlalu panas. Betulkan masalah itu; pencetakan bersambung dengan sendirinya.</dd>
+<dt>Resit yang menunggu tidak pernah dicetak.</dt>
+<dd>Resit automatik yang menunggu lebih daripada 10 minit akan digugurkan. Cetak salinan dari <b>Jualan &amp; bayaran balik</b>.</dd>
+<dt>Tanda soal atau huruf yang salah pada resit.</dt>
+<dd>Tetapkan <b>Cetak sebagai</b> kepada <i>Automatik</i> atau <i>Gambar</i>. Untuk pencetak Cina, hidupkan <b>Pencetak ada aksara
+Cina</b>. Kekalkan halaman kod pada 0.</dd>
+<dt>Baris terpotong atau berlipat ke baris baharu.</dt>
+<dd>Pilih <b>Lebar kertas</b> yang betul; untuk 80 mm, cuba kedua-dua 48 dan 42 aksara dengan <b>Cetak halaman ujian</b>.</dd>
+<dt>Laci wang tidak terbuka.</dt>
+<dd>Pastikan <b>Laci wang disambung ke pencetak</b> dihidupkan, cuba <b>Pin 5</b>, dan pastikan kaedah bayaran itu mempunyai <b>Membuka
+laci wang</b> yang ditanda. Pencetak mesti disambung.</dd>
+</dl>
+
+<h3 id="ts-backup">Sandaran dan Google Drive</h3>
+<dl>
+<dt>“Tiada sandaran” tidak hilang-hilang.</dt>
+<dd>Hidupkan Sandaran Google Drive atau salinan harian ke folder — atau simpan/kongsi fail sandaran. Jika Sandaran Google Drive sudah hidup,
+buka skrinnya: status menyatakan apa yang tidak kena (tiada internet, perlu log masuk, Drive penuh).</dd>
+<dt>“Sandaran: log masuk”.</dt>
+<dd>Tetapan → Sandaran Google Drive → <b>Log masuk semula</b> dengan akaun Google yang <b>sama</b>.</dd>
+<dt>“Sandaran Google Drive memerlukan perkhidmatan Google Play”.</dt>
+<dd>Telefon ini tiada perkhidmatan Google Play: gunakan salinan harian ke kad SD atau pemacu USB.</dd>
+<dt>“Google Drive kedai ini sudah penuh”.</dt>
+<dd>Kosongkan ruang dalam Google Drive itu atau beli storan tambahan; sandaran bersambung dengan sendirinya.</dd>
+<dt>“Tarikh atau masa telefon ini salah”.</dt>
+<dd>Hidupkan tarikh dan masa automatik dalam tetapan Android.</dd>
+<dt>Google Drive tiada dalam senarai folder.</dt>
+<dd>Gunakan <b>Kongsi fail sandaran → Simpan ke Drive</b> sebagai ganti, atau Sandaran Google Drive.</dd>
+<dt>“Ini bukan fail sandaran LekasPOS” / “rosak atau tidak lengkap”.</dt>
+<dd>Pilih fail <code>.lekasbak</code>; cuba salinan lain jika fail itu terputus semasa disalin.</dd>
+<dt>Perubahan di satu kaunter tidak muncul di kaunter lain.</dt>
+<dd>Kedua-dua kaunter perlu menghidupkan Sandaran Google Drive dengan akaun Google yang <b>sama</b> dan ada internet. Ketik <b>Segerak sekarang</b> pada kedua-duanya.
+<b>Kaunter dalam kedai ini</b> menunjukkan bila setiap kaunter kali terakhir bersegerak.</dd>
+</dl>
+
+<h3 id="ts-other">Soalan lain</h3>
+<dl>
+<dt>Adakah data saya dihantar kepada pembangun?</dt>
+<dd>Tidak. Data kedai kekal dalam telefon dan, jika anda menghidupkan Sandaran Google Drive atau laporan jualan harian, dalam
+Google Drive anda sendiri. Laporan ralat (hanya jika anda membenarkannya) mengandungi butiran teknikal sahaja. Lihat
+<a href="privasi.html">dasar privasi</a>.</dd>
+<dt>Adakah saya perlukan internet?</dt>
+<dd>Tidak untuk menjual. Internet hanya diperlukan untuk Sandaran Google Drive, laporan jualan harian, kemas kini dan laporan
+ralat (jika anda membenarkannya).</dd>
+<dt>Adakah ia berbayar?</dt>
+<dd>Tidak. LekasPOS percuma dan bersumber terbuka (GPL-3.0).</dd>
+<dt>Bolehkah saya menggunakannya untuk e-invois (LHDN)?</dt>
+<dd>LekasPOS tidak menghantar e-invois kepada LHDN dengan sendirinya. Resit boleh mencetak kod QR ke halaman permintaan
+e-invois anda sendiri (tetapkan pautannya dalam Kedai &amp; resit), dan eksport <b>Resit – untuk e-invois bulanan</b>
+menyenaraikan setiap resit supaya anda atau akauntan anda boleh menghantar e-invois disatukan bulanan (tinggalkan jualan
+yang dibatalkan).</dd>
+<dt>Pemilik lupa PIN dan kehilangan kod pemulihan.</dt>
+<dd>Orang lain yang mempunyai peranan Pemilik boleh menetapkan PIN baharu untuknya (Tetapan → Kakitangan). Tanpa pemilik lain, tiada
+cara untuk masuk semula — sila <a href="#help">minta bantuan</a> sebelum mengosongkan data atau memasang semula aplikasi, kerana ini memadam data
+dalam telefon itu. Simpan kod pemulihan di tempat selamat, dan pertimbangkan untuk memberi peranan Pemilik kepada orang kedua yang dipercayai.</dd>
+<dt>Bagaimana saya berpindah ke telefon baharu?</dt>
+<dd>Mula-mula, selesaikan jualan pada telefon lama. Dengan Sandaran Google Drive, tunggu sehingga skrin Sandaran Google
+Drive pada telefon lama menyatakan <b>Semua sudah disandarkan</b>, kemudian sediakan telefon baharu seperti dalam
+<a href="#lost-phone">Telefon hilang atau rosak</a>. Tanpanya, simpan fail sandaran pada telefon lama selepas jualan
+terakhir dan pulihkannya pada telefon baharu dengan <b>Ganti telefon lama</b>. Jangan menjual pada telefon lama selepas
+itu.</dd>
+</dl>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="glossary">21. Istilah dalam aplikasi</h2>
+<div class="table-wrap"><table>
+<tr><th>Bahasa Melayu</th><th>English</th><th>Maksud</th></tr>
+<tr><td>Kaunter</td><td>Till</td><td>Satu telefon atau tablet yang digunakan untuk menjual.</td></tr>
+<tr><td>Bil</td><td>Bill</td><td>Barang-barang pelanggan yang sedang dilayan.</td></tr>
+<tr><td>Tangguh / bil ditangguh</td><td>Hold / held bill</td><td>Bil yang diketepikan untuk melayan pelanggan lain.</td></tr>
+<tr><td>Kosongkan bil</td><td>Clear bill</td><td>Membuang bil yang ada di skrin.</td></tr>
+<tr><td>Baki</td><td>Change</td><td>Wang yang dipulangkan kepada pelanggan.</td></tr>
+<tr><td>Pecah bayaran</td><td>Split payment</td><td>Bil yang dibayar dengan lebih daripada satu kaedah.</td></tr>
+<tr><td>Pembundaran</td><td>Rounding</td><td>Tunai dibundarkan kepada 5 sen yang terdekat.</td></tr>
+<tr><td>Salinan resit</td><td>Receipt copy</td><td>Sebarang cetakan resit selepas cetakan pertama.</td></tr>
+<tr><td>Bayaran balik / pulangan</td><td>Refund / return</td><td>Wang yang dibayar balik untuk barang yang dipulangkan.</td></tr>
+<tr><td>Batalkan</td><td>Void</td><td>Membatalkan seluruh jualan seolah-olah ia tidak pernah berlaku.</td></tr>
+<tr><td>Semak harga</td><td>Price check</td><td>Melihat harga tanpa menjual.</td></tr>
+<tr><td>Laris</td><td>Popular</td><td>Barang paling laris dalam 30 hari terakhir.</td></tr>
+<tr><td>Promosi</td><td>Promotion</td><td>Tawaran yang dikenakan oleh kaunter secara automatik.</td></tr>
+<tr><td>Syif</td><td>Shift</td><td>Masa seseorang di satu kaunter, dari kiraan ke kiraan.</td></tr>
+<tr><td>Wang apungan</td><td>Float</td><td>Wang kecil dalam laci pada permulaan syif.</td></tr>
+<tr><td>Simpanan wang</td><td>Cash drop</td><td>Wang tunai yang dibawa dari laci ke peti besi atau bank.</td></tr>
+<tr><td>Tunai dijangka / lebih / kurang</td><td>Expected cash / over / short</td><td>Jumlah yang sepatutnya ada dalam laci, dan perbezaannya.</td></tr>
+<tr><td>Kredit pelanggan</td><td>Customer credit</td><td>Bayar kemudian; pelanggan berhutang kepada kedai.</td></tr>
+<tr><td>Pemilik / Pengurus / Juruwang</td><td>Owner / Manager / Cashier</td><td>Peranan yang sedia ada dalam aplikasi.</td></tr>
+<tr><td>Kelulusan pengurus</td><td>Manager approval</td><td>PIN pengurus untuk sesuatu yang juruwang tidak dibenarkan lakukan.</td></tr>
+<tr><td>Kod pemulihan</td><td>Recovery code</td><td>Cara pemilik masuk semula selepas terlupa PIN.</td></tr>
+<tr><td>Log aktiviti</td><td>Activity log</td><td>Rekod tindakan sensitif.</td></tr>
+<tr><td>Terima stok / penghantaran</td><td>Receive stock / delivery</td><td>Barang yang tiba daripada pembekal.</td></tr>
+<tr><td>Laras stok / dihapus kira</td><td>Adjust stock / written off</td><td>Stok yang diubah secara manual (rosak, tamat tempoh…).</td></tr>
+<tr><td>Kiraan stok</td><td>Stock count</td><td>Mengira barang yang ada di rak.</td></tr>
+<tr><td>Harga kos</td><td>Cost price</td><td>Kos satu unit atau satu kg kepada anda.</td></tr>
+<tr><td>Untung kasar</td><td>Gross profit</td><td>Jualan bersih tolak kos barang yang dijual.</td></tr>
+<tr><td>Sandaran Google Drive / segerak</td><td>Google Drive backup / sync</td><td>Menyalin data kedai ke Google Drive dan antara kaunter.</td></tr>
+<tr><td>Sandaran</td><td>Backup &amp; restore</td><td>Salinan data, dan memulihkan salah satu daripadanya.</td></tr>
+</table></div>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+
+<h2 id="help">22. Privasi dan mendapatkan bantuan</h2>
+<ul>
+<li><b>Privasi:</b> data kedai anda kekal dalam telefon anda dan, hanya jika anda menghidupkan Sandaran Google Drive atau laporan
+jualan harian, dalam Google Drive anda sendiri. Pembangun tidak pernah menerimanya. Baca <a href="privasi.html">dasar privasi</a>.</li>
+<li><b>Masalah atau cadangan:</b> <a href="https://github.com/FaizoKen/LekasPOS/issues">laporkan di GitHub</a>, atau hantar
+laporan dari aplikasi (Tetapan → Diagnostik → <b>Hantar laporan kepada pembangun</b>, bersama nombor telefon atau e-mel anda jika
+mahu dibalas).</li>
+<li><b>Kod sumber:</b> <a href="https://github.com/FaizoKen/LekasPOS">github.com/FaizoKen/LekasPOS</a> (GPL-3.0).</li>
+<li><b>Muat turun dan pasang:</b> <a href="index.html#download">laman utama LekasPOS</a>.</li>
+</ul>
+<p class="top"><a href="#contents">↑ Kandungan</a></p>
+</main>
+</body>
+</html>

@@ -185,3 +185,6 @@ the existing Android OAuth client keeps working.
 9. Version numbers in public text: the website (`site/index.html`, the English and Malay "From
    version …" / "Version … or older" update steps) and `README.md` must still be right for the new
    release; update them if the release changes how installing or updating works.
+10. User guide: `site/guide.html` and `site/panduan.html` describe the release (their "For LekasPOS x.y.z" line,
+   and every screen or step the release changed — skill `references/recipes.md` §0); `node scripts/check-site.mjs`
+   passes (`pages.yml` runs it too).

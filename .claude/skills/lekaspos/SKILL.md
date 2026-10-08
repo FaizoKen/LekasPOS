@@ -9,15 +9,22 @@ Read this whole file before working. Load a reference file when the task touches
 
 | Area | Reference |
 |---|---|
+| Where a class, screen, worker, test or stable code is | `references/codemap.md` |
+| What each feature does today (rules, permissions, settings, audit) | `references/features.md` |
+| How to add a screen, setting, permission, table, sync event, string, report; release; debug | `references/recipes.md` |
+| The same word in the app (EN/BM) and in the code | `references/glossary.md` |
 | Modules, layers, threading, startup, UI rules | `references/architecture.md` |
 | Tables, columns, indexes, migrations, SQLite 3.8.4 limits | `references/database.md` |
 | Money, quantities, tax, discounts, rounding | `references/money.md` |
 | Google Drive sync, IDs, HLC, merge rules, backups | `references/sync.md` |
 | Performance budget, perf suite, how to measure | `references/performance.md` |
 
-Human-facing docs live in `docs/` (`PHASES.md`, `DECISIONS.md`, `BUILD.md`, README, privacy).
+Human-facing docs live in `docs/` (`PHASES.md`, `DECISIONS.md`, `BUILD.md`, `PLAY.md`), the README, and the website
+`site/`: the **user guide** (`guide.html` English, `panduan.html` Malay — the shops' manual), the privacy policy and
+`llms.txt`. Other AI tools read `AGENTS.md` (same rules, points here).
 When a decision changes: update the reference file here **and** add an entry to
-`docs/DECISIONS.md` (date, decision, why, alternatives rejected).
+`docs/DECISIONS.md` (date, decision, why, alternatives rejected). When what users see changes: update the user
+guide in both languages (`references/recipes.md` §0) and `references/features.md`.
 
 ## 1. How work is delivered
 
@@ -172,5 +179,7 @@ streaming I/O for files (never whole files or whole tables in memory).
 - [ ] Lint has no errors; release build (R8) installs and runs the changed flow.
 - [ ] Perf suite within budget; release APK size recorded (< 8 MB).
 - [ ] Privacy policy / Data Safety answers still true.
+- [ ] User guide (`site/guide.html` + `site/panduan.html`) and `references/features.md` still true; screenshots
+      refreshed if a pictured screen changed; `node scripts/check-site.mjs` passes.
 - [ ] `docs/PHASES.md` updated; skill + `docs/DECISIONS.md` updated if a decision changed.
 - [ ] Phase end only: tests + APK size + hardware test list reported, then wait for feedback.

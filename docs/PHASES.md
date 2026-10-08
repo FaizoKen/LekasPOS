@@ -33,6 +33,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
+| — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | written 2026-10-08 for 1.13.0 — goes live on GitHub Pages when pushed; the owner's read-through pending |
 
 ## Open questions for the user
 

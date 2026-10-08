@@ -17,6 +17,10 @@ The only other connections: a daily update check against this repository's GitHu
 Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
 [faizoken.github.io/LekasPOS/privacy.html](https://faizoken.github.io/LekasPOS/privacy.html).
 
+**User guide:** [English](https://faizoken.github.io/LekasPOS/guide.html) ·
+[Bahasa Melayu](https://faizoken.github.io/LekasPOS/panduan.html) — everything the app does, for owners, managers and
+cashiers, with screenshots.
+
 ## Features
 
 - **Selling:** barcode scanners (Bluetooth/USB keyboard or serial) and camera scanning, search
@@ -35,14 +39,29 @@ Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy po
 
 ## Documentation map
 
+For people using the app:
+
 | Document | What it covers |
 |---|---|
+| [User guide](site/guide.html) / [Panduan pengguna](site/panduan.html) | Every feature step by step: selling, payment, receipts, products, stock, staff, shifts, customers, reports, backup, Google Drive, hardware, troubleshooting (published at [faizoken.github.io/LekasPOS/guide.html](https://faizoken.github.io/LekasPOS/guide.html)) |
+| [`site/index.html`](site/index.html) | Download, install and update steps |
+| [`site/privacy.html`](site/privacy.html) / [`privasi.html`](site/privasi.html) | Privacy policy |
+| [`site/llms.txt`](site/llms.txt) | A short description of the app for AI assistants that help users |
+
+For people (and AI agents) working on the code:
+
+| Document | What it covers |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) | Start here: what to read first, the non-negotiable rules, commands, which docs to keep true |
+| [`.claude/skills/lekaspos/`](.claude/skills/lekaspos/SKILL.md) | Project rules: architecture, conventions, performance budget, money, schema, sync, definition of done |
+| [`references/codemap.md`](.claude/skills/lekaspos/references/codemap.md) | Where everything is: every source file, screen, background job, test, script and stable code |
+| [`references/features.md`](.claude/skills/lekaspos/references/features.md) | What every feature does today: rules, permissions, settings, activity log |
+| [`references/recipes.md`](.claude/skills/lekaspos/references/recipes.md) | How to add a screen, setting, permission, table, sync event, string, report; release; debug; gotchas |
+| [`references/glossary.md`](.claude/skills/lekaspos/references/glossary.md) | One word per idea: English UI, Malay UI, code name |
 | [`docs/PHASES.md`](docs/PHASES.md) | Delivery phases, status, results, open questions |
 | [`docs/BUILD.md`](docs/BUILD.md) | Toolchain, build/test commands, emulators, signing, release checklist |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Why things are the way they are (dependencies, DB, sync, IDs, …) |
 | [`docs/PLAY.md`](docs/PLAY.md) | Google Play preparation: listing, Data Safety answers, release steps |
-| [`site/`](site/) | Public web page and privacy policy (GitHub Pages) |
-| [`.claude/skills/lekaspos/`](.claude/skills/lekaspos/SKILL.md) | Project rules: architecture, conventions, performance budget, money, schema, sync, definition of done |
 
 ## Quick start
 
@@ -64,8 +83,10 @@ builds. Performance runs: Actions → Performance → Run workflow. See [`docs/B
 ```
 core/     pure Kotlin business rules (money, tax, pricing, barcodes, IDs, HLC, sync rules) + JVM tests
 app/      Android app: SQLite data layer, UI, hardware, sync, perf suite + instrumented tests
-scripts/  toolchain setup, emulator profiles, performance runs, cold-start measurement
+scripts/  toolchain setup, emulator profiles, performance runs, cold-start measurement, website check
 docs/     phases, build/release, decisions
+site/     website: home, user guide (EN + MS) with screenshots, privacy policy (GitHub Pages)
+relay/    Cloudflare Worker that files error reports (D-057)
 ```
 
 ## Signing

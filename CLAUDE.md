@@ -32,6 +32,14 @@ See `docs/PHASES.md` (single source of truth for phase status).
 - Every synced write appends its sync event to `outbox` in the same transaction.
 - Every new dependency needs a size + need justification in `docs/DECISIONS.md` first.
 - Release APK must stay under 8 MB. Record its size at the end of every phase.
+- Anything users see changes → update the user guide in **both** languages (`site/guide.html`,
+  `site/panduan.html`) and `references/features.md` in the same change (`references/recipes.md` §0).
+
+## Documentation
+
+`AGENTS.md` (same rules for other AI tools) · the skill's `references/` (`codemap.md` where things are,
+`features.md` what the app does, `recipes.md` how to change it, `glossary.md` words) · `docs/` · the user
+guide in `site/`. The README has the full map.
 
 ## Commands (Windows, run from the repo root)
 

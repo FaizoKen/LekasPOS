@@ -1437,6 +1437,31 @@ cast library for a screen most shops cast to with Miracast anyway); a second app
 network (another device, pairing, a local server); a customer screen inside the till's own screen (the owner wants
 the other screen).
 
+### D-070 — Documentation for the shops and for AI agents (2026-10-08)
+The owner: "please make full complete documentation for this app users and AI.. please do your best as much as
+possible".
+- **User guide** for owners, managers and cashiers on the website, like the privacy pages: `site/guide.html`
+  (English) and `site/panduan.html` (Bahasa Melayu, the app's own Malay labels), 22 chapters from getting started and
+  a one-page cashier guide to troubleshooting and a glossary, with screenshots from the CI `ScreenshotsTest` (phone
+  API 36 and tablet; test data only, never a shop's). Written from the current code and string resources (fact sheets
+  per area, then a separate fact-check against the code) — not from PHASES/DECISIONS, which are history. Linked from
+  the home page and the README. `site/llms.txt` describes the app for AI assistants that help shop owners.
+- **AI developer docs**: `AGENTS.md` for any AI tool (same rules as `CLAUDE.md`, reading order, which docs to keep
+  true); new skill references `codemap.md` (every file, screen, worker, test, stable code), `features.md` (what each
+  feature does today), `recipes.md` (how to add a screen, setting, permission, table, sync event, string, report;
+  release; debugging; 40 gotchas), `glossary.md` (EN UI ↔ BM UI ↔ code).
+- **Keeping it true**: a user-visible change updates both guides and `features.md` in the same change (skill
+  definition of done, `recipes.md` §0); `scripts/check-site.mjs` (links, pictures, balanced tags, both languages with
+  the same sections) runs in `pages.yml` before publishing.
+- Found while writing it and listed in `features.md` §20 (the code is not changed here; the guide warns about them):
+  a weighed product priced 0.00 sells free; a till joining later switches "Require an open shift" on again for the
+  whole shop; a backup file left in Downloads clears "Not backed up"; plus small text issues (old menu paths in two
+  messages, an unused tax "code on receipts", Malay wording clashes).
+Rejected: a Markdown guide in `docs/` (shop owners do not read GitHub; the website already serves them); a static-site
+generator (a dependency and a build step for a handful of pages); help screens inside the app (APK size and every
+text twice in resources — a "User guide" link in Settings → About is the cheap next step); a Google Doc (not
+versioned with the code, so it drifts).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

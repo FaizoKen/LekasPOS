@@ -1,0 +1,50 @@
+# LekasPOS
+
+> LekasPOS is a free, open-source (GPL-3.0) point-of-sale app for small grocery shops and mini markets, for Android
+> phones and tablets (Android 5.0 and newer). It works fully offline, in English and Bahasa Melayu, with Malaysian
+> ringgit (RM) and 5-sen cash rounding. There is no server and no account: the shop's data stays on the phone and,
+> only if the shop turns it on, in the shop's own Google Drive.
+
+Facts an assistant should get right when helping a LekasPOS user:
+
+- Install from https://faizoken.github.io/LekasPOS/#download (an APK; it is not on Google Play yet). After that the app
+  updates itself from its GitHub releases: an "Update" button appears on the selling screen for the owner.
+- Selling never needs internet. Internet is used only for Google Drive backup, the optional daily sales report to
+  Google Drive, update checks and (only with the shop's consent) error reports with no shop data.
+- Until the owner sets a PIN, everyone is the owner. With PINs on, the roles are Owner, Manager and Cashier (plus
+  custom roles); a cashier sees only what they may do, and a manager's PIN allows the rest.
+- Only registered products are sold. An unknown barcode offers "Add product". Items without a barcode are products
+  sold by weight or with the price entered at the till.
+- Card and e-wallet payments are only recorded; LekasPOS does not connect to card terminals or banks.
+- Data safety: daily backups on the phone (last 7), plus a copy off the phone through Google Drive backup (also keeps
+  several tills of one shop in step and restores a lost phone), a daily copy to an SD card/USB drive, or backup files
+  (.lekasbak, not encrypted). "Not backed up" on the selling screen means no copy left the phone for 3 days.
+- Hardware: Bluetooth ESC/POS receipt printers (58/80 mm, paired in Android first), a cash drawer plugged into the
+  printer, USB/Bluetooth barcode scanners (keyboard mode, or serial SPP), the phone camera, weighing-scale barcode
+  labels (no scale cable), and a customer screen on a second display (HDMI, USB-C or Miracast screen mirroring — not
+  Google Home "Cast screen").
+- Where things are: the selling screen's Menu → Manage shop › → Products, Categories, Promotions, Inventory, Reports,
+  Settings, Tax rates, Diagnostics. Shifts: Menu → Open shift / Close shift. Past sales, refunds, voids:
+  Menu → Sales & refunds.
+
+## User guide
+
+- [User guide (English)](https://faizoken.github.io/LekasPOS/guide.html): every feature step by step — getting
+  started, quick guide for cashiers, selling, payment, receipts and printer, refunds and voids, products, promotions,
+  stock, staff and PINs, shifts and cash, customers and credit, reports, activity log, backup and Google Drive,
+  several tills, settings, hardware, updates, troubleshooting, glossary.
+- [Panduan pengguna (Bahasa Melayu)](https://faizoken.github.io/LekasPOS/panduan.html): the same guide in Malay.
+
+## Install, privacy, help
+
+- [Download and install](https://faizoken.github.io/LekasPOS/#download)
+- [Privacy policy](https://faizoken.github.io/LekasPOS/privacy.html) · [Dasar privasi](https://faizoken.github.io/LekasPOS/privasi.html)
+- [Report a problem](https://github.com/FaizoKen/LekasPOS/issues)
+- [Release notes](https://github.com/FaizoKen/LekasPOS/releases)
+
+## For developers
+
+- [Source code](https://github.com/FaizoKen/LekasPOS)
+- [AGENTS.md](https://github.com/FaizoKen/LekasPOS/blob/main/AGENTS.md): rules and reading order for AI coding agents
+- [What every feature does](https://github.com/FaizoKen/LekasPOS/blob/main/.claude/skills/lekaspos/references/features.md)
+- [Code map](https://github.com/FaizoKen/LekasPOS/blob/main/.claude/skills/lekaspos/references/codemap.md)

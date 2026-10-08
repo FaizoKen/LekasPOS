@@ -50,3 +50,37 @@ h3 { font-size: 1.05rem; margin: 1.5rem 0 0.25rem; }
 }
 .button:hover, .button:focus { background: #145e43; }
 .logo { vertical-align: middle; margin-right: 0.35rem; border-radius: 12px; }
+
+/* User guide (guide.html, panduan.html) */
+:root { --line: #d0d7de; --tip: #1b7f5b; --warn: #c2410c; }
+@media (prefers-color-scheme: dark) {
+  :root { --line: #3d444d; --tip: #3fb27f; --warn: #f0883e; }
+}
+.guide main { max-width: 52rem; }
+.toc { background: var(--code); border-radius: 8px; padding: 0.75rem 1rem; }
+.toc ol { margin: 0.25rem 0; padding-left: 1.4rem; }
+.toc li { margin: 0.15rem 0; }
+.toc > ol > li { margin: 0.35rem 0; }
+.toc ol ol { font-size: 0.88rem; list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 0 0.9rem; }
+.toc ol ol li { margin: 0; }
+.table-wrap { overflow-x: auto; margin: 0.75rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { border: 1px solid var(--line); padding: 0.4rem 0.55rem; text-align: left; vertical-align: top; }
+th { background: var(--code); }
+.tip, .warn, .note { border-left: 4px solid var(--link); background: var(--code); border-radius: 4px;
+  padding: 0.5rem 0.85rem; margin: 1rem 0; }
+.tip { border-left-color: var(--tip); }
+.warn { border-left-color: var(--warn); }
+.tip > :first-child, .warn > :first-child, .note > :first-child { margin-top: 0; }
+.tip > :last-child, .warn > :last-child, .note > :last-child { margin-bottom: 0; }
+.shots { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+figure { margin: 0; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.shots figure { flex: 0 1 240px; }
+figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
+.wide { margin: 1rem 0; }
+.top { font-size: 0.85rem; text-align: right; margin: 1.5rem 0 0; }
+.guide h2 { border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.guide h4 { font-size: 1rem; margin: 1.2rem 0 0.2rem; }
+dt { font-weight: 600; margin-top: 0.6rem; }
+dd { margin-left: 1.2rem; }
