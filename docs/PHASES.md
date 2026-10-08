@@ -1783,3 +1783,6 @@ other screen, not on tablet".
       latest release is v1.13.0); smoke baseline (`PREV_APK_URL`) v1.13.0. Shops on 1.6.1 or later are offered it inside
       the app within a day. Privacy policy already updated for 1.12.0 (8 October 2026); 1.13.0 sends nothing new.
       Open: the Google Cloud `drive.file` scope step of 1.11.0 (the daily report to Drive) was never confirmed
+- [x] Perf FULL on the released code (run 37778514740, d3c583c): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 107 query plans ok; API 21 sale commit p95 19.1 ms (150), multi-word search p95 4.8 ms (50), scan to cart
+      0.58 ms, report_month 164 ms (1,000), report_year 224 ms (3,000); cold start to a usable till about 0.7 s
