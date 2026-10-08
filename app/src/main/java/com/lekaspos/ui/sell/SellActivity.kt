@@ -279,6 +279,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         categoryList.setHasFixedSize(true)
         tileSize = graph.settings.device.value.tileSize
         val grid = GridLayoutManager(this, spanCount())
+        productAdapter.columns = grid.spanCount
         productAdapter.spec = tileSpec(grid.spanCount)
         productGrid.layoutManager = grid
         productGrid.adapter = productAdapter
@@ -868,6 +869,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         tileSize = size
         val grid = productGrid.layoutManager as? GridLayoutManager ?: return
         grid.spanCount = spanCount()
+        productAdapter.columns = grid.spanCount
         productAdapter.spec = tileSpec(grid.spanCount)
     }
 

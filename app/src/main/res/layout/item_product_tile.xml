@@ -15,14 +15,33 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/picture"
+        <!-- The picture, or in a row where other tiles have one, the product's initials in its place
+             (the row's tiles are as tall as its tallest: an empty one looked broken). -->
+        <FrameLayout
+            android:id="@+id/picture_box"
             android:layout_width="match_parent"
             android:layout_height="72dp"
             android:background="#14000000"
-            android:importantForAccessibility="no"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/initials"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:singleLine="true"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/picture"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <LinearLayout
             android:id="@+id/texts"

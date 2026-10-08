@@ -165,7 +165,9 @@ class ProductTileAdapter(
 ) : RecyclerView.Adapter<ProductTileAdapter.Holder>() {
 
     class Holder(v: View) : RecyclerView.ViewHolder(v) {
+        val pictureBox: View = v.findViewById(R.id.picture_box)
         val picture: ImageView = v.findViewById(R.id.picture)
+        val initials: TextView = v.findViewById(R.id.initials)
         val texts: View = v.findViewById(R.id.texts)
         val name: TextView = v.findViewById(R.id.name)
         val price: TextView = v.findViewById(R.id.price)
@@ -192,6 +194,24 @@ class ProductTileAdapter(
             field = value
             notifyDataSetChanged()
         }
+
+    /**
+     * Tiles to a row (the grid's span count): in a row where a tile has a picture, the others show their
+     * initials in its place, so the row's tiles look alike (D-066).
+     */
+    var columns: Int = 1
+        @SuppressLint("NotifyDataSetChanged") // the rows change
+        set(value) {
+            if (field == value) return
+            field = value.coerceAtLeast(1)
+            notifyDataSetChanged()
+        }
+
+    private fun rowHasPicture(position: Int): Boolean {
+        val start = position / columns * columns
+        for (i in start until minOf(start + columns, items.size)) if (items[i].imageId != null) return true
+        return false
+    }
 
     /** Category id → its colour: the colour of products without one of their own. */
     var categoryColors: Map<Long, Int> = emptyMap()
@@ -232,6 +252,9 @@ class ProductTileAdapter(
         val start = items.size
         items = items + more
         notifyItemRangeInserted(start, more.size)
+        // The last row of the page before may have gained a tile with a picture.
+        val inRow = start % columns
+        if (inRow > 0) notifyItemRangeChanged(start - inRow, inRow)
     }
 
     /**
@@ -245,7 +268,15 @@ class ProductTileAdapter(
         if (gone.isEmpty()) {
             val next = old.map { fresh[it.id] ?: it }
             items = next
-            for (i in next.indices) if (next[i] != old[i]) notifyItemChanged(i)
+            for (i in next.indices) {
+                if (next[i] == old[i]) continue
+                if (next[i].imageId != old[i].imageId) {
+                    val start = i / columns * columns // a picture came or went: its row-mates too
+                    notifyItemRangeChanged(start, minOf(columns, next.size - start))
+                } else {
+                    notifyItemChanged(i)
+                }
+            }
         } else {
             items = old.filter { it.id !in gone }.map { fresh[it.id] ?: it }
             notifyDataSetChanged()
@@ -275,6 +306,8 @@ class ProductTileAdapter(
         val stock = p.stockQty
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
         h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
+        h.pictureBox.visibility = if (p.imageId != null || rowHasPicture(position)) View.VISIBLE else View.GONE
+        h.initials.text = if (p.imageId == null) initials(p.name) else ""
         showPicture(h.picture, p.imageId)
         bindBadge(h, p)
         h.itemView.setOnClickListener { onClick(p) }
@@ -297,7 +330,17 @@ class ProductTileAdapter(
         val pad = (s.paddingDp * d).toInt()
         h.texts.setPadding(pad, pad, pad, pad)
         h.itemView.minimumHeight = (s.minHeightDp * d).toInt()
-        if (s.pictureHeightPx > 0) h.picture.layoutParams = h.picture.layoutParams.also { it.height = s.pictureHeightPx }
+        if (s.pictureHeightPx > 0) h.pictureBox.layoutParams = h.pictureBox.layoutParams.also { it.height = s.pictureHeightPx }
+    }
+
+    /** "Beras Faiza 10kg" → "BF": in the picture's place on a tile without one. */
+    private fun initials(name: String): String {
+        val words = name.trim().split(' ').filter { it.isNotEmpty() && it[0].isLetterOrDigit() }
+        return when {
+            words.size >= 2 -> "${words[0].first()}${words[1].first()}"
+            words.size == 1 -> words[0].take(2)
+            else -> ""
+        }.uppercase()
     }
 
     /** White text on a coloured tile; the plain tile as before. */
@@ -310,6 +353,7 @@ class ProductTileAdapter(
             h.name.setTextColor(h.nameColor)
             h.price.setTextColor(h.priceColor)
             h.stock.setTextColor(h.stockColor)
+            h.initials.setTextColor(h.stockColor)
             h.inBill.setBackgroundResource(R.drawable.count_bg)
             h.inBill.setTextColor(ctx.colorOf(R.color.text_on_brand))
         } else {
@@ -318,6 +362,7 @@ class ProductTileAdapter(
             h.name.setTextColor(white)
             h.price.setTextColor(white)
             h.stock.setTextColor(white)
+            h.initials.setTextColor(white)
             h.inBill.setBackgroundResource(R.drawable.count_bg_light)
             h.inBill.setTextColor(ctx.colorOf(R.color.text_primary))
         }
