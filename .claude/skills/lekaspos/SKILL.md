@@ -179,7 +179,9 @@ streaming I/O for files (never whole files or whole tables in memory).
 - [ ] Lint has no errors; release build (R8) installs and runs the changed flow.
 - [ ] Perf suite within budget; release APK size recorded (< 8 MB).
 - [ ] Privacy policy / Data Safety answers still true.
-- [ ] User guide (`site/guide.html` + `site/panduan.html`) and `references/features.md` still true; screenshots
-      refreshed if a pictured screen changed; `node scripts/check-site.mjs` passes.
+- [ ] User guide (`site/guide.html` + `site/panduan.html`), `references/features.md`, `references/codemap.md` and
+      `references/glossary.md` still true (the table in `CLAUDE.md` "Keep the documentation true"); screenshots
+      refreshed if a pictured screen changed; `node scripts/check-site.mjs` passes; the final report says which
+      documents were updated.
 - [ ] `docs/PHASES.md` updated; skill + `docs/DECISIONS.md` updated if a decision changed.
 - [ ] Phase end only: tests + APK size + hardware test list reported, then wait for feedback.

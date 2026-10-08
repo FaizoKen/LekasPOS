@@ -73,11 +73,17 @@ A change is not done until the documents that describe it are right:
 | If you change… | Also update |
 |---|---|
 | Anything a shop owner, manager or cashier sees or does (labels, steps, defaults, permissions, messages) | the user guide in **both** languages: [`site/guide.html`](site/guide.html) and [`site/panduan.html`](site/panduan.html); refresh a screenshot in `site/img/` if the screen changed (`recipes.md` → "Refresh the guide's screenshots") |
-| A feature's rules, a setting, a permission, a screen | `references/features.md`; `references/codemap.md` if files/classes moved |
+| A feature's rules, a setting, a permission, a screen | `references/features.md` |
+| A file, screen, worker, test or stable code added, moved or renamed | `references/codemap.md` |
+| A word users see added or renamed | `references/glossary.md` |
 | A decision (architecture, data, dependency, behaviour the owner chose) | the matching reference **and** a new entry in `docs/DECISIONS.md` |
 | What the app stores, sends, asks permission for or connects to | `site/privacy.html` **and** `site/privasi.html` (same date), `docs/PLAY.md` |
+| A release | the guide's "For LekasPOS x.y.z" line (both languages), `docs/PHASES.md` |
 | Phase/release status | `docs/PHASES.md` |
 | Build, CI, signing, release steps | `docs/BUILD.md` |
+
+Do it in the same commit as the change, run `node scripts/check-site.mjs` when `site/` changed, and say in your
+report which documents you updated (or that none needed it).
 
 ## Working agreements
 

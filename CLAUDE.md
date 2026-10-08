@@ -32,8 +32,24 @@ See `docs/PHASES.md` (single source of truth for phase status).
 - Every synced write appends its sync event to `outbox` in the same transaction.
 - Every new dependency needs a size + need justification in `docs/DECISIONS.md` first.
 - Release APK must stay under 8 MB. Record its size at the end of every phase.
-- Anything users see changes → update the user guide in **both** languages (`site/guide.html`,
-  `site/panduan.html`) and `references/features.md` in the same change (`references/recipes.md` §0).
+
+## Keep the documentation true — every change, same commit
+
+A change to the app is not done until every document it affects says the same as the code. Check
+this list for **every** change (feature, fix, setting, label, permission, release) and update what applies:
+
+| The change… | Update |
+|---|---|
+| alters anything an owner, manager or cashier sees or does (screen, button text, step, default, permission, message) | the user guide in **both** languages: `site/guide.html` and `site/panduan.html` (labels exactly as in `values/` and `values-ms/`); refresh its screenshot in `site/img/` if a pictured screen changed (`references/recipes.md` §0, §0a) |
+| alters what a feature does (rules, limits, settings, activity log) | `.claude/skills/lekaspos/references/features.md` |
+| adds/moves/renames a file, screen, worker, test, stable code | `references/codemap.md` |
+| adds or renames a word users see | `references/glossary.md` |
+| changes a decision or a reference rule | that reference **and** a new `docs/DECISIONS.md` entry |
+| changes what the app stores, sends or asks permission for | `site/privacy.html` + `site/privasi.html` (same date), `docs/PLAY.md` |
+| is released | the guide's "For LekasPOS x.y.z" line (both languages), `docs/PHASES.md` |
+
+Before committing anything under `site/`: `node scripts/check-site.mjs`. When reporting finished work,
+say which documents were updated (or that none needed it).
 
 ## Documentation
 
