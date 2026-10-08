@@ -227,8 +227,9 @@ stock.</dd>
 <li><b>Weighed items</b> (sold by weight): after the scan or tap, type the weight. The keypad fills from the
 right: <code>1 2 5 0</code> = 1.250 kg. Each weighing is its own line.</li>
 <li><b>Items priced at the till</b>: the tile says <b>Enter price</b>; type the price (<code>1 5 0</code> = RM1.50).</li>
-<li>A product sold by the piece whose price is 0.00 asks for the price, so it is not sold free by mistake. A
-weighed product needs its price per kg: at 0.00 it is sold free.</li>
+<li>A product with no price yet (0.00) is not sold free by mistake: the till asks for the price. For a weighed
+product it asks <b>Price of … per kg</b> first, then the weight. (LekasPOS 1.13.0 and older sold a weighed product,
+a pack or a scale label without a price at RM0.00: give such products a price, or update.)</li>
 <li>A <b>carton or pack barcode</b> adds one line such as “Milo x24” at the pack price.</li>
 <li>A <b>weighing-scale label</b> adds the weighed item with its weight, or with exactly the price printed on
 the label (“label price”). See <a href="#scale-labels">Weighing-scale labels</a>.</li>
@@ -516,9 +517,9 @@ know it, it offers <b>Add product</b>; after saving, the product is also on the 
 <dl>
 <dt>Name</dt><dd>What the bill, the receipt and the reports show.</dd>
 <dt>Selling price</dt><dd>The price of one piece (or of one kg for weighed products). Type it like
-<code>12.50</code>. It may be left empty only for products whose price is typed at the till. For a piece product, a
-price of 0.00 makes the till ask for the price every time. A weighed product must have its price per kg: at 0.00 it
-is sold free.</dd>
+<code>12.50</code>. It may be left empty only for products whose price is typed at the till. A price of 0.00 makes
+the till ask for the price every time (for a weighed product, the price per kg). LekasPOS 1.13.0 and older sold a
+weighed product at 0.00 free, so give weighed products their price per kg.</dd>
 <dt>Sold by</dt><dd><b>Piece / pack</b> (the usual), <b>Weight</b> (the till asks the weight, the price is
 per kg), or <b>Price entered at the till</b> (the cashier types the price each time — for things like
 <i>kuih</i> or loose items of different prices). See <a href="#sold-by">How products are sold</a>.</dd>
@@ -915,8 +916,8 @@ the end. The app works out how much cash <b>should</b> be in the drawer, so any 
 <p>In <b>Settings → Store &amp; receipt → Shifts and customers</b>:</p>
 <ul>
 <li><b>Require an open shift to take payments</b> — off by default, and switched on by itself once a cashier or
-manager can sign in with a PIN. The owner can switch it off again; a new till joining the shop may switch it on
-again, so check it after adding a till.</li>
+manager can sign in with a PIN. The owner can switch it off again and it stays off (on LekasPOS 1.13.0 and older a
+new till joining the shop could switch it on again, so check it after adding a till).</li>
 <li><b>Count the drawer when the cashier changes</b> — on by default (see <a href="#handover">Handover</a>).</li>
 </ul>
 
@@ -1292,6 +1293,7 @@ changed on; the others apply to the whole shop and reach every till through Goog
 <tr><td><b>Error reports</b></td><td><a href="#error-reports">Error reports</a>.</td><td>this phone</td></tr>
 <tr><td><b>App updates</b></td><td><a href="#updates">App updates</a>.</td><td>this phone</td></tr>
 <tr><td><b>Diagnostics</b></td><td><a href="#diagnostics">Diagnostics</a>.</td><td>this phone</td></tr>
+<tr><td><b>User guide</b></td><td>Opens this guide in the app's language (LekasPOS 1.13.1 and newer).</td><td>—</td></tr>
 <tr><td><b>About</b></td><td>Version, licence, website and privacy policy.</td><td>—</td></tr>
 </table></div>
 
@@ -1453,8 +1455,8 @@ buttons appear (refunds, voids and the drawer ask for the manager's PIN again). 
 the right date and time first — best with automatic date and time on.</dd>
 <dt>The till says “No shift open”.</dt>
 <dd>The shop requires a shift: tap <b>Open shift</b>, count the drawer, then pay. To stop requiring shifts: Settings →
-Store &amp; receipt → <b>Require an open shift to take payments</b> off. A new till joining the shop may switch it on
-again: check it after adding a till.</dd>
+Store &amp; receipt → <b>Require an open shift to take payments</b> off. On LekasPOS 1.13.0 and older a new till
+joining the shop could switch it on again: check it after adding a till.</dd>
 <dt>“Sale not saved”.</dt>
 <dd>The sale was not recorded and the bill is kept. Read the reason (often the phone is full), fix it and tap Pay
 again. If the customer already paid by card or e-wallet on your terminal, do not charge them again: just tap the same

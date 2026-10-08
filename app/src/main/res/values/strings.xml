@@ -56,6 +56,8 @@
     <string name="cart_price_changed">price changed</string>
     <string name="weigh_title">Weight of %1$s</string>
     <string name="price_for_title">Price of %1$s</string>
+    <!-- A weighed product with no price per kg yet (1.13.1): its price is asked before the weight. -->
+    <string name="price_per_unit_title">Price of %1$s per %2$s</string>
     <string name="price_check_title">Price check</string>
     <string name="price_check_hint">Scan or type a barcode or name</string>
     <string name="price_check_go">Check</string>
@@ -282,6 +284,9 @@
     <string name="language_phone">Phone\'s language</string>
     <string name="settings_about">About</string>
     <string name="settings_about_sub">LekasPOS %1$s (build %2$d) · GPL-3.0</string>
+    <!-- The user guide on the website, in the app language (1.13.1, D-070). -->
+    <string name="settings_guide">User guide</string>
+    <string name="settings_guide_sub">How to use LekasPOS, step by step (opens the website)</string>
     <string name="about_text">LekasPOS %1$s — a free, open-source point-of-sale app, licensed under the GNU General Public License v3.0: you may use, study, share and change it. Your data stays on this phone, and in your own Google Drive only if you turn on Google Drive backup. New versions: Settings → App updates, or Website &amp; updates.</string>
     <string name="about_notices">Includes open-source software: AndroidX libraries (Core, RecyclerView, WorkManager, Room), Kotlin and kotlinx.coroutines, and the ZXing barcode library — all under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, under the Android Software Development Kit License.</string>
     <string name="about_privacy">Privacy policy</string>
@@ -422,6 +427,8 @@
     <string name="error_reports_title">Error reports</string>
     <!-- The privacy policy in the app’s language. -->
     <string name="privacy_url">https://faizoken.github.io/LekasPOS/privacy.html</string>
+    <!-- The user guide in the app's language. -->
+    <string name="guide_url">https://faizoken.github.io/LekasPOS/guide.html</string>
     <string name="error_reports_ask_title">Help fix problems?</string>
     <string name="error_reports_ask_message">When something goes wrong in LekasPOS (the app stops, freezes or shows an error), this phone can send a short error report to the LekasPOS developer, so it gets fixed.\n\nA report holds what went wrong (with the app’s last log lines before it), when and how often, the app version, the phone model, Android version, memory and free storage, the size of the app’s data, the app language and a random number for this phone. It never holds your sales, products, prices, customers, staff, PINs or Google account. Reports go through Cloudflare to a private GitHub page (see the privacy policy).\n\nYou can change this any time in Settings → Error reports.</string>
     <string name="error_reports_yes">Send reports</string>

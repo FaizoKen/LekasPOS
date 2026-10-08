@@ -14,6 +14,7 @@ import com.lekaspos.data.db.Seed
 import com.lekaspos.data.shift.ShiftDao
 import com.lekaspos.domain.report.ReportService
 import com.lekaspos.domain.sell.Tender
+import com.lekaspos.domain.shift.ShiftService
 import com.lekaspos.testing.TestDb
 import com.lekaspos.testing.TestGraph
 import java.util.TimeZone
@@ -272,6 +273,12 @@ class StaffCheckTest {
         graph.settings.saveStore(graph.settings.store.value.copy(shiftRequired = false))
         graph.shifts.useShiftsWithStaff()
         assertFalse(graph.settings.store.value.shiftRequired) // the owner's choice stays
+        // 1.13.1: a till that joins the shop later has no "done" mark of its own (LOCAL), but the shop's synced
+        // activity log says it was done: the owner's "off" stays off on every till.
+        graph.db().write { tx -> tx.db.execSQL("DELETE FROM meta WHERE key = ?", arrayOf(ShiftService.SHIFTS_ON_KEY)) }
+        graph.shifts.useShiftsWithStaff()
+        assertFalse(graph.settings.store.value.shiftRequired)
+        assertEquals(1, graph.db().read { AuditDao.byAction(it, AuditAction.SETTINGS_CHANGE, null) }.count { it.detail == ShiftService.SHIFTS_ON_DETAIL })
     }
 
     @Test

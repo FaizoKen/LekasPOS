@@ -53,6 +53,7 @@
     <string name="cart_price_changed">harga diubah</string>
     <string name="weigh_title">Berat %1$s</string>
     <string name="price_for_title">Harga %1$s</string>
+    <string name="price_per_unit_title">Harga %1$s setiap %2$s</string>
     <string name="price_check_title">Semak harga</string>
     <string name="price_check_hint">Imbas atau taip kod bar atau nama</string>
     <string name="price_check_go">Semak</string>
@@ -278,6 +279,8 @@
     <string name="language_phone">Bahasa telefon</string>
     <string name="settings_about">Perihal</string>
     <string name="settings_about_sub">LekasPOS %1$s (binaan %2$d) · GPL-3.0</string>
+    <string name="settings_guide">Panduan pengguna</string>
+    <string name="settings_guide_sub">Cara menggunakan LekasPOS, langkah demi langkah (membuka laman web)</string>
     <string name="about_text">LekasPOS %1$s — aplikasi jualan percuma dan sumber terbuka, berlesen GNU General Public License v3.0: anda boleh menggunakan, mengkaji, berkongsi dan mengubahnya. Data anda kekal dalam telefon ini, dan dalam Google Drive anda sendiri hanya jika anda menghidupkan sandaran Google Drive. Versi baharu: Tetapan → Kemas kini aplikasi, atau Laman web &amp; kemas kini.</string>
     <string name="about_notices">Mengandungi perisian sumber terbuka: pustaka AndroidX (Core, RecyclerView, WorkManager, Room), Kotlin dan kotlinx.coroutines, serta pustaka kod bar ZXing — semuanya di bawah Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, di bawah Android Software Development Kit License.</string>
     <string name="about_privacy">Dasar privasi</string>
@@ -417,6 +420,7 @@
     <!-- Laporan ralat kepada pembangun (D-057) -->
     <string name="error_reports_title">Laporan ralat</string>
     <string name="privacy_url">https://faizoken.github.io/LekasPOS/privasi.html</string>
+    <string name="guide_url">https://faizoken.github.io/LekasPOS/panduan.html</string>
     <string name="error_reports_ask_title">Bantu baiki masalah?</string>
     <string name="error_reports_ask_message">Apabila berlaku masalah dalam LekasPOS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun LekasPOS supaya ia dibaiki.\n\nLaporan mengandungi apa yang tidak kena (bersama baris log terakhir aplikasi sebelumnya), bila dan berapa kerap, versi aplikasi, model telefon, versi Android, memori dan storan kosong, saiz data aplikasi, bahasa aplikasi dan satu nombor rawak bagi telefon ini. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau akaun Google anda. Laporan dihantar melalui Cloudflare ke halaman GitHub peribadi (lihat dasar privasi).\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
     <string name="error_reports_yes">Hantar laporan</string>

@@ -234,8 +234,10 @@ menunjukkan harga dan, bagi produk yang stoknya dikira, bilangan yang ada dalam 
 <li><b>Barang ditimbang</b> (dijual mengikut berat): selepas imbas atau ketik, taip beratnya. Pad kekunci diisi dari
 kanan: <code>1 2 5 0</code> = 1.250 kg. Setiap timbangan menjadi baris tersendiri.</li>
 <li><b>Barang yang harganya dimasukkan di kaunter</b>: petaknya menunjukkan <b>Masukkan harga</b>; taip harganya (<code>1 5 0</code> = RM1.50).</li>
-<li>Produk yang dijual mengikut unit dengan harga 0.00 meminta harga, supaya ia tidak terjual percuma secara tidak
-sengaja. Produk yang ditimbang mesti ada harga sekilogram: pada harga 0.00 ia dijual percuma.</li>
+<li>Produk yang belum ada harga (0.00) tidak terjual percuma secara tidak sengaja: kaunter meminta harganya. Bagi
+produk yang ditimbang, kaunter meminta <b>Harga … setiap kg</b> dahulu, kemudian beratnya. (LekasPOS 1.13.0 dan lebih
+lama menjual produk yang ditimbang, pek atau label penimbang tanpa harga pada RM0.00: berikan harga kepada produk
+itu, atau kemas kini aplikasi.)</li>
 <li><b>Kod bar karton atau pek</b> menambah satu baris seperti “Milo x24” pada harga pek.</li>
 <li><b>Label penimbang</b> menambah barang yang ditimbang bersama beratnya, atau tepat dengan harga yang dicetak pada
 label (“harga label”). Lihat <a href="#scale-labels">Label penimbang</a>.</li>
@@ -531,9 +533,10 @@ mengenalinya, ia menawarkan <b>Tambah produk</b>; selepas disimpan, produk itu j
 <dl>
 <dt>Nama</dt><dd>Nama yang ditunjukkan pada bil, resit dan laporan.</dd>
 <dt>Harga jualan</dt><dd>Harga seunit (atau sekilogram bagi produk yang ditimbang). Taip seperti
-<code>12.50</code>. Ia boleh dibiarkan kosong hanya bagi produk yang harganya ditaip di kaunter. Bagi produk unit,
-harga 0.00 menyebabkan kaunter meminta harga setiap kali. Produk yang ditimbang mesti ada harga sekilogram: pada harga
-0.00 ia dijual percuma.</dd>
+<code>12.50</code>. Ia boleh dibiarkan kosong hanya bagi produk yang harganya ditaip di kaunter. Harga 0.00
+menyebabkan kaunter meminta harga setiap kali (bagi produk yang ditimbang, harga sekilogram). LekasPOS 1.13.0 dan
+lebih lama menjual produk yang ditimbang pada harga 0.00 secara percuma, jadi berikan harga sekilogram kepada produk
+yang ditimbang.</dd>
 <dt>Dijual mengikut</dt><dd><b>Unit / pek</b> (yang biasa), <b>Berat</b> (kaunter meminta berat, harganya bagi
 sekilogram), atau <b>Harga dimasukkan di kaunter</b> (juruwang menaip harga setiap kali — untuk barang seperti
 <i>kuih</i> atau barang longgar yang berlainan harga). Lihat <a href="#sold-by">Cara produk dijual</a>.</dd>
@@ -932,8 +935,9 @@ akhirnya. Aplikasi mengira berapa banyak wang tunai yang <b>sepatutnya</b> ada d
 <p>Di <b>Tetapan → Kedai &amp; resit → Syif dan pelanggan</b>:</p>
 <ul>
 <li><b>Wajibkan syif dibuka untuk menerima bayaran</b> — mati secara lalai, dan hidup dengan sendirinya sebaik sahaja juruwang atau
-pengurus boleh log masuk dengan PIN. Pemilik boleh mematikannya semula; kaunter baharu yang menyertai kedai mungkin
-menghidupkannya semula, jadi semak tetapan ini selepas menambah kaunter.</li>
+pengurus boleh log masuk dengan PIN. Pemilik boleh mematikannya semula dan ia kekal mati (pada LekasPOS 1.13.0 dan
+lebih lama, kaunter baharu yang menyertai kedai boleh menghidupkannya semula, jadi semak tetapan ini selepas menambah
+kaunter).</li>
 <li><b>Kira laci apabila juruwang bertukar</b> — hidup secara lalai (lihat <a href="#handover">Pertukaran juruwang</a>).</li>
 </ul>
 
@@ -1318,6 +1322,7 @@ yang lain berkuat kuasa untuk seluruh kedai dan sampai ke setiap kaunter melalui
 <tr><td><b>Laporan ralat</b></td><td><a href="#error-reports">Laporan ralat</a>.</td><td>telefon ini</td></tr>
 <tr><td><b>Kemas kini aplikasi</b></td><td><a href="#updates">Kemas kini aplikasi</a>.</td><td>telefon ini</td></tr>
 <tr><td><b>Diagnostik</b></td><td><a href="#diagnostics">Diagnostik</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Panduan pengguna</b></td><td>Membuka panduan ini dalam bahasa aplikasi (LekasPOS 1.13.1 dan lebih baharu).</td><td>—</td></tr>
 <tr><td><b>Perihal</b></td><td>Versi, lesen, laman web dan dasar privasi.</td><td>—</td></tr>
 </table></div>
 
@@ -1479,8 +1484,8 @@ masuk melalui <b>Kunci / tukar pengguna</b>.</dd>
 tarikh dan masa yang betul dahulu — sebaik-baiknya dengan tarikh dan masa automatik dihidupkan.</dd>
 <dt>Kaunter memaparkan “Tiada syif dibuka”.</dt>
 <dd>Kedai mewajibkan syif: ketik <b>Buka syif</b>, kira laci, kemudian bayar. Untuk berhenti mewajibkan syif: Tetapan →
-Kedai &amp; resit → matikan <b>Wajibkan syif dibuka untuk menerima bayaran</b>. Kaunter baharu yang menyertai kedai
-mungkin menghidupkannya semula: semak tetapan ini selepas menambah kaunter.</dd>
+Kedai &amp; resit → matikan <b>Wajibkan syif dibuka untuk menerima bayaran</b>. Pada LekasPOS 1.13.0 dan lebih lama,
+kaunter baharu yang menyertai kedai boleh menghidupkannya semula: semak tetapan ini selepas menambah kaunter.</dd>
 <dt>“Jualan tidak disimpan”.</dt>
 <dd>Jualan itu tidak direkodkan dan bil masih disimpan. Baca sebabnya (selalunya storan telefon penuh), betulkan, dan ketik
 Bayar sekali lagi. Jika pelanggan sudah membayar dengan kad atau e-dompet di terminal anda, jangan caj mereka sekali lagi:

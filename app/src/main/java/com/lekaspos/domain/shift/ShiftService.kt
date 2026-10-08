@@ -256,6 +256,9 @@ class ShiftService(private val graph: AppGraph) {
      * 1.12.1 (D-068): a shop whose staff sign in with PINs of their own uses shifts — the only way cash missing
      * from the drawer shows. Turned on once, when such staff first exist (on record; the owner can turn it off
      * in Store & receipt, and it stays off). A shop of one keeps its choice.
+     * Once per shop, not per till (1.13.1): not when the shop's activity log (synced) already shows it was done on
+     * any till. A till that joined later switched the owner's "off" on again for every till, its own "done" mark
+     * (LOCAL) being missing. The log also covers shops where 1.12.1–1.13.0 did it.
      */
     suspend fun useShiftsWithStaff() {
         val db = graph.db()
@@ -266,9 +269,10 @@ class ShiftService(private val graph: AppGraph) {
         withContext(NonCancellable) {
             db.write(reserveIds = 1L) { tx ->
                 val now = System.currentTimeMillis()
-                if (!required) {
+                val shopDidIt = AuditDao.existsWithDetail(tx.db, AuditAction.SETTINGS_CHANGE, SHIFTS_ON_DETAIL)
+                if (!required && !shopDidIt) {
                     SettingsDao.putChanged(tx, SettingsDao.all(tx.db), mapOf(SettingKeys.SHIFT_REQUIRED to "1"), now)
-                    AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, null, now, detail = "shift.required: on (the shop has staff)")
+                    AuditDao.log(tx, AuditAction.SETTINGS_CHANGE, null, now, detail = SHIFTS_ON_DETAIL)
                 }
                 Meta.put(tx.db, SHIFTS_ON_KEY, "1")
             }
@@ -301,6 +305,9 @@ class ShiftService(private val graph: AppGraph) {
 
         /** LOCAL meta: [useShiftsWithStaff] has run (or found shifts on) on this till. */
         const val SHIFTS_ON_KEY = "upgrade.shifts_on"
+
+        /** The activity-log detail of shifts turned on because the shop has staff: synced, so every till knows it was done. */
+        const val SHIFTS_ON_DETAIL = "shift.required: on (the shop has staff)"
 
         /**
          * What this till's activity log holds for [shift] that the owner should look at (D-067): bills

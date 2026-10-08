@@ -1061,7 +1061,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 }
                 is CartSession.ScanResult.NeedsPrice -> {
                     beeper?.ok()
-                    askPrice(r.product, r.code)
+                    askPrice(r.product, r.code, r.packQty)
                 }
                 is CartSession.ScanResult.NotFound -> {
                     beeper?.error()
@@ -1073,6 +1073,15 @@ class SellActivity : Activity(), LineActions, DialogHost {
     }
 
     private fun askWeight(p: SellableProduct, code: String?) {
+        if (p.price == 0L) {
+            // No price per kg yet: weight × 0.00 sold it free (1.13.1). The price per unit first, then the
+            // weight at that price — for this sale only, like a product sold by the piece with no price.
+            val d = AmountDialog(this, getString(R.string.price_per_unit_title, p.name, p.unit), AmountDialog.Kind.MONEY, currency) { price ->
+                askWeight(p.copy(price = price), code)
+            }.show()
+            keepPrompt(d, CartSession.Prompt(p, code, weight = true))
+            return
+        }
         val d = AmountDialog(this, getString(R.string.weigh_title, p.name), AmountDialog.Kind.WEIGHT, currency, p.unit) { milli ->
             if (graph.cart.addProduct(p, qty = milli, barcode = code) == 0L) beeper?.error()
         }.show()
@@ -1085,7 +1094,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         promptDialog = d
         d.setOnDismissListener {
             if (promptDialog === d) promptDialog = null
-            if (!destroying) graph.cart.prompt = null
+            // Only its own question: the dismissal comes after OK, when the next one (the weight after a price
+            // per kg) may already be asked.
+            if (!destroying && graph.cart.prompt === prompt) graph.cart.prompt = null
         }
     }
 
@@ -1099,21 +1110,23 @@ class SellActivity : Activity(), LineActions, DialogHost {
             graph.cart.prompt = null
             return
         }
-        if (p.weight) askWeight(p.product, p.code) else askPrice(p.product, p.code)
+        if (p.weight) askWeight(p.product, p.code) else askPrice(p.product, p.code, p.packQty)
     }
 
     /** onDestroy has begun: dialogs closing now were not answered by the cashier. */
     private var destroying = false
 
-    private fun askPrice(p: SellableProduct, code: String?) {
+    /** [packQty]: a pack barcode with no price — the price typed is the whole pack's. */
+    private fun askPrice(p: SellableProduct, code: String?, packQty: Long = 1000L) {
         // A product priced 0.00 may be sold for 0.00: a free plastic bag or gift could not be sold at all
         // once a product without a price asked for one (1.7.1) — it is still asked, never sold free
         // unseen. A product priced at the till (kuih, vegetables) still needs a price typed.
         val allowZero = p.sellMode != SellMode.OPEN_PRICE
-        val d = AmountDialog(this, getString(R.string.price_for_title, p.name), AmountDialog.Kind.MONEY, currency, allowZero = allowZero) { price ->
-            if (graph.cart.addAtPrice(p, price, code) == 0L) beeper?.error()
+        val title = getString(R.string.price_for_title, CartSession.lineName(p.name, packQty))
+        val d = AmountDialog(this, title, AmountDialog.Kind.MONEY, currency, allowZero = allowZero) { price ->
+            if (graph.cart.addAtPrice(p, price, code, packQty) == 0L) beeper?.error()
         }.show()
-        keepPrompt(d, CartSession.Prompt(p, code, weight = false))
+        keepPrompt(d, CartSession.Prompt(p, code, weight = false, packQty = packQty))
     }
 
     /** Price check: scan or search to see price, stock and deals; the bill is not touched. */
@@ -1259,7 +1272,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                     }
                     is CartSession.ScanResult.NeedsPrice -> {
                         clearSearch()
-                        askPrice(r.product, r.code)
+                        askPrice(r.product, r.code, r.packQty)
                         return@launch
                     }
                     is CartSession.ScanResult.NotFound -> if (text.length >= 6 && text.all { it in '0'..'9' }) {

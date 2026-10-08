@@ -81,6 +81,8 @@ class SettingsActivity : ScreenActivity() {
                 withApproval(Perm.SETTINGS) { UpdateUi.settings(this, scope) }
             },
             Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
+            // The user guide on the website, in the app's language (D-070): the shop's manual, kept true with each release.
+            Entry(R.string.settings_guide, R.string.settings_guide_sub, null) { open(getString(R.string.guide_url)) },
             Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
         )
         val adapter = RowAdapter<Entry>(

@@ -110,6 +110,11 @@ object AuditDao {
     /** Is there an entry of [action] by [staffId] about [entityId]? (A rare action: its rows by the action index.) */
     fun exists(db: SQLiteDatabase, action: Int, staffId: Long, entityId: Long): Boolean = db.long(EXISTS, action, staffId, entityId) > 0L
 
+    private const val EXISTS_DETAIL = "SELECT COUNT(*) FROM audit_log WHERE action = ? AND detail = ?"
+
+    /** Is there an entry of [action] (on any till: the log is synced) with exactly [detail]? A rare action, by its index. */
+    fun existsWithDetail(db: SQLiteDatabase, action: Int, detail: String): Boolean = db.long(EXISTS_DETAIL, action, detail) > 0L
+
     private fun row(c: Cursor) = AuditRow(
         id = c.getLong(0),
         action = c.getInt(1),
@@ -128,6 +133,7 @@ object AuditDao {
         "audit_action_first" to ACTION_FIRST,
         "audit_action_next" to ACTION_NEXT,
         "audit_exists" to EXISTS,
+        "audit_exists_detail" to EXISTS_DETAIL,
         "audit_by_staff" to BY_STAFF,
         "audit_of_till" to OF_TILL,
     )

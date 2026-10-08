@@ -79,7 +79,8 @@ class CartSession(private val graph: AppGraph) {
     sealed class ScanResult {
         data class Added(val key: Long, val name: String) : ScanResult()
         data class NeedsWeight(val product: SellableProduct, val code: String) : ScanResult()
-        data class NeedsPrice(val product: SellableProduct, val code: String) : ScanResult()
+        /** [packQty]: a pack barcode with no price (its price is for the whole pack). */
+        data class NeedsPrice(val product: SellableProduct, val code: String, val packQty: Long = 1000L) : ScanResult()
         data class NotFound(val code: String) : ScanResult()
         object Busy : ScanResult()
     }
@@ -113,7 +114,7 @@ class CartSession(private val graph: AppGraph) {
      * asked again when the selling screen is rebuilt (the phone turned) instead of being lost with the
      * dialog (2026-10 review). Main thread.
      */
-    data class Prompt(val product: SellableProduct, val code: String?, val weight: Boolean)
+    data class Prompt(val product: SellableProduct, val code: String?, val weight: Boolean, val packQty: Long = 1000L)
 
     var prompt: Prompt? = null
 
@@ -162,10 +163,11 @@ class CartSession(private val graph: AppGraph) {
             is Resolution.Scale -> {
                 val l = res.label
                 val p = res.product
-                if (l.priceMinor == 0L || (l.priceMinor == null && (l.weightMilli ?: 0L) <= 0L)) {
+                if (l.priceMinor == 0L || (l.priceMinor == null && ((l.weightMilli ?: 0L) <= 0L || p.price == 0L))) {
                     // A label printed with no weight or a price of 0.00 (a scale fault, a test label) is
                     // weighed or priced by the cashier: it went on the bill as 0.001 kg, or free, with
-                    // the "ok" beep (2026-10 review).
+                    // the "ok" beep (2026-10 review). So is a weight label of a product with no price per
+                    // kg yet: weight × 0.00 sold it free (1.13.1).
                     if (p.sellMode == SellMode.WEIGHT && p.price > 0L) ScanResult.NeedsWeight(p, res.code) else ScanResult.NeedsPrice(p, res.code)
                 } else {
                     added(add(itemForLabel(res)))
@@ -174,13 +176,14 @@ class CartSession(private val graph: AppGraph) {
             is Resolution.Plain -> {
                 val p = res.hit.product
                 when {
+                    // A weighed product with no price per kg yet: the selling screen asks it before the weight.
                     p.sellMode == SellMode.WEIGHT && res.hit.packQty == 1000L && res.hit.packPrice == null ->
                         ScanResult.NeedsWeight(p, res.hit.code)
                     p.sellMode == SellMode.OPEN_PRICE -> ScanResult.NeedsPrice(p, res.hit.code)
                     // No price yet (a product added in a hurry): the price is asked, it never sells free
-                    // with the normal beep (2026-10 review).
-                    p.sellMode == SellMode.UNIT && p.price == 0L && res.hit.packQty == 1000L && res.hit.packPrice == null ->
-                        ScanResult.NeedsPrice(p, res.hit.code)
+                    // with the normal beep (2026-10 review). A pack of such a product with no pack price
+                    // too: it went on the bill at 0.00 (1.13.1).
+                    BarcodeLookup.unitPrice(res.hit) == 0L -> ScanResult.NeedsPrice(p, res.hit.code, res.hit.packQty)
                     else -> added(add(itemFor(res.hit)))
                 }
             }
@@ -201,12 +204,12 @@ class CartSession(private val graph: AppGraph) {
         ),
     )
 
-    /** An open-price product sold at [price]. */
-    fun addAtPrice(p: SellableProduct, price: Long, barcode: String? = null): Long = add(
+    /** An open-price product (or a product with no price yet) sold at [price]; [packQty]: one pack of a pack barcode. */
+    fun addAtPrice(p: SellableProduct, price: Long, barcode: String? = null, packQty: Long = 1000L): Long = add(
         CartItem(
-            key = 0L, productId = p.id, name = p.name, barcode = barcode, unit = p.unit, categoryId = p.categoryId,
-            qty = 1000L, unitPrice = price, taxRateId = p.taxRateId, taxBp = p.taxBp, unitCost = p.cost,
-            trackStock = p.trackStock,
+            key = 0L, productId = p.id, name = lineName(p.name, packQty), barcode = barcode, unit = p.unit,
+            categoryId = p.categoryId, qty = 1000L, packQty = packQty, unitPrice = price, taxRateId = p.taxRateId,
+            taxBp = p.taxBp, unitCost = p.cost, trackStock = p.trackStock,
         ),
     )
 
@@ -257,9 +260,8 @@ class CartSession(private val graph: AppGraph) {
 
     fun itemFor(hit: ScanHit): CartItem {
         val p = hit.product
-        val pack = hit.packQty != 1000L
         return CartItem(
-            key = 0L, productId = p.id, name = if (pack) "${p.name} x${MoneyFormat.formatQty(hit.packQty)}" else p.name,
+            key = 0L, productId = p.id, name = lineName(p.name, hit.packQty),
             barcode = hit.code, unit = p.unit, categoryId = p.categoryId, qty = 1000L, packQty = hit.packQty,
             unitPrice = BarcodeLookup.unitPrice(hit), taxRateId = p.taxRateId, taxBp = p.taxBp, unitCost = p.cost,
             trackStock = p.trackStock,
@@ -831,6 +833,10 @@ class CartSession(private val graph: AppGraph) {
 
         /** Characters of item names in a cleared bill's activity-log entry. */
         private const val ITEMS_TEXT_MAX = 300
+
+        /** A bill line's name: "Milo x24" for a pack barcode of 24, else the product's name. */
+        fun lineName(name: String, packQty: Long): String =
+            if (packQty != 1000L) "$name x${MoneyFormat.formatQty(packQty)}" else name
 
         fun discountOf(kind: Int, value: Long): Discount = when (kind) {
             DiscountKind.AMOUNT -> if (value > 0L) Discount.Amount(value) else Discount.None

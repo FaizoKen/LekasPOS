@@ -33,7 +33,8 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
-| — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | written 2026-10-08 for 1.13.0 — goes live on GitHub Pages when pushed; the owner's read-through pending |
+| — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
+| — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | in progress 2026-10-08 |
 
 ## Open questions for the user
 
@@ -1787,3 +1788,33 @@ other screen, not on tablet".
 - [x] Perf FULL on the released code (run 37778514740, d3c583c): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
       lines), all 107 query plans ok; API 21 sale commit p95 19.1 ms (150), multi-word search p95 4.8 ms (50), scan to cart
       0.58 ms, report_month 164 ms (1,000), report_year 224 ms (3,000); cold start to a usable till about 0.7 s
+
+## 1.13.1 — nothing without a price sells free; shifts once per shop; the guide in the app (D-071)
+
+Found by the user guide's fact-check (D-070); the owner (2026-10-08): "yup do it".
+
+- [x] **No price, never free:** a weighed product priced 0.00 asks "Price of X per kg" before the weight (this sale
+      only); a pack barcode whose price works out to 0.00 asks the whole pack's price ("Milo x24", 24 pieces off stock);
+      a weight label of a product with no price per kg asks the amount. Before, all three went on the bill at RM0.00
+      with the "ok" beep
+- [x] **"Require an open shift" once per shop:** a till that joins later no longer switches the owner's "off" back on
+      for every till (the synced activity log says it was done; also for shops where 1.12.1–1.13.0 did it)
+- [x] **Settings → User guide:** opens https://faizoken.github.io/LekasPOS/guide.html (Malay: `panduan.html`)
+- [x] Tests: `CartSessionTest.noPriceIsNeverSoldFree`; `StaffCheckTest.aShopWithStaffUsesShifts` extended (a till
+      that joins later); `audit_exists_detail` registered for the query-plan check
+- [x] User guide (both languages), `features.md`, `codemap.md`, D-071
+- [x] Local: JVM tests, lint (0 errors), the instrumented tests compile
+- [ ] CI green (API 21 + 36, tablet, release smoke), release APK size, test build (pre-release)
+- [ ] The owner's phone check (below), then the release
+
+### Needs real-device testing (1.13.1)
+
+1. **Weighed item with no price:** Products → a product sold by **Weight** → Selling price 0.00 → Save. On the selling
+   screen tap it (or scan its barcode): "Price of … per kg" → type 8.00 → OK → the weight → 1.250 → the line is
+   RM10.00. Cancel at the price: nothing on the bill. Turn the phone while the weight is asked: it is asked again.
+2. **Pack with no price:** a product priced 0.00 with a pack barcode (Add pack barcode, pieces 6, pack price empty) →
+   scan the pack → "Price of … x6" → 1.20 → one line "… x6" RM1.20; its stock goes down by 6.
+3. **Shifts stay off:** with staff who sign in, Settings → Store & receipt → "Require an open shift…" off. On a second
+   phone (or after Clear storage on a spare one) join the shop through Google Drive → sign in → the setting is still
+   off on both tills.
+4. **User guide:** Settings → User guide → the guide opens in the browser (Malay app: the Malay guide).

@@ -1,6 +1,6 @@
 # Features — what the app does today (behaviour reference)
 
-The current behaviour of LekasPOS **1.13.0**, feature by feature, for anyone changing the code. It complements
+The current behaviour of LekasPOS **1.13.1**, feature by feature, for anyone changing the code. It complements
 the design references (`architecture.md`, `database.md`, `money.md`, `sync.md`): those say *how* it is built,
 this says *what it does* and where. `docs/DECISIONS.md` is the history of *why* (D-numbers below); when it and
 this file disagree, the code wins — fix this file.
@@ -124,9 +124,11 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   till `dev.tiles` (Large 150 / Medium 112 / Small 88dp min width × font scale, 2–10 per row). Taps are queued; a
   400 ms shield after a search pick.
 - Sell modes: piece (adds 1; price 0.00 asks the price, 0.00 accepted), weight (asks weight, 3 decimals, > 0, each
-  weighing its own line; **a weighed product priced 0.00 is added at 0.00 — no price is asked**, nor for a pack
-  barcode with no pack price of a 0.00 product: `CartSession.scan` guards only `SellMode.UNIT`), open price (asks
-  price, > 0). Pack barcode: line "Name x24" at the pack price (or price ×
+  weighing its own line; priced 0.00 → `SellActivity.askWeight` asks "Price of X per kg" (> 0) first, then the
+  weight at that price, for this sale only — 1.13.1, D-071), open price (asks price, > 0). Nothing with no price
+  goes on the bill unseen (`CartSession.scan`): a code whose `BarcodeLookup.unitPrice` is 0 → `NeedsPrice` (a pack:
+  `packQty` carried through `Prompt` to `addAtPrice`, the typed price is the pack's); a weight label of a 0.00
+  product → `NeedsPrice` (the typed amount, one unit). Pack barcode: line "Name x24" at the pack price (or price ×
   pieces), stock in base units. Scale label: weight → weighed line; price → line amount = label price ("label
   price", Remove only); weight 0 / price 0 → asks.
 - Unknown barcode (`showUnknownBarcode`): "Barcode not found" → Add product (MANAGE_PRODUCTS or manager help) →
@@ -303,10 +305,10 @@ applies after. Line shows "· name −saving"; receipt prints the name. Tills �
 
 ## 10. Shifts and cash (`domain/shift/ShiftService.kt`, `core/shift/*`, D-038, D-067, D-068)
 
-- One open shift per till (`shift`, LWW). Store settings `shift.required` (default off; turned on once per till
-  when a non-owner can sign in with a PIN — `useShiftsWithStaff`, audited; the "done" marker `upgrade.shifts_on` is
-  LOCAL meta, so a till that joins later turns the store-wide setting on again even after the owner turned it off —
-  see §20) and `shift.handover` (default on).
+- One open shift per till (`shift`, LWW). Store settings `shift.required` (default off; turned on once per **shop**
+  when a non-owner can sign in with a PIN — `useShiftsWithStaff`, audited with `SHIFTS_ON_DETAIL`; skipped when the
+  synced activity log already has that entry, so a till joining later never turns the owner's "off" back on — 1.13.1,
+  D-071; the LOCAL `upgrade.shifts_on` mark only saves re-checking) and `shift.handover` (default on).
 - The till asks by itself (`core/shift/ShiftGuide.kt`, `SellActivity.checkShift`, once per person and shift/day,
   never over a payment or result): no shift and required → "Start the shift"; a shift from an earlier day → "Yesterday's
   shift is still open" (count closes it and opens today's); another person's shift today with handover on → "Take
@@ -382,7 +384,8 @@ codepage 0, cut on, feed 4, auto on, native QR off), `dev.drawer.*` (enabled on,
 Settings screen order: App language · Item size · Customer screen · Store & receipt · Printer & cash drawer · Barcode
 scanner & camera · Staff · Shift & cash · Customers · Tax rates · Payment methods · Categories · Activity log · Google
 Drive backup · Backup & restore · Daily sales report to Google Drive · Error reports · App updates · Diagnostics ·
-About. The hub has no guard; each screen guards itself.
+User guide (opens `guide_url`: `guide.html`, or `panduan.html` in Malay — 1.13.1) · About. The hub has no guard;
+each screen guards itself.
 
 ## 15. Data safety: backups and restore (`domain/backup/BackupService.kt`, `data/backup/*`, D-044, D-048, D-053)
 
@@ -448,14 +451,10 @@ notifications. Google scopes: `drive.appdata` (sync), `drive.file` (daily report
 
 ## 20. Known gaps and inconsistencies (found while writing the user guide, 2026-10-08)
 
-Behaviour worth a code fix (decide with the owner):
-- **A weighed product with price 0.00 sells free**: the scan path asks the price only for piece products
-  (`CartSession.scan`, `SellMode.UNIT && price == 0`), and `SellActivity.askWeight` adds the line at the stored
-  price. Same for a pack barcode without a pack price of a 0.00 product. The guide warns owners to give weighed
-  products a price.
-- **`shift.required` comes back**: `ShiftService.useShiftsWithStaff` keeps its "done" marker per till
-  (`upgrade.shifts_on`, LOCAL), so a till joining the shop later switches the store-wide setting on again after the
-  owner switched it off. The guide tells owners to check it after adding a till.
+Fixed in 1.13.1 (D-071): a weighed product, a pack or a weight label with no price sold free; a till joining later
+switched "Require an open shift" back on for the whole shop. The guide still warns users of 1.13.0 and older.
+
+Behaviour worth a look (decide with the owner):
 - A **damaged database** that cannot open leaves an empty till; good backups are protected only 7 days
   (`KeepDamagedDatabase.HOLD_MS`), then daily backups of the empty data start to rotate them out.
 - Saving or sharing a backup file marks the data "protected" even when the file stays in the phone's Downloads or

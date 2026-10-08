@@ -107,6 +107,42 @@ class CartSessionTest {
         assertEquals(2, cart.state.value.cart.items.size) // nothing added
     }
 
+    /** 1.13.1: a weighed product, a pack or a weight label with no price went on the bill at 0.00 with the "ok" beep. */
+    @Test
+    fun noPriceIsNeverSoldFree() = runBlocking {
+        val db = graph.db()
+        val (onionId, bagId) = db.writeBlocking { tx ->
+            val now = System.currentTimeMillis()
+            val onion = tx.nextId()
+            ProductDao.create(
+                tx, Product(id = onion, name = "Bawang", unit = "kg", sellMode = SellMode.WEIGHT, price = 0L),
+                listOf(Barcode(tx.nextId(), onion, "5550001"), Barcode(tx.nextId(), onion, "777", BarcodeKind.SCALE_PLU)), now,
+            )
+            val bag = tx.nextId()
+            ProductDao.create(tx, Product(id = bag, name = "Beg", price = 0L), listOf(Barcode(tx.nextId(), bag, "5550002", packQty = 6000L)), now)
+            onion to bag
+        }
+        // A weighed product's plain barcode: its weight is asked (the selling screen asks the price per kg first).
+        assertTrue(cart.scan("5550001") is CartSession.ScanResult.NeedsWeight)
+        // A weight label of a product with no price per kg: weight × 0.00 was free; the price is asked.
+        assertTrue(cart.scan(Gtin.withCheckDigit("20" + "00777" + "01500")) is CartSession.ScanResult.NeedsPrice)
+        // A pack of a product with no price and no pack price: asked, for the whole pack.
+        val pack = cart.scan("5550002") as CartSession.ScanResult.NeedsPrice
+        assertEquals(6000L, pack.packQty)
+        assertTrue(cart.state.value.cart.isEmpty) // nothing went on the bill unseen
+
+        val bag = TestDb.sellable(db, bagId)
+        assertTrue(cart.addAtPrice(bag, 120L, "5550002", pack.packQty) != 0L)
+        val line = cart.state.value.cart.items.single()
+        assertEquals("Beg x6", line.name)
+        assertEquals(6000L, line.packQty)
+        assertEquals(120L, cart.state.value.priced.lines.single().gross)
+        // The price per kg typed at the till, then the weight (what the selling screen does).
+        val onion = TestDb.sellable(db, onionId)
+        assertTrue(cart.addProduct(onion.copy(price = 800L), qty = 1250L) != 0L)
+        assertEquals(1000L, cart.state.value.priced.lines.last().gross) // 1.25 kg × RM8.00
+    }
+
     @Test
     fun holdResumeAndDeleteHeldBills() = runBlocking {
         val a = TestDb.sellable(graph.db(), product("A", 100L, "111"))

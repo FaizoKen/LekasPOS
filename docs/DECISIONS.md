@@ -1462,6 +1462,24 @@ generator (a dependency and a build step for a handful of pages); help screens i
 text twice in resources — a "User guide" link in Settings → About is the cheap next step); a Google Doc (not
 versioned with the code, so it drifts).
 
+### D-071 — Nothing without a price sells free; shifts turned on once per shop; the guide in the app (1.13.1, 2026-10-08)
+Found by the user guide's fact-check (D-070); the owner: "yup do it".
+- **No price, never free**: a weighed product priced 0.00 asks "Price of X per kg" (> 0) before the weight, for this
+  sale only — the same rule as a piece product with no price (asked each time; the owner sets the price for good in
+  Products or Price check). A pack barcode whose price works out to 0.00 asks the price of the whole pack (the line
+  stays "Milo x24", 24 pieces off stock); a weight label of a product with no price per kg asks the amount, as a
+  label with no weight already did. `CartSession.scan` decides on `BarcodeLookup.unitPrice == 0`; the selling
+  screen's prompt now hands over from the price to the weight question without dropping it on rotation (a dismissal
+  clears only its own prompt).
+- **"Require an open shift" turned on once per shop**: `useShiftsWithStaff` no longer relies on a LOCAL mark alone —
+  it skips when the synced activity log already holds its entry (`SHIFTS_ON_DETAIL`). A till joining later turned the
+  owner's "off" back on for every till (its new HLC won). The log covers shops where 1.12.1–1.13.0 did it.
+- **Settings → User guide** opens the guide in the app's language (`guide_url`: `guide.html` / `panduan.html`): a row,
+  because the About dialog's three buttons are taken.
+Rejected: refusing to sell a product with no price (stops the till for want of a manager — the owner prefers the
+cashier keeps going); a synced "shifts done" setting key (shops that already did it on 1.12.1–1.13.0 have no
+such key, the log entry they all have); a fourth About button (AlertDialog has three).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

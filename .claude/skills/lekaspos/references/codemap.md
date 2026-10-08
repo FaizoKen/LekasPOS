@@ -227,7 +227,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 
 | File | Main declarations | Purpose |
 |---|---|---|
-| `A/data/audit/AuditDao.kt` | `data class AuditRow`, `object AuditDao` (`log` :35, `recent`, `byAction`, `countByAction`, `totalsByStaff`, `totalsOfTill`, `exists`, `HOT_QUERIES`) | EVENT `audit_log`; `log` appends `Entity.AUDIT` outbox. |
+| `A/data/audit/AuditDao.kt` | `data class AuditRow`, `object AuditDao` (`log` :35, `recent`, `byAction`, `countByAction`, `totalsByStaff`, `totalsOfTill`, `exists`, `existsWithDetail`, `HOT_QUERIES`) | EVENT `audit_log`; `log` appends `Entity.AUDIT` outbox. |
 | `A/data/backup/BackupFiles.kt` | `object BackupFiles` (`EXT=".lekasbak"`, `Header`, `Invalid(kind)`, `write`, `writeClosed`, `integrity`, `readHeader`, `unpack`, `unpackedDb`) | The backup ZIP format (D-044). |
 | `A/data/backup/BackupFolder.kt` | `interface BackupFolder`, `class FileBackupFolder`, `class TreeBackupFolder` | Daily copy to an SAF tree / folder (D-048). |
 | `A/data/backup/Restore.kt` | `object Restore` (`Mode {REPLACE, NEW_DEVICE}`, `stage`, `prepare`, `arm`, `cancelStaged`, `applyIfStaged`, `afterOpen`, `renewIfAsked`, `newIdentity`, `Carry`, `Who`, `takeAudit`, `backupDir`) | Staged restore applied in `Db.open` before opening. |
@@ -525,7 +525,7 @@ Meta keys: `session.staff`, `session.away_at`, `session.seen_at`, `pin.fails.<id
 ### 4.8 `ShiftService` (`A/domain/shift/ShiftService.kt`)
 `current: StateFlow<Shift?>` (:53), `load()` (:60), `currentId`, `open(openingFloat)` (:74; audits `SHIFT_OPEN`, maybe `FLOAT_DIFFERENCE`),
 `moveCash(kind, amount, reason, approval)` (:106; `CASH_MOVE`), `report(shiftId)` (:128), `close(counted, note, leave)` (:140), `handover(...)` (:184),
-`class Prompt`, `prompt(staffId)` (:224), `handoverDue`, `leftInDrawer()` (meta `shift.left`), `markAsked`, `useShiftsWithStaff()`, `continueShift`
+`class Prompt`, `prompt(staffId)` (:224), `handoverDue`, `leftInDrawer()` (meta `shift.left`), `markAsked`, `useShiftsWithStaff()` (once per shop: skipped when the synced log has `SHIFTS_ON_DETAIL`), `continueShift`
 (`SHIFT_CONTINUED`), `print(shiftId, approval)`, `page(after)`.
 
 ### 4.9 `SyncEngine` (`A/sync/SyncEngine.kt`)
@@ -647,7 +647,7 @@ WorkManager's `InitializationProvider` initializer removed (`tools:node="remove"
   `allowed(perm) = graph.permissions.shown(perm)` (SellActivity.kt:633): role **or** a manager's help on the till.
 - **Settings hub** rows (SettingsActivity.kt:57-84): App language · Item size · Customer screen · Store & receipt · Printer & cash drawer · Barcode scanner & camera ·
   Staff · Shift & cash · Customers · Tax rates · Payment methods · Categories · Activity log · Google Drive backup (Sync) · Backup & restore · Daily sales report to
-  Google Drive · Error reports · App updates · Diagnostics · About.
+  Google Drive · Error reports · App updates · Diagnostics · User guide (opens `guide_url`) · About.
 
 ---
 
