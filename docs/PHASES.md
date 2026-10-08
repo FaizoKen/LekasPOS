@@ -30,7 +30,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
-| — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | in progress — CI, then a test build for the owner's phone check |
+| — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1654,8 +1654,17 @@ day... please improve something to avoid staff fraud and avoid staff stealing (a
 - [x] Local: `:core` and `:app` JVM tests pass, instrumented tests compile, lint 0 errors
 - [x] Privacy policy (English and Malay, 8 October 2026): product pictures, the camera's second use, the audit
       log's new entries, the daily report's checks columns; Play Data Safety draft (Photos)
-- [ ] CI (API 21 + 36, tablet, release smoke), release APK size
-- [ ] Test build v1.12.0 (pre-release), then the owner's phone check (below)
+- [x] CI on a52bde5 (run 37758272292): **276/276 on API 21 and 36**, tablet, release smoke (upgrade from 1.9.1),
+      lint. The tablet screenshot showed a row stretched to its picture tile's height with empty tiles: tiles in
+      a row with a picture now show their initials in its place (1627437); review fixes (b9ceecb): full-width
+      category dialog and picture row, a manager's help also lends what it was asked for ("Add product"), a
+      camera app's thumbnail when it ignores where to save, perf data with tile colours
+- [x] CI on 1627437 (run 37760744551, build 139): **276/276 on API 21 and 36**, tablet, release smoke, lint; release
+      APK **1,579,610 bytes** (1.11.0's build 136: 1,541,020 — about +39 KB). Tablet screenshot: 7 tiles a row
+      (was 5), coloured tiles, a picture, initials in its row
+- [x] Test build **v1.12.0** (pre-release, 2026-10-08; build 139, release key — same certificate `0a67abec…d4b9`;
+      SHA-256 of the APK `37979785…deee`, `mapping-1.12.0.txt` attached). The public download stays v1.9.1
+- [ ] The owner's phone check (below)
 
 ### Needs real-device testing (1.12.0)
 
