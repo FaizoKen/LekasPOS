@@ -32,7 +32,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — waiting for the owner's phone check |
-| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | in progress — CI, then a test build |
+| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | test build **v1.13.0** (build 145) — waiting for the owner's check with the TV |
 
 ## Open questions for the user
 
@@ -1759,7 +1759,12 @@ other screen, not on tablet".
       welcome, the bill, another screen opened over the selling screen); pictures `en-customer-welcome.png`,
       `en-customer-bill.png` with the screenshots
 - [x] Local: JVM tests and lint pass, instrumented tests compile
-- [ ] CI, release APK size; test build v1.13.0; the owner's check (below)
+- [x] CI on a27fa4f (run 37773750589, build 145): **280/280 on API 21 and 36** (with `CustomerScreenTest` on the simulated
+      second display), tablet, release smoke, lint; release APK **1,603,588 bytes** (1.12.1's build 143: 1,589,160 — about
+      +14 KB). Pictures of the customer screen (welcome, bill) reviewed
+- [x] Test build **v1.13.0** (pre-release, 2026-10-08; build 145, release key — same certificate `0a67abec…d4b9`;
+      SHA-256 of the APK `0d2d90b2…5f4b`, `mapping-1.13.0.txt` attached). The public download stays v1.9.1
+- [ ] The owner's check with the TV (below)
 
 ### Needs real-device testing (1.13.0)
 
