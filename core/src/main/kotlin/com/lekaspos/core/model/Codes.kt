@@ -147,6 +147,12 @@ object AuditAction {
     /** Someone signed in and sold on in another person's open shift without counting the drawer (detail: whose; D-067). */
     const val SHIFT_CONTINUED = 33
 
+    /**
+     * A shift opened with another amount than the last close left in the drawer (amount: counted − left;
+     * detail: who left what; D-068): cash gone between two shifts, or a mistyped count.
+     */
+    const val FLOAT_DIFFERENCE = 34
+
     /** Bills cleared ([BILL_CANCEL] and [BILL_CANCEL_AFTER_PAY]). */
     val CLEARED: Set<Int> = setOf(BILL_CANCEL, BILL_CANCEL_AFTER_PAY)
 

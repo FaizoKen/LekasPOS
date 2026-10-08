@@ -59,6 +59,10 @@ class StaffCheckActivity : ScreenActivity() {
             tally(f, R.string.check_cash_out, c.cashOut)
             tally(f, R.string.check_write_off, c.writeOffs)
             if (c.continued > 0L) f.row(getString(R.string.check_continued), c.continued.toString())
+            if (c.floatDiffs.count > 0L) {
+                val v = if (c.floatDiffs.amount > 0L) "+" + money(c.floatDiffs.amount) else money(c.floatDiffs.amount)
+                f.row(getString(R.string.check_float_diff, c.floatDiffs.count), v, bold = c.floatDiffs.amount < 0L)
+            }
             if (s.shifts > 0L) {
                 val v = if (s.overShort > 0L) "+" + money(s.overShort) else money(s.overShort)
                 f.row(getString(R.string.check_over_short, s.shifts, s.shortShifts), v, bold = s.overShort < 0L)

@@ -118,6 +118,7 @@ data class ShiftText(
     val drawerOpens: String = "Drawer opened, no sale",
     val copies: String = "Receipt copies",
     val continued: String = "Sold on without a count",
+    val floatDiff: String = "Opened with another amount than was left",
 ) {
     companion object {
         val EN = ShiftText(
@@ -140,7 +141,7 @@ data class ShiftText(
             creditCharged = "Jualan kredit", creditRepaid = "Bayaran hutang", note = "Catatan",
             checksSection = "Semakan", cleared = "Bil dikosongkan", removed = "Barang dibuang",
             afterPay = "Selepas jumlah ditunjuk", drawerOpens = "Laci dibuka tanpa jualan", copies = "Salinan resit",
-            continued = "Jual tanpa kiraan laci",
+            continued = "Jual tanpa kiraan laci", floatDiff = "Dibuka dengan jumlah lain daripada yang ditinggal",
         )
 
         fun forLanguage(lang: String): ShiftText = if (lang == "ms") MS else EN
@@ -237,6 +238,7 @@ class ShiftReportLayout(private val currency: CurrencySpec, private val t: Shift
         if (c.drawerOpens > 0L) ReportRow(t.drawerOpens, c.drawerOpens.toString(), bold = true) else null,
         if (c.copies > 0L) ReportRow(t.copies, c.copies.toString()) else null,
         if (c.continued > 0L) ReportRow(t.continued, c.continued.toString()) else null,
+        if (c.floatDiffs.count > 0L) ReportRow(t.floatDiff, signed(c.floatDiffs.amount), bold = true) else null,
     )
 
     private fun tally(label: String, x: Tally): ReportRow? = if (x.count > 0L) ReportRow("$label (${x.count})", money(x.amount)) else null

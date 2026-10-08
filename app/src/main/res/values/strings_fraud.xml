@@ -33,4 +33,21 @@
     <string name="audit_bill_cancel_after_pay">Bill cancelled after the total was shown</string>
     <string name="audit_write_off">Stock written off</string>
     <string name="audit_shift_continued">Sold in another person\'s shift without a count</string>
+
+    <!-- The shift asked by itself, the close in steps, what stays in the drawer (1.12.1, D-068). -->
+    <string name="shift_start_title">Start the shift</string>
+    <string name="shift_start_hint">Count the cash in the drawer (the change for customers) and press OK.</string>
+    <string name="shift_float_left">%1$s was left in the drawer at the last close (by %2$s). Count the cash in the drawer: if it is %1$s, press OK.</string>
+    <string name="shift_float_differs_title">Not what was left</string>
+    <string name="shift_float_differs">You counted %1$s, but %2$s was left in the drawer at the last close (by %3$s). Count again, or keep %1$s? The difference is recorded for the owner.</string>
+    <string name="shift_float_keep">Keep %1$s</string>
+    <string name="shift_count_again">Count again</string>
+    <string name="shift_leave_title">Leave in the drawer</string>
+    <string name="shift_leave_hint">You counted %1$s. How much stays in the drawer as change for the next shift? The rest goes to the owner.</string>
+    <string name="shift_close_summary">Counted: %1$s\nLeave in the drawer: %2$s\nTake out for the owner: %3$s</string>
+    <string name="shift_closed_take">The shift is closed. Take out %1$s for the owner and leave %2$s in the drawer.</string>
+    <string name="new_day_title">Yesterday\'s shift is still open</string>
+    <string name="new_day_message">%1$s opened a shift on %2$s and it was not closed. Count the cash in the drawer now: this closes that shift and starts today\'s. Next time, close the shift at the end of the day (Menu → Close shift).</string>
+    <string name="audit_float_difference">Shift opened with another amount than was left</string>
+    <string name="check_float_diff">Opened with another amount than was left (%1$d)</string>
 </resources>

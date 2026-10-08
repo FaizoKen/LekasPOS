@@ -7,6 +7,7 @@ import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.report.Period
+import com.lekaspos.core.shift.ShiftGuide
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.Seed
@@ -204,6 +205,73 @@ class StaffCheckTest {
         assertEquals(1L, owner.shortShifts)
         assertEquals(1L, owner.checks.continued)
         assertEquals(1L, owner.sales.count)
+    }
+
+    /** D-068: what a close leaves in the drawer is what the next opening count is checked against. */
+    @Test
+    fun theNextOpeningIsCheckedAgainstWhatWasLeft() = runBlocking {
+        graph.staff.load()
+        graph.shifts.open(10_000L)
+        graph.shifts.close(25_000L, null, leave = 10_000L)
+        assertEquals(10_000L, graph.shifts.leftInDrawer()?.amount)
+        graph.shifts.open(8_000L) // RM20 less than was left
+        val db = graph.db()
+        val diff = db.read { AuditDao.byAction(it, AuditAction.FLOAT_DIFFERENCE, null) }.single()
+        assertEquals(-2_000L, diff.amount)
+        assertNull(graph.shifts.leftInDrawer())
+        // The same amount as was left: nothing to record.
+        graph.shifts.close(8_000L, null, leave = 8_000L)
+        graph.shifts.open(8_000L)
+        assertEquals(1, db.read { AuditDao.byAction(it, AuditAction.FLOAT_DIFFERENCE, null) }.size)
+        // More than was counted cannot stay in the drawer.
+        graph.shifts.close(5_000L, null, leave = 9_000L)
+        assertEquals(5_000L, graph.shifts.leftInDrawer()?.amount)
+        val owner = db.read { ReportService.staffCheck(it, today(), tz) }.single()
+        assertEquals(-2_000L, owner.checks.floatDiffs.amount)
+        assertTrue(owner.checks.warning)
+    }
+
+    /** D-068: a shift nobody closed is closed by the next day's first count, which starts that day's shift. */
+    @Test
+    fun yesterdaysShiftIsClosedByTodaysFirstCount() = runBlocking {
+        graph.staff.load()
+        graph.settings.saveStore(graph.settings.store.value.copy(shiftRequired = true))
+        assertEquals(ShiftGuide.Ask.OPEN, graph.shifts.prompt(Seed.Ids.STAFF_OWNER).ask)
+        val s = graph.shifts.open(10_000L)
+        assertEquals(ShiftGuide.Ask.NONE, graph.shifts.prompt(Seed.Ids.STAFF_OWNER).ask)
+        // The next morning, as far as the till can tell: it was opened a day earlier.
+        graph.db().write(reserveIds = 0L) { tx -> tx.db.execSQL("UPDATE shift SET opened_at = opened_at - 86400000 WHERE id = ?", arrayOf<Any?>(s.id)) }
+        val next = TestGraph.reopen(name)
+        try {
+            next.settings.load()
+            next.staff.load()
+            assertEquals(ShiftGuide.Ask.NEW_DAY, next.shifts.prompt(Seed.Ids.STAFF_OWNER).ask)
+            val todays = next.shifts.handover(10_000L, null, newDay = true)
+            assertTrue(todays.id != s.id)
+            assertEquals(10_000L, todays.openingFloat)
+            val closed = next.db().read { AuditDao.byAction(it, AuditAction.SHIFT_CLOSE, null) }.first()
+            assertTrue(closed.detail?.startsWith("not closed the day before") == true, "${closed.detail}")
+            assertEquals(ShiftGuide.Ask.NONE, next.shifts.prompt(Seed.Ids.STAFF_OWNER).ask)
+        } finally {
+            TestGraph.close(next)
+        }
+    }
+
+    /** D-068: a shop whose staff sign in with PINs uses shifts, once; the owner can turn them off for good. */
+    @Test
+    fun aShopWithStaffUsesShifts() = runBlocking {
+        graph.staff.load()
+        graph.shifts.useShiftsWithStaff()
+        assertFalse(graph.settings.store.value.shiftRequired) // a shop of one keeps its choice
+        signInCashier()
+        graph.shifts.useShiftsWithStaff()
+        assertTrue(graph.settings.store.value.shiftRequired)
+        assertEquals(1, graph.db().read { AuditDao.byAction(it, AuditAction.SETTINGS_CHANGE, null) }.count { it.detail?.contains("shift.required") == true })
+        graph.staff.lock()
+        graph.staff.signIn(Seed.Ids.STAFF_OWNER, "2468")
+        graph.settings.saveStore(graph.settings.store.value.copy(shiftRequired = false))
+        graph.shifts.useShiftsWithStaff()
+        assertFalse(graph.settings.store.value.shiftRequired) // the owner's choice stays
     }
 
     @Test

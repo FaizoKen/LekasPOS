@@ -234,6 +234,12 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   sums this till's activity log for the shift (`AuditDao.totalsOfTill`: its ids are `device_no shl 41`);
   Reports → Staff check (`ReportService.staffCheck`, VIEW_AUDIT) sums it per person with their shifts'
   over/short.
+  The till asks about the shift by itself (D-068): `ShiftService.prompt` (`:core` `ShiftGuide`: OPEN, NEW_DAY,
+  HANDOVER) from `SellActivity.checkShift` when someone starts using the till and when the day changes, once per
+  person and shift/day (`markAsked`), never over a payment. Menu → Open shift / Close shift (`openShift`,
+  `closeShift` in `ui.shift`). A close records what stays in the drawer (LOCAL meta `shift.left`); the next opening
+  is pre-filled with it and a different count is recorded (`FLOAT_DIFFERENCE`). `useShiftsWithStaff` turns
+  "Require an open shift" on once when non-owner staff can sign in.
 - `CustomerService` + checkout: credit tenders need the bill's customer, CREDIT_SALE, and over
   the limit a CREDIT_LIMIT approval, all re-checked inside the sale transaction (D-039).
 

@@ -37,12 +37,14 @@ data class Checks(
     val writeOffs: Tally = Tally(),
     /** Sold on in someone else's shift without counting the drawer. */
     val continued: Long = 0L,
+    /** Shifts opened with another amount than the last close left (amount: counted − left, summed; D-068). */
+    val floatDiffs: Tally = Tally(),
 ) {
     /** Nothing to look at. */
     val isEmpty: Boolean get() = this == Checks()
 
     /** Signs that most often go with cash going missing: taken off after the total was shown, drawer opened without a sale. */
-    val warning: Boolean get() = afterPay.count > 0L || drawerOpens > 0L
+    val warning: Boolean get() = afterPay.count > 0L || drawerOpens > 0L || floatDiffs.amount < 0L
 
     companion object {
         /** Folds activity-log groups (of one person, one shift or one till) into [Checks]; other actions are ignored. */
@@ -63,6 +65,7 @@ data class Checks(
                     AuditAction.CASH_OUT -> c.copy(cashOut = c.cashOut + t)
                     AuditAction.STOCK_WRITE_OFF -> c.copy(writeOffs = c.writeOffs + t)
                     AuditAction.SHIFT_CONTINUED -> c.copy(continued = c.continued + r.count)
+                    AuditAction.FLOAT_DIFFERENCE -> c.copy(floatDiffs = c.floatDiffs + t)
                     else -> c
                 }
             }
@@ -74,7 +77,7 @@ data class Checks(
             AuditAction.BILL_CANCEL, AuditAction.BILL_CANCEL_AFTER_PAY, AuditAction.LINE_REMOVE, AuditAction.LINE_REMOVE_AFTER_PAY,
             AuditAction.SALE_VOID, AuditAction.REFUND, AuditAction.LINE_DISCOUNT, AuditAction.BILL_DISCOUNT,
             AuditAction.PRICE_OVERRIDE, AuditAction.DRAWER_OPEN, AuditAction.REPRINT, AuditAction.CASH_OUT,
-            AuditAction.STOCK_WRITE_OFF, AuditAction.SHIFT_CONTINUED,
+            AuditAction.STOCK_WRITE_OFF, AuditAction.SHIFT_CONTINUED, AuditAction.FLOAT_DIFFERENCE,
         )
     }
 }

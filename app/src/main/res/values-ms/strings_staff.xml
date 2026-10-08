@@ -109,7 +109,6 @@
     <string name="shift_close">Tutup syif</string>
     <string name="shift_count">Kira laci</string>
     <string name="shift_count_hint">Kira semua wang tunai dalam laci dan masukkan jumlahnya.</string>
-    <string name="shift_close_confirm">Tutup syif dengan %1$s dikira dalam laci?</string>
     <string name="shift_close_note_hint">Catatan untuk pemilik (pilihan), cth. sebab lebih atau kurang</string>
     <string name="cash_count_button">Kira wang &amp; syiling</string>
     <string name="cash_count_title">Kira wang kertas dan syiling</string>
@@ -118,7 +117,6 @@
     <string name="cash_count_coin">%1$d sen</string>
     <string name="cash_count_total">Jumlah %1$s</string>
     <string name="shift_closed">Syif ditutup</string>
-    <string name="shift_closed_blind">Syif telah ditutup. Dikira: %1$s.</string>
     <string name="shift_history">Syif lepas</string>
     <string name="shift_history_empty">Belum ada syif.</string>
     <string name="shift_open_tag">dibuka</string>

@@ -47,8 +47,10 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.PricingEngine
 import com.lekaspos.core.report.ReportMath
 import com.lekaspos.core.scan.ScanBuffer
+import com.lekaspos.core.shift.ShiftGuide
 import com.lekaspos.core.time.ClockCheck
 import com.lekaspos.core.time.DateText
+import com.lekaspos.core.time.Days
 import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.PaymentMethod
@@ -56,9 +58,9 @@ import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
 import com.lekaspos.data.product.SellableProduct
+import com.lekaspos.data.db.Seed
 import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.settings.DeviceSettings
-import com.lekaspos.data.staff.StaffDao
 import com.lekaspos.domain.Approval
 import com.lekaspos.domain.StaffSession
 import com.lekaspos.domain.backup.BackupService
@@ -107,7 +109,8 @@ import com.lekaspos.ui.settings.SetupActivity
 import com.lekaspos.ui.settings.SyncActivity
 import com.lekaspos.ui.settings.UpdateUi
 import com.lekaspos.ui.shift.ShiftActivity
-import com.lekaspos.ui.shift.offerHandover
+import com.lekaspos.ui.shift.closeShift
+import com.lekaspos.ui.shift.offerShiftCount
 import com.lekaspos.ui.shift.openShift
 import com.lekaspos.ui.staff.ApprovalDialog
 import com.lekaspos.ui.staff.LockActivity
@@ -393,8 +396,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         s.launch { graph.cart.state.collect { render(it) } }
         s.launch { graph.staff.state.collect { renderStaff(it) } }
-        // Someone else signed in during another person's shift: count the drawer and take it over (D-067).
-        s.launch { graph.staff.state.map { if (it.locked) null else it.current?.id }.distinctUntilChanged().collect { if (it != null) checkHandover(it) } }
+        // Someone starts using the till: the shift is asked about by itself (D-068: open it, take it over, a new day).
+        s.launch { graph.staff.state.map { usingStaff() }.distinctUntilChanged().collect { if (it != null) checkShift(it) } }
         s.launch { combine(graph.staff.state, graph.permissions.helper) { st, h -> st to h }.collect { renderAccess(it.first, it.second) } }
         s.launch { combine(graph.updates.status, graph.staff.state) { u, st -> u to st }.collect { renderUpdate(it.first, it.second) } }
         s.launch {
@@ -402,6 +405,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 delay(IDLE_CHECK_MS)
                 graph.staff.lockIfIdle()
                 graph.permissions.endHelpIfExpired()
+                // A till left on over midnight: the new day's shift question comes without a sign-in (D-068).
+                val today = Days.epochDay(System.currentTimeMillis(), java.util.TimeZone.getDefault())
+                if (today != shiftDay && !busyForShift()) { // not over a payment or a sale's change: next time round
+                    shiftDay = today
+                    usingStaff()?.let { checkShift(it) }
+                }
             }
         }
         s.launch {
@@ -812,17 +821,36 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun money(v: Long) = MoneyFormat.format(v, currency)
 
     /**
-     * [staffId] just signed in while another person's shift is open on this till: asked once (per person
-     * and shift while the app runs) to count the drawer and start their own shift, or to sell on in it
-     * (D-067). Only when the store asks for it (Settings → Store → "Count the drawer when the cashier changes").
+     * The till asks about the shift by itself (D-068), so nobody has to remember or find it: when [staffId]
+     * starts using it (signs in, or the screen opens) and when a new day starts. No shift open (the store uses
+     * shifts) → "Start the shift" (count the drawer); yesterday's shift never closed → one count closes it and
+     * starts today's; another person's shift → the handover count (D-067). Once per person and shift (or day)
+     * while the app runs; never over a payment.
      */
-    private suspend fun checkHandover(staffId: Long) {
-        val shift = graph.shifts.handoverDue(staffId) ?: return
-        if (!graph.shifts.markAsked(shift.id, staffId)) return
-        val openedBy = graph.db().read { StaffDao.name(it, shift.openedBy) } ?: "?"
-        if (isFinishing || graph.staff.state.value.current?.id != staffId) return
-        offerHandover(this, graph, scope, shift, openedBy)
+    private suspend fun checkShift(staffId: Long) {
+        graph.shifts.useShiftsWithStaff()
+        val p = graph.shifts.prompt(staffId)
+        if (p.ask == ShiftGuide.Ask.NONE) return
+        if (isFinishing || usingStaff() != staffId || busyForShift()) return
+        if (!graph.shifts.markAsked(p.key, staffId)) return
+        when (p.ask) {
+            ShiftGuide.Ask.OPEN -> openShift(this, graph, scope, getString(R.string.shift_start_title)) {}
+            else -> offerShiftCount(this, graph, scope, p)
+        }
     }
+
+    /** A payment, or the change of the sale just made, is on the screen: the shift question waits. */
+    private fun busyForShift(): Boolean =
+        graph.cart.state.value.paying || paymentDialog != null || outcomeDialog?.isShowing == true
+
+    /** Who is using the till: the person signed in, the owner while PIN login is off; null while locked or loading. */
+    private fun usingStaff(): Long? {
+        val s = graph.staff.state.value
+        return if (!s.loaded || s.locked) null else s.current?.id ?: Seed.Ids.STAFF_OWNER
+    }
+
+    /** The business day the shift was last checked on ([checkShift] again when it changes, a till left on overnight). */
+    private var shiftDay = -1L
 
     /** Settings → Item tiles on this till (DeviceSettings.TILES_*), as the grid shows it now. */
     private var tileSize = DeviceSettings.TILES_MEDIUM
@@ -1560,7 +1588,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
         // Price check has its own button on the screen.
         items += if (allowed(Perm.REFUND) || allowed(Perm.VOID)) R.string.menu_sales else R.string.menu_receipts
         if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
-        items += R.string.menu_shift
+        // The shift in one tap (D-068): open it, or close it with the count; cash in and out, reports and past
+        // shifts in "Shift & cash" for whoever may.
+        items += if (graph.shifts.current.value == null) R.string.shift_open else R.string.shift_close
+        if (allowed(Perm.CASH_MOVE) || allowed(Perm.SHIFT_REPORT)) items += R.string.menu_shift
         if (allowed(Perm.OPEN_DRAWER)) items += R.string.menu_open_drawer
         val staff = graph.staff.state.value
         if (staff.loginRequired) items += R.string.menu_lock
@@ -1591,6 +1622,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 R.string.menu_sales, R.string.menu_receipts -> startActivity(Intent(this, SalesActivity::class.java))
                 R.string.menu_reports -> startActivity(Intent(this, ReportsActivity::class.java))
                 R.string.menu_shift -> startActivity(Intent(this, ShiftActivity::class.java))
+                R.string.shift_open -> openShift(this, graph, scope) {}
+                R.string.shift_close -> closeShift(this, graph, scope)
                 R.string.menu_customers -> startActivity(Intent(this, CustomersActivity::class.java))
                 R.string.menu_lock -> graph.staff.lock()
                 R.string.menu_open_drawer -> openDrawer()

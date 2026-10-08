@@ -14,13 +14,16 @@ import com.lekaspos.core.model.Perm
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.shift.CashCount
+import com.lekaspos.core.shift.ShiftGuide
 import com.lekaspos.core.shift.ShiftReportLayout
 import com.lekaspos.core.shift.ShiftText
 import com.lekaspos.core.time.DateText
+import com.lekaspos.core.time.Days
 import com.lekaspos.data.shift.CashMove
 import com.lekaspos.data.shift.Shift
 import com.lekaspos.data.shift.ShiftDao
 import com.lekaspos.data.staff.StaffDao
+import com.lekaspos.domain.shift.ShiftService
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.RowAdapter
@@ -56,13 +59,16 @@ internal fun cashCountButton(
     }
 }
 
-/** Asks for the opening float and opens a shift on this till; [opened] runs after it is open. */
-fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () -> Unit) {
+/**
+ * Asks for the cash in the drawer and opens a shift on this till; [opened] runs after it is open. What the
+ * last close left in the drawer comes pre-filled (OK keeps it, the first key replaces it), and a count that is
+ * not that amount is asked once more before it is kept and recorded (D-068): a typo, or cash gone between two
+ * shifts. [title]: "Start the shift" when the till asks by itself.
+ */
+fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, title: CharSequence? = null, opened: () -> Unit) {
     val currency = graph.settings.store.value.currency
-    AmountDialog(
-        a, a.getString(R.string.shift_open), AmountDialog.Kind.MONEY, currency, message = a.getString(R.string.shift_float_hint),
-        allowZero = true, extra = cashCountButton(a, currency),
-    ) { float ->
+    fun money(v: Long) = MoneyFormat.format(v, currency)
+    fun open(float: Long) {
         scope.launch {
             try {
                 graph.shifts.open(float)
@@ -75,38 +81,131 @@ fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, opened: () ->
                 Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
             }
         }
+    }
+    scope.launch {
+        val left = try {
+            graph.shifts.leftInDrawer()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("Reading what was left in the drawer failed", e)
+            null
+        }
+        val by = left?.let { l -> graph.db().read { StaffDao.name(it, l.staffId) } } ?: "-"
+        val message = if (left != null) a.getString(R.string.shift_float_left, money(left.amount), by) else a.getString(R.string.shift_start_hint)
+        fun ask(initial: Long) {
+            AmountDialog(
+                a, title ?: a.getString(R.string.shift_open), AmountDialog.Kind.MONEY, currency, initial = initial, message = message,
+                allowZero = true, extra = cashCountButton(a, currency),
+            ) { float ->
+                if (left == null || float == left.amount) return@AmountDialog open(float)
+                android.app.AlertDialog.Builder(a)
+                    .setTitle(R.string.shift_float_differs_title)
+                    .setMessage(a.getString(R.string.shift_float_differs, money(float), money(left.amount), by))
+                    .setPositiveButton(a.getString(R.string.shift_float_keep, money(float))) { _, _ -> open(float) }
+                    .setNegativeButton(R.string.shift_count_again) { _, _ -> ask(float) }
+                    .create()
+                    .trackedBy(a)
+                    .also { if (!a.isFinishing && !a.isDestroyed) it.show() }
+            }.show()
+        }
+        ask(left?.amount ?: 0L)
+    }
+}
+
+/**
+ * Closes this till's shift in three short steps (D-068): count all the cash in the drawer; how much stays in it
+ * as change for the next shift (this shift's opening amount, pre-filled); then one screen that says what to take
+ * out for the owner, with an optional note. Whoever may see shift reports gets the report; a cashier (blind close)
+ * is told only what to take out and what to leave.
+ */
+fun closeShift(a: Activity, graph: AppGraph, scope: CoroutineScope) {
+    val shift = graph.shifts.current.value ?: return
+    val currency = graph.settings.store.value.currency
+    fun money(v: Long) = MoneyFormat.format(v, currency)
+    var pieces: Map<Long, Long> = emptyMap()
+    AmountDialog(
+        a, a.getString(R.string.shift_count), AmountDialog.Kind.MONEY, currency, message = a.getString(R.string.shift_count_hint),
+        allowZero = true, extra = cashCountButton(a, currency) { pieces = it },
+    ) { counted ->
+        // The notes and coins counted start the note, for the owner who checks a difference (the cashier may
+        // change it); only when the total was not typed over afterwards.
+        val breakdown = if (pieces.isNotEmpty() && CashCount.total(pieces) == counted) {
+            CashCount.summary(pieces) { CashCountDialog.label(a, currency, it) }
+        } else {
+            ""
+        }
+        AmountDialog(
+            a, a.getString(R.string.shift_leave_title), AmountDialog.Kind.MONEY, currency, initial = minOf(shift.openingFloat, counted),
+            message = a.getString(R.string.shift_leave_hint, money(counted)), allowZero = true,
+        ) { asked ->
+            val leave = asked.coerceAtMost(counted) // more than is there cannot stay in the drawer
+            // With the confirmation, an optional note for the owner (why the drawer is over or short): it could
+            // not be written anywhere (2026-10 review). It shows on the shift report.
+            Dialogs.input(
+                a, a.getString(R.string.shift_close), a.getString(R.string.shift_close_note_hint), initial = breakdown,
+                message = a.getString(R.string.shift_close_summary, money(counted), money(leave), money(counted - leave)),
+            ) { note ->
+                scope.launch {
+                    try {
+                        graph.shifts.close(counted, note.ifEmpty { null }, leave)
+                        if (graph.permissions.allowed(Perm.SHIFT_REPORT)) {
+                            a.startActivity(ShiftReportActivity.intent(a, shift.id))
+                        } else {
+                            Dialogs.message(a, a.getString(R.string.shift_closed), a.getString(R.string.shift_closed_take, money(counted - leave), money(leave)))
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (e is com.lekaspos.domain.sale.ActionRefused) Log.w("Closing the shift refused: ${e.reason}") else Log.e("Closing the shift failed", e)
+                        Dialogs.message(a, a.getString(R.string.error_title), ScreenActivity.errorText(a, e))
+                    }
+                }
+                true
+            }
+        }.show()
     }.show()
 }
 
 /**
- * Someone signed in while [shift], another person's, is open on this till (D-067): "Count the drawer"
- * closes that shift with the cash counted now and opens theirs with it ([com.lekaspos.domain.shift.ShiftService.handover]);
- * "Not now" sells on in it, on record and not asked again in that shift.
+ * The till asks by itself (D-068): another person's shift is open ([ShiftGuide.Ask.HANDOVER], D-067) — "Count the
+ * drawer" closes it with the cash counted now and opens theirs with it, "Not now" sells on in it, on record and
+ * not asked again in that shift — or yesterday's shift was never closed ([ShiftGuide.Ask.NEW_DAY]) — one count
+ * closes it and starts today's, "Not now" leaves it (asked again later).
  */
-fun offerHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, shift: Shift, openedBy: String) {
+fun offerShiftCount(a: Activity, graph: AppGraph, scope: CoroutineScope, prompt: ShiftService.Prompt) {
+    val shift = prompt.shift ?: return
     val staffId = graph.staff.staffId
-    android.app.AlertDialog.Builder(a)
-        .setTitle(R.string.handover_title)
-        .setMessage(a.getString(R.string.handover_message, openedBy))
-        .setPositiveButton(R.string.handover_count) { _, _ -> countHandover(a, graph, scope, openedBy) }
-        .setNegativeButton(R.string.handover_later) { _, _ ->
-            scope.launch {
-                try {
-                    graph.shifts.continueShift(staffId, shift)
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e("Recording a shift carried on failed", e)
+    val openedBy = prompt.openedBy ?: "-"
+    val newDay = prompt.ask == ShiftGuide.Ask.NEW_DAY
+    val b = android.app.AlertDialog.Builder(a)
+    if (newDay) {
+        b.setTitle(R.string.new_day_title)
+            .setMessage(a.getString(R.string.new_day_message, openedBy, DateText.date(Days.epochDay(shift.openedAt, TimeZone.getDefault()))))
+            .setNegativeButton(R.string.handover_later, null)
+    } else {
+        b.setTitle(R.string.handover_title)
+            .setMessage(a.getString(R.string.handover_message, openedBy))
+            .setNegativeButton(R.string.handover_later) { _, _ ->
+                scope.launch {
+                    try {
+                        graph.shifts.continueShift(staffId, shift)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e("Recording a shift carried on failed", e)
+                    }
                 }
             }
-        }
-        .setCancelable(false) // one answer or the other: both are on record
+    }
+    b.setPositiveButton(R.string.handover_count) { _, _ -> countHandover(a, graph, scope, openedBy, newDay) }
+        .setCancelable(false) // one answer or the other
         .create()
         .trackedBy(a)
         .also { if (!a.isFinishing && !a.isDestroyed) it.show() }
 }
 
-private fun countHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, openedBy: String) {
+private fun countHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, openedBy: String, newDay: Boolean) {
     val currency = graph.settings.store.value.currency
     var pieces: Map<Long, Long> = emptyMap()
     AmountDialog(
@@ -120,7 +219,7 @@ private fun countHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, o
         }
         scope.launch {
             try {
-                graph.shifts.handover(counted, note)
+                graph.shifts.handover(counted, note, newDay)
                 Dialogs.message(a, a.getString(R.string.handover_done_title), a.getString(R.string.handover_done, MoneyFormat.format(counted, currency)))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -214,39 +313,7 @@ class ShiftActivity : ScreenActivity() {
         }
     }
 
-    private fun close() {
-        val currency = graph.settings.store.value.currency
-        var pieces: Map<Long, Long> = emptyMap()
-        AmountDialog(
-            this, getString(R.string.shift_count), AmountDialog.Kind.MONEY, currency, message = getString(R.string.shift_count_hint),
-            allowZero = true, extra = cashCountButton(this, currency) { pieces = it },
-        ) { counted ->
-            // The notes and coins counted start the note, for the owner who checks a difference
-            // (the cashier may change it); only when the total was not typed over afterwards.
-            val breakdown = if (pieces.isNotEmpty() && CashCount.total(pieces) == counted) {
-                CashCount.summary(pieces) { CashCountDialog.label(this, currency, it) }
-            } else {
-                ""
-            }
-            // With the confirmation, an optional note for the owner (why the drawer is over or short):
-            // it could not be written anywhere (2026-10 review). It shows on the shift report.
-            Dialogs.input(
-                this, getString(R.string.shift_close), getString(R.string.shift_close_note_hint), initial = breakdown,
-                message = getString(R.string.shift_close_confirm, money(counted)),
-            ) { note ->
-                launchUi {
-                    val shiftId = graph.shifts.current.value?.id ?: return@launchUi
-                    graph.shifts.close(counted, note.ifEmpty { null })
-                    if (graph.permissions.allowed(Perm.SHIFT_REPORT)) {
-                        startActivity(ShiftReportActivity.intent(this@ShiftActivity, shiftId))
-                    } else {
-                        Dialogs.message(this@ShiftActivity, getString(R.string.shift_closed), getString(R.string.shift_closed_blind, money(counted)))
-                    }
-                }
-                true
-            }
-        }.show()
-    }
+    private fun close() = closeShift(this, graph, scope)
 }
 
 /** A shift's report: sales, payments, cash drawer, credit; printable (needs SHIFT_REPORT). */

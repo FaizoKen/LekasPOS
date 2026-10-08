@@ -33,4 +33,21 @@
     <string name="audit_bill_cancel_after_pay">Bil dibatalkan selepas jumlah ditunjuk</string>
     <string name="audit_write_off">Stok dihapus kira</string>
     <string name="audit_shift_continued">Jual dalam syif orang lain tanpa kiraan laci</string>
+
+    <!-- Syif ditanya sendiri, tutup syif langkah demi langkah, wang yang tinggal dalam laci (1.12.1, D-068). -->
+    <string name="shift_start_title">Mulakan syif</string>
+    <string name="shift_start_hint">Kira wang tunai dalam laci (wang kecil untuk pelanggan) dan tekan OK.</string>
+    <string name="shift_float_left">%1$s ditinggalkan dalam laci semasa syif terakhir ditutup (oleh %2$s). Kira wang tunai dalam laci: jika %1$s, tekan OK.</string>
+    <string name="shift_float_differs_title">Tidak sama dengan yang ditinggalkan</string>
+    <string name="shift_float_differs">Anda mengira %1$s, tetapi %2$s ditinggalkan dalam laci semasa syif terakhir ditutup (oleh %3$s). Kira semula, atau kekalkan %1$s? Perbezaannya direkod untuk pemilik.</string>
+    <string name="shift_float_keep">Kekalkan %1$s</string>
+    <string name="shift_count_again">Kira semula</string>
+    <string name="shift_leave_title">Tinggal dalam laci</string>
+    <string name="shift_leave_hint">Anda mengira %1$s. Berapa yang tinggal dalam laci sebagai wang kecil untuk syif seterusnya? Bakinya untuk pemilik.</string>
+    <string name="shift_close_summary">Dikira: %1$s\nTinggal dalam laci: %2$s\nKeluarkan untuk pemilik: %3$s</string>
+    <string name="shift_closed_take">Syif ditutup. Keluarkan %1$s untuk pemilik dan tinggalkan %2$s dalam laci.</string>
+    <string name="new_day_title">Syif semalam masih dibuka</string>
+    <string name="new_day_message">%1$s membuka syif pada %2$s dan ia tidak ditutup. Kira wang tunai dalam laci sekarang: ini menutup syif itu dan memulakan syif hari ini. Lain kali, tutup syif pada akhir hari (Menu → Tutup syif).</string>
+    <string name="audit_float_difference">Syif dibuka dengan jumlah lain daripada yang ditinggalkan</string>
+    <string name="check_float_diff">Dibuka dengan jumlah lain daripada yang ditinggalkan (%1$d)</string>
 </resources>

@@ -111,7 +111,6 @@
     <string name="shift_close">Close shift</string>
     <string name="shift_count">Count the drawer</string>
     <string name="shift_count_hint">Count all the cash in the drawer and enter the total.</string>
-    <string name="shift_close_confirm">Close the shift with %1$s counted in the drawer?</string>
     <string name="shift_close_note_hint">Note for the owner (optional), e.g. why it is over or short</string>
     <string name="cash_count_button">Count notes &amp; coins</string>
     <string name="cash_count_title">Count notes and coins</string>
@@ -120,7 +119,6 @@
     <string name="cash_count_coin">%1$d sen</string>
     <string name="cash_count_total">Total %1$s</string>
     <string name="shift_closed">Shift closed</string>
-    <string name="shift_closed_blind">The shift is closed. Counted: %1$s.</string>
     <string name="shift_history">Past shifts</string>
     <string name="shift_history_empty">No shifts yet.</string>
     <string name="shift_open_tag">open</string>

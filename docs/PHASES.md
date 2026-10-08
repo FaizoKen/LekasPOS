@@ -31,6 +31,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
+| — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | in progress — CI, then a test build |
 
 ## Open questions for the user
 
@@ -1696,3 +1697,38 @@ day... please improve something to avoid staff fraud and avoid staff stealing (a
 11. **Staff check:** Reports → Today → Staff check → each person's lines (sales, cleared, taken off, drawer …).
     The shift report shows "Checks". The Drive daily report has the new columns (next upload).
 12. **Bahasa Melayu:** the new screens, buttons and messages in Malay.
+
+## 1.12.1 — the shift asked by itself; what stays in the drawer (D-068)
+
+The owner (2026-10-08), after the open/close routine was explained: "ok improve something to make this never missing
+and not make cashier confusing... please audit and do your best".
+
+- [x] **Asked by itself** when someone starts using the till (sign-in, or the screen opening with PIN login off) and
+      when the day changes on a till left on: no shift → "Start the shift" (count the drawer); yesterday's shift never
+      closed → one count closes it and starts today's; another person's shift → the handover (1.12.0). Once per
+      person and shift/day; never over a payment or a sale's change; "Not now" always possible
+- [x] **Menu → Open shift / Close shift** directly ("Shift & cash" stays for whoever moves cash or sees reports)
+- [x] **Close in three steps:** count all the cash → how much stays in the drawer (the shift's opening amount
+      pre-filled) → "Counted / Leave in the drawer / Take out for the owner" with the note. A cashier is told what to
+      take out and what to leave
+- [x] **The next opening** comes pre-filled with what was left (OK keeps it); another amount → "Not what was left:
+      Count again / Keep", recorded for the owner (activity log, staff check, the shift report's checks)
+- [x] **Shifts on for shops with staff:** "Require an open shift" turns on once when a cashier or manager can sign in
+      with a PIN (on record); the owner can turn it off and it stays off
+- [x] Tests: `:core` `ShiftGuideTest`; instrumented `StaffCheckTest` (opening checked against what was left, yesterday's
+      shift closed by today's first count, shifts on for staff, once)
+- [x] Local: `:core` and `:app` JVM tests pass, instrumented tests compile, lint 0 errors
+- [ ] CI, release APK size; test build v1.12.1; the owner's phone check (below, with 1.12.0's list)
+
+### Needs real-device testing (1.12.1)
+
+1. **Shifts on:** with a cashier who has a PIN, after the update Settings → Store & receipt shows "Require an open
+   shift to take payments" on; the activity log says why.
+2. **Start of day:** no shift open → sign in → "Start the shift" with the keypad → count → OK. "Cancel" → Pay asks again.
+3. **Close:** Menu → Close shift → count (e.g. RM850) → "Leave in the drawer" shows RM100 → OK → "Counted RM850, leave
+   RM100, take out RM750" → Close. A cashier sees "Take out RM750 for the owner and leave RM100 in the drawer".
+4. **Next opening:** Menu → Open shift → RM100 already there → OK. Type RM80 instead → "Not what was left" → Keep →
+   Reports → Staff check shows "Opened with another amount than was left" −RM20.
+5. **Forgot to close:** leave a shift open overnight → in the morning sign in (or wait a minute on the screen) →
+   "Yesterday's shift is still open" → Count the drawer → today's shift starts; the old one is closed.
+6. **Bahasa Melayu:** the new questions and steps in Malay.

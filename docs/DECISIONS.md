@@ -1383,6 +1383,34 @@ restricting voids to today (a manager may need an older one; the staff check sho
 e-wallet terminal totals at close (more counting at every close; the per-method totals are on the report
 to compare with the bank).
 
+### D-068 — The shift asked by itself; what stays in the drawer (1.12.1, 2026-10-08)
+The owner, after the open/close routine was explained: "ok improve something to make this never missing and not
+make cashier confusing... please audit and do your best". The audit: shifts were off by default (no cash check at
+all); opening one meant knowing Menu → Shift & cash; a shift nobody closed at night ran on into the next day; the
+cash taken out after a close was nowhere, so an opening count could not be checked; closing was one count and a
+note, with nothing telling the cashier what to take out.
+- **The till asks by itself** (`:core` `ShiftGuide`, `SellActivity.checkShift`) when someone starts using it (signs
+  in, or the selling screen opens with PIN login off) and when the day changes on a till left on: no shift and the
+  store uses shifts → "Start the shift" (the count); yesterday's shift still open → "Yesterday's shift is still
+  open": one count closes it and starts today's (`ShiftService.handover(newDay = true)`, on record as "not closed the
+  day before"); another person's shift → the handover (D-067). Once per person and shift (or day) while the app
+  runs; never over a payment or a sale's change; "Not now" always possible (Pay still asks when shifts are required).
+- **Menu → Open shift / Close shift** directly; "Shift & cash" only for whoever may move cash or see reports.
+- **Close in three short steps** (`closeShift`): count all the cash; how much stays in the drawer as change for the
+  next shift (this shift's opening amount pre-filled); a summary — counted, leave, take out for the owner — with the
+  optional note. A cashier (blind close) is told what to take out and what to leave.
+- **What was left is checked** (LOCAL meta `shift.left`): the next opening count comes pre-filled with it (OK keeps
+  it); another amount is asked once more ("Count again" / "Keep") and recorded (`FLOAT_DIFFERENCE`, counted − left),
+  in the staff check and the shift report's checks — cash gone between two shifts, or a typo, is seen at once
+  instead of as a "short" that evening.
+- **Shifts on for shops with staff:** once a non-owner staff member can sign in with a PIN, "Require an open shift"
+  is turned on once (activity log: "shift.required: on (the shop has staff)"); the owner can turn it off and it stays
+  off. A shop of one keeps its choice.
+Rejected: forcing the count with no "Not now" (a queue at opening time; Pay asks anyway); a fixed closing time and
+an alarm (shops' hours differ; the new-day count catches a forgotten close); leaving the cash taken out after a close
+unrecorded (no way to check the next opening); counting the float on the shift row (a schema change and a synced field
+for something only this till's next opening needs).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.
