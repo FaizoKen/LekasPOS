@@ -34,7 +34,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
-| — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | test build **v1.13.1** (build 152) — waiting for the owner's phone check |
+| — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 
 ## Open questions for the user
 
@@ -1809,7 +1809,11 @@ Found by the user guide's fact-check (D-070); the owner (2026-10-08): "yup do it
       +1 KB)
 - [x] Test build **v1.13.1** (pre-release, 2026-10-08; build 152, release key — same certificate `0a67abec…d4b9`; SHA-256 of
       the APK `27610542…a24a`, `mapping-1.13.1.txt` attached). The public download stays v1.13.0
-- [ ] The owner's phone check (below), then the release
+- [x] The owner asked to release it (2026-10-09, "yup do it"): **v1.13.1 is the latest release** (public notes with What's new in
+      English and Malay; the website's Download link serves it, SHA-256 checked); smoke baseline (`PREV_APK_URL`) v1.13.1; the user
+      guide says "For LekasPOS 1.13.1". Privacy policy unchanged (1.13.1 stores and sends nothing new)
+- [ ] The owner's phone check (below)
+- [ ] Perf FULL on the released code
 
 ### Needs real-device testing (1.13.1)
 
