@@ -1367,7 +1367,8 @@ screen, for five minutes; nothing summed any of it per person.
   or **Not now** (`SHIFT_CONTINUED`, on record, not asked again in that shift). Store setting "Count the
   drawer when the cashier changes", on by default.
 - **Manager's help** lends only the bill's own permissions (`Perm.TILL_HELP`: discount, price change,
-  customers, credit sale); voids, refunds, the drawer, cash in/out, receipt copies, products and the back
+  customers, credit sale) and what it was asked for ("Add product" for an unknown barcode); voids, refunds,
+  the drawer, cash in/out, receipt copies, products and the back
   office still show (`PermissionGate.shown`) but ask for the manager's PIN each time.
 - **Staff check** (Reports → Staff check, VIEW_AUDIT): per person for the period — sales; taken off after the
   total was shown; bills cleared; items taken off; voids; refunds; discounts and price changes; drawer opened

@@ -4,9 +4,11 @@ import android.app.AlertDialog
 import android.content.Context
 import android.text.InputType
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import com.lekaspos.R
 
 /**
@@ -70,10 +72,10 @@ object Dialogs {
         val d = AlertDialog.Builder(ctx)
             .setTitle(title)
             .setMessage(message)
-            .setView(padded(ctx, if (below == null) field else android.widget.LinearLayout(ctx).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                addView(field)
-                addView(below)
+            .setView(padded(ctx, if (below == null) field else LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(field, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                addView(below, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             }))
             .setPositiveButton(R.string.ok, null)
             .setNegativeButton(R.string.cancel, null)

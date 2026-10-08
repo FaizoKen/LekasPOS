@@ -111,7 +111,7 @@ object ApprovalDialog {
             approve = { id, pin -> graph.permissions.approveHelp(id, pin, needed) },
             onCancel = null,
         ) { approval ->
-            graph.permissions.startHelp(approval)
+            graph.permissions.startHelp(approval, lend = needed) // what it was asked for, too (D-067)
             graph.appScope.launch { graph.staff.recordApproval(approval) }
             onHelping()
         }

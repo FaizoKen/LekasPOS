@@ -150,6 +150,11 @@ class StaffCheckTest {
         }
         p.endHelp()
         assertFalse(p.shown(Perm.VOID))
+        // Help asked for something (an unknown barcode → "Add product") lends that too.
+        p.startHelp(help, lend = Perm.MANAGE_PRODUCTS)
+        assertTrue(p.allowed(Perm.MANAGE_PRODUCTS))
+        assertFalse(p.allowed(Perm.VOID))
+        p.endHelp()
     }
 
     @Test

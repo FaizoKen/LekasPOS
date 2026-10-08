@@ -223,7 +223,7 @@ No network, Play Services or Bluetooth calls happen before the selling screen is
   (`LINE_REMOVE`; after the payment screen showed the total `LINE_REMOVE_AFTER_PAY` / `BILL_CANCEL_AFTER_PAY`,
   `CartSession.State.payShown`); a cleared bill names its items. The idle lock defaults to 5 minutes (a till
   that never locked was moved to 5 once, `SettingsRepo.lockByDefault`); "after each sale" locks when the
-  sale's result is closed (`CheckoutService.acknowledge`). A manager's help lends only `Perm.TILL_HELP`;
+  sale's result is closed (`CheckoutService.acknowledge`). A manager's help lends only `Perm.TILL_HELP` (and the permission it was asked for);
   `PermissionGate.shown(perm)` decides what controls show (the rest asks for the PIN again).
 - `ShiftService`: one open shift per till; sales/refunds/voids/credit repayments written while
   it is open carry its id; expected cash is recomputed from those events (D-038). Blind close

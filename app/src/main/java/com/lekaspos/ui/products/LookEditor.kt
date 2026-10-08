@@ -129,7 +129,7 @@ class LookEditor(private val a: ScreenActivity) {
             showPicture()
         }
         top.addView(buttons, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
-        column.addView(top)
+        column.addView(top, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         column.addView(TextView(a, null, 0, R.style.Text_Lekas_Label).apply { text = a.getString(R.string.look_color) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
@@ -216,12 +216,23 @@ class LookEditor(private val a: ScreenActivity) {
         if (requestCode != REQ_PHOTO && requestCode != REQ_PICK) return false
         if (resultCode != android.app.Activity.RESULT_OK) return true
         val picked: Uri? = if (requestCode == REQ_PICK) data?.data ?: return true else null
+        // A camera app that ignores where to save the photo gives back only a small one: better than nothing.
+        @Suppress("DEPRECATION")
+        val thumbnail = if (requestCode == REQ_PHOTO) data?.extras?.get("data") as? android.graphics.Bitmap else null
         val app = a.applicationContext
         busy = true
         a.launchUi {
             try {
                 val stored = withContext(Dispatchers.IO) {
-                    if (picked != null) Pictures.fromUri(app, picked) else Pictures.fromFile(Pictures.captureFile(app))
+                    val photo = Pictures.captureFile(app)
+                    when {
+                        picked != null -> Pictures.fromUri(app, picked)
+                        photo.length() == 0L && thumbnail != null -> {
+                            java.io.FileOutputStream(photo).use { thumbnail.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, it) }
+                            Pictures.fromFile(photo)
+                        }
+                        else -> Pictures.fromFile(photo)
+                    }
                 }
                 newPicture = stored
                 removed = false

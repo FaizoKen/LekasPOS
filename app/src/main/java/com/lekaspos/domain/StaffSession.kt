@@ -553,11 +553,15 @@ class PermissionGate(private val session: StaffSession) {
     private var helpToken = 0L
     private var helpUntil = 0L
 
+    /**
+     * [lend]: the permission the help was asked for (adding an unknown product: MANAGE_PRODUCTS), lent with
+     * the bill's own ([Perm.TILL_HELP]) when the helper holds it.
+     */
     @Synchronized
-    fun startHelp(approval: Approval) {
+    fun startHelp(approval: Approval, lend: Long = 0L) {
         if (helpToken != 0L) elevations.remove(helpToken)
         // Only the bill's own business is lent (D-067); the rest shows ([shown]) and asks again.
-        helpToken = elevate(Approval(approval.perm and Perm.TILL_HELP, approval.staffId, approval.name))
+        helpToken = elevate(Approval(approval.perm and (Perm.TILL_HELP or lend), approval.staffId, approval.name))
         helpUntil = SystemClock.elapsedRealtime() + HELP_MS
         _helper.value = approval
     }

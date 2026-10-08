@@ -193,6 +193,14 @@ class PerfDataGenerator(
                         lowStock = if (rnd.nextInt(100) < 30) (5L + rnd.nextInt(16)) * 1000L else 0L,
                     )
                     ProductDao.insert(tx, p, barcodes, now, tx.hlcNow())
+                    // Every fifth product has a tile colour (D-066): the lists' join finds rows. No draw of `rnd`,
+                    // so the rest of the generated store stays as it was.
+                    if (k % 5 == 0) {
+                        tx.insert(
+                            "INSERT INTO product_look(id, color, created_at, updated_at, ver_hlc, ver_dev) VALUES(?,?,?,?,?,?)",
+                            productId, 1 + k % 12, now, now, tx.hlcNow(), tx.deviceNo,
+                        )
+                    }
                     if (p.trackStock) {
                         tx.insert(
                             "INSERT INTO stock_movement(id, product_id, kind, qty, unit_cost, at, hlc) VALUES(?,?,?,?,?,?,?)",
