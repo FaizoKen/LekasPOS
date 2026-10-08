@@ -1664,6 +1664,9 @@ day... please improve something to avoid staff fraud and avoid staff stealing (a
       (was 5), coloured tiles, a picture, initials in its row
 - [x] Test build **v1.12.0** (pre-release, 2026-10-08; build 139, release key — same certificate `0a67abec…d4b9`;
       SHA-256 of the APK `37979785…deee`, `mapping-1.12.0.txt` attached). The public download stays v1.9.1
+- [x] Perf QUICK (run 37762725913): **PASS** on API 21, 29 and 36; all 107 query plans ok on API 21 (with the new
+      `products_by_ids` join, `audit_by_staff`, `audit_of_till`, `shift_over_short`); API 21 search p95 ≤ 2.9 ms,
+      scan to cart 0.63 ms, sale commit 10.3 ms; cold start to a usable till about 0.6 s
 - [ ] The owner's phone check (below)
 
 ### Needs real-device testing (1.12.0)
