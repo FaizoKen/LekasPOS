@@ -32,7 +32,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
 | — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
 | — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
-| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | test build **v1.13.0** (build 145) — **tested by the owner** (2026-10-08): "all good" |
+| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
 
 ## Open questions for the user
 
@@ -1778,3 +1778,8 @@ other screen, not on tablet".
 5. **Turn off:** Settings → Customer screen → Turn off → the TV mirrors the tablet again (Android's normal cast); turn on.
 6. If the TV only copies the tablet: the cast is Google Home's "Cast screen" — use Screen mirroring / Smart View, or a
    cable. Tell us the tablet's and the TV's (or dongle's) make.
+- [x] The owner asked to release it (2026-10-08, "yup"): **v1.13.0 is the latest release** (public notes with What's new in
+      English and Malay, covering 1.10.0 to 1.13.0; the website's Download link serves it, SHA-256 checked, and GitHub's
+      latest release is v1.13.0); smoke baseline (`PREV_APK_URL`) v1.13.0. Shops on 1.6.1 or later are offered it inside
+      the app within a day. Privacy policy already updated for 1.12.0 (8 October 2026); 1.13.0 sends nothing new.
+      Open: the Google Cloud `drive.file` scope step of 1.11.0 (the daily report to Drive) was never confirmed
