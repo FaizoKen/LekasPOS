@@ -30,9 +30,9 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.9.0 / 1.9.1**: the cashier's screen — clear a bill without a PIN, only the buttons the cashier may use (a manager's PIN shows the rest for a bill), faster taps; 1.9.1: the bill line's buttons on one line, nothing to scroll with the phone held sideways (D-063) | **released** 2026-10-04 (v1.9.1) — the owner asked to release it; offered in the app to shops on 1.8.0; phone checks still to run |
 | — | **1.10.0 / 1.10.1**: one selling screen for everyone (the owner's Discount and "More" moved to Menu → Discount); the payment in two clear steps (D-064); 1.10.1: Google Drive missing from the folder picker → a backup file to Drive | test builds v1.10.0 (build 131) and **v1.10.1** (build 134) — waiting for the owner's phone check |
 | — | **1.11.0**: daily sales report to the owner's Google Drive, also on a tablet with an old Drive app (D-065) | test build **v1.11.0** (build 136) — the owner adds the `drive.file` scope in Google Cloud, then the phone check |
-| — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — waiting for the owner's phone check |
-| — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — waiting for the owner's phone check |
-| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | test build **v1.13.0** (build 145) — waiting for the owner's check with the TV |
+| — | **1.12.0**: product pictures and colours, more items on the selling screen (D-066); staff on a shared till — removals on record, handover count, lock after each sale, staff check (D-067) | test build **v1.12.0** (build 139) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
+| — | **1.12.1**: the shift asked by itself — start, yesterday's never closed, handover; Menu → Open/Close shift; close in three steps with what stays in the drawer; the next opening checked against it; shifts on for shops with staff (D-068) | test build **v1.12.1** (build 143) — the owner tested it with v1.13.0 (2026-10-08): "all good" |
+| — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | test build **v1.13.0** (build 145) — **tested by the owner** (2026-10-08): "all good" |
 
 ## Open questions for the user
 
@@ -1669,7 +1669,7 @@ day... please improve something to avoid staff fraud and avoid staff stealing (a
 - [x] Perf QUICK (run 37762725913): **PASS** on API 21, 29 and 36; all 107 query plans ok on API 21 (with the new
       `products_by_ids` join, `audit_by_staff`, `audit_of_till`, `shift_over_short`); API 21 search p95 ≤ 2.9 ms,
       scan to cart 0.63 ms, sale commit 10.3 ms; cold start to a usable till about 0.6 s
-- [ ] The owner's phone check (below)
+- [x] The owner's phone check (below): tested with v1.13.0 — "i was test. all good" (2026-10-08)
 
 ### Needs real-device testing (1.12.0)
 
@@ -1723,7 +1723,7 @@ and not make cashier confusing... please audit and do your best".
       **1,589,160 bytes** (1.12.0's build 139: 1,579,610 — about +10 KB)
 - [x] Test build **v1.12.1** (pre-release, 2026-10-08; build 143, release key — same certificate `0a67abec…d4b9`; SHA-256
       of the APK `6dedb828…847c`, `mapping-1.12.1.txt` attached). The public download stays v1.9.1
-- [ ] The owner's phone check (below, with 1.12.0's list)
+- [x] The owner's phone check (below, with 1.12.0's list): tested with v1.13.0 — "all good" (2026-10-08)
 
 ### Needs real-device testing (1.12.1)
 
@@ -1764,7 +1764,7 @@ other screen, not on tablet".
       +14 KB). Pictures of the customer screen (welcome, bill) reviewed
 - [x] Test build **v1.13.0** (pre-release, 2026-10-08; build 145, release key — same certificate `0a67abec…d4b9`;
       SHA-256 of the APK `0d2d90b2…5f4b`, `mapping-1.13.0.txt` attached). The public download stays v1.9.1
-- [ ] The owner's check with the TV (below)
+- [x] The owner's check with the TV (below): "i was test. all good" (2026-10-08)
 
 ### Needs real-device testing (1.13.0)
 
