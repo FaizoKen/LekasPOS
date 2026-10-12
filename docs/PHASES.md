@@ -1864,7 +1864,9 @@ on voids: "you decide and do your best".
       says "For LekasPOS 1.14.0". Privacy policy unchanged (1.14.0 stores and sends nothing new). Shops on 1.6.1+ are
       offered it inside the app. The shop's request (LekasPOS-reports issue #9, "Bagi access pulang balik barang kpd
       cashier") answered and closed
-- [ ] Perf FULL on the released code (no hot path changed: the void-last check reads by primary key)
+- [x] Perf FULL on the released code (run 38235242996, 18cc6d9): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 8.8 ms (150), multi-word search p95 3.0 ms (50), scan to cart
+      0.42 ms, report_month 94 ms (1,000), report_year 145 ms (3,000); cold start to a usable till about 0.4 s
 - [ ] The owner's phone check (below)
 
 ### Needs real-device testing (1.14.0)
