@@ -1973,6 +1973,10 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
       `llms.txt` mentions the Menu's groups. Privacy policy unchanged (nothing new stored, sent or asked). Shops on 1.6.1+
       are offered it inside the app
 
+- [x] Perf FULL on the released code (run 38266016027, c694c15): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 12.0 ms (150), multi-word search p95 5.9 ms (50), scan to cart
+      p95 0.79 ms (20), report_month 205 ms (1,000), report_year 228 ms (3,000); cold start to a usable till about 0.6 s
+
 ### Needs real-device testing (1.16.0)
 
 1. **Menu as cashier** (PIN on, Cashier role): only This bill and Till tiles; no Manage shop group. Tap a tile twice
