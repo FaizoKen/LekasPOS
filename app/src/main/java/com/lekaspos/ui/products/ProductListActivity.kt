@@ -6,6 +6,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.PopupMenu
@@ -26,6 +27,7 @@ import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.setIconText
 import com.lekaspos.ui.common.TileColors
 import com.lekaspos.ui.common.onNearEnd
 import com.lekaspos.ui.sell.visible
@@ -42,6 +44,7 @@ class ProductListActivity : ScreenActivity() {
 
     private lateinit var search: EditText
     private lateinit var empty: TextView
+    private lateinit var addBarcode: Button
     private var job: Job? = null
     private var end = false
 
@@ -100,6 +103,8 @@ class ProductListActivity : ScreenActivity() {
         search = v.findViewById(R.id.list_search)
         search.setHint(R.string.products_search_hint)
         empty = v.findViewById(R.id.list_empty)
+        addBarcode = v.findViewById(R.id.list_empty_action)
+        addBarcode.setIconText(R.drawable.ic_add, getString(R.string.products_add))
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -134,9 +139,11 @@ class ProductListActivity : ScreenActivity() {
                 code != null -> empty.text = getString(R.string.products_add_barcode, code)
                 else -> empty.setText(R.string.products_none_found)
             }
-            empty.setOnClickListener(if (code == null) null else View.OnClickListener {
-                requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this@ProductListActivity, barcode = code, series = true)) }
-            })
+            addBarcode.setOnClickListener {
+                val barcode = code ?: return@setOnClickListener
+                requireAccess(Perm.MANAGE_PRODUCTS) { startActivity(ProductEditActivity.newIntent(this@ProductListActivity, barcode = barcode, series = true)) }
+            }
+            addBarcode.visible(code != null)
             empty.visible(items.isEmpty())
         }
     }

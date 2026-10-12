@@ -20,6 +20,10 @@
     <style name="Base.Theme.Lekas.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
         <item name="android:colorAccent">@color/brand</item>
         <item name="android:colorPrimary">@color/brand</item>
+        <item name="android:buttonBarButtonStyle">@style/Widget.Lekas.Button.Bar</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/Widget.Lekas.Button.Bar.Main</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/Widget.Lekas.Button.Bar</item>
+        <item name="android:buttonBarNeutralButtonStyle">@style/Widget.Lekas.Button.Bar</item>
     </style>
 
     <style name="Theme.Lekas.Dialog" parent="Base.Theme.Lekas.Dialog" />
@@ -65,15 +69,22 @@
         <item name="android:paddingEnd">8dp</item>
     </style>
 
-    <!-- A word that acts without the weight of a button: Cancel, Back, Split payment (the payment, D-064). -->
-    <style name="Widget.Lekas.Button.Text">
-        <item name="android:background">?android:attr/selectableItemBackground</item>
-        <item name="android:textColor">@color/brand</item>
-        <item name="android:textStyle">bold</item>
+    <!-- The buttons under a dialog (OK, Cancel, Delete…): Android draws them as bare words, which did not look
+         like buttons (the owner, 2026-10-13). Ours have the shape of every other button; the main one is filled. -->
+    <style name="Widget.Lekas.Button.Bar" parent="Widget.Lekas.Button.Secondary">
         <item name="android:minHeight">48dp</item>
-        <item name="android:minWidth">64dp</item>
+        <item name="android:minWidth">72dp</item>
         <item name="android:paddingStart">12dp</item>
         <item name="android:paddingEnd">12dp</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:maxLines">2</item>
+    </style>
+
+    <style name="Widget.Lekas.Button.Bar.Main">
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:textColor">@color/text_on_brand</item>
     </style>
 
     <!-- Keypad keys: big digits, no minimum width (4 across on a small phone). -->

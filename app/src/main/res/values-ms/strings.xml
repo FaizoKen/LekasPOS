@@ -159,7 +159,7 @@
     <string name="products_search_hint">Cari nama, SKU atau kod bar</string>
     <string name="products_empty">Belum ada produk. Tekan + untuk menambah, atau imbas kod bar yang tidak dikenali di skrin jualan.</string>
     <string name="products_none_found">Tiada produk yang sepadan.</string>
-    <string name="products_add_barcode">Tiada produk dengan kod bar %1$s. Ketik di sini untuk menambahnya.</string>
+    <string name="products_add_barcode">Tiada produk dengan kod bar %1$s.</string>
     <string name="product_row_stock">Stok: %1$s</string>
     <string name="product_hidden">TERSEMBUNYI</string>
     <string name="product_new">Produk baru</string>

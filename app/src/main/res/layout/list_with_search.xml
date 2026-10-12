@@ -35,11 +35,30 @@
             android:clipToPadding="false"
             android:paddingBottom="16dp" />
 
-        <TextView
-            android:id="@+id/list_empty"
-            style="@style/Text.Lekas.Empty"
+        <!-- The empty list's text, and under it a button when there is something to do (a barcode no product
+             has: "Add product"); a "Tap here" text did not look like something to tap (2026-10-13). -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:visibility="gone" />
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/list_empty"
+                style="@style/Text.Lekas.Empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/list_empty_action"
+                style="@style/Widget.Lekas.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:visibility="gone" />
+        </LinearLayout>
     </FrameLayout>
 </LinearLayout>

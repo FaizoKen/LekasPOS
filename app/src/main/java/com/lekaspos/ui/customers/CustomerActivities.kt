@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -29,6 +30,7 @@ import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
+import com.lekaspos.ui.common.setIconText
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.sell.AmountDialog
 import com.lekaspos.ui.sell.visible
@@ -191,8 +193,17 @@ class CustomerActivity : ScreenActivity() {
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
         list.onNearEnd { loadMore() }
-        header.setOnClickListener { actions() }
-        addAction(R.drawable.ic_more, R.string.sell_menu) { actions() }
+        val buttons = layoutInflater.inflate(R.layout.customer_buttons, header.parent as LinearLayout, false)
+        (header.parent as LinearLayout).addView(buttons, 1)
+        header.elevation = 0f // the buttons below carry the shadow
+        buttons.findViewById<Button>(R.id.customer_receive).apply {
+            setIconText(R.drawable.ic_cash, getString(R.string.credit_receive))
+            setOnClickListener { customer?.let { receive(it) } }
+        }
+        buttons.findViewById<Button>(R.id.customer_more).apply {
+            setIconText(R.drawable.ic_more, getString(R.string.customer_more))
+            setOnClickListener { actions() }
+        }
     }
 
     override fun onStarted(scope: CoroutineScope) = reload()

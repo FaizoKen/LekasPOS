@@ -233,6 +233,8 @@ data class DeviceSettings(
     val tileSize: Int = TILES_MEDIUM,
     /** The customer screen on a second display when one is connected (D-069). */
     val customerScreen: Boolean = true,
+    /** Where the scan beeps play: [BEEP_TILL], [BEEP_SECOND_SCREEN] or [BEEP_OFF] (D-076). */
+    val beep: Int = BEEP_TILL,
 ) {
     val cols: Int get() = when (paper) { 80 -> 48; 81 -> 42; else -> 32 }
     val dots: Int get() = when (paper) { 80 -> 576; 81 -> 512; else -> 384 }
@@ -262,6 +264,10 @@ data class DeviceSettings(
         const val TILES_MEDIUM = 1
         const val TILES_SMALL = 2
 
+        const val BEEP_TILL = 0
+        const val BEEP_SECOND_SCREEN = 1
+        const val BEEP_OFF = 2
+
         private const val P = "dev."
         private const val PRINTER_ADDRESS = "dev.printer.address"
         private const val PRINTER_NAME = "dev.printer.name"
@@ -282,6 +288,7 @@ data class DeviceSettings(
         private const val LOCK_AFTER_SALE = "dev.lock.after_sale"
         private const val TILES = "dev.tiles"
         private const val CUSTOMER_SCREEN = "dev.customer_screen"
+        private const val BEEP = "dev.beep"
 
         fun load(db: SQLiteDatabase): DeviceSettings {
             val m = HashMap<String, String?>()
@@ -312,6 +319,7 @@ data class DeviceSettings(
                 lockAfterSale = b(LOCK_AFTER_SALE, d.lockAfterSale),
                 tileSize = i(TILES, d.tileSize).coerceIn(TILES_LARGE, TILES_SMALL),
                 customerScreen = b(CUSTOMER_SCREEN, d.customerScreen),
+                beep = i(BEEP, d.beep).coerceIn(BEEP_TILL, BEEP_OFF),
             )
         }
 
@@ -337,6 +345,7 @@ data class DeviceSettings(
             put(LOCK_AFTER_SALE, flag(s.lockAfterSale))
             put(TILES, s.tileSize.toString())
             put(CUSTOMER_SCREEN, flag(s.customerScreen))
+            put(BEEP, s.beep.toString())
         }
     }
 }

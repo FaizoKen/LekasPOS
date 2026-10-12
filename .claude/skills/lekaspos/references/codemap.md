@@ -16,7 +16,7 @@ Path abbreviations used throughout:
 | `AT/` | `app/src/androidTest/java/com/lekaspos/` |
 | `RES/` | `app/src/main/res/` |
 
-File counts: `:core` main 50, `:app` main 162, `:core` JVM tests 39, `:app` JVM tests 14, instrumented tests 54 (319 `.kt` files).
+File counts: `:core` main 50, `:app` main 162, `:core` JVM tests 39, `:app` JVM tests 14, instrumented tests 55 (320 `.kt` files).
 Not repeated here (already documented): the rules in `CLAUDE.md`, `.claude/skills/lekaspos/SKILL.md`,
 `references/{architecture,database,money,sync,performance}.md`, `docs/BUILD.md`. This file is the *where is it* map.
 
@@ -365,7 +365,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/sell/PriceCheckDialog.kt` | `class PriceCheckDialog` | Price check. |
 | `A/ui/sell/LineControls.kt` | `class LineControls` | Remove / − / qty / + under the selected line. |
 | `A/ui/sell/TopBarLayout.kt` | `class TopBarLayout` | Top bar with pills and Menu. |
-| `A/ui/sell/Beeper.kt` | `class Beeper` | Scan beeps on their own thread. |
+| `A/ui/sell/Beeper.kt` | `class Beeper` (`create(context, device)`, `ok`, `error`, `release`) | Scan beeps on their own thread, made as `AudioTrack` samples and sent to the till's speaker or not by `dev.beep` (D-076). |
 | `A/ui/staff/LockActivity.kt` | `class LockActivity : Activity, DialogHost` | PIN sign-in over the selling screen. |
 | `A/ui/staff/StaffActivities.kt` | `StaffActivity`, `StaffEditActivity`, `RolesActivity`, `RoleEditActivity`, `changeOwnPin`, private `asOwnerIfRefused` | Settings → Staff. Role editor: "Void sales" on shows "Void their own last sale" on and locked (D-072). |
 | `A/ui/staff/StaffUi.kt` | `permLabel` :30, `waitText`, `checkMessage`, `Activity.withApproval` :71, `object ApprovalDialog` (`show`, `help`), `askPin`, `askNewPin`, `showRecoveryCode` | Permission labels, approval dialogs, PIN dialogs. |
@@ -798,6 +798,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `sync/SyncMergeTest.kt` | **merge** | 36 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
 | `ui/AppLanguageTest.kt` | UI | Screens follow the chosen language. |
 | `ui/BackOfficeReviewTest.kt` | UI | Back-office fixes (app DB, PIN login off). |
+| `ui/BeeperTest.kt` | UI | Beep sound setting kept; each choice plays without a crash (D-076). |
 | `ui/CustomerScreenTest.kt` | UI | Customer screen on a simulated second display. |
 | `ui/IdleLockTest.kt` | UI | Idle lock after screen off/on. |
 | `ui/LineControlsTest.kt` | UI | Line buttons fit. |
@@ -863,9 +864,9 @@ same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g
 
 ### 9.6 Resources (`RES/`)
 `values/` + `values-ms/`: `strings.xml` (496/495 entries), `strings_{a11y,cashier,display,fraud,hw,look,promo,reports,safety,staff,sync,update}.xml` (same files in both
-languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
-`colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only);
-`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `list_with_search.xml`, `item_row.xml`,
+languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Button.Bar(.Main) (dialog buttons, set by `Theme.Lekas.Dialog`, D-076),Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
+`colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only; `status_strip`, `search_row`, `cart_side` with the top bar and `bill_header`, D-076);
+`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`,
 `item_section.xml`, `item_menu_tile.xml` (MenuSheet), `top_action.xml`, selling-screen layouts; `drawable/ic_*.xml` icons (Material icons, Apache 2.0; new ones made
 with explicit path separators and no `evenOdd` fill, which API 21 lacks), `Theme.Lekas.Menu` (the Menu sheet); `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.
 

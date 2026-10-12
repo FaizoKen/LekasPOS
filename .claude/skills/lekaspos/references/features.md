@@ -102,10 +102,13 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 
 ### 2.1 Layout
 - Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
-  bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). Recreated on rotation (like the lock screen, camera and
+  bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). Two panes (D-076): search row, chips and tiles from the
+  top of the screen; the top bar over the bill only; the summary in a band above the bill (`bill_header`) so the bill
+  starts level with the first row of tiles (`alignBill`); a brand-colour `status_strip` under the status bar on
+  Android 15+. Recreated on rotation (like the lock screen, camera and
   Diagnostics; back-office screens are not, D-054). Orientation locked while the payment is open.
-- Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu**. Pill
-  order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
+- Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu** (in a darker
+  box, `top_button_bg`; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
   shown and a non-Play install). Pills that do not fit wrap to a second line.
 - Safety pill, first match wins (`renderSafety`): Data problem → Backup: sign in (sync on, auth needed) → Not
   backed up (sync on, changes waiting, no success for 24 h) → Storage almost full (free < max(300 MB, DB + 100 MB,
@@ -113,7 +116,7 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   (`safety_pill_at_risk`, sync off). Without SETTINGS a tap shows `safety_tell_owner`. A shop with no products and
   no sales shows none (`BackupService.FRESH_MS` = 3 days).
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
-  incl. tax/tax"), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
+  incl. tax/tax"; above the bill in two panes), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
 - Empty bill: help text and the **last sale** of this app run (`CheckoutService.last`: change again, "Print receipt" until
   its receipt was printed, then "Print a copy").
 
@@ -131,8 +134,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 - Search: 150 ms debounce, ≤ 60 tiles; ≥ 2 digits = barcode prefix; words = name/SKU word prefixes (all words,
   accent/case-insensitive, ≤ 6 words); one letter = name prefix; active products only. Enter: try as code (≥ 3 chars,
   no spaces), else ≥ 6 digits → unknown-barcode flow, else a single result is added.
-- Catalogue: chips Popular (if sales in 30 days; `PopularItems`: top 40 by qty over 30 days from `sum_day_product`,
-  cached 10 min, rebuilt if > 3 days) → All → categories (by name). Tiles: picture, colour (product, else category),
+- Catalogue: chips All (chosen when the screen opens, D-076) → Popular (if sales in 30 days; `PopularItems`: top 40 by
+  qty over 30 days from `sum_day_product`, cached 10 min, rebuilt if > 3 days) → categories (by name). Tiles: picture, colour (product, else category),
   price (`/unit` for weighed, "Enter price" for open price), stock if tracked, "×n" badge when on the bill. Sizes per
   till `dev.tiles` (Large 150 / Medium 112 / Small 88dp min width × font scale, 2–10 per row). Taps are queued; a
   400 ms shield after a search pick.
@@ -217,7 +220,7 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
 (nothing written, bill kept); storage full → `pay_failed_storage`.
 - Result dialog: Change (or Paid), "Received … · total …", receipt number, printing state or `result_no_printer`
   (SETTINGS holders only), customer balance, "Running low: …" (MANAGE_STOCK holders), Print receipt / Print a copy,
-  Share (no permission, not a copy), New sale; a scan closes it. "After each sale" lock fires when it closes.
+  New sale (no Share since 1.17.0: a till has no app to share to; Sales & refunds → the sale shares, D-076); a scan closes it. "After each sale" lock fires when it closes.
 
 ---
 
@@ -403,14 +406,14 @@ audited. Currency is fixed MYR/RM/2 decimals (no UI).
 
 Per till (`meta`, LOCAL, inside backups): `dev.printer.*` (address, paper 58/80/80-42, mode auto, gb18030 off,
 codepage 0, cut on, feed 4, auto on, native QR off), `dev.drawer.*` (enabled on, pin 2), `dev.scanner.*`,
-`dev.camera.enabled(on)`, `dev.tiles(medium)`, `dev.customer_screen(on)`, `dev.lock.minutes(5)`,
+`dev.camera.enabled(on)`, `dev.tiles(medium)`, `dev.customer_screen(on)`, `dev.beep(0 this till's speaker, 1 customer screen, 2 off)`, `dev.lock.minutes(5)`,
 `dev.lock.after_sale(off)`, `dev.backup_folder*`, `dev.setup_done`, `drive_report.*`, `sync.*`, `receipt_prefix`,
 `device_no`, `shift.left`. Per phone (SharedPreferences, not in backups): `lekas_ui` (app language), `lekas_reports`
 (error-report consent), `lekas_updates` (daily check on, test versions off). Receipt logo picture:
 `files/receipt_logo.png` (per phone, not synced, not in backups).
 
 Settings screen, in groups with an icon per row (D-074): **This till** App language · Item size · Printer & cash drawer ·
-Barcode scanner & camera · Customer screen — **Shop** Store & receipt · Payment methods · Tax rates · Categories ·
+Barcode scanner & camera · Customer screen · Beep sound — **Shop** Store & receipt · Payment methods · Tax rates · Categories ·
 Customers — **Staff and cash** Staff · Shift & cash · Activity log — **Data and backups** Google Drive backup · Backup &
 restore · Daily sales report to Google Drive — **Help and app** User guide (opens `guide_url`: `guide.html`, or
 `panduan.html` in Malay — 1.13.1) · App updates · Error reports · Diagnostics · About. The hub has no guard; each
@@ -469,6 +472,11 @@ Miracast); follows the activity in front so the back office is never mirrored. V
 Bill (lines, last item highlighted and large with picture/initials on landscape, bill discount, Total / Total to pay,
 item count), Thanks (Paid, Change; 30 s or until the next item). Texts in the receipt language; 1280×720 design
 scaled. Google Cast "Cast screen" cannot host it.
+
+**Beep sound** (Settings → This till, per till `dev.beep`, D-076): where the scan beeps (`ui/sell/Beeper.kt`: added,
+not found) play — *This till's speaker* (default; the built-in speaker via `AudioTrack.setPreferredDevice`, Android
+6+; on Android 5 wherever Android sends it), *Customer screen, when connected* (Android's choice: a Miracast or HDMI
+screen takes every sound) or *Off*. Same tones as before (400 + 1200 Hz 35 ms; 400 Hz 200 ms), media volume.
 
 ## 19. Hardware and Android permissions
 

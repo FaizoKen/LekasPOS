@@ -9,6 +9,10 @@
     <string name="cs_turn_on">Hidupkan</string>
     <string name="cs_turn_off">Matikan</string>
     <string name="cs_connect">Sambung skrin</string>
+    <string name="settings_beep">Bunyi bip</string>
+    <string name="beep_till">Pembesar suara kaunter ini</string>
+    <string name="beep_second_screen">Skrin pelanggan, jika disambung</string>
+    <string name="beep_off">Mati</string>
     <string name="cs_no_cast">Tablet ini tiada tetapan screen mirroring. Bukanya dari tetapan pantas (leret ke bawah dari atas).</string>
 
     <string name="cs_welcome">Selamat datang</string>

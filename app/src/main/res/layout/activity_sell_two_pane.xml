@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Selling screen, two panes (landscape, tablets): catalogue on the left, bill on the right. -->
+<!-- Selling screen, two panes (landscape, tablets): catalogue on the left from the top of the screen, bill on the
+     right under the brand bar (store name, pills, Menu). The bill's first line is level with the first row of
+     tiles (SellActivity.alignBill): the owner asked for both lists to start on one line, and the tiles to get
+     the height the full-width bar took (2026-10-13). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root"
@@ -9,7 +12,13 @@
     android:orientation="vertical"
     tools:ignore="NestedWeights">
 
-    <include layout="@layout/sell_top_bar" />
+    <!-- Under the status bar where the app draws behind it (Android 15+, Insets.apply): the brand colour, as
+         the status bar is on older Android. Its height is that padding only. -->
+    <FrameLayout
+        android:id="@+id/status_strip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/brand_dark" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,7 +32,9 @@
             android:layout_weight="3"
             android:orientation="vertical">
 
-            <include layout="@layout/sell_search" />
+            <include
+                android:id="@+id/search_row"
+                layout="@layout/sell_search" />
 
             <include
                 layout="@layout/sell_catalog"
@@ -43,6 +54,17 @@
             android:layout_height="match_parent"
             android:layout_weight="2"
             android:orientation="vertical">
+
+            <include layout="@layout/sell_top_bar" />
+
+            <!-- The bill's summary ("3 items · discount …", moved here from under the bill): its height is set
+                 so the bill starts level with the tiles. -->
+            <FrameLayout
+                android:id="@+id/bill_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
 
             <include
                 layout="@layout/sell_cart"

@@ -10,6 +10,11 @@
     <string name="cs_turn_on">Turn on</string>
     <string name="cs_turn_off">Turn off</string>
     <string name="cs_connect">Connect a screen</string>
+    <!-- Where the scan beeps play (D-076): a cast or HDMI screen takes every sound, often a TV without speakers. -->
+    <string name="settings_beep">Beep sound</string>
+    <string name="beep_till">This till\'s speaker</string>
+    <string name="beep_second_screen">Customer screen, when connected</string>
+    <string name="beep_off">Off</string>
     <string name="cs_no_cast">This tablet has no screen mirroring settings. Open them from the quick settings (swipe down from the top).</string>
 
     <string name="cs_welcome">Welcome</string>

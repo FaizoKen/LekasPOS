@@ -50,7 +50,7 @@
 
                     <Button
                         android:id="@+id/pay_cancel"
-                        style="@style/Widget.Lekas.Button.Text"
+                        style="@style/Widget.Lekas.Button.Secondary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/cancel" />
@@ -121,7 +121,7 @@
 
                 <Button
                     android:id="@+id/pay_split"
-                    style="@style/Widget.Lekas.Button.Text"
+                    style="@style/Widget.Lekas.Button.Secondary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
@@ -199,10 +199,9 @@
 
                     <Button
                         android:id="@+id/pay_back"
-                        style="@style/Widget.Lekas.Button.Text"
+                        style="@style/Widget.Lekas.Button.Secondary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="-12dp"
                         android:text="@string/pay_back" />
 
                     <com.lekaspos.ui.common.FitTextView

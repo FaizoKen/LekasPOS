@@ -15,6 +15,7 @@ import android.provider.Settings
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.widget.Button
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.lekaspos.R
@@ -22,6 +23,7 @@ import com.lekaspos.domain.sell.CartSession
 import com.lekaspos.hw.camera.BarcodeDecoder
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.Beeper
+import com.lekaspos.ui.sell.visible
 import com.lekaspos.util.Log
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -38,6 +40,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     private var sellMode = true
     private lateinit var surface: SurfaceView
     private lateinit var status: TextView
+    private lateinit var allow: Button
     private var camera: Camera? = null
     private var cameraId = 0
     private var shownRotation = -1
@@ -69,10 +72,11 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
         surface = v.findViewById(R.id.camera_preview)
         status = v.findViewById(R.id.camera_status)
         status.setText(R.string.camera_hint)
-        status.setOnClickListener { onStatusClick() }
+        allow = v.findViewById(R.id.camera_allow)
+        allow.setOnClickListener { onAllowClick() }
         surface.holder.addCallback(this)
         addAction(R.drawable.ic_flash, R.string.camera_torch) { toggleTorch() }
-        beeper = Beeper.create()
+        beeper = Beeper.create(this, graph.settings.device)
         // After process death Android may restore this screen first: the bill must be loaded.
         if (sellMode) launchUi { graph.cart.load() }
     }
@@ -143,12 +147,15 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     private fun canAskAgain(): Boolean =
         Build.VERSION.SDK_INT >= 23 && shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
 
-    /** Denied: the status line says so; tapped, it asks again (or opens the app's settings once Android won't). */
+    /** Denied: the status line says so; its button asks again (or opens the app's settings once Android won't). */
     private fun showDenied() {
-        status.setText(if (canAskAgain()) R.string.camera_permission_ask else R.string.camera_permission_settings)
+        val again = canAskAgain()
+        status.setText(if (again) R.string.camera_permission_ask else R.string.camera_permission_settings)
+        allow.setText(if (again) R.string.camera_allow else R.string.camera_open_settings)
+        allow.visible(Build.VERSION.SDK_INT >= 23 && permissionAsked)
     }
 
-    private fun onStatusClick() {
+    private fun onAllowClick() {
         if (Build.VERSION.SDK_INT < 23) return
         if (hasPermission() || !permissionAsked) return
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
@@ -166,6 +173,7 @@ class CameraScanActivity : ScreenActivity(), SurfaceHolder.Callback, Camera.Prev
     // ------------------------------------------------------------------ camera
 
     private fun open() {
+        allow.visible(false)
         if (camera != null) return
         var cam: Camera? = null
         try {

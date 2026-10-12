@@ -12,14 +12,17 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -100,7 +103,6 @@ import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
 import com.lekaspos.ui.products.PromotionsActivity
 import com.lekaspos.ui.reports.ReportsActivity
-import com.lekaspos.ui.sales.ReceiptShare
 import com.lekaspos.ui.sales.SalesActivity
 import com.lekaspos.ui.scan.CameraScanActivity
 import com.lekaspos.ui.settings.BackupActivity
@@ -203,7 +205,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private val productAdapter = ProductTileAdapter({ tapProduct(it) }) { view, id -> graph.pictures.show(view, id, scope) }
     private val categoryAdapter = CategoryChipAdapter { selectCategory(it) }
     private var selectedCategory = CategoryChipAdapter.ALL
-    private var categoryChosen = false
     private var catalogJob: Job? = null
     private var catalogEnd = false
     private var searchJob: Job? = null
@@ -236,7 +237,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         alive++
         counted = true
         setContentView(R.layout.activity_sell)
-        Insets.apply(findViewById(R.id.root), findViewById(R.id.top_bar))
+        // Two panes: the brand bar is over the bill only; a strip of its colour goes under the status bar instead.
+        Insets.apply(findViewById(R.id.root), findViewById<View>(R.id.status_strip) ?: findViewById<View>(R.id.top_bar))
         keyboardTip = KeyboardTip.watch(this) // a keyboard-mode scanner hides the on-screen keyboard: said once
         titleView = findViewById(R.id.title)
         printerState = findViewById(R.id.printer_state)
@@ -277,6 +279,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 width = (billPaneDp() * resources.displayMetrics.density).toInt()
                 weight = 0f
             }
+            alignBill()
         }
 
         cartList.layoutManager = LinearLayoutManager(this)
@@ -341,7 +344,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         printerState.setOnClickListener { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
         staffChip.setOnClickListener { staffMenu(it) }
         customerChip.setOnClickListener { customerAction() }
-        beeper = Beeper.create()
+        beeper = Beeper.create(this, graph.settings.device)
         showPanels()
     }
 
@@ -871,6 +874,26 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var tileSize = DeviceSettings.TILES_MEDIUM
 
     /**
+     * Two panes (D-076): the bill's summary moves from under the bill to a band above it, as tall as the search
+     * row and chips beside it less the brand bar, so the bill's first line is level with the first row of tiles.
+     * The chips count while a search hides them: the bill does not jump. A brand bar on two lines (many pills)
+     * leaves no band: the bill then starts a little lower.
+     */
+    private fun alignBill() {
+        val band = findViewById<ViewGroup>(R.id.bill_header)
+        (summary.parent as ViewGroup).removeView(summary)
+        band.addView(summary, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL))
+        val searchRow = findViewById<View>(R.id.search_row)
+        val topBar = findViewById<View>(R.id.top_bar)
+        val align = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val h = (searchRow.height + categoryList.layoutParams.height - topBar.height).coerceAtLeast(0)
+            if (band.minimumHeight != h) band.post { band.minimumHeight = h } // not inside this layout pass
+        }
+        searchRow.addOnLayoutChangeListener(align)
+        topBar.addOnLayoutChangeListener(align)
+    }
+
+    /**
      * The bill pane's width beside the tiles (D-066): about a third of the screen, at least what its
      * line buttons and totals need (one line from 300dp, LineControlsTest), at most 420dp. It took 40 %
      * (a tablet's bill was 510dp wide and the tiles five to a row).
@@ -1328,12 +1351,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
             productAdapter.categoryColors = cats.filter { it.color != 0 }.associate { it.id to it.color } // tiles without a colour of their own
             val popular = graph.popular.load().isNotEmpty()
             val chips = ArrayList<Category>(cats.size + 2)
-            if (popular) chips.add(Category(CategoryChipAdapter.POPULAR, getString(R.string.sell_popular)))
+            // "All" first and chosen at the start: opened on Popular, the screen showed only the 40 best sellers
+            // and the owner took the others for missing (2026-10-13). Popular is one tap away beside it.
             chips.add(Category(CategoryChipAdapter.ALL, getString(R.string.sell_all)))
+            if (popular) chips.add(Category(CategoryChipAdapter.POPULAR, getString(R.string.sell_popular)))
             chips.addAll(cats)
             val before = selectedCategory
-            // Best sellers first once the shop has sold something; the owner's choice is kept after that.
-            if (!refresh && !categoryChosen && popular) selectedCategory = CategoryChipAdapter.POPULAR
             if (chips.none { it.id == selectedCategory }) selectedCategory = CategoryChipAdapter.ALL
             categoryAdapter.submit(chips)
             categoryAdapter.selected = selectedCategory
@@ -1378,7 +1401,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private var catalogCursor: ProductListItem? = null
 
     private fun selectCategory(id: Long) {
-        categoryChosen = true
         selectedCategory = id
         categoryAdapter.selected = id
         loadCatalog(reset = true)
@@ -1882,10 +1904,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
         print.visible(device.hasPrinter && (!done.receiptQueued || allowed(Perm.REPRINT))) // a copy needs "Reprint" (D-063)
         print.setIconText(R.drawable.ic_print, getString(if (done.receiptQueued) R.string.result_print_again else R.string.result_print))
         print.setOnClickListener { printOnce.run { printReceipt(done.saleId) { print.isEnabled = false } } }
-        v.findViewById<Button>(R.id.result_share).apply {
-            setIconText(R.drawable.ic_share, getString(R.string.result_share))
-            setOnClickListener { ReceiptShare.chooseAndShare(this@SellActivity, done.saleId) }
-        }
         v.findViewById<Button>(R.id.result_new).apply {
             setIconText(R.drawable.ic_cart, getString(R.string.result_new))
             setOnClickListener { d.dismiss() }

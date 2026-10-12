@@ -70,30 +70,14 @@
         android:textSize="14sp"
         android:visibility="gone" />
 
-    <LinearLayout
+    <!-- No Share here: a till has no app to share to (the owner, 2026-10-13); a receipt is shared from
+         Sales & refunds → the sale. -->
+    <Button
+        android:id="@+id/result_print"
+        style="@style/Widget.Lekas.Button.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/result_print"
-            style="@style/Widget.Lekas.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:minWidth="0dp" />
-
-        <Button
-            android:id="@+id/result_share"
-            style="@style/Widget.Lekas.Button.Secondary"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
-            android:text="@string/result_share" />
-    </LinearLayout>
+        android:layout_marginTop="16dp" />
 
     <Button
         android:id="@+id/result_new"

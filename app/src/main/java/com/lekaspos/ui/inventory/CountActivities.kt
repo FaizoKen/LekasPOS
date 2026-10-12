@@ -170,7 +170,7 @@ class CountActivity : ScreenActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(s: Editable?) = reload(debounce = true)
         })
-        beeper = Beeper.create()
+        beeper = Beeper.create(this, graph.settings.device)
     }
 
     override fun onStarted(scope: CoroutineScope) {

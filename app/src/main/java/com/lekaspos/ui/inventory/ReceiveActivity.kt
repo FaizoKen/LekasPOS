@@ -99,7 +99,7 @@ class ReceiveActivity : ScreenActivity() {
             startActivityForResult(ProductPickActivity.intent(this, getString(R.string.inv_add_item)), REQ_PICK)
         }
         save.setOnClickListener { confirmSave() }
-        beeper = Beeper.create()
+        beeper = Beeper.create(this, graph.settings.device)
         loading = launchUi {
             draft = graph.inventory.loadDraft()
             suppliers = graph.db().read { SupplierDao.list(it) }

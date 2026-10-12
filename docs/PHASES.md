@@ -39,6 +39,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
+| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top, level with the bill; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | on branch `ui-feedback` — CI, then a test build for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2024,3 +2025,43 @@ Found while explaining a flaky test after 1.16.0; the owner asked to release it 
 
 1. PIN login on, a cashier signed in, lock after 5 min: swipe the app away (Android ends it), open it again within a
    minute: still signed in. Wait 6 minutes and open it: the sign-in screen.
+
+---
+
+## 1.17.0 — buttons that look like buttons, the tiles from the top, the beep on the till (D-076)
+
+The owner's feedback after testing 1.16.1 (2026-10-13), five points; they chose the sideways layout ("header over the
+bill only") and where Share goes ("remove after a sale only").
+
+- [x] **Buttons**: an audit of everything tappable that showed as bare text. Dialog buttons (91, Android's bare words) get
+      our outlined shape, the main one filled (`Theme.Lekas.Dialog` → `Widget.Lekas.Button.Bar`); the payment's Cancel /
+      Back / Split payment outlined (`Widget.Lekas.Button.Text` removed); Price check and Items outlined; Menu in a darker
+      box; Diagnostics' three buttons; Products list "Add product" button for an unknown barcode; camera "Allow camera" /
+      "Open settings" button; a customer's balance no longer a hidden tap: **Take a repayment** and **More** under it
+- [x] **Catalogue opens on All** (first chip), Popular next to it
+- [x] **Two panes**: search, chips and tiles from the top; the top bar over the bill only; the bill's summary in a band
+      above the bill sized so its first line is level with the first row of tiles (`alignBill`); a brand strip under the
+      status bar on Android 15+
+- [x] **No Share on the sale-done window** (Sales & refunds → the sale keeps it)
+- [x] **Settings → Beep sound** (per till): This till's speaker (default) / Customer screen, when connected / Off;
+      `Beeper` makes the same tones with `AudioTrack` and asks for the built-in speaker (Android 6+)
+- [x] New test `BeeperTest`; local `:core:test`, `:app:testDebugUnitTest`, instrumented tests compile
+- [x] Docs: user guide EN + MS (selling screen, tabs, after the sale, sharing, unknown barcode, repayments, Settings table,
+      customer screen), `features.md`, `codemap.md`, `glossary.md`, D-076. Privacy policy and Play answers unchanged
+      (nothing new stored off the till, sent or asked)
+- [ ] CI on the branch; guide pictures refreshed from its screenshots (sell, tablet-sell, pay, menu)
+- [ ] Test build for the owner
+
+### Needs real-device testing (1.17.0)
+
+1. **Beep with the customer screen** (the reason for the setting): cast to the TV (or HDMI), scan an item: the beep comes
+   from the tablet. Settings → Beep sound → Customer screen, when connected: from the TV. Off: silent. Not found: the low
+   tone, same choices.
+2. **Tablet held sideways** and a phone held sideways: tiles start at the top; the bill's first line level with the first
+   row of tiles; the store name, pills and Menu above the bill; with many pills (held bills, backup, printer) nothing
+   cut off.
+3. **Selling screen opens on All** (with sales in the last 30 days, Popular is the second chip).
+4. **Dialogs**: any confirm (e.g. Clear bill, Delete a product): the buttons have a border, the main one green.
+   Payment: Cancel, Split payment, Back are buttons. At the largest font size nothing is cut.
+5. **After a sale**: Print and New sale only. Menu → Sales & refunds → a sale → Share still works.
+6. **Customer** (credit on): Take a repayment and More under the balance.

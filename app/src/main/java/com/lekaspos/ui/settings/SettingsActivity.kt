@@ -55,6 +55,7 @@ class SettingsActivity : ScreenActivity() {
     private var driveReportRow = 0
     private var tilesRow = 0
     private var customerRow = 0
+    private var beepRow = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +67,7 @@ class SettingsActivity : ScreenActivity() {
             Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java, R.drawable.ic_print),
             Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java, R.drawable.ic_scanner),
             Entry(R.string.settings_customer_screen, null, null, R.drawable.ic_cast, sub = { customerScreenLine() }) { customerScreen() },
+            Entry(R.string.settings_beep, null, null, R.drawable.ic_volume, sub = { beepName(graph.settings.device.value.beep) }) { chooseBeep() },
             group(R.string.settings_group_shop),
             Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java, R.drawable.ic_store),
             Entry(R.string.pm_title, R.string.settings_pm_sub, PaymentMethodsActivity::class.java, R.drawable.ic_card),
@@ -110,6 +112,7 @@ class SettingsActivity : ScreenActivity() {
         driveReportRow = entries.indexOfFirst { it.title == R.string.drive_report_title }
         tilesRow = entries.indexOfFirst { it.title == R.string.settings_tiles }
         customerRow = entries.indexOfFirst { it.title == R.string.settings_customer_screen }
+        beepRow = entries.indexOfFirst { it.title == R.string.settings_beep }
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
@@ -253,6 +256,29 @@ class SettingsActivity : ScreenActivity() {
             launchUi {
                 graph.settings.saveDevice(graph.settings.device.value.copy(tileSize = sizes[i]))
                 adapter?.notifyItemChanged(tilesRow)
+            }
+        }
+    }
+
+    private fun beepName(beep: Int): String = getString(
+        when (beep) {
+            DeviceSettings.BEEP_SECOND_SCREEN -> R.string.beep_second_screen
+            DeviceSettings.BEEP_OFF -> R.string.beep_off
+            else -> R.string.beep_till
+        },
+    )
+
+    /**
+     * Where this till's scan beeps play (D-076): a customer screen cast or on HDMI takes every sound, often to a
+     * TV without speakers. Per till, like the tiles: no permission.
+     */
+    private fun chooseBeep() {
+        val choices = listOf(DeviceSettings.BEEP_TILL, DeviceSettings.BEEP_SECOND_SCREEN, DeviceSettings.BEEP_OFF)
+        val current = graph.settings.device.value
+        Dialogs.choose(this, getString(R.string.settings_beep), choices.map { beepName(it) }, choices.indexOf(current.beep)) { i ->
+            launchUi {
+                graph.settings.saveDevice(graph.settings.device.value.copy(beep = choices[i]))
+                adapter?.notifyItemChanged(beepRow)
             }
         }
     }

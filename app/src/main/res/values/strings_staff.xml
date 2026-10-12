@@ -148,6 +148,7 @@
     <string name="customer_pick">Choose customer</string>
     <string name="customer_add">New customer</string>
     <string name="customer_edit">Edit customer</string>
+    <string name="customer_more">More</string>
     <string name="customer_name">Name</string>
     <string name="customer_tin">Tax ID (TIN)</string>
     <string name="customer_limit">Credit limit (empty = no limit)</string>

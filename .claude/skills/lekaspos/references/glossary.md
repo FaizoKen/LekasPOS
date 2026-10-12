@@ -33,6 +33,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Discount typed by staff | Discount (bill / item) | Diskaun (bil / item) | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT` |
 | Price changed on the bill | price changed | harga diubah | `PRICE_OVERRIDE` |
 | Customer-facing second display | Customer screen (second screen) | Skrin pelanggan (skrin kedua) | `CustomerDisplay`, `dev.customer_screen` |
+| Where the scan beeps play (D-076) | Beep sound: This till's speaker / Customer screen, when connected / Off | Bunyi bip: Pembesar suara kaunter ini / Skrin pelanggan, jika disambung / Mati | `Beeper`, `dev.beep`, `DeviceSettings.BEEP_*` |
 | The Menu's groups (D-074) | This bill / Till / Manage shop | Bil ini / Kaunter / Urus kedai | `MenuSheet.group`, `menu_group_*`, `menu_manage` |
 
 ## Products and stock

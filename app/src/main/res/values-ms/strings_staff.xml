@@ -146,6 +146,7 @@
     <string name="customer_pick">Pilih pelanggan</string>
     <string name="customer_add">Pelanggan baharu</string>
     <string name="customer_edit">Sunting pelanggan</string>
+    <string name="customer_more">Lagi</string>
     <string name="customer_name">Nama</string>
     <string name="customer_tin">No. cukai (TIN)</string>
     <string name="customer_limit">Had kredit (kosong = tiada had)</string>
