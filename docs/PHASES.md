@@ -36,6 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
+| — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | the owner asked to release it (2026-10-12) |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 
@@ -1980,7 +1981,7 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
 - [x] **The flaky staff test explained (D-075):** the API 21 emulator synced its clock with the host mid-test (back
       0.34 s); a restored sign-in with any negative idle time counted as expired. Now only a clock more than 1 min behind
       the last activity does; new test `aClockCorrectedBackALittleKeepsTheSignInAfterARestart`. On `main` for the next
-      release (no new version yet)
+      release: 1.16.1 (below)
 
 ### Needs real-device testing (1.16.0)
 
@@ -1993,3 +1994,21 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
 5. **Buttons**: Hold/Pay icons, a big font size (Android settings → Font size largest): words and icons still fit; a
    disabled Pay shows a grey icon. Payment: Card and E-wallet / QR show their icons.
 6. **Last sale** with auto-print off: the button says "Print receipt", after printing "Print a copy".
+
+---
+
+## 1.16.1 — the sign-in survives a small clock correction (D-075)
+
+Found while explaining a flaky test after 1.16.0; the owner asked to release it ("do it").
+
+- [x] A sign-in restored after Android restarted the app expires only when the clock reads more than 1 minute earlier
+      than the last activity (a clock set back by hand); a smaller correction (network time) is no idle time
+- [x] Test `StaffTest.aClockCorrectedBackALittleKeepsTheSignInAfterARestart`; CI on 5b32326 (run 38269571720): 287/287
+      on API 21 and 36, tablet, release smoke API 21 and 36, lint
+- [x] Docs: `features.md` §1.3, D-075. User guide: no screen or step changed (only the "For LekasPOS" line). Privacy
+      policy unchanged
+
+### Needs real-device testing (1.16.1)
+
+1. PIN login on, a cashier signed in, lock after 5 min: swipe the app away (Android ends it), open it again within a
+   minute: still signed in. Wait 6 minutes and open it: the sign-in screen.

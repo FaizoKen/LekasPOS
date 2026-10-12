@@ -1542,7 +1542,7 @@ Running); a `prices` column on `promotion` (lost on tills not yet updated, see a
 that replaces the shelf price (a customer buying 4 pays 3 + 1, which a fixed table would have to spell out for every
 count); greedy biggest-group-first (overcharges, as above).
 
-### D-075 — A clock corrected back a little keeps the sign-in after a restart (2026-10-12)
+### D-075 — A clock corrected back a little keeps the sign-in after a restart (1.16.1, 2026-10-12)
 `StaffTest.theOwnersFirstPinTurnsLoginOnAndTheSignInSurvivesARestart` failed once on the API 21 CI emulator (run
 38261007337) and passed on the re-run. Its logcat showed why: between the sign-in and the simulated process restart the
 emulator synced its clock with the host (`AlarmManagerService: Setting time of day`, `TIME_SET`) and the wall clock went

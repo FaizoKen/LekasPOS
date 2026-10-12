@@ -1,6 +1,6 @@
 # Features — what the app does today (behaviour reference)
 
-The current behaviour of LekasPOS **1.16.0**, feature by feature, for anyone changing the code. It complements
+The current behaviour of LekasPOS **1.16.1**, feature by feature, for anyone changing the code. It complements
 the design references (`architecture.md`, `database.md`, `money.md`, `sync.md`): those say *how* it is built,
 this says *what it does* and where. `docs/DECISIONS.md` is the history of *why* (D-numbers below); when it and
 this file disagree, the code wins — fix this file.
