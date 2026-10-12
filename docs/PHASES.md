@@ -1916,7 +1916,9 @@ RM4) — "please fix this issue in better way and do it your best".
       the website's Download link serves it, SHA-256 checked); smoke baseline (`PREV_APK_URL`) v1.15.0; the user guide
       says "For LekasPOS 1.15.0"; `llms.txt` mentions several prices. Privacy policy unchanged (1.15.0 stores and sends
       nothing new about people). Shops on 1.6.1+ are offered it inside the app
-- [ ] Perf FULL on the released code
+- [x] Perf FULL on the released code (run 38250117294, 6592e47): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 15.9 ms (150), multi-word search p95 5.9 ms (50), scan to cart
+      p95 0.96 ms (20), report_month 167 ms (1,000), report_year 252 ms (3,000); cold start to a usable till about 0.6 s
 
 ### Needs real-device testing (1.15.0)
 
