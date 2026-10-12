@@ -19,6 +19,11 @@ w=${size%x*}; h=${size#*x}
 rotation=0; [ "${h:-0}" -gt "${w:-0}" ] && rotation=1
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation $rotation
+# No "System UI isn't responding" over the pictures: the slow tablet emulator raised it in most runs of 2026-10-13
+# and it covered the selling screen in every tablet screenshot. Android's own crash/ANR dialogs only; the tests
+# still fail on a crash of the app.
+adb shell settings put global hide_error_dialogs 1
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1 || true
 adb shell wm size | tee "$OUT/tablet-display.txt"
 adb shell wm density | tee -a "$OUT/tablet-display.txt"
 
