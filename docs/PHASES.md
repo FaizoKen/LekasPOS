@@ -2099,7 +2099,12 @@ bill only") and where Share goes ("remove after a sale only").
       Download link serves it (SHA-256 `a59d2a7d…bb5b` checked). Shops on 1.6.1 or later are offered it inside the app.
       `ui-feedback` merged into `main`; smoke baseline (`PREV_APK_URL`) v1.17.2; the guide says "For LekasPOS 1.17.2";
       `llms.txt` mentions Beep sound. Privacy policy unchanged (nothing new stored off the till, sent or asked)
-- [ ] Perf FULL on the released code
+- [x] CI on main 4d53063 (run 38299633906): all jobs green, release smoke upgrading from 1.17.2. Pages published the guide
+      ("For LekasPOS 1.17.2" live)
+- [x] Perf FULL on the released code (run 38299656426, 4d53063): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 8.3 ms (150), multi-word search p95 3.6 ms (50), scan to cart
+      p95 0.29 ms (20), report_month 93 ms (1,000), report_year 179 ms (3,000); cold start to a usable till about 0.6 s
+      (first two cold runs), 0.13 s after
 
 ### Needs real-device testing (1.17.0)
 
