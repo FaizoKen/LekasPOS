@@ -22,6 +22,7 @@ import com.lekaspos.data.product.ProductLook
 import com.lekaspos.data.product.ProductLookDao
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
+import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.inventory.InventoryActivity
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
@@ -128,6 +129,14 @@ class ScreenshotsTest {
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay.png")) { it.findViewById<View>(R.id.btn_pay).performClick() }
             // The Menu: every job as a tile in its group (D-074).
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-menu.png")) { it.findViewById<View>(R.id.btn_menu).performClick() }
+            // A dialog's buttons have a button's shape, the main one filled (D-076; Android drew bare words).
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-dialog.png")) { a ->
+                val n = graph.cart.state.value.cart.items.size
+                Dialogs.confirm(
+                    a, a.getString(R.string.clear_confirm_title),
+                    a.resources.getQuantityString(R.plurals.clear_confirm_message, n, n), a.getString(R.string.clear_yes),
+                ) {}
+            }
             // Its second step: "Other amount", RM100 typed — the change shows.
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay-cash.png")) { a ->
                 val total = graph.cart.state.value.priced.total
