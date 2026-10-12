@@ -1516,6 +1516,32 @@ above); "void own last sale" without a time limit or for any of their sales (the
 is the fraud and not the fix); tying it to REFUND instead of a permission of its own (the owner could not keep one
 without the other).
 
+### D-073 — A multi-buy with several prices; the bill takes the cheapest mix (1.15.0, 2026-10-12)
+The owner: a shop's deal "1 for RM2, 2 for RM3, 3 for RM4" charged RM5 for 3 items, not RM4 — "please fix this issue
+in better way". A product took only one promotion (the lowest id), so with "2 for RM3" and "3 for RM4" made as two
+promotions, the older one won and the third item paid its shelf price. One promotion could hold only one price.
+- **More prices on one multi-buy:** up to 5 rows under "More prices (optional)" ("3 for RM4" besides "2 for RM3"; each
+  quantity once). Stored as LWW `promotion_price` (id = the promotion's id, `prices` "3:400,5:600", schema v10) — a table
+  of its own, not a `promotion` column, because tills on 1.14 drop fields they do not know for good (recipes §5); with
+  a new entity they keep the events aside (`sync_deferred`) and apply them once updated. Until then they use the first
+  price only (what they charged before: never less than the old price, never a wrong deal).
+- **The cheapest mix for the customer** (`Promotions.plan`, money.md §11): with the units dearest first, take the K that
+  saves most, where the first K units are covered exactly by the prices at the least cost (unbounded knapsack) and the
+  rest pay the shelf price. Greedy "biggest group first" is wrong ("4 for RM6, 3 for RM4.80": 6 items are 3 + 3, not
+  4 + 2). Groups are laid out biggest first; each group's saving is shared over its lines by price, never negative, as
+  before — a promotion with one price gives exactly the old result. Above 10,000 units of one deal the cheapest price per
+  unit takes the dearest units first, so memory stays small on any bill.
+- **Promotions already made per price combine:** running multi-buys on exactly the same products form one ladder,
+  so the shop's two promotions charge RM4 for 3 without re-entering anything. Different product sets keep the
+  lowest-id rule (a "any 3 Milo" deal and a "Milo 2 for RM7" cannot be mixed fairly in one plan). A line's receipt name is
+  the promotion of its biggest group (3 + 2 → "3 for RM4"). Price check lists the deal with all its prices.
+- **Merged edits from two tills** (the first price made 3 on one, a "3 for" row added on the other; or the deal made a
+  "buy X get Y"): the clashing further prices are left out when pricing (`PromotionService.toCore`), not the whole deal.
+Rejected: only combining separate promotions (the owner keeps several promotions in step by hand: products, dates,
+Running); a `prices` column on `promotion` (lost on tills not yet updated, see above); a fixed "price per quantity" table
+that replaces the shelf price (a customer buying 4 pays 3 + 1, which a fixed table would have to spell out for every
+count); greedy biggest-group-first (overcharges, as above).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

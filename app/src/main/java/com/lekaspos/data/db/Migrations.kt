@@ -99,6 +99,11 @@ object Migrations {
             // D-067: the payment screen showed the bill's total (kept when it is parked or the app restarts).
             db.execSQL("ALTER TABLE cart ADD COLUMN pay_shown INTEGER NOT NULL DEFAULT 0")
         },
+        // v9 → v10 (1.15.0, D-073): a multi-buy's further prices. A new entity, so tills still on 1.14 keep
+        // its events aside (sync_deferred) and apply them once updated.
+        Migration(9, 10) { db ->
+            db.execSQL(Schema.PROMOTION_PRICE)
+        },
     )
 
     fun migrate(db: SQLiteDatabase, from: Int, to: Int) {

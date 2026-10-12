@@ -59,7 +59,8 @@ Every synced change is one event appended to `outbox` in the same transaction as
 
 LWW entities: `setting` (per key), `role`, `staff`, `tax_rate`, `category`, `product`,
 `product_barcode`, `supplier`, `customer`, `payment_method`, `shift`, `count_session`, `promotion`,
-`product_look` (colour and picture of a product, id = its id; D-066).
+`product_look` (colour and picture of a product, id = its id; D-066), `promotion_price` (a multi-buy's further prices, id =
+the promotion's id, the whole list one field; D-073).
 
 Stock work (D-036): a PURCHASE event regenerates its RECEIVE movements with the purchase-line
 ids; the moving-average cost change travels separately as an ordinary LWW `product.cost` edit,

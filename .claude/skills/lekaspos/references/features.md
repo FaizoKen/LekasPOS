@@ -277,15 +277,19 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
   E-wallet/QR (default), Card, Other; "Opens the cash drawer"; "Shown at the till" (locked on for Cash and Credit).
   No delete (hide), no reorder; renaming a used method asks (`pm_rename_used`). Record-only: no terminal/gateway.
 
-## 7. Promotions (`core/pricing/Promotions.kt`, `domain/promo/PromotionService.kt`, D-047, D-060)
+## 7. Promotions (`core/pricing/Promotions.kt`, `domain/promo/PromotionService.kt`, D-047, D-060, D-073)
 
-Kinds: multi-buy "N for RM X" (N = 1 → "Special price", price > 0) and "Buy X get Y free". Quantities 1–1,000;
+Kinds: multi-buy "N for RM X" (N = 1 → "Special price", price > 0) with up to 5 "More prices (optional)" rows ("2 for RM3,
+3 for RM4": the bill takes the cheapest mix; `promotion_price`, D-073) and "Buy X get Y free". Quantities 1–1,000;
 optional start/end day (inclusive, local); Running switch; ≥ 1 product, piece products only. Eligible lines: piece
 products added as single units, no pack/scale/weight, no manual discount or price change. Any mix of the products
 counts; dearest first; for buy-X-get-Y the cheapest of each set are free; never a negative saving; one promotion per
-product (lowest id). The saving becomes the line's discount, shared by price within a group; a bill discount
-applies after. Line shows "· name −saving"; receipt prints the name. Tills ≤ 1.6.1 ignore special prices. Audited
-`PROMOTION_CHANGE`.
+product (lowest id), except multi-buys on exactly the same products, which combine into one ladder (a line is named
+after the promotion of its biggest group). Further prices that clash after a sync merge are left out, not the deal.
+Price check lists the deal with all its prices. The saving becomes the line's discount, shared by price within a
+group; a bill discount applies after. Line shows "· name −saving"; receipt prints the name. Tills ≤ 1.6.1 ignore
+special prices; tills before 1.15.0 use only the first price (they keep `promotion_price` events aside until
+updated). Audited `PROMOTION_CHANGE`.
 
 ## 8. Product CSV (`core/csv/ProductCsv.kt`, `domain/products/ProductCsvService.kt`, D-041, D-042)
 

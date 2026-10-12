@@ -120,7 +120,7 @@ Streaming CSV in/out and the product CSV format (D-041, D-042).
 | File | Main declarations | Purpose |
 |---|---|---|
 | `C/pricing/Pricing.kt` | `sealed class Discount {None, Amount(minor), Percent(bp)}`, `PriceLine`, `PricedLine`, `TaxGroup`, `PricedCart`, `object PricingEngine` (`price`) | Bill totals, discounts, tax groups (money.md §3). |
-| `C/pricing/Promotions.kt` | `Promotion`, `PromoLine`, `AppliedPromo`, `object Promotions` (`apply`) | "N for X" / "buy X get Y" savings (money.md §11). |
+| `C/pricing/Promotions.kt` | `PriceTier`, `object PriceTiers` (`encode`, `decode`), `Promotion` (`morePrices`, `prices`, `MAX_MORE_PRICES`), `PromoLine`, `AppliedPromo`, `object Promotions` (`apply`; private `deals`, `ladder`, `plan`) | "N for X" (with more prices: cheapest mix, D-073) / "buy X get Y" savings (money.md §11). |
 | `C/pricing/QuickCash.kt` | `object QuickCash` | One-tap cash note buttons. |
 | `C/pricing/Settlement.kt` | `object Settlement` (`cashDue`, `cash`, `exact`, `cashRefund`, `Result {Settled, Partial, Rejected}`, `Reason`) | Tenders, change, cash rounding. |
 
@@ -213,7 +213,7 @@ Opening, schema, migrations, seeds, SQL helpers, damage handling, derived rebuil
 |---|---|---|
 | `A/data/db/Db.kt` | `class Db` (+ `class Db.Tx`, `companion open/assertNotMainThread`, `MetaReservations`) | The only SQLite entry point (see §4.2). |
 | `A/data/db/DbOpenHelper.kt` | `class DbOpenHelper : SQLiteOpenHelper` | WAL; `onCreate` = `Schema.STATEMENTS` + `Seed.insert` + `Meta.createIdentity`; `onUpgrade` = `Migrations.migrate`; `onDowngrade` throws; `onOpen` turns FKs on + `synchronous=FULL`, `cache_size=-4000`, `journal_size_limit`. |
-| `A/data/db/Schema.kt` | `object Schema` (`VERSION = 9` at :11, `FILE_NAME="lekaspos.db"`, `STATEMENTS`, `LWW_TABLES`, `EVENT_TABLES`, `DERIVED_TABLES`, `LOCAL_TABLES`, `GENERATED_ID_TABLES`, `normalize`; DDL constants `SUM_YEAR_PRODUCT`, `SHIFT_OPEN_INDEX`, `SUM_CATEGORY`, `SUM_PRODUCT_INDEXES`, `PROMOTION`, `PRODUCT_LOOK`, `PRODUCT_IMAGE`, `SYNC_DEFERRED`) | Authoritative DDL of the current version; DDL needed by a migration is a named constant reused in `STATEMENTS`. |
+| `A/data/db/Schema.kt` | `object Schema` (`VERSION = 10` at :11, `FILE_NAME="lekaspos.db"`, `STATEMENTS`, `LWW_TABLES`, `EVENT_TABLES`, `DERIVED_TABLES`, `LOCAL_TABLES`, `GENERATED_ID_TABLES`, `normalize`; DDL constants `SUM_YEAR_PRODUCT`, `SHIFT_OPEN_INDEX`, `SUM_CATEGORY`, `SUM_PRODUCT_INDEXES`, `PROMOTION`, `PRODUCT_LOOK`, `PRODUCT_IMAGE`, `SYNC_DEFERRED`) | Authoritative DDL of the current version; DDL needed by a migration is a named constant reused in `STATEMENTS`. |
 | `A/data/db/Migrations.kt` | `class Migration(from, to, migrate)`, `object Migrations` (`ALL` :17, `migrate`) | v1→v9 steps (one version at a time, `require(to == from + 1)`). |
 | `A/data/db/Seed.kt` | `data class SeedNames`, `object Seed` (`Ids.ROLE_OWNER=1/MANAGER=2/CASHIER=3`, `PM_CASH=1/CARD=2/EWALLET=3/CREDIT=4`, `STAFF_OWNER=1`; `CASHIER_1_14_DONE` meta key, set by `insert`; `insert`, `renameUntouched`, `ensureOwner`) | Seed rows at version (0,0) with device_no 0 ids. |
 | `A/data/db/Meta.kt` | `object Meta` (key constants, `get/getLong/put/increment/createIdentity/docSeqKey`) | LOCAL key/value store (`meta`). |
@@ -238,7 +238,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 | `A/data/print/PrintJobDao.kt` | `data class PrintJob`, `object PrintJobDao` (`enqueue`, `next`, `hasReceipt`, `expireReceipts`, `markDone/Attempt/Failed`, `cancelPending`, `purge`, `pendingCount`) | LOCAL persistent print queue (drawer pulses first). |
 | `A/data/product/ProductDao.kt` | `Product`, `Barcode`, `SellableProduct`, `ScanHit`, `ProductListItem`, `ExportRow`; `object ProductDao` (`insert` (raw, no outbox — perf/tests only), `create` (LWW), `update(tx, shown, edited, current, now)`, `delete`, barcode CRUD, `findByCode`, `sellableById`, `search`, `byCategory`, `managePage`, `sellPage`, `popularIds`, `listByIds`, `exportPage`, `owners/ownerOf/bySku/codeOwners`, `reindex`, `ftsBody`, `FTS_CANDIDATES=2000`, `HOT_QUERIES`) | LWW `product`/`product_barcode` + DERIVED `product_fts`. |
 | `A/data/product/ProductLookDao.kt` | `data class ProductLook(color, imageId)`, `object ProductLookDao` (`get`, `update(tx, id, shown, edited, now)`, `addImage`, `imageData`) | LWW `product_look` + EVENT `product_image` (D-066). |
-| `A/data/promo/PromotionDao.kt` | `data class PromotionRow` (`runsOn`), `object PromotionDao` (`list`, `get`, `insert`, `update`, `delete`, `parseProducts`) | LWW `promotion`. |
+| `A/data/promo/PromotionDao.kt` | `data class PromotionRow` (`runsOn`, `morePrices`), `object PromotionDao` (`list`, `get`, `insert`, `update`, `delete`, `parseProducts`; private `setPrices`) | LWW `promotion` + `promotion_price` (v10, D-073). |
 | `A/data/purchase/PurchaseDao.kt` | `PurchaseLineIn`, `PurchaseIn`, `PurchaseRow`, `PurchaseLineRow`, `object PurchaseDao` (`commit`, `page`, `get`, `lines`, `HOT_QUERIES`) | EVENT `purchase`/`purchase_line` (+RECEIVE movements), `Entity.PURCHASE`. |
 | `A/data/report/ReportDao.kt` | `Totals`, `PaymentTotal`, `ProductTotal`, `StaffTotal`, `CategoryTotal`, `SlowMover`, `StockValue`, `ReceiptRow`; `object ReportDao` (`totals`, `days`, `byPayment`, `byStaff`, `summary`, `products`, `byCategory`, `eachProduct`, `slowMovers`, `stockValue`, `receipts`, `receiptsOfDays`, `HOT_QUERIES`) | Report reads from `sum_*` tables. |
 | `A/data/report/SummaryRange.kt` | `object SummaryRange` (`plan`, `all`, `qty`, `categories`, `HAS_SALES`) | Builds the UNION of year/month/day summary pieces for a period. |
@@ -372,7 +372,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/products/ProductListActivity.kt` | `ProductListActivity` | Product list, CSV menu. |
 | `A/ui/products/ProductEditActivity.kt` | `ProductEditActivity` (`newIntent`, `EXTRA_BARCODE`) | Product form (writes DAOs directly in one tx). |
 | `A/ui/products/ProductImportActivity.kt` | `ProductImportActivity` | CSV import preview/run. |
-| `A/ui/products/PromotionActivities.kt` | `promoDeal`, `PromotionsActivity`, `PromotionEditActivity` | Promotions. |
+| `A/ui/products/PromotionActivities.kt` | `promoDeal`, `PromotionsActivity`, `PromotionEditActivity` (`buildMore`, `addMoreRow`, `readMore`: "More prices") | Promotions. |
 | `A/ui/products/LookEditor.kt` | `class LookEditor` | Tile colour + picture part of the product form. |
 | `A/ui/products/Pictures.kt` | `object Pictures` | Photo → 240 px JPEG base64. |
 | `A/ui/catalog/CategoriesActivity.kt` | `CategoriesActivity` | Categories CRUD. |
@@ -775,7 +775,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `domain/inventory/InventoryTest.kt` | domain | Receive, average cost, counts, adjustments, low stock. |
 | `domain/print/ReceiptBuilderTest.kt` | domain | Receipt from stored sale; CJK → image. |
 | `domain/products/ProductCsvServiceTest.kt` | domain | Export/import round trips, problems, barcode rules. |
-| `domain/promo/PromotionFlowTest.kt` | domain | Promotions end to end. |
+| `domain/promo/PromotionFlowTest.kt` | domain | Promotions end to end; more prices stored and billed, two multi-buys on one product combine (D-073). |
 | `domain/report/DailyReportUploadTest.kt` | domain | Drive daily report with an in-memory folder. |
 | `domain/report/ReceiptDaysTest.kt` | domain | Receipts export by stored business day. |
 | `domain/report/ReportTest.kt` | domain | Month/year tables equal days, report screen + permission, categories, voids. |
@@ -792,7 +792,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `perf/PerfSuiteTest.kt` | **perf** | Generates data, runs suite; query plans always enforced; budgets only with `-e assertBudgets true`; `-e perfScale TINY\|QUICK\|FULL`. Excluded from the normal instrumented run. |
 | `perf/QueryPlansTest.kt` | **plan check** | Registered queries pass; checker flags full scans, correlated scans, sorts. |
 | `perf/SoakTest.kt` | perf/leak | 1,000-sale soak heap budget, leaked screens (heap dump). |
-| `sync/SyncMergeTest.kt` | **merge** | 35 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
+| `sync/SyncMergeTest.kt` | **merge** | 36 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
 | `ui/AppLanguageTest.kt` | UI | Screens follow the chosen language. |
 | `ui/BackOfficeReviewTest.kt` | UI | Back-office fixes (app DB, PIN login off). |
 | `ui/CustomerScreenTest.kt` | UI | Customer screen on a simulated second display. |
@@ -890,7 +890,7 @@ All in `C/model/Codes.kt` unless stated. Stored in the DB and in sync files.
 | `CountSessionStatus` (:256) | `count_session.status` | OPEN=0, FINISHED=1 |
 | `PrintJobKind` (:262) | `print_job.kind` | RECEIPT=1, REPRINT=2, TEST=3, DRAWER=4, SHIFT=5 (`ref_id` = shift id) |
 | `PromoKind` (:273) | `promotion.kind` | MULTI_PRICE=0, BUY_GET_FREE=1 |
-| `Entity` (:282) | `outbox.entity`, segment `"e"`, `audit_log.entity`, `sync_deferred.entity` | LWW: SETTING=1, ROLE=2, STAFF=3, TAX_RATE=4, CATEGORY=5, PRODUCT=6, BARCODE=7, SUPPLIER=8, CUSTOMER=9, PAYMENT_METHOD=10, SHIFT=11, COUNT_SESSION=12, PROMOTION=13, PRODUCT_LOOK=14; EVENT: SALE=20, SALE_VOID=21, STOCK_MOVE=22, STOCK_COUNT=23, PURCHASE=24, CASH_MOVE=25, CREDIT=26, AUDIT=27, PRODUCT_IMAGE=28 (next free: LWW 15–19, EVENT 29) |
+| `Entity` (:282) | `outbox.entity`, segment `"e"`, `audit_log.entity`, `sync_deferred.entity` | LWW: SETTING=1, ROLE=2, STAFF=3, TAX_RATE=4, CATEGORY=5, PRODUCT=6, BARCODE=7, SUPPLIER=8, CUSTOMER=9, PAYMENT_METHOD=10, SHIFT=11, COUNT_SESSION=12, PROMOTION=13, PRODUCT_LOOK=14, PROMOTION_PRICE=15; EVENT: SALE=20, SALE_VOID=21, STOCK_MOVE=22, STOCK_COUNT=23, PURCHASE=24, CASH_MOVE=25, CREDIT=26, AUDIT=27, PRODUCT_IMAGE=28 (next free: LWW 15–19, EVENT 29) |
 | `TileColor` (:316) | `product_look.color`, `category.color` | NONE=0, RED=1, PINK=2, PURPLE=3, INDIGO=4, BLUE=5, TEAL=6, GREEN=7, LIME=8, AMBER=9, ORANGE=10, BROWN=11, GREY=12 (`known()` maps unknown → NONE) |
 | `EventOp` (:342) | `outbox.op`, segment `"o"` | LWW=1, INSERT=2 |
 | `AdjustReason` (`C/inventory/AdjustReason.kt:13`) | `stock_movement.reason` text `"code[: note]"` | damaged, expired, lost, theft, own_use, returned, found, correction, other (codes are strings; never rename) |

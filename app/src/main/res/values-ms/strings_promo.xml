@@ -2,7 +2,7 @@
 <!-- Fasa 8: promosi. -->
 <resources>
     <string name="promo_title">Promosi</string>
-    <string name="promo_help">Tawaran yang digunakan sendiri oleh kaunter: “3 untuk RM10”, harga istimewa (1 untuk RM3.99) atau “beli 1 percuma 1” bagi satu atau lebih produk, dari tarikh mula hingga tarikh tamat jika mahu. Hanya unit penuh produk yang dijual mengikut unit dikira; baris dengan diskaun manual atau harga yang diubah tidak termasuk. Kaunter dengan LekasPOS 1.6.1 atau lebih lama tidak menggunakan harga istimewa: kemas kini setiap kaunter dahulu.</string>
+    <string name="promo_help">Tawaran yang digunakan sendiri oleh kaunter: “3 untuk RM10”, beberapa harga (2 untuk RM3, 3 untuk RM4), harga istimewa (1 untuk RM3.99) atau “beli 1 percuma 1” bagi satu atau lebih produk, dari tarikh mula hingga tarikh tamat jika mahu. Hanya unit penuh produk yang dijual mengikut unit dikira; baris dengan diskaun manual atau harga yang diubah tidak termasuk. Kaunter lama melangkau apa yang tidak dikenalinya (harga istimewa sebelum 1.6.1, harga lain sebelum 1.15.0): kemas kini setiap kaunter dahulu.</string>
     <string name="promo_empty">Belum ada promosi. Ketik + untuk menambah.</string>
     <string name="promo_add">Promosi baharu</string>
     <string name="promo_edit">Sunting promosi</string>
@@ -23,6 +23,13 @@
     <string name="promo_buy_qty">Bilangan dibeli</string>
     <string name="promo_free_qty">Bilangan percuma</string>
     <string name="promo_group_price">Harga untuk semuanya</string>
+    <string name="promo_more_prices">Harga lain (pilihan)</string>
+    <string name="promo_more_prices_help">Untuk “1 untuk RM2, 2 untuk RM3, 3 untuk RM4”: harga pertama di atas, yang lain di sini. Kaunter mengenakan gabungan yang paling murah bagi pelanggan: 5 barang = 3 + 2 = RM7.</string>
+    <string name="promo_more_add">Tambah harga lain</string>
+    <string name="promo_more_qty_hint">Bilangan</string>
+    <string name="promo_more_for">untuk</string>
+    <string name="promo_more_price_hint">Harga</string>
+    <string name="promo_error_same_qty">Bilangan ini sudah ada harganya.</string>
     <string name="promo_products">Produk</string>
     <string name="promo_products_help">Sebarang campuran produk ini dikira untuk tawaran.</string>
     <string name="promo_add_product">Tambah produk</string>

@@ -29,6 +29,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Cancel a whole sale | Void / VOIDED | Batalkan / DIBATALKAN | `sale_void`, `SaleStatus.VOIDED` |
 | A cashier undoing the sale just made | Void their own last sale (within 5 minutes) | Batalkan jualan terakhir sendiri (dalam 5 minit) | `Perm.VOID_LAST`, `VoidLast` |
 | Automatic deal | Promotion; Special price; Buy X get Y free | Promosi; Harga istimewa; Beli X percuma Y | `promotion`, `PromoKind` |
+| A deal's further prices ("2 for RM3, 3 for RM4") | More prices; Add another price | Harga lain; Tambah harga lain | `promotion_price`, `PriceTier`, `morePrices` |
 | Discount typed by staff | Discount (bill / item) | Diskaun (bil / item) | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT` |
 | Price changed on the bill | price changed | harga diubah | `PRICE_OVERRIDE` |
 | Customer-facing second display | Customer screen (second screen) | Skrin pelanggan (skrin kedua) | `CustomerDisplay`, `dev.customer_screen` |

@@ -4,9 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
+import com.lekaspos.core.pricing.PriceTier
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.db.Seed
+import com.lekaspos.data.promo.PromotionDao
 import com.lekaspos.data.promo.PromotionRow
 import com.lekaspos.data.sale.SaleQueries
 import com.lekaspos.domain.print.ReceiptBuilder
@@ -92,5 +94,42 @@ class PromotionFlowTest {
         graph.promotions.save(null, promo("Today", listOf(milo), start = today, end = today))
         assertEquals(1_000L, graph.cart.state.value.priced.total)
         assertEquals("Today", graph.cart.state.value.priced.promotions[0]?.name)
+    }
+
+    /** D-073: "1 for RM2, 2 for RM3, 3 for RM4" charged RM5 for 3 — one promotion with more prices. */
+    @Test
+    fun morePricesAreStoredAndTheBillTakesTheCheapestMix() = runBlocking {
+        val db = graph.db()
+        val egg = TestDb.product(db, "Telur", 200L)
+        val sellable = TestDb.sellable(db, egg)
+        val row = PromotionRow(0L, "Telur murah", PromoKind.MULTI_PRICE, 2, 0, 300L, listOf(egg), morePrices = listOf(PriceTier(3, 400L)))
+        val id = graph.promotions.save(null, row)
+        assertEquals(listOf(PriceTier(3, 400L)), db.read { PromotionDao.get(it, id) }?.morePrices)
+        graph.cart.addProduct(sellable, qty = 3_000L)
+        assertEquals(400L, graph.cart.state.value.priced.total)
+        graph.cart.addProduct(sellable, qty = 2_000L) // 5 = 3 + 2
+        assertEquals(700L, graph.cart.state.value.priced.total)
+        val done = pay()
+        assertEquals("Telur murah", db.read { SaleQueries.lines(it, done.saleId) }[0].promoName)
+
+        // The further price taken out: back to "2 for RM3" only, also after a reload from the database.
+        val saved = assertNotNull(graph.promotions.all().firstOrNull { it.id == id })
+        graph.promotions.save(saved, saved.copy(morePrices = emptyList()))
+        graph.promotions.load()
+        assertEquals(emptyList(), graph.promotions.all().first { it.id == id }.morePrices)
+        graph.cart.addProduct(sellable, qty = 3_000L)
+        assertEquals(500L, graph.cart.state.value.priced.total)
+    }
+
+    /** Two promotions on the same product, as a shop made them before 1.15.0, combine into one ladder. */
+    @Test
+    fun twoMultiBuysOnTheSameProductCombine() = runBlocking {
+        val db = graph.db()
+        val egg = TestDb.product(db, "Telur", 200L)
+        graph.promotions.save(null, PromotionRow(0L, "2 for RM3", PromoKind.MULTI_PRICE, 2, 0, 300L, listOf(egg)))
+        graph.promotions.save(null, PromotionRow(0L, "3 for RM4", PromoKind.MULTI_PRICE, 3, 0, 400L, listOf(egg)))
+        graph.cart.addProduct(TestDb.sellable(db, egg), qty = 3_000L)
+        assertEquals(400L, graph.cart.state.value.priced.total)
+        assertEquals("3 for RM4", graph.cart.state.value.priced.promotions[0]?.name)
     }
 }

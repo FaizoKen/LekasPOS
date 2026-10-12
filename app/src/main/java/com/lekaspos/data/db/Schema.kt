@@ -8,7 +8,7 @@ package com.lekaspos.data.db
  * `app/src/androidTest/assets/schemas/<VERSION>.sql` (SchemaSnapshotTest prints it).
  */
 object Schema {
-    const val VERSION = 9
+    const val VERSION = 10
     const val FILE_NAME = "lekaspos.db"
 
     /** LWW columns shared by all editable master-data tables. */
@@ -94,6 +94,17 @@ object Schema {
             staff_id INTEGER,
             at INTEGER NOT NULL,
             hlc INTEGER NOT NULL
+        )"""
+
+    /**
+     * v10 (D-073): a multi-buy's further prices ("2 for RM3" with "3 for RM4"), as
+     * [com.lekaspos.core.pricing.PriceTiers] text "3:400,5:600". LWW, id = the promotion's id; a table
+     * of its own so tills not yet updated keep these events aside (sync_deferred) instead of dropping a
+     * field of `promotion` they do not know.
+     */
+    const val PROMOTION_PRICE = """CREATE TABLE promotion_price (
+            id INTEGER PRIMARY KEY,
+            prices TEXT NOT NULL DEFAULT '',$LWW
         )"""
 
     /** Sync events of a kind this version does not know yet, kept until an update knows it (v6, D-047). */
@@ -196,6 +207,7 @@ object Schema {
         )""",
         "CREATE INDEX supplier_name ON supplier(name_key) WHERE deleted = 0",
         PROMOTION,
+        PROMOTION_PRICE,
         """CREATE TABLE customer (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
@@ -582,7 +594,7 @@ object Schema {
     /** Tables by sync class (every table must appear exactly once; checked by SchemaTest). */
     val LWW_TABLES = listOf(
         "setting", "role", "staff", "tax_rate", "category", "product", "product_barcode",
-        "supplier", "customer", "payment_method", "shift", "count_session", "promotion", "product_look",
+        "supplier", "customer", "payment_method", "shift", "count_session", "promotion", "product_look", "promotion_price",
     )
     val EVENT_TABLES = listOf(
         "cash_movement", "sale", "sale_line", "payment", "sale_void", "stock_movement",

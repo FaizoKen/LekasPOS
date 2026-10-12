@@ -37,7 +37,7 @@ yang anda lihat dalam aplikasi.</p>
 <li><a href="#products">Produk</a>
 <ol><li><a href="#product-list">Senarai produk</a></li><li><a href="#product-form">Borang produk</a></li><li><a href="#sold-by">Cara produk dijual</a></li><li><a href="#barcodes">Kod bar, pek dan karton</a></li><li><a href="#scale-labels">Label penimbang</a></li><li><a href="#pictures">Gambar dan warna</a></li><li><a href="#categories">Kategori</a></li><li><a href="#tax">Kadar cukai</a></li><li><a href="#payment-methods">Kaedah bayaran</a></li><li><a href="#csv">Banyak produk sekali gus (CSV)</a></li></ol></li>
 <li><a href="#promotions">Promosi</a>
-<ol><li><a href="#promotion-new">Membuat promosi</a></li><li><a href="#promotion-rules">Perkara yang perlu diketahui</a></li></ol></li>
+<ol><li><a href="#promotion-new">Membuat promosi</a></li><li><a href="#promotion-prices">Beberapa harga (2 untuk RM3, 3 untuk RM4)</a></li><li><a href="#promotion-rules">Perkara yang perlu diketahui</a></li></ol></li>
 <li><a href="#stock">Stok</a>
 <ol><li><a href="#how-stock">Bagaimana aplikasi mengetahui stok anda</a></li><li><a href="#receive">Terima stok (penghantaran)</a></li><li><a href="#adjust">Laras stok</a></li><li><a href="#count">Kiraan stok (stock take)</a></li><li><a href="#low-stock">Stok rendah</a></li><li><a href="#suppliers">Pembekal dan penghantaran</a></li><li><a href="#stock-history">Sejarah stok dan perubahan stok</a></li></ol></li>
 <li><a href="#staff">Kakitangan, PIN dan peranan</a>
@@ -728,7 +728,7 @@ bagi setiap fail.</li>
 barang yang betul ada dalam bil — juruwang tidak perlu buat apa-apa.</p>
 <div class="shots">
 <figure><img src="img/ms-promotions.png" alt="Senarai Promosi" width="240" loading="lazy"><figcaption>Promosi: tawaran yang digunakan kaunter dengan sendirinya.</figcaption></figure>
-<figure><img src="img/ms-promotion-edit.png" alt="Promosi baharu" width="240" loading="lazy"><figcaption>Harga beli banyak: berapa banyak, harga untuk semuanya, dan produknya.</figcaption></figure>
+<figure><img src="img/ms-promotion-edit.png" alt="Promosi baharu" width="240" loading="lazy"><figcaption>Harga beli banyak: berapa banyak, harga untuk semuanya, harga lain, dan produknya.</figcaption></figure>
 </div>
 <div class="table-wrap"><table>
 <tr><th>Jenis</th><th>Contoh</th><th>Apa yang pelanggan dapat</th></tr>
@@ -750,6 +750,25 @@ percuma</b>.</li>
 berjalan sehingga anda mematikannya.</li>
 <li>Biarkan <b>Berjalan</b> dihidupkan dan ketik <b>Simpan</b>.</li>
 </ol>
+<h3 id="promotion-prices">Beberapa harga (2 untuk RM3, 3 untuk RM4)</h3>
+<p>Sesetengah tawaran ada harga untuk setiap bilangan: <i>1 untuk RM2, 2 untuk RM3, 3 untuk RM4</i>. Buat
+<b>satu</b> promosi harga beli banyak: masukkan harga pertama dalam <b>Bilangan dibeli</b> dan <b>Harga untuk
+semuanya</b> (2 dan 3.00), kemudian di bawah <b>Harga lain (pilihan)</b> ketik <b>Tambah harga lain</b> untuk setiap
+harga yang lain (3 untuk 4.00). “1 untuk RM2” memang harga biasa, jadi boleh ditinggalkan. Sehingga 6 harga dalam
+satu promosi.</p>
+<p>Kaunter mengenakan gabungan yang <b>paling murah</b> bagi pelanggan:</p>
+<div class="table-wrap"><table>
+<tr><th>Barang</th><th>Kaunter mengenakan</th></tr>
+<tr><td>1</td><td>RM2 (harga biasa)</td></tr>
+<tr><td>2</td><td>RM3</td></tr>
+<tr><td>3</td><td>RM4</td></tr>
+<tr><td>4</td><td>RM6 (3 + 1)</td></tr>
+<tr><td>5</td><td>RM7 (3 + 2)</td></tr>
+<tr><td>6</td><td>RM8 (3 + 3)</td></tr>
+</table></div>
+<p>Pernah membuat satu promosi bagi setiap harga (“2 untuk RM3” dan “3 untuk RM4” pada produk yang sama)? Mulai
+LekasPOS 1.15.0 promosi itu digunakan bersama dengan cara yang sama; resit menunjukkan nama promosi bagi kumpulan terbesar
+yang dibeli (untuk 5 barang: “3 untuk RM4”).</p>
 <h3 id="promotion-rules">Perkara yang perlu diketahui</h3>
 <ul>
 <li>Hanya produk yang <b>dijual mengikut unit</b> layak. Barang yang ditimbang, barang yang harganya dimasukkan di kaunter,
@@ -760,10 +779,13 @@ menjadikan sesuatu kumpulan lebih mahal daripada harga biasanya.</li>
 <li>Penjimatan ditunjukkan pada baris bil (“· <i>nama promosi</i> −RM…”) dan pada resit. Diskaun bil dikira
 selepas promosi.</li>
 <li>Bayaran balik satu barang daripada promosi membayar balik harga sebenar barang itu.</li>
-<li>Jika satu produk berada dalam dua promosi yang sedang berjalan, hanya satu daripadanya yang digunakan.</li>
-<li><b>Semak harga</b> menunjukkan promosi yang digunakan pada sesuatu produk.</li>
+<li>Jika satu produk berada dalam dua promosi yang sedang berjalan, hanya satu daripadanya yang digunakan — kecuali
+promosi harga beli banyak pada produk yang sama sepenuhnya, yang digunakan bersama sebagai
+<a href="#promotion-prices">beberapa harga</a>.</li>
+<li><b>Semak harga</b> menunjukkan promosi yang digunakan pada sesuatu produk, dengan semua harganya.</li>
 <li>Jika ada beberapa kaunter, kemas kini <b>setiap</b> kaunter: kaunter yang menggunakan LekasPOS 1.6.1 atau lebih lama
-tidak menggunakan harga istimewa.</li>
+tidak menggunakan harga istimewa, dan kaunter yang lebih lama daripada 1.15.0 hanya menggunakan harga pertama promosi
+yang ada harga lain.</li>
 <li>Matikan <b>Berjalan</b> untuk menghentikan tawaran buat sementara; padamkannya dengan <b>Padam</b>. Jualan yang sudah dibuat kekal dengan harganya.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>

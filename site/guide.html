@@ -33,7 +33,7 @@
 <li><a href="#products">Products</a>
 <ol><li><a href="#product-list">The product list</a></li><li><a href="#product-form">The product form</a></li><li><a href="#sold-by">How products are sold</a></li><li><a href="#barcodes">Barcodes, packs and cartons</a></li><li><a href="#scale-labels">Weighing-scale labels</a></li><li><a href="#pictures">Pictures and colours</a></li><li><a href="#categories">Categories</a></li><li><a href="#tax">Tax rates</a></li><li><a href="#payment-methods">Payment methods</a></li><li><a href="#csv">Many products at once (CSV)</a></li></ol></li>
 <li><a href="#promotions">Promotions</a>
-<ol><li><a href="#promotion-new">Making a promotion</a></li><li><a href="#promotion-rules">Good to know</a></li></ol></li>
+<ol><li><a href="#promotion-new">Making a promotion</a></li><li><a href="#promotion-prices">Several prices (2 for RM3, 3 for RM4)</a></li><li><a href="#promotion-rules">Good to know</a></li></ol></li>
 <li><a href="#stock">Stock</a>
 <ol><li><a href="#how-stock">How the app knows your stock</a></li><li><a href="#receive">Receive stock (a delivery)</a></li><li><a href="#adjust">Adjust stock</a></li><li><a href="#count">Stock count (stock take)</a></li><li><a href="#low-stock">Low stock</a></li><li><a href="#suppliers">Suppliers and deliveries</a></li><li><a href="#stock-history">Stock history and stock changes</a></li></ol></li>
 <li><a href="#staff">Staff, PINs and roles</a>
@@ -710,7 +710,7 @@ per file.</li>
 right items are on the bill — the cashier does nothing.</p>
 <div class="shots">
 <figure><img src="img/en-promotions.png" alt="The Promotions list" width="240" loading="lazy"><figcaption>Promotions: the deals the till applies by itself.</figcaption></figure>
-<figure><img src="img/en-promotion-edit.png" alt="A new promotion" width="240" loading="lazy"><figcaption>A multi-buy: how many, the price for all of them, the products.</figcaption></figure>
+<figure><img src="img/en-promotion-edit.png" alt="A new promotion" width="240" loading="lazy"><figcaption>A multi-buy: how many, the price for all of them, more prices, the products.</figcaption></figure>
 </div>
 <div class="table-wrap"><table>
 <tr><th>Type</th><th>Example</th><th>What the customer gets</th></tr>
@@ -732,6 +732,24 @@ free</b>.</li>
 until you switch it off.</li>
 <li>Leave <b>Running</b> on and tap <b>Save</b>.</li>
 </ol>
+<h3 id="promotion-prices">Several prices (2 for RM3, 3 for RM4)</h3>
+<p>Some deals have a price for each quantity: <i>1 for RM2, 2 for RM3, 3 for RM4</i>. Make <b>one</b>
+multi-buy: put the first price in <b>How many to buy</b> and <b>Price for all of them</b> (2 and 3.00), then
+under <b>More prices (optional)</b> tap <b>Add another price</b> for each of the others (3 for 4.00). “1 for RM2”
+is the normal price already, so it can be left out. Up to 6 prices in one promotion.</p>
+<p>The till charges the mix that costs the customer <b>least</b>:</p>
+<div class="table-wrap"><table>
+<tr><th>Items</th><th>The till charges</th></tr>
+<tr><td>1</td><td>RM2 (normal price)</td></tr>
+<tr><td>2</td><td>RM3</td></tr>
+<tr><td>3</td><td>RM4</td></tr>
+<tr><td>4</td><td>RM6 (3 + 1)</td></tr>
+<tr><td>5</td><td>RM7 (3 + 2)</td></tr>
+<tr><td>6</td><td>RM8 (3 + 3)</td></tr>
+</table></div>
+<p>Made one promotion per price before (“2 for RM3” and “3 for RM4” on the same products)? From LekasPOS 1.15.0
+they work together the same way; the receipt shows the name of the promotion of the biggest group bought (for 5
+items: “3 for RM4”).</p>
 <h3 id="promotion-rules">Good to know</h3>
 <ul>
 <li>Only products <b>sold by the piece</b> take part. Weighed items, items priced at the till, pack barcodes
@@ -742,10 +760,11 @@ group cost more than its normal price.</li>
 <li>The saving shows on the bill line (“· <i>promotion name</i> −RM…”) and on the receipt. A bill discount is
 taken after the promotions.</li>
 <li>A refund of one item from a promotion pays back what that item really cost.</li>
-<li>If one product is in two running promotions, only one of them applies.</li>
-<li><b>Price check</b> shows the promotion that applies to a product.</li>
+<li>If one product is in two running promotions, only one of them applies — except multi-buys on exactly the
+same products, which work together as <a href="#promotion-prices">several prices</a>.</li>
+<li><b>Price check</b> shows the promotion that applies to a product, with all its prices.</li>
 <li>With several tills, update <b>every</b> till: tills on LekasPOS 1.6.1 or older do not apply a special
-price.</li>
+price, and tills older than 1.15.0 use only the first price of a promotion with more prices.</li>
 <li>Switch <b>Running</b> off to pause a deal; delete it with <b>Delete</b>. Sales already made keep their prices.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Contents</a></p>

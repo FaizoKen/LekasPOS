@@ -10,6 +10,7 @@ import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.model.TileColor
+import com.lekaspos.core.pricing.PriceTier
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.report.Period
 import com.lekaspos.core.staff.PinHash
@@ -645,6 +646,39 @@ class SyncMergeTest {
             val name = a.db().read { r -> r.queryList("SELECT promo_name FROM sale_line WHERE product_id = ?", arrayOf(milo.toString())) { it.getString(0) } }
             assertEquals(listOf("Milo 3 for RM10"), name)
         }
+    }
+
+    /**
+     * D-073: a multi-buy's further prices (their own table) reach the other till — set before sync was on
+     * too (the backfill) — and B's bill takes the ladder; a price changed on B comes back to A.
+     */
+    @Test
+    fun aPromotionsMorePricesReachTheOtherTills() {
+        val a = till()
+        val egg = product(a, "Telur", 200L)
+        val id = runBlocking {
+            a.promotions.save(
+                null,
+                PromotionRow(0L, "Telur", PromoKind.MULTI_PRICE, 2, 0, 300L, listOf(egg), morePrices = listOf(PriceTier(3, 400L))),
+            )
+        }
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        syncAll(a, b)
+        runBlocking {
+            val there = kotlin.test.assertNotNull(b.promotions.all().firstOrNull { it.id == id })
+            assertEquals(listOf(PriceTier(3, 400L)), there.morePrices)
+            b.cart.load()
+            b.cart.addProduct(TestDb.sellable(b.db(), egg), qty = 3_000L)
+            assertEquals(400L, b.cart.state.value.priced.total)
+            b.promotions.save(there, there.copy(morePrices = listOf(PriceTier(3, 450L), PriceTier(6, 800L))))
+        }
+        syncAll(a, b)
+        runBlocking {
+            assertEquals(listOf(PriceTier(3, 450L), PriceTier(6, 800L)), a.promotions.all().first { it.id == id }.morePrices)
+        }
+        assertConverged(a, b)
     }
 
     /**

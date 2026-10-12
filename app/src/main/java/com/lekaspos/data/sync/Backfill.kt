@@ -48,7 +48,7 @@ object Backfill {
     /** Parents before children, so a single importer sees roles before staff and products before barcodes. */
     private fun order(table: String) = listOf(
         "role", "staff", "tax_rate", "category", "payment_method", "supplier", "customer", "product", "product_barcode",
-        "shift", "count_session", "promotion", "product_look",
+        "shift", "count_session", "promotion", "product_look", "promotion_price",
     ).indexOf(table)
 
     private suspend fun settings(db: Db) {

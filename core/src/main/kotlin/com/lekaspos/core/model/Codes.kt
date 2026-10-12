@@ -313,6 +313,9 @@ object Entity {
 
     /** A product's colour and picture on the selling screen (LWW `product_look`, id = product id; v9, D-066). */
     const val PRODUCT_LOOK = 14
+
+    /** A multi-buy's further prices (LWW `promotion_price`, id = the promotion's id; v10, D-073). */
+    const val PROMOTION_PRICE = 15
     const val SALE = 20
     const val SALE_VOID = 21
     const val STOCK_MOVE = 22

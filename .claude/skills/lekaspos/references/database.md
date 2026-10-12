@@ -147,6 +147,7 @@ LWW field `deleted = 1` (a tombstone); rows referenced by history are never hard
 | `sync_cursor` | LOCAL | per other device: last applied segment seq + HLC (v5) | PK dev |
 | `sync_deferred` | LOCAL | sync events of kinds this version does not know yet, applied after an update (v6, D-047) | PK seq |
 | `promotion` | LWW | "N for RM X" / "buy X get Y free", products as id list, optional start/end day (v6, D-047) | PK id |
+| `promotion_price` | LWW | a multi-buy's further prices as `PriceTiers` text "3:400,5:600"; id = the promotion's id (v10, D-073) | PK |
 
 Children (`sale_line`, `payment`, `purchase_line`, `cart_line`) reference their parent with
 `REFERENCES … ON DELETE CASCADE`. All other references (product, staff, customer, shift, …)
@@ -241,4 +242,4 @@ are plain columns without FK constraints because sync can deliver them in any or
   files): Android's default handler deletes the database on SQLITE_CORRUPT (D-055).
 - `ALTER TABLE … ADD COLUMN` is fine on 3.8: SQLite appends `, <column def>` to the stored
   CREATE text, so a fresh DDL with the new columns *last* (same spelling) matches a migrated DB.
-- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`), v6 (Phase 8, D-047: `promotion`, `sale_line.promo_id` + `promo_name`, LOCAL `sync_deferred`; sync cursors cleared once). v7 and v8 (D-058: year and category summaries), v9 (1.12.0, D-066: `product_look`, `product_image` — new entities, so tills not yet updated defer their events instead of dropping fields).
+- History: v1 (Phase 1), v2 (Phase 3, D-034: count sessions, count expected/cost, movement log index), v3 (Phase 4, D-040: `credit_entry.shift_id`, `credit_entry_shift`, `sale_void_shift`, seed role permissions), v4 (Phase 5, D-043: `sum_month_product`, REPORTS permission for the unedited manager role), v5 (Phase 6, D-045: LOCAL `sync_segment`, `sync_cursor`), v6 (Phase 8, D-047: `promotion`, `sale_line.promo_id` + `promo_name`, LOCAL `sync_deferred`; sync cursors cleared once). v7 and v8 (D-058: year and category summaries), v9 (1.12.0, D-066: `product_look`, `product_image` — new entities, so tills not yet updated defer their events instead of dropping fields), v10 (1.15.0, D-073: `promotion_price` — a new entity for the same reason).

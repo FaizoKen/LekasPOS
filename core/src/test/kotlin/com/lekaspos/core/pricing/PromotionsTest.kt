@@ -112,8 +112,104 @@ class PromotionsTest {
         assertEquals(100L, r[0]?.discount)
     }
 
+    private fun ladder(id: Long, prices: List<Pair<Int, Long>>, vararg products: Long) = Promotion(
+        id, "promo $id", PromoKind.MULTI_PRICE, buyQty = prices[0].first, groupPrice = prices[0].second,
+        productIds = products.toSet(), morePrices = prices.drop(1).map { PriceTier(it.first, it.second) },
+    )
+
+    /** D-073, a shop's deal: "1 for RM2, 2 for RM3, 3 for RM4" charged RM5 for 3 (only one price applied). */
+    @Test
+    fun aPriceLadderChargesTheCheapestMix() {
+        val p = ladder(1, listOf(1 to 200L, 2 to 300L, 3 to 400L), 10)
+        // Totals for 1..7 units: 2, 3, 4, 6 (3+1), 7 (3+2), 8 (3+3), 10 (3+3+1).
+        val totals = listOf(200L, 300L, 400L, 600L, 700L, 800L, 1_000L)
+        for ((i, total) in totals.withIndex()) {
+            val units = i + 1
+            assertEquals(listOf(units * 200L - total), savings(listOf(line(10, units, 200)), p), "$units units")
+        }
+        // Without "1 for RM2" (the shelf price already) the same.
+        val q = ladder(1, listOf(2 to 300L, 3 to 400L), 10)
+        for ((i, total) in totals.withIndex()) {
+            assertEquals(listOf((i + 1) * 200L - total), savings(listOf(line(10, i + 1, 200)), q))
+        }
+    }
+
+    /** The shop had made two promotions: they combine into one ladder, each line named by the deal that saved most. */
+    @Test
+    fun separateMultiBuysOnTheSameProductsCombine() {
+        val two = multi(1, 2, 300, 10)
+        val three = multi(2, 3, 400, 10)
+        val r = Promotions.apply(listOf(line(10, 3, 200)), listOf(two, three))
+        assertEquals(200L, r[0]?.discount) // RM4, not RM5
+        assertEquals(2L, r[0]?.promotionId)
+        assertEquals("promo 2", r[0]?.name)
+        assertEquals(1L, Promotions.apply(listOf(line(10, 2, 200)), listOf(two, three))[0]?.promotionId)
+        // Other products: not the same deal, the older one only.
+        val wider = multi(3, 3, 400, 10, 11)
+        assertEquals(100L, Promotions.apply(listOf(line(10, 3, 200)), listOf(two, wider))[0]?.discount)
+    }
+
+    /** The biggest group first is not always cheapest: 6 units are 3 + 3 (RM9.60), not 4 + 2 at the shelf price (RM10). */
+    @Test
+    fun theLadderFindsTheCheapestMixNotTheBiggestGroup() {
+        val p = ladder(1, listOf(4 to 600L, 3 to 480L), 10)
+        assertEquals(listOf(240L), savings(listOf(line(10, 6, 200)), p))
+        assertEquals(listOf(200L), savings(listOf(line(10, 4, 200)), p))
+        assertEquals(listOf(320L), savings(listOf(line(10, 7, 200)), p)) // 4 + 3 = RM10.80 of RM14
+    }
+
+    @Test
+    fun aLadderOverMixedProductsGroupsTheDearestUnits() {
+        val p = ladder(1, listOf(2 to 500L, 3 to 700L), 10, 11)
+        // Units 300, 300, 280, 250, 250: 3 + 2 → 700 + 500 = 1200 of 1380, saving 180.
+        val s = savings(listOf(line(10, 2, 300), line(11, 1, 280), line(12, 1, 999), line(11, 2, 250)), p)
+        assertEquals(180L, s.sum())
+        assertEquals(0L, s[2])
+    }
+
+    @Test
+    fun aLadderOnThousandsOfUnitsStaysExact() {
+        val p = ladder(1, listOf(2 to 300L, 3 to 400L), 10)
+        // 20,000 units: 6,666 groups of 3 and one of 2.
+        val regular = 20_000L * 200L
+        assertEquals(listOf(regular - (6_666L * 400L + 300L)), savings(listOf(line(10, 20_000, 200)), p))
+    }
+
+    /** One line at one price: the ladder's total equals the cheapest of every possible mix. */
+    @Test
+    fun aLadderMatchesEveryMixTriedByHand() {
+        val rnd = Random(73)
+        repeat(300) {
+            val qtys = (1..6).shuffled(rnd).take(1 + rnd.nextInt(4))
+            val prices = qtys.map { it to (50L + rnd.nextInt(1_500)) }
+            val p = ladder(1, prices, 10)
+            val shelf = 1L + rnd.nextInt(400)
+            val units = rnd.nextInt(16)
+            // cheapest[k]: k units, each grouped or at the shelf price.
+            val cheapest = LongArray(units + 1) { it * shelf }
+            for (k in 1..units) for ((q, price) in prices) if (q <= k) cheapest[k] = minOf(cheapest[k], cheapest[k - q] + price)
+            assertEquals(listOf(units * shelf - cheapest[units]), savings(listOf(line(10, units, shelf)), p), "$prices $shelf $units")
+        }
+    }
+
+    @Test
+    fun priceTiersTravelAsText() {
+        val tiers = listOf(PriceTier(3, 400), PriceTier(5, 600))
+        assertEquals("3:400,5:600", PriceTiers.encode(tiers))
+        assertEquals(tiers, PriceTiers.decode("3:400,5:600"))
+        assertEquals(emptyList(), PriceTiers.decode(""))
+        assertEquals(listOf(PriceTier(2, 300)), PriceTiers.decode("x,2:300,:5,4:"))
+    }
+
     @Test
     fun invalidPromotionsAreRefused() {
+        assertFailsWith<IllegalArgumentException> { ladder(1, listOf(2 to 300L, 2 to 250L), 10) }
+        assertFailsWith<IllegalArgumentException> { ladder(1, listOf(2 to 300L, 3 to -1L), 10) }
+        assertFailsWith<IllegalArgumentException> { ladder(1, listOf(2 to 300L, 1_001 to 100L), 10) }
+        assertFailsWith<IllegalArgumentException> { ladder(1, (1..7).map { it to 100L * it }, 10) }
+        assertFailsWith<IllegalArgumentException> {
+            Promotion(1, "x", PromoKind.BUY_GET_FREE, 1, 1, productIds = setOf(1L), morePrices = listOf(PriceTier(3, 100)))
+        }
         assertFailsWith<IllegalArgumentException> { multi(1, 0, 100, 10) }
         assertFailsWith<IllegalArgumentException> { bogo(1, 0, 1, 10) }
         assertFailsWith<IllegalArgumentException> { bogo(1, 1, 0, 10) }
@@ -147,8 +243,11 @@ class PromotionsTest {
         repeat(2_000) {
             val promos = List(1 + rnd.nextInt(3)) { k ->
                 val products = (1..(1 + rnd.nextInt(3))).map { (rnd.nextInt(5) + 1).toLong() }.toLongArray()
-                if (rnd.nextBoolean()) {
+                val kind = rnd.nextInt(3)
+                if (kind == 0) {
                     multi(k.toLong(), 2 + rnd.nextInt(4), rnd.nextInt(2_000).toLong(), *products)
+                } else if (kind == 1) {
+                    ladder(k.toLong(), (1..5).shuffled(rnd).take(1 + rnd.nextInt(3)).map { it to rnd.nextInt(2_000).toLong() }, *products)
                 } else {
                     bogo(k.toLong(), 1 + rnd.nextInt(3), 1 + rnd.nextInt(2), *products)
                 }

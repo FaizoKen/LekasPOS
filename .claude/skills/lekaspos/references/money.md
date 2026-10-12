@@ -139,14 +139,25 @@ Bill level:
 `PricingEngine`. Two kinds (`PromoKind`), each on a set of products (any mix counts):
 
 - **MULTI_PRICE** "N for P": every group of N units costs P (N ≥ 1, P ≥ 0; N = 1 is a special
-  price per unit, "now RM3.99" — added 2026-10, older tills skip such a promotion).
+  price per unit, "now RM3.99" — added 2026-10, older tills skip such a promotion). Up to 5 **more
+  prices** (`morePrices`, a ladder: "2 for RM3, 3 for RM4"; 1.15.0, D-073), each quantity once.
 - **BUY_GET_FREE** "buy X get Y": in every set of X + Y units, the Y cheapest are free.
 
 Rules:
 - Only **eligible** lines take part: a catalogue product sold by the piece (`sellMode UNIT`,
   pack size 1000), whole units (qty multiple of 1000), no scale-label price, no manual price
   change, no manual line discount. Packs, weighed goods, "other items" never take part.
-- A product in several running promotions takes the one with the **lowest id**.
+- A product in several running promotions takes the one with the **lowest id** — except that
+  multi-buys on exactly the same product set join that one as a single ladder (D-073; a shop that
+  made "2 for RM3" and "3 for RM4" as two promotions was charged RM5 for 3).
+- **Ladder plan** (multi-buy with several prices): with the units dearest first, a plan groups the
+  first K units and the rest pay the shelf price; cost[K] = the cheapest exact cover of K units by
+  the prices (unbounded knapsack, every price as often as wanted). The plan takes the K with the
+  biggest saving (smallest K on ties); groups are laid out biggest first, ties by lower price, then
+  promotion id. Above 10,000 units of one deal, the price with the lowest unit price takes the
+  dearest units in whole groups first and only the rest is planned exactly. A single price gives
+  exactly the old result. A line's receipt name is the promotion of the first (biggest) group that
+  saved on it.
 - Units are sorted **dearest first** (ties by line order) and grouped in that order, so mixed
   prices give the customer the bigger saving; for buy-get-free the last Y of each set are free.
 - A group's saving = regular − P, **never negative**; for buy-get-free a set's saving is the
@@ -165,4 +176,7 @@ Rules:
 | buy 1 get 1 | 2 / 3 / 4 × 500 | 500 / 500 / 1000 |
 | buy 2 get 1 | 600 + 500 + 400 | 400 free, shared 160 / 133 / 107 |
 | deal dearer than shelf | 3 × 300 for 1000 | no saving |
+| ladder 1/RM2, 2/RM3, 3/RM4 | 1…7 × 200 | totals 200, 300, 400, 600, 700, 800, 1000 |
+| ladder 4/RM6, 3/RM4.80 | 6 × 200 | 3 + 3 = 960 (not 4 + 2 at shelf = 1000): saving 240 |
+| two promotions 2/RM3 and 3/RM4, same product | 3 × 200 | one ladder: 400, named after "3 for" |
 | in the bill (6% inclusive) | 3 × 390 promo + 350 | net 1000 + 350, tax 57 on the promo line |

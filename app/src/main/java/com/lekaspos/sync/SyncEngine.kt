@@ -505,7 +505,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         try {
             if (Entity.SETTING in changed) graph.settings.reload()
             if (Entity.ROLE in changed || Entity.STAFF in changed) graph.staff.reload()
-            if (Entity.PROMOTION in changed) graph.promotions.load()
+            if (Entity.PROMOTION in changed || Entity.PROMOTION_PRICE in changed) graph.promotions.load()
             if (changed.any { it in CATALOG_ENTITIES }) graph.catalogChanged() // the selling screen's tiles
         } catch (e: Exception) {
             Log.w("Reloading what sync imported failed", e)

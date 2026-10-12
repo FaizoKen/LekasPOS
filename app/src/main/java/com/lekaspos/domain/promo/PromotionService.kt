@@ -4,6 +4,7 @@ import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.pricing.Promotion
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.audit.AuditDao
@@ -94,9 +95,20 @@ class PromotionService(private val graph: AppGraph) {
     }
 
     companion object {
-        /** The pricing form of a stored promotion, or null when its numbers are not valid. */
+        /**
+         * The pricing form of a stored promotion, or null when its numbers are not valid. Further prices
+         * that do not fit (two tills' edits merged field by field: "3 for RM4" added on one while the other
+         * made the first price "3 for RM4.50", or made it a buy X get Y) are left out, not the whole deal.
+         */
         fun toCore(r: PromotionRow): Promotion? = try {
-            Promotion(r.id, r.name, r.kind, r.buyQty, r.freeQty, r.groupPrice, r.productIds.toSet())
+            val more = if (r.kind != PromoKind.MULTI_PRICE) {
+                emptyList()
+            } else {
+                r.morePrices.filter { it.qty in 1..Promotion.MAX_UNITS && it.price >= 0L && it.qty != r.buyQty }
+                    .distinctBy { it.qty }
+                    .take(Promotion.MAX_MORE_PRICES)
+            }
+            Promotion(r.id, r.name, r.kind, r.buyQty, r.freeQty, r.groupPrice, r.productIds.toSet(), more)
         } catch (e: IllegalArgumentException) {
             null
         }

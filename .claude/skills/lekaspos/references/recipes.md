@@ -214,7 +214,7 @@ not in `.lekasbak`), never synced.
 
 ## 5. Add a column or a table (schema change)
 
-Never edit a shipped version's DDL. Current `Schema.VERSION = 9` (Schema.kt:11). Example to copy: v8→v9 (`Migrations.kt:96-101`, D-066): two new tables
+Never edit a shipped version's DDL. Current `Schema.VERSION = 10` (Schema.kt:11). Example to copy: v8→v9 (`Migrations.kt:96-101`, D-066): two new tables
 via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
 
 1. **Decide the sync class** (database.md §4) — LWW / EVENT / LOCAL / DERIVED — and whether a new column on a **synced** table is safe:
@@ -254,7 +254,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
 
 **Copy:** D-066's `product_look` (LWW) and `product_image` (EVENT) — every touch point below exists for them.
 
-1. **Entity code**: `C/model/Codes.kt` `object Entity` (:282). LWW codes are 1–14 (next 15), EVENT 20–28 (next 29). Append only.
+1. **Entity code**: `C/model/Codes.kt` `object Entity` (:282). LWW codes are 1–15 (next 16), EVENT 20–28 (next 29). Append only.
 2. **Schema**: recipe 5 (table + class list + migration + snapshot).
 3. **Local write = outbox in the same transaction**:
    - LWW: `LwwWriter.insert(tx, "table", Entity.X, id, fields, now)` / `update(tx, "table", Entity.X, id, changes, now)` / `delete` (tombstone). Edits

@@ -208,6 +208,7 @@ class Importer(private val db: SQLiteDatabase) {
             Entity.COUNT_SESSION to "count_session",
             Entity.PROMOTION to "promotion",
             Entity.PRODUCT_LOOK to "product_look",
+            Entity.PROMOTION_PRICE to "promotion_price",
         )
 
         private val EVENT_ENTITIES = setOf(

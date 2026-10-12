@@ -36,6 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
+| — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | in progress — local tests pass; CI and the test build next |
 
 ## Open questions for the user
 
@@ -1883,3 +1884,39 @@ on voids: "you decide and do your best".
    wait 6 minutes: the newer shows none either. A sale made by the owner shows no **Void** for the cashier.
 4. **The owner says no:** Roles → Cashier → Refunds off → Save. Restart the app (and on a second till that syncs, update
    it after this): Refunds stays off; the cashier sees **Receipts** again and no Refund / return.
+
+## 1.15.0 — a multi-buy with several prices: "2 for RM3, 3 for RM4" (D-073)
+
+The owner (2026-10-12): a shop's promotion "1 for RM2, 2 for RM3, 3 for RM4" still charged RM5 for 3 items (should be
+RM4) — "please fix this issue in better way and do it your best".
+
+- [x] **Cause:** a product took one promotion only (the lowest id); "2 for RM3" won and the 3rd item paid RM2
+- [x] **More prices** on one multi-buy (Promotions → a promotion → "More prices (optional)" → "Add another price", up to 5);
+      schema v10, LWW `promotion_price` (tills on 1.14 keep its events aside and use the first price until updated)
+- [x] **The cheapest mix** for the customer (exact plan, not "biggest group first"): 1…6 items cost RM2, 3, 4, 6, 7, 8
+- [x] Multi-buys made per price on exactly the same products combine into one ladder (the shop's existing setup works
+      without re-entering it); price check lists every price
+- [x] Tests: `PromotionsTest` (the shop's ladder 1…7 items, separate promotions combine, not greedy, mixed products,
+      20,000 units, 300 random ladders against a brute-force check, `PriceTiers` text, invalid ladders, the random
+      "never above a line's gross" run with ladders); `PromotionFlowTest` (stored, billed, receipt name, removed;
+      two promotions combine); `SyncMergeTest.aPromotionsMorePricesReachTheOtherTills` (backfill, B's bill, an edit
+      back to A, converged); schema snapshot `10.sql`. Local: `:core:test` and `:app:testDebugUnitTest` pass, lint has no
+      errors, instrumented tests compile; release APK **1,611,259 bytes** (1.14.0: 1,607,618 — about +4 KB)
+- [x] User guide (both languages: new "Several prices (2 for RM3, 3 for RM4)" with a table, Good to know, captions),
+      `features.md`, `money.md` §11, `database.md`, `sync.md`, `codemap.md`, `glossary.md`, `recipes.md`, D-073. Privacy
+      policy unchanged (nothing new about people stored or sent)
+- [ ] CI (instrumented API 21 + 36, tablet, release smoke), then refresh `en/ms-promotion-edit.png` from its screenshots
+- [ ] Test build v1.15.0, the owner's phone check (below)
+
+### Needs real-device testing (1.15.0)
+
+1. **The shop's deal:** Promotions → + → Multi-buy, How many to buy 2, Price for all of them 3.00 → More prices → Add
+   another price → 3 for 4.00 → a product at RM2.00 → Save. The list shows "2 for RM3.00, 3 for RM4.00". Sell 1, 2, 3,
+   4, 5, 6 of it: totals RM2, RM3, RM4, RM6, RM7, RM8; the receipt prints the promotion's name.
+2. **Made before as two promotions:** two multi-buys "2 for RM3" and "3 for RM4" on the same product: 3 items cost RM4,
+   the bill line shows "3 for RM4".
+3. **Editor checks:** a row with the same quantity as another → "This quantity has a price already."; an empty row is
+   ignored; after 5 rows "Add another price" hides; Buy X get Y free hides "More prices". Turn the phone sideways: the
+   rows stay.
+4. **Two tills:** update one till only, add a price there: the other (1.14) still charges the first price; after
+   updating it, it charges the ladder without anything re-entered.

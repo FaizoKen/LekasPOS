@@ -4,6 +4,7 @@ import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.Perm
+import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.core.pricing.PricingEngine
@@ -94,9 +95,15 @@ class PriceCheck(private val graph: AppGraph) {
                     .map { Pack(it.packQty, it.packPrice ?: PricingEngine.lineGross(p.price, it.packQty)) }
                 // The deal the till really gives: products sold by the piece only, and of several
                 // running deals the one the pricing takes (the lowest id) — it listed deals that never
-                // applied (2026-10 review).
-                val winner = running.filter { p.id in it.productIds }.minOfOrNull { it.id }
-                val deals = if (p.sellMode != SellMode.UNIT) emptyList() else promos.filter { it.id == winner }
+                // applied (2026-10 review). Multi-buys on exactly its products join it as one ladder (D-073).
+                val winner = running.filter { p.id in it.productIds }.minByOrNull { it.id }
+                val ladder = if (winner?.kind != PromoKind.MULTI_PRICE) emptySet() else running
+                    .filter { it.kind == PromoKind.MULTI_PRICE && it.productIds == winner.productIds }
+                    .mapTo(HashSet()) { it.id }
+                val deals = when {
+                    p.sellMode != SellMode.UNIT || winner == null -> emptyList()
+                    else -> promos.filter { it.id == winner.id || it.id in ladder }
+                }
                 val stock = if (p.trackStock) StockDao.level(r, p.id) else null
                 Info(p.id, p.name, p.unit, p.sellMode, p.price, stock, packs, p.active, deals, p.cost, p.taxBp)
             }

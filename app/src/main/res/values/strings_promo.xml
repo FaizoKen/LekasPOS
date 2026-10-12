@@ -2,7 +2,7 @@
 <!-- Phase 8: promotions. -->
 <resources>
     <string name="promo_title">Promotions</string>
-    <string name="promo_help">Deals the till applies by itself: “3 for RM10”, a special price (1 for RM3.99) or “buy 1 get 1 free” on one or more products, from a start date to an end date if you like. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out. Tills on LekasPOS 1.6.1 or older do not apply a special price: update every till first.</string>
+    <string name="promo_help">Deals the till applies by itself: “3 for RM10”, several prices (2 for RM3, 3 for RM4), a special price (1 for RM3.99) or “buy 1 get 1 free” on one or more products, from a start date to an end date if you like. Only whole units of products sold by the piece count; a line with a hand-made discount or a changed price is left out. Older tills skip what they do not know (a special price before 1.6.1, more prices before 1.15.0): update every till first.</string>
     <string name="promo_empty">No promotions yet. Tap + to add one.</string>
     <string name="promo_add">New promotion</string>
     <string name="promo_edit">Edit promotion</string>
@@ -23,6 +23,13 @@
     <string name="promo_buy_qty">How many to buy</string>
     <string name="promo_free_qty">How many free</string>
     <string name="promo_group_price">Price for all of them</string>
+    <string name="promo_more_prices">More prices (optional)</string>
+    <string name="promo_more_prices_help">For “1 for RM2, 2 for RM3, 3 for RM4”: the first price above, the others here. The till charges the mix that costs the customer least: 5 items = 3 + 2 = RM7.</string>
+    <string name="promo_more_add">Add another price</string>
+    <string name="promo_more_qty_hint">How many</string>
+    <string name="promo_more_for">for</string>
+    <string name="promo_more_price_hint">Price</string>
+    <string name="promo_error_same_qty">This quantity has a price already.</string>
     <string name="promo_products">Products</string>
     <string name="promo_products_help">Any mix of these products counts towards the deal.</string>
     <string name="promo_add_product">Add a product</string>

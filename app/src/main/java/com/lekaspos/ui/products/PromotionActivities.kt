@@ -22,6 +22,8 @@ import com.lekaspos.core.model.PromoKind
 import com.lekaspos.core.model.SellMode
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.money.MoneyFormat
+import com.lekaspos.core.pricing.PriceTier
+import com.lekaspos.core.pricing.Promotion
 import com.lekaspos.core.time.DateText
 import com.lekaspos.core.time.Days
 import com.lekaspos.data.product.ProductDao
@@ -37,12 +39,13 @@ import com.lekaspos.ui.sell.visible
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
 
-/** "3 for RM10.00" / "Special price RM3.99" / "Buy 1 get 1 free". */
+/** "3 for RM10.00" / "Special price RM3.99" / "2 for RM3.00, 3 for RM4.00" / "Buy 1 get 1 free". */
 fun promoDeal(ctx: Context, p: PromotionRow, currency: CurrencySpec): String = when (p.kind) {
-    PromoKind.MULTI_PRICE -> if (p.buyQty == 1) {
+    PromoKind.MULTI_PRICE -> if (p.buyQty == 1 && p.morePrices.isEmpty()) {
         ctx.getString(R.string.promo_deal_price, MoneyFormat.format(p.groupPrice, currency))
     } else {
-        ctx.getString(R.string.promo_deal_multi, p.buyQty, MoneyFormat.format(p.groupPrice, currency))
+        (p.morePrices + PriceTier(p.buyQty, p.groupPrice)).sortedBy { it.qty }
+            .joinToString(", ") { ctx.getString(R.string.promo_deal_multi, it.qty, MoneyFormat.format(it.price, currency)) }
     }
     else -> ctx.getString(R.string.promo_deal_free, p.buyQty, p.freeQty)
 }
@@ -116,6 +119,12 @@ class PromotionEditActivity : ScreenActivity() {
     private lateinit var buy: EditText
     private lateinit var free: EditText
     private lateinit var price: EditText
+
+    /** "More prices": shown for a multi-buy only; one row per further price (D-073). */
+    private lateinit var moreBox: LinearLayout
+    private lateinit var moreRows: LinearLayout
+    private lateinit var moreAdd: Button
+    private val more = ArrayList<Pair<EditText, EditText>>()
     private lateinit var productList: LinearLayout
     private lateinit var startButton: Button
     private lateinit var endButton: Button
@@ -162,6 +171,7 @@ class PromotionEditActivity : ScreenActivity() {
             p?.takeIf { it.kind == PromoKind.MULTI_PRICE }?.let { MoneyFormat.plain(it.groupPrice, currency.decimals) },
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
         )
+        buildMore(f, p?.takeIf { it.kind == PromoKind.MULTI_PRICE }?.morePrices.orEmpty())
 
         f.section(getString(R.string.promo_products))
         f.info(getString(R.string.promo_products_help))
@@ -193,6 +203,113 @@ class PromotionEditActivity : ScreenActivity() {
         // Form labels sit right above their fields.
         (price.parent as? ViewGroup)?.let { parent -> parent.getChildAt(parent.indexOfChild(price) - 1)?.visible(multi) }
         (free.parent as? ViewGroup)?.let { parent -> parent.getChildAt(parent.indexOfChild(free) - 1)?.visible(!multi) }
+        moreBox.visible(multi)
+    }
+
+    /** "2 for RM3" above, "3 for RM4" here: the till charges the mix of prices that costs the customer least. */
+    private fun buildMore(f: Form, prices: List<PriceTier>) {
+        val density = resources.displayMetrics.density
+        moreBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        moreBox.addView(
+            TextView(this, null, 0, R.style.Text_Lekas_Label).apply { setText(R.string.promo_more_prices) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = (16 * density).toInt()
+            },
+        )
+        moreBox.addView(TextView(this, null, 0, R.style.Text_Lekas_Caption).apply { setText(R.string.promo_more_prices_help) })
+        moreRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        moreBox.addView(moreRows)
+        moreAdd = Button(this, null, 0, R.style.Widget_Lekas_Button_Secondary).apply {
+            setText(R.string.promo_more_add)
+            setOnClickListener { addMoreRow(null)?.first?.requestFocus() }
+        }
+        moreBox.addView(
+            moreAdd,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = (8 * density).toInt()
+            },
+        )
+        f.add(moreBox)
+        for (t in prices.sortedBy { it.qty }) addMoreRow(t)
+        moreAdd.visible(more.size < Promotion.MAX_MORE_PRICES)
+    }
+
+    private fun addMoreRow(t: PriceTier?): Pair<EditText, EditText>? {
+        if (more.size >= Promotion.MAX_MORE_PRICES) return null
+        val density = resources.displayMetrics.density
+        val size = (48 * density).toInt()
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = size
+        }
+        val qty = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+            minHeight = size
+            hint = getString(R.string.promo_more_qty_hint)
+            setText(t?.qty?.toString().orEmpty())
+            isSaveEnabled = false
+        }
+        val forText = TextView(this, null, 0, R.style.Text_Lekas_Body).apply {
+            setText(R.string.promo_more_for)
+            val pad = (8 * density).toInt()
+            setPadding(pad, 0, pad, 0)
+        }
+        val amount = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+            minHeight = size
+            hint = getString(R.string.promo_more_price_hint)
+            setText(t?.let { MoneyFormat.plain(it.price, currency.decimals) }.orEmpty())
+            isSaveEnabled = false
+        }
+        val pair = qty to amount
+        val remove = ImageButton(this, null, 0, R.style.Widget_Lekas_IconButton).apply {
+            setImageResource(R.drawable.ic_close)
+            contentDescription = getString(R.string.remove)
+            setOnClickListener {
+                more.remove(pair)
+                moreRows.removeView(row)
+                moreAdd.visible(more.size < Promotion.MAX_MORE_PRICES)
+            }
+        }
+        row.addView(qty, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(forText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        row.addView(amount, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.5f))
+        row.addView(remove, LinearLayout.LayoutParams(size, size))
+        moreRows.addView(row)
+        more.add(pair)
+        moreAdd.visible(more.size < Promotion.MAX_MORE_PRICES)
+        return pair
+    }
+
+    /**
+     * The further prices typed, or null after marking the first field that is wrong. A row left empty is
+     * dropped; every price needs its own quantity (also not the first price's).
+     */
+    private fun readMore(buyQty: Int): List<PriceTier>? {
+        val out = ArrayList<PriceTier>(more.size)
+        val seen = hashSetOf(buyQty)
+        for ((qtyField, priceField) in more) {
+            val qtyText = qtyField.text.toString().trim()
+            val priceText = priceField.text.toString().trim()
+            if (qtyText.isEmpty() && priceText.isEmpty()) continue
+            val q = qtyText.toIntOrNull()
+            if (q == null || q < 1 || q > Promotion.MAX_UNITS) return fail(qtyField, R.string.promo_error_qty)
+            if (!seen.add(q)) return fail(qtyField, R.string.promo_error_same_qty)
+            val amount = MoneyFormat.parse(priceText, currency)
+            // A price of 0.00 for one unit gives every unit away.
+            if (amount == null || amount < 0L || (q == 1 && amount == 0L)) return fail(priceField, R.string.promo_error_price)
+            out.add(PriceTier(q, amount))
+        }
+        return out.sortedBy { it.qty }
+    }
+
+    private fun fail(field: EditText, message: Int): List<PriceTier>? {
+        field.error = getString(message)
+        field.requestFocus()
+        return null
     }
 
     private fun renderProducts() {
@@ -288,6 +405,7 @@ class PromotionEditActivity : ScreenActivity() {
             problem.requestFocus()
             return
         }
+        val morePrices = if (multi) readMore(buyQty ?: 0) ?: return else emptyList()
         if (productIds.isEmpty()) {
             Dialogs.message(this, null, getString(R.string.promo_error_products))
             return
@@ -309,6 +427,7 @@ class PromotionEditActivity : ScreenActivity() {
             startDay = s,
             endDay = e,
             active = active.isChecked,
+            morePrices = morePrices,
         )
         if (PromotionService.toCore(row) == null) {
             Dialogs.message(this, null, getString(R.string.promo_error_qty))
