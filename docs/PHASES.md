@@ -36,7 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
-| — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | test build **v1.15.0** (build 162) — waiting for the owner's phone check |
+| — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 
 ## Open questions for the user
 
@@ -1911,7 +1911,12 @@ RM4) — "please fix this issue in better way and do it your best".
 - [x] Test build **v1.15.0** (pre-release, 2026-10-12; build 162, release key — same certificate `0a67abec…d4b9`; SHA-256
       of the APK `7ce645d9…ea8d`, `mapping-1.15.0.txt` attached). The public download stays v1.14.0; phones with
       "Include test versions" are offered it
-- [ ] The owner's phone check (below)
+- [x] The owner tested it on the phone (2026-10-12): "all good"
+- [x] The owner asked to release it: **v1.15.0 is the latest release** (public notes with What's new in English and Malay;
+      the website's Download link serves it, SHA-256 checked); smoke baseline (`PREV_APK_URL`) v1.15.0; the user guide
+      says "For LekasPOS 1.15.0"; `llms.txt` mentions several prices. Privacy policy unchanged (1.15.0 stores and sends
+      nothing new about people). Shops on 1.6.1+ are offered it inside the app
+- [ ] Perf FULL on the released code
 
 ### Needs real-device testing (1.15.0)
 

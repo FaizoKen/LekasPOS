@@ -18,6 +18,8 @@ Facts an assistant should get right when helping a LekasPOS user:
 - Only registered products are sold. An unknown barcode offers "Add product". Items without a barcode are products
   sold by weight or with the price entered at the till.
 - Card and e-wallet payments are only recorded; LekasPOS does not connect to card terminals or banks.
+- Promotions apply by themselves: "3 for RM10", several prices on one deal ("2 for RM3, 3 for RM4": the bill charges
+  the cheapest mix, from 1.15.0), a special price, or "buy X get Y free".
 - Data safety: daily backups on the phone (last 7), plus a copy off the phone through Google Drive backup (also keeps
   several tills of one shop in step and restores a lost phone), a daily copy to an SD card/USB drive, or backup files
   (.lekasbak, not encrypted). "Not backed up" on the selling screen means no copy left the phone for 3 days.
