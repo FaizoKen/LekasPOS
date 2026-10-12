@@ -1933,3 +1933,45 @@ RM4) — "please fix this issue in better way and do it your best".
    rows stay.
 4. **Two tills:** update one till only, add a price there: the other (1.14) still charges the first price; after
    updating it, it charges the ladder without anything re-entered.
+
+---
+
+## Next (unreleased) — icons and groups (D-074)
+
+Asked by the owner (2026-10-12): "improve the UI UX, to make more easier for cashier, manager and owner … like put
+some icon". Branch `ui-icons` (main untouched); no version bump yet.
+
+- [x] **Menu = one sheet of tiles** (`MenuSheet`): icon over word, groups This bill / Till / Manage shop — the back
+      office one tap away (was behind "Manage shop ›"); held-bill count on its tile; Clear bill in red; same rules for
+      who sees what; a scan closes it; tracked like other dialogs (closes when the till locks — the old PopupMenu did not)
+- [x] **Settings in five groups** with an icon per row; Inventory hub icons
+- [x] **Icons on buttons** (`setIconText`, tinted and centred on API 21): Hold, Pay, sale result (Print, Share, New sale),
+      sale screen (Print a copy, Share, Refund, Void), shift & cash, payment methods by kind, printer/scanner/setup/sync
+      buttons; Delete / Remove PIN / Turn off sync in red
+- [x] **Products list**: picture or colour square with initials (like the tile) and the category
+- [x] Texts fixed: needs-shift and credit-off messages, the last sale's "Print receipt"/"Print a copy", backup help;
+      About credits the Material icons (Apache 2.0)
+- [x] Docs: user guide EN + MS (Menu and Settings tables in groups, paths "Menu → Manage shop → …", captions, Menu
+      picture), `features.md`, `codemap.md`, `architecture.md`, `recipes.md`, `glossary.md`, D-074. Privacy policy and
+      Play answers unchanged (nothing new stored, sent or asked)
+- [x] Local: `:core:test`, `:app:testDebugUnitTest`, lint (no new warnings of note), instrumented tests compile
+- [x] CI on the branch (runs 38257251065, 38259221561, 38261007337): all jobs green — instrumented tests on **API 21 and
+      36**, tablet, release smoke API 21 and 36, lint; screenshots checked on API 21 (the new vector icons parse there),
+      API 36 and the tablet. Release APK **1,654,672 bytes** (1.15.0: 1,612,004 — about +43 KB for ~50 icons and the new
+      screens' code). In the third run `StaffTest.theOwnersFirstPinTurnsLoginOnAndTheSignInSurvivesARestart` failed once
+      on API 21 (line 109: the cashier not signed in after the simulated restart) and passed on the re-run — flaky, not
+      touched by this change; worth a look on its own
+- [x] Guide pictures refreshed from run 38261007337: phone `sell`, `sell-empty`, `pay`, `settings`, `inventory`,
+      `products`, `shift`, the new `menu` (EN + MS), and `tablet-sell`
+
+### Needs real-device testing (D-074)
+
+1. **Menu as cashier** (PIN on, Cashier role): only This bill and Till tiles; no Manage shop group. Tap a tile twice
+   fast: one screen opens. Scan while the Menu is open: it closes and the item goes on the bill.
+2. **Menu as owner**: all three groups; Products, Reports, Settings open in one tap. With a held bill the Held bills tile
+   shows the count. Phone sideways: the sheet scrolls, nothing cut off.
+3. **Lock while the Menu is open** (wait for the idle lock): after signing in again the Menu is closed.
+4. **Settings** groups and icons; **Products** list squares (with a picture, a colour, a category colour, none).
+5. **Buttons**: Hold/Pay icons, a big font size (Android settings → Font size largest): words and icons still fit; a
+   disabled Pay shows a grey icon. Payment: Card and E-wallet / QR show their icons.
+6. **Last sale** with auto-print off: the button says "Print receipt", after printing "Print a copy".
