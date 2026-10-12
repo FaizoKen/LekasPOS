@@ -2049,7 +2049,14 @@ bill only") and where Share goes ("remove after a sale only").
 - [x] Docs: user guide EN + MS (selling screen, tabs, after the sale, sharing, unknown barcode, repayments, Settings table,
       customer screen), `features.md`, `codemap.md`, `glossary.md`, D-076. Privacy policy and Play answers unchanged
       (nothing new stored off the till, sent or asked)
-- [ ] CI on the branch; guide pictures refreshed from its screenshots (sell, tablet-sell, pay, menu)
+- [x] CI on the branch: run 38281967213 failed `SidewaysLayoutTest.thePaymentFitsAPhoneUpright` (the cash step 523dp
+      of 520 upright: the outlined Back was 56dp) → Cancel/Back/Split payment 48dp high as before; a new screenshot of a
+      dialog showed the buttons' top edge cut on API 36 (their 4dp top/bottom margins) → margins removed. Run
+      38285530283 (268c9bf): all jobs green — instrumented API 21 and 36, tablet, release smoke
+      API 21 and 36, lint. Release APK **1,660,838 bytes** (1.16.1: 1,654,741)
+- [x] Guide pictures refreshed: phone `sell`, `sell-empty`, `pay`, `pay-cash`, `menu`, `settings` (EN + MS) from run
+      38285530283; `tablet-sell` from run 38281967213 (the tablet emulator's "System UI isn't responding" covered the
+      later runs' tablet pictures; the selling screen is the same)
 - [ ] Test build for the owner
 
 ### Needs real-device testing (1.17.0)
