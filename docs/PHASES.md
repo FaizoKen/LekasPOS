@@ -39,7 +39,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
-| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test build v1.17.0 (build 180) → **1.17.1** on branch `ui-feedback`: the bill right under the bar again, Menu a pill (the owner's check of 1.17.0) |
+| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180) and **v1.17.1** (build 182: the bill right under the bar again, Menu a pill) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2071,7 +2071,17 @@ bill only") and where Share goes ("remove after a sale only").
 - [x] Menu: a pill like the others on the bar (`pill_info_bg`, 40dp drawn in its 56dp target, "⋮ Menu" on one line);
       `top_button_bg` removed; the bar's end padding 8dp so the pill does not touch the screen's edge
 - [x] Docs: guide EN + MS (the totals line), `features.md`, `codemap.md`, D-076, this file
-- [ ] CI; guide pictures; test build v1.17.1
+- [x] CI run 38289383645: API 21's emulator download failed ("Error on ZipFile unknown archive", no test ran); every tablet
+      picture since the second 1.17.0 run was covered by the emulator's "System UI isn't responding" → `screenshots.sh`
+      sets `hide_error_dialogs` (Android's own crash/ANR dialogs; the tests still fail on an app crash). Run
+      38291378544 (675e78e, build 182): all jobs green — instrumented API 21 and 36, tablet, release smoke API 21 and 36,
+      lint. Release APK **1,659,141 bytes**
+- [x] Guide pictures from run 38291378544: phone `sell`, `sell-empty`, `pay`, `pay-cash`, `menu`, `settings` and
+      `tablet-sell` (EN + MS); the tablet's dialog checked (Cancel outlined, Clear bill filled)
+- [x] **Test build v1.17.1** (2026-10-13): pre-release on 675e78e, build 182, assets `LekasPOS.apk`, `LekasPOS-1.17.1.apk`,
+      `mapping-1.17.1.txt`; SHA-256 `78126fe9…b982`; certificate SHA-256 `0a67abec…d4b9`. 1.16.1 stays the latest release
+- [ ] The owner's phone check; then merge `ui-feedback` into `main`, perf FULL, public release (smoke baseline, guide's
+      "For LekasPOS 1.17.1")
 
 ### Needs real-device testing (1.17.0)
 
