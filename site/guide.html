@@ -543,7 +543,8 @@ per kg), or <b>Price entered at the till</b> (the cashier types the price each t
 <b>Weight</b> changes <i>pcs</i> to <i>kg</i> by itself.</dd>
 <dt>On the selling screen</dt><dd>A <b>picture</b> (<b>Take photo</b>, <b>Choose picture</b>, <b>Remove
 picture</b>) and a <b>Colour</b> for the product's tile. See <a href="#pictures">Pictures and colours</a>.</dd>
-<dt>Barcodes</dt><dd><b>Add barcode</b> (type it, or tap <b>Scan</b> to use the camera). A product may have
+<dt>Barcodes</dt><dd>The numbers under the black stripes on the item or its carton, printed by the maker.
+Scanning one puts the product on the bill. <b>Add barcode</b> (type it, or tap <b>Scan</b> to use the camera). A product may have
 several barcodes. You can also simply scan with a barcode scanner while the form is open: the code is added
 (“Barcode … added”). <b>Add pack barcode</b> is for the barcode on a carton or multipack — see
 <a href="#barcodes">Barcodes, packs and cartons</a>.</dd>
@@ -554,7 +555,9 @@ several barcodes. You can also simply scan with a barcode scanner while the form
 <b>Tax</b> (only if you charge tax at the till — see <a href="#tax">Tax rates</a>),
 <b>Cost price</b> (what you pay the supplier for one piece or one kg; used for profit and stock value, and
 updated by itself when you receive deliveries),
-<b>SKU / item code</b> (your own code; searchable, and scanning it also finds the product),
+<b>Your own code (SKU)</b> (optional and <b>not a barcode</b>: a short code you make up yourself, such as
+<i>A12</i>, for example for an item without a barcode. Typing it in the search box finds the product. Most shops leave
+it empty),
 <b>Track stock</b> (on by default; off for things you do not count, such as services or plastic bags),
 <b>Low-stock alert at</b> (warns when stock falls to this level; empty or 0 = no alert),
 <b>Opening stock</b> (new products only: how many are on the shelf now).</dd>
@@ -683,7 +686,7 @@ importing the same file again continues where it stopped.</li>
 <tr><td><code>name</code> (required)</td><td>The product name (up to 120 characters).</td></tr>
 <tr><td><code>price</code> (required)</td><td>Selling price, like <code>12.50</code> or <code>RM12.50</code>.</td></tr>
 <tr><td><code>barcodes</code></td><td>One or more, separated by <code>|</code> or <code>;</code>.</td></tr>
-<tr><td><code>sku</code></td><td>Your item code.</td></tr>
+<tr><td><code>sku</code></td><td>Your own code (SKU), if you use one; not a barcode.</td></tr>
 <tr><td><code>category</code></td><td>A category name; new names create new categories.</td></tr>
 <tr><td><code>unit</code></td><td>pcs, kg, pack…</td></tr>
 <tr><td><code>cost</code></td><td>Cost price.</td></tr>

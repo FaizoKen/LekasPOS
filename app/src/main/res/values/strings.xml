@@ -177,6 +177,7 @@
     <string name="sell_mode_open">Price entered at the till</string>
     <string name="product_unit">Unit (pcs, kg, pack…)</string>
     <string name="product_barcodes">Barcodes</string>
+    <string name="product_barcodes_info">The numbers under the black stripes on the item or its carton. Scanning one puts the product on the bill.</string>
     <string name="product_no_barcodes">No barcode yet.</string>
     <string name="product_barcode_add">Add barcode</string>
     <string name="product_barcode_hint">Barcode</string>
@@ -193,7 +194,9 @@
     <string name="product_tax">Tax</string>
     <string name="product_no_tax">No tax</string>
     <string name="product_cost">Cost price</string>
-    <string name="product_sku">SKU / item code</string>
+    <string name="product_sku">Your own code (SKU)</string>
+    <string name="product_sku_hint">Optional, e.g. A12</string>
+    <string name="product_sku_info">Not a barcode: a short code you make up yourself, only if you want one. Type it in the search box to find the product. Most shops leave it empty.</string>
     <string name="product_track_stock">Track stock</string>
     <string name="product_low_stock">Low-stock alert at</string>
     <string name="product_stock_now">In stock now: %1$s</string>

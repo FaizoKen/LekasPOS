@@ -560,7 +560,8 @@ sekilogram), atau <b>Harga dimasukkan di kaunter</b> (juruwang menaip harga seti
 <b>Berat</b> menukar <i>pcs</i> kepada <i>kg</i> dengan sendirinya.</dd>
 <dt>Di skrin jualan</dt><dd><b>Gambar</b> (<b>Ambil foto</b>, <b>Pilih gambar</b>, <b>Buang
 gambar</b>) dan <b>Warna</b> untuk petak produk itu. Lihat <a href="#pictures">Gambar dan warna</a>.</dd>
-<dt>Kod bar</dt><dd><b>Tambah kod bar</b> (taip, atau ketik <b>Imbas</b> untuk menggunakan kamera). Satu produk boleh
+<dt>Kod bar</dt><dd>Nombor di bawah jalur hitam pada barang atau kartonnya, dicetak oleh pengeluar.
+Mengimbasnya memasukkan produk ke dalam bil. <b>Tambah kod bar</b> (taip, atau ketik <b>Imbas</b> untuk menggunakan kamera). Satu produk boleh
 ada beberapa kod bar. Anda juga boleh terus mengimbas dengan pengimbas kod bar semasa borang dibuka: kod itu ditambah
 (“Kod bar … ditambah”). <b>Tambah kod bar pek</b> adalah untuk kod bar pada karton atau pek berbilang — lihat
 <a href="#barcodes">Kod bar, pek dan karton</a>.</dd>
@@ -571,7 +572,9 @@ ada beberapa kod bar. Anda juga boleh terus mengimbas dengan pengimbas kod bar s
 <b>Cukai</b> (hanya jika anda mengenakan cukai di kaunter — lihat <a href="#tax">Kadar cukai</a>),
 <b>Harga kos</b> (harga yang anda bayar kepada pembekal untuk seunit atau sekilogram; digunakan untuk keuntungan dan
 nilai stok, dan dikemas kini dengan sendirinya apabila anda menerima penghantaran),
-<b>SKU / kod item</b> (kod anda sendiri; boleh dicari, dan mengimbasnya juga menjumpai produk itu),
+<b>Kod sendiri (SKU)</b> (pilihan dan <b>bukan kod bar</b>: kod pendek yang anda reka sendiri, seperti
+<i>A12</i>, contohnya untuk barang tanpa kod bar. Menaipnya dalam kotak carian menjumpai produk itu. Kebanyakan kedai
+membiarkannya kosong),
 <b>Jejak stok</b> (hidup secara lalai; matikan untuk barang yang anda tidak kira, seperti perkhidmatan atau beg plastik),
 <b>Amaran stok rendah pada</b> (memberi amaran apabila stok turun ke paras ini; kosong atau 0 = tiada amaran),
 <b>Stok permulaan</b> (produk baharu sahaja: berapa banyak yang ada di rak sekarang).</dd>
@@ -701,7 +704,7 @@ mengimport fail yang sama sekali lagi akan menyambung dari tempat ia berhenti.</
 <tr><td><code>name</code> (wajib)</td><td>Nama produk (hingga 120 aksara).</td></tr>
 <tr><td><code>price</code> (wajib)</td><td>Harga jualan, seperti <code>12.50</code> atau <code>RM12.50</code>.</td></tr>
 <tr><td><code>barcodes</code></td><td>Satu atau lebih, dipisahkan dengan <code>|</code> atau <code>;</code>.</td></tr>
-<tr><td><code>sku</code></td><td>Kod item anda.</td></tr>
+<tr><td><code>sku</code></td><td>Kod sendiri (SKU) anda, jika ada; bukan kod bar.</td></tr>
 <tr><td><code>category</code></td><td>Nama kategori; nama baharu mencipta kategori baharu.</td></tr>
 <tr><td><code>unit</code></td><td>pcs, kg, pek…</td></tr>
 <tr><td><code>cost</code></td><td>Harga kos.</td></tr>

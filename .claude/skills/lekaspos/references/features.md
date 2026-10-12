@@ -272,8 +272,9 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
 - Product form (`ui/products/ProductEditActivity.kt`): Name*, Selling price* (empty allowed only for open price →
   0), Sold by (piece default / weight / open price; unit pcs↔kg follows), Unit, look (picture 240×240 JPEG q80 centre
   crop, ≤ 40 MB source; 12 colours or none — `product_look`, `product_image`, D-066), barcodes (several, canonical
-  `Gtin.canonical`), pack barcodes (2–100,000 pieces, optional price), Scale PLU (one, leading zeros dropped),
-  category, tax, cost, SKU, Track stock (on), Low-stock alert (0 = none), Opening stock (new products,
+  `Gtin.canonical`; a caption says what a barcode is), pack barcodes (2–100,000 pieces, optional price), Scale PLU
+  (one, leading zeros dropped), category, tax, cost, "Your own code (SKU)" (optional free text; its caption says it is
+  not a barcode — the two read as the same thing before, 2026-10-13), Track stock (on), Low-stock alert (0 = none), Opening stock (new products,
   MANAGE_STOCK), Show in search and catalogue (on). Save and Delete need MANAGE_PRODUCTS. "Save and add another" only
   in series mode (from Products +), keeps category and tax.
 - Edits write only the fields changed on the screen (another till's concurrent change survives). Duplicate barcode

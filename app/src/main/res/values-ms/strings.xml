@@ -172,6 +172,7 @@
     <string name="sell_mode_open">Harga dimasukkan di kaunter</string>
     <string name="product_unit">Unit (pcs, kg, pek…)</string>
     <string name="product_barcodes">Kod bar</string>
+    <string name="product_barcodes_info">Nombor di bawah jalur hitam pada barang atau kartonnya. Mengimbasnya memasukkan produk ke dalam bil.</string>
     <string name="product_no_barcodes">Belum ada kod bar.</string>
     <string name="product_barcode_add">Tambah kod bar</string>
     <string name="product_barcode_hint">Kod bar</string>
@@ -188,7 +189,9 @@
     <string name="product_tax">Cukai</string>
     <string name="product_no_tax">Tiada cukai</string>
     <string name="product_cost">Harga kos</string>
-    <string name="product_sku">SKU / kod item</string>
+    <string name="product_sku">Kod sendiri (SKU)</string>
+    <string name="product_sku_hint">Pilihan, cth. A12</string>
+    <string name="product_sku_info">Bukan kod bar: kod pendek yang anda reka sendiri, hanya jika mahu. Taip dalam kotak carian untuk mencari produk itu. Kebanyakan kedai membiarkannya kosong.</string>
     <string name="product_track_stock">Jejak stok</string>
     <string name="product_low_stock">Amaran stok rendah pada</string>
     <string name="product_stock_now">Stok sekarang: %1$s</string>

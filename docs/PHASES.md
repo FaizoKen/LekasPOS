@@ -40,6 +40,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | on branch `sku-label` — CI, then test build v1.17.3 |
 
 ## Open questions for the user
 
@@ -2119,3 +2120,24 @@ bill only") and where Share goes ("remove after a sale only").
    Payment: Cancel, Split payment, Back are buttons. At the largest font size nothing is cut.
 5. **After a sale**: Print and New sale only. Menu → Sales & refunds → a sale → Share still works.
 6. **Customer** (credit on): Take a repayment and More under the balance.
+
+## 1.17.3 — barcode and SKU no longer read as the same thing
+
+The owner (2026-10-13): "what different section barcodes vs SKU section on product editor, its same?.. it can make users
+confuse". The form gave neither a word of explanation, and the SKU's label "SKU / item code" used the same words as the
+Scale PLU ("item code on weighing-scale labels").
+
+- [x] Product form: a caption under **Barcodes** ("The numbers under the black stripes on the item or its carton. Scanning
+      one puts the product on the bill."); the SKU field renamed **Your own code (SKU)** / **Kod sendiri (SKU)**, hint
+      "Optional, e.g. A12", and a caption: not a barcode, a code you make up, found by the search box, most shops leave it
+      empty. It stays under More details (most shops never use it). "Item code" now means only the Scale PLU
+- [x] Docs: user guide EN + MS (product form, CSV `sku` column), `features.md`, `glossary.md`, this file. No decision
+      changed; nothing new stored or sent (privacy unchanged); the guide's product-form picture stops above Barcodes
+- [x] Local: `compileDebugKotlin` and `lintDebug` clean; `check-site.mjs` OK
+- [ ] CI; test build v1.17.3
+
+### Needs real-device testing (1.17.3)
+
+1. Products → + and an existing product, in English and Malay: the Barcodes caption and the SKU field with its hint and
+   caption read well and wrap cleanly on the phone and held sideways; at the largest font size nothing is cut.
+2. With the cursor in the SKU field, a scanner still adds the code to Barcodes (not into the SKU).

@@ -45,6 +45,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | How it is sold | Sold by: Piece / pack, Weight, Price entered at the till | Dijual mengikut: Unit / pek, Berat, Harga dimasukkan di kaunter | `SellMode.UNIT/WEIGHT/OPEN_PRICE` |
 | Barcode on a carton | pack barcode | kod bar pek | `product_barcode.pack_qty` |
 | Scale's item code | Scale PLU | PLU timbangan | `BarcodeKind.SCALE_PLU` |
+| The shop's own code for a product (not a barcode; never call it "item code", that is the PLU) | Your own code (SKU) | Kod sendiri (SKU) | `product.sku` |
 | Scale label layout | Label formats | Format label | `scale.templates`, `ScaleTemplate` |
 | Hidden from the till | Show in search and catalogue (off), HIDDEN | Papar dalam carian dan katalog, TERSEMBUNYI | `product.active = 0` |
 | Picture and colour of a tile | picture, colour | gambar, warna | `product_image`, `product_look`, `TileColor` |

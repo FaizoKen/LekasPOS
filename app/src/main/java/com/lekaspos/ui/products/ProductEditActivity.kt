@@ -200,7 +200,9 @@ class ProductEditActivity : ScreenActivity() {
         form.section(getString(R.string.look_section))
         form.add(look.build(shownLook))
 
+        // Barcodes and the SKU read as the same thing (the owner, 2026-10-13): each now says what it is.
         form.section(getString(R.string.product_barcodes))
+        form.info(getString(R.string.product_barcodes_info))
         codeList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         form.add(codeList)
         renderCodes()
@@ -238,7 +240,8 @@ class ProductEditActivity : ScreenActivity() {
             taxes.indexOfFirst { it.id == (p?.taxRateId ?: likeTax) } + 1,
         )
         cost = form.text(getString(R.string.product_cost), p?.let { MoneyFormat.format(it.cost, currency, withSymbol = false) }, MONEY_INPUT)
-        sku = form.text(getString(R.string.product_sku), p?.sku, InputType.TYPE_CLASS_TEXT)
+        sku = form.text(getString(R.string.product_sku), p?.sku, InputType.TYPE_CLASS_TEXT, hint = getString(R.string.product_sku_hint))
+        form.info(getString(R.string.product_sku_info))
         trackStock = form.switch(getString(R.string.product_track_stock), p?.trackStock ?: true)
         lowStock = form.text(
             getString(R.string.product_low_stock), p?.lowStock?.takeIf { it > 0L }?.let { MoneyFormat.formatQty(it) }, QTY_INPUT,
