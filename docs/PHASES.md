@@ -40,7 +40,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
-| — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me"); offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 
 ## Open questions for the user
 
@@ -2141,6 +2141,8 @@ Scale PLU ("item code on weighing-scale labels").
       notes (What's new in English and Malay); the website's Download link serves it (SHA-256 `8eeaaf9f…c666` checked).
       Shops on 1.6.1 or later are offered it inside the app. `sku-label` merged into `main`; smoke baseline (`PREV_APK_URL`)
       v1.17.3; the guide says "For LekasPOS 1.17.3". Privacy policy unchanged
+- [x] The owner's phone check (2026-10-13): "i was check and all good" — the captions and the SKU field in English and
+      Malay, and a scan with the cursor in the SKU field going to Barcodes
 - [ ] CI on main; perf FULL on the released code
 
 ### Needs real-device testing (1.17.3)
