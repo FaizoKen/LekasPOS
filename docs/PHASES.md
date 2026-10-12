@@ -35,7 +35,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
-| — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | in progress — code, tests and docs done locally; CI and test build next |
+| — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | test build **v1.14.0** (build 158) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1850,7 +1850,15 @@ on voids: "you decide and do your best".
 - [x] User guide (both languages: quick guide rows "Customer brings an item back" and "Wrong payment method or wrong
       items, just paid", §6 and Void, roles table and note, manager's help), `llms.txt`, `features.md`, `codemap.md`,
       `glossary.md`, D-072. Privacy policy unchanged (nothing new stored or sent)
-- [ ] CI (API 21 + 36), release smoke, release APK size, test build
+- [x] CI on 7a49e2c (run 38231220960, build 157): one old assertion failed on API 21 and 36 —
+      `StaffTest.managersApproveWhatCashiersMayNotDo` checked "an approval covers one permission" with REFUND, now the
+      cashier's own; checked with OPEN_DRAWER instead (06e398e). Everything else passed
+- [x] CI on 06e398e (run 38233217223, build 158): **283/283 on API 21 and 36**, tablet 9/9, release smoke (upgrade from
+      1.13.1) API 21 and 36, lint; release APK **1,607,618 bytes** (1.13.1's build 152: 1,604,821 — about +3 KB)
+- [x] Test build **v1.14.0** (pre-release, 2026-10-12; build 158, release key — same certificate `0a67abec…d4b9`; SHA-256
+      of the APK `694f8495…12d4`, `mapping-1.14.0.txt` attached). The public download stays v1.13.1; phones with
+      "Include test versions" are offered it
+- [ ] Perf run (no hot path changed: the void-last check reads by primary key; to run with the release)
 - [ ] The owner's phone check (below)
 
 ### Needs real-device testing (1.14.0)
