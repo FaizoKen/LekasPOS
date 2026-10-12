@@ -136,7 +136,9 @@ class StaffSession(private val graph: AppGraph) {
                 // counts from the last activity before the app went out of sight, not from now.
                 val idle = System.currentTimeMillis() - away
                 val minutes = graph.settings.device.value.autoLockMinutes
-                if (minutes > 0 && (idle < 0L || idle >= minutes * 60_000L)) {
+                // A clock set back counts as expired; one corrected back a little (network time, the
+                // emulator's host sync) is no idle time: it signed the cashier out (D-075).
+                if (minutes > 0 && (idle < -CLOCK_SLACK_MS || idle >= minutes * 60_000L)) {
                     current = null
                     expired = true
                 } else {
@@ -473,6 +475,12 @@ class StaffSession(private val graph: AppGraph) {
         const val KEY_SEEN = "session.seen_at"
         private const val HEARTBEAT_MS = 30_000L
         private const val RESULT_GRACE_MS = 60_000L
+
+        /**
+         * How far the phone's clock may have gone back since the last stored activity before a restored sign-in
+         * counts as expired (D-075): network time corrects a clock by seconds; setting it back by hand is more.
+         */
+        internal const val CLOCK_SLACK_MS = 60_000L
 
         /** The boot part of a wrong-PIN stamp on phones without a boot count (Android 5 and 6). */
         private const val UNKNOWN_BOOT = "u"

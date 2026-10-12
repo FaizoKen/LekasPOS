@@ -1542,6 +1542,22 @@ Running); a `prices` column on `promotion` (lost on tills not yet updated, see a
 that replaces the shelf price (a customer buying 4 pays 3 + 1, which a fixed table would have to spell out for every
 count); greedy biggest-group-first (overcharges, as above).
 
+### D-075 — A clock corrected back a little keeps the sign-in after a restart (2026-10-12)
+`StaffTest.theOwnersFirstPinTurnsLoginOnAndTheSignInSurvivesARestart` failed once on the API 21 CI emulator (run
+38261007337) and passed on the re-run. Its logcat showed why: between the sign-in and the simulated process restart the
+emulator synced its clock with the host (`AlarmManagerService: Setting time of day`, `TIME_SET`) and the wall clock went
+back about 0.34 s. At the restart `StaffSession.reloadLocked` computed idle = now − last activity ≈ −340 ms, and any
+negative idle time counted as an expired sign-in: the cashier was signed out. A real phone does the same when network
+time corrects its clock back by a moment while Android has the app stopped.
+- A restored sign-in now expires when the clock reads more than **1 minute** earlier than the last stored activity
+  (`CLOCK_SLACK_MS`); less counts as no idle time. A clock set back by hand (minutes or more) still locks, as before.
+- This barely changes what the rule protects: it only catches a clock set back by more than the time the till was idle
+  (a smaller step only shortens the idle time, with or without the slack), now by more than that plus a minute.
+- Test `StaffTest.aClockCorrectedBackALittleKeepsTheSignInAfterARestart` covers both sides without touching the clock
+  (the last activity stored 5 s and 11 min "ahead"); the two restart tests no longer depend on the emulator's clock.
+Rejected: changing only the test (the app would still sign a cashier out over a sub-second correction); measuring with
+time since boot alone (a restart after a power cut or a reboot loses it; the wall clock is all there is).
+
 ### D-074 — Icons and groups: the Menu as one sheet of tiles, Settings in groups (1.16.0, 2026-10-12)
 The owner: "improve the UI UX, to make more easier for cashier, manager and owner … like put some icon". Every screen
 was words only: the Menu (a platform `PopupMenu`, which shows no icons below API 29) was a list of up to 11 lines plus a

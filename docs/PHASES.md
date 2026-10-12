@@ -1961,7 +1961,7 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
       API 36 and the tablet. Release APK **1,654,672 bytes** (1.15.0: 1,612,004 — about +43 KB for ~50 icons and the new
       screens' code). In the third run `StaffTest.theOwnersFirstPinTurnsLoginOnAndTheSignInSurvivesARestart` failed once
       on API 21 (line 109: the cashier not signed in after the simulated restart) and passed on the re-run — flaky, not
-      touched by this change; worth a look on its own
+      touched by this change — explained and fixed after the release (D-075, below)
 - [x] Guide pictures refreshed from run 38261007337: phone `sell`, `sell-empty`, `pay`, `settings`, `inventory`,
       `products`, `shift`, the new `menu` (EN + MS), and `tablet-sell`
 
@@ -1976,6 +1976,11 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
 - [x] Perf FULL on the released code (run 38266016027, c694c15): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
       lines), all 108 query plans ok; API 21 sale commit p95 12.0 ms (150), multi-word search p95 5.9 ms (50), scan to cart
       p95 0.79 ms (20), report_month 205 ms (1,000), report_year 228 ms (3,000); cold start to a usable till about 0.6 s
+
+- [x] **The flaky staff test explained (D-075):** the API 21 emulator synced its clock with the host mid-test (back
+      0.34 s); a restored sign-in with any negative idle time counted as expired. Now only a clock more than 1 min behind
+      the last activity does; new test `aClockCorrectedBackALittleKeepsTheSignInAfterARestart`. On `main` for the next
+      release (no new version yet)
 
 ### Needs real-device testing (1.16.0)
 

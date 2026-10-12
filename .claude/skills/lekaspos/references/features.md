@@ -91,7 +91,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   "never" was moved to 5 once (`SettingsRepo.lockByDefault`, 1.12.0).
 - Idle = no touch/key/scan (dialogs count); checked every 15 s, on start/resume, and before an input counts (the
   input that finds the till idle is dropped). `session.away_at` / `session.seen_at` keep idle time across process
-  death and power cuts. Never locks during a payment; a lock due meanwhile happens when the result closes (≤ 1 min).
+  death and power cuts; at the next start a clock that now reads more than 1 min earlier than that time (set back)
+  counts as expired, less is no idle time (`CLOCK_SLACK_MS`, D-075). Never locks during a payment; a lock due meanwhile happens when the result closes (≤ 1 min).
 - Locking clears the last sale's result, held approvals and the manager's help. `LockActivity` covers the selling
   screen; other screens jump home when the till locks. Back on the lock screen leaves the app.
 

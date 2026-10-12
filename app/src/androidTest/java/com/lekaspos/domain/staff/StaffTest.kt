@@ -266,6 +266,32 @@ class StaffTest {
         assertTrue(graph.staff.state.value.locked)
     }
 
+    /**
+     * D-075: the CI emulator's clock went back 0.34 s between a sign-in and the restart, and the cashier was
+     * signed out (a flaky [theOwnersFirstPinTurnsLoginOnAndTheSignInSurvivesARestart]). A clock corrected back a
+     * little keeps the sign-in; one set back by minutes still locks.
+     */
+    @Test
+    fun aClockCorrectedBackALittleKeepsTheSignInAfterARestart() = runBlocking {
+        val (_, cashier) = team()
+        graph.settings.saveDevice(graph.settings.device.value.copy(autoLockMinutes = 5))
+        graph.staff.lock()
+        assertIs<StaffSession.Check.Ok>(graph.staff.signIn(cashier, "1111"))
+        suspend fun lastActivityAhead(ms: Long) = graph.db().write(reserveIds = 0L) { tx ->
+            Meta.put(tx.db, StaffSession.KEY_SEEN, (System.currentTimeMillis() + ms).toString())
+            Meta.put(tx.db, StaffSession.KEY_AWAY, null)
+        }
+        lastActivityAhead(5_000L) // the clock now reads 5 s earlier than at the last activity
+        TestGraph.close(graph)
+        graph = TestGraph.reopen(name)
+        assertEquals(cashier, graph.staff.state.value.current?.id)
+
+        lastActivityAhead(StaffSession.CLOCK_SLACK_MS + 10 * 60_000L) // set back by hand, by more than the slack
+        TestGraph.close(graph)
+        graph = TestGraph.reopen(name)
+        assertTrue(graph.staff.state.value.locked)
+    }
+
     @Test
     fun oneOwnPinNeverGivesFreshGuessesAtAnothersPin() = runBlocking {
         val (manager, cashier) = team()
