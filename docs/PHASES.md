@@ -36,7 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
-| — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | in progress — local tests pass; CI and the test build next |
+| — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | test build **v1.15.0** (build 162) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -1905,8 +1905,13 @@ RM4) — "please fix this issue in better way and do it your best".
 - [x] User guide (both languages: new "Several prices (2 for RM3, 3 for RM4)" with a table, Good to know, captions),
       `features.md`, `money.md` §11, `database.md`, `sync.md`, `codemap.md`, `glossary.md`, `recipes.md`, D-073. Privacy
       policy unchanged (nothing new about people stored or sent)
-- [ ] CI (instrumented API 21 + 36, tablet, release smoke), then refresh `en/ms-promotion-edit.png` from its screenshots
-- [ ] Test build v1.15.0, the owner's phone check (below)
+- [x] CI on d0c2c26 (run 38247529804, build 162): **286/286 on API 21 and 36**, tablet, release smoke (upgrade from
+      1.14.0) API 21 and 36, lint; release APK **1,612,004 bytes**. `en/ms-promotion-edit.png` refreshed from its
+      screenshots (now with "More prices")
+- [x] Test build **v1.15.0** (pre-release, 2026-10-12; build 162, release key — same certificate `0a67abec…d4b9`; SHA-256
+      of the APK `7ce645d9…ea8d`, `mapping-1.15.0.txt` attached). The public download stays v1.14.0; phones with
+      "Include test versions" are offered it
+- [ ] The owner's phone check (below)
 
 ### Needs real-device testing (1.15.0)
 
