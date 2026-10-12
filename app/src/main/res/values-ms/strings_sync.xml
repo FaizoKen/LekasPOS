@@ -3,7 +3,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="backup_title">Sandaran</string>
     <string name="settings_backup_sub">Sandaran dalam telefon ini, salinan harian ke kad SD atau USB, fail sandaran, pulihkan</string>
-    <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum setiap naik taraf aplikasi atau pemulihan. Ia hilang bersama telefon: simpan salinan di luarnya dengan sandaran Google Drive, salinan harian ke kad SD atau pemacu USB (menu ⋮), atau dengan menyimpan atau berkongsi fail sandaran. Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
+    <string name="backup_help">Sandaran dibuat setiap hari dalam telefon ini (7 yang terakhir disimpan), dan sebelum pemulihan dan naik taraf aplikasi yang mengubah cara data disimpan. Ia hilang bersama telefon: simpan salinan di luarnya dengan sandaran Google Drive, salinan harian ke kad SD atau pemacu USB (menu ⋮), atau dengan menyimpan atau berkongsi fail sandaran. Ketik sandaran untuk memulihkannya; tekan lama untuk memadamnya.</string>
     <string name="backup_empty">Belum ada sandaran dalam telefon ini.</string>
     <string name="backup_counts">jualan: %1$d · produk: %2$d</string>
     <string name="backup_reason_auto">Automatik</string>

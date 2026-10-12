@@ -123,7 +123,7 @@ class SyncActivity : ScreenActivity() {
                 tillName = f.text(getString(R.string.sync_till_name), typed ?: s.deviceName ?: Build.MODEL, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
                 f.info(getString(R.string.sync_same_account))
                 stateText = f.info("")
-                turnOnButton = f.button(getString(R.string.sync_turn_on), primary = true) { turnOn() }
+                turnOnButton = f.button(getString(R.string.sync_turn_on), primary = true, icon = R.drawable.ic_cloud) { turnOn() }
             }
         } else {
             f.section(getString(R.string.sync_section_status))
@@ -134,9 +134,9 @@ class SyncActivity : ScreenActivity() {
             pendingValue = f.valueRow(getString(R.string.sync_pending), "")
             devicesValue = f.valueRow(getString(R.string.sync_other_tills), "")
             if (s.needsSignIn) f.button(getString(R.string.sync_sign_in), primary = true) { signIn() }
-            syncNowButton = f.button(getString(R.string.sync_now), primary = !s.needsSignIn) { syncNow() }
+            syncNowButton = f.button(getString(R.string.sync_now), primary = !s.needsSignIn, icon = R.drawable.ic_cloud) { syncNow() }
             f.button(getString(R.string.sync_show_tills)) { showTills() }
-            f.button(getString(R.string.sync_turn_off)) { turnOff() }
+            f.button(getString(R.string.sync_turn_off), danger = true) { turnOff() }
             f.info(getString(R.string.sync_help_short))
         }
         builtFor = layout

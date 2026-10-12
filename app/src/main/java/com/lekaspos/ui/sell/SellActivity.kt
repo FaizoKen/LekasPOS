@@ -82,11 +82,13 @@ import com.lekaspos.ui.common.DialogTracker
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.KeyboardTip
 import com.lekaspos.ui.common.LaunchGuard
+import com.lekaspos.ui.common.MenuSheet
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.scanChar
+import com.lekaspos.ui.common.setIconText
 import com.lekaspos.ui.common.sideways
 import com.lekaspos.ui.common.trackedBy
 import com.lekaspos.ui.common.wide
@@ -180,7 +182,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var lastSaleTitle: TextView
     private lateinit var lastSaleText: TextView
     private lateinit var lastSaleChange: TextView
-    private lateinit var lastSalePrint: View
+    private lateinit var lastSalePrint: Button
+
+    /** The last sale whose receipt was printed from the empty bill's panel: its next print is a copy. */
+    private var lastSalePrinted = 0L
     private lateinit var holdButton: Button
     private lateinit var payButton: Button
     private lateinit var staffChip: TextView
@@ -259,6 +264,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         lastSalePrint = findViewById(R.id.last_sale_print)
         holdButton = findViewById(R.id.btn_hold)
         payButton = findViewById(R.id.btn_pay)
+        holdButton.setIconText(R.drawable.ic_pause, getString(R.string.sell_hold)) // D-074
+        payButton.setIconText(R.drawable.ic_cash, getString(R.string.sell_pay_empty))
         staffChip = findViewById(R.id.staff_chip)
         customerChip = findViewById(R.id.customer_chip)
         twoPane = findViewById<View>(R.id.cart_side) != null
@@ -706,13 +713,21 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         lastSaleChange.text = getString(R.string.pay_change, money(done.change))
         lastSaleChange.visible(done.change > 0L)
-        // A copy needs "Reprint" (D-063: not shown to whoever may not); a receipt not printed yet is no copy.
-        lastSalePrint.visible(graph.settings.device.value.hasPrinter && (!done.receiptQueued || allowed(Perm.REPRINT)))
+        // A copy needs "Reprint" (D-063: not shown to whoever may not); a receipt not printed yet is no copy, and
+        // says so: with auto-print off the button said "Print a copy" for the first, original receipt.
+        val printed = done.receiptQueued || lastSalePrinted == done.saleId
+        lastSalePrint.visible(graph.settings.device.value.hasPrinter && (!printed || allowed(Perm.REPRINT)))
+        lastSalePrint.setIconText(R.drawable.ic_print, getString(if (printed) R.string.result_print_again else R.string.result_print))
     }
 
     private fun printLastSale() {
         val done = graph.checkout.last.value ?: return
-        printOnce.run { printReceipt(done.saleId) }
+        printOnce.run {
+            printReceipt(done.saleId) {
+                lastSalePrinted = done.saleId
+                if (graph.checkout.last.value?.saleId == done.saleId) renderLastSale(done)
+            }
+        }
     }
 
     /** A double tap on Print queued a copy too (with its audit entry, or a manager's PIN asked). */
@@ -1591,39 +1606,46 @@ class SellActivity : Activity(), LineActions, DialogHost {
      * in may do is listed (D-063); "Manager PIN" lets a manager use the rest on this bill.
      */
     private fun showMenu(anchor: View) {
-        val m = PopupMenu(this, anchor)
+        val m = MenuSheet(this)
         val st = graph.cart.state.value
-        val items = ArrayList<Int>(11)
         val line = st.cart.item(selectedKey)
-        if (!st.cart.isEmpty && (allowed(Perm.DISCOUNT) || (line != null && allowed(Perm.PRICE_OVERRIDE)))) items += R.string.sell_discount
-        if (!st.cart.isEmpty) items += R.string.menu_cancel_bill
-        if (st.heldCount > 0) items += R.string.held_title
+        m.group(R.string.menu_group_bill)
+        if (!st.cart.isEmpty && (allowed(Perm.DISCOUNT) || (line != null && allowed(Perm.PRICE_OVERRIDE)))) m.item(R.string.sell_discount, R.drawable.ic_percent)
+        if (st.heldCount > 0) m.item(R.string.held_title, R.drawable.ic_held, badge = st.heldCount.toString())
+        if (!st.cart.isEmpty) m.item(R.string.menu_cancel_bill, R.drawable.ic_clear_bill, danger = true)
+        m.group(R.string.menu_group_till)
         // Price check has its own button on the screen.
-        items += if (allowed(Perm.REFUND) || allowed(Perm.VOID)) R.string.menu_sales else R.string.menu_receipts
-        if (graph.settings.store.value.creditEnabled) items += R.string.menu_customers
+        m.item(if (allowed(Perm.REFUND) || allowed(Perm.VOID)) R.string.menu_sales else R.string.menu_receipts, R.drawable.ic_receipt)
+        if (graph.settings.store.value.creditEnabled) m.item(R.string.menu_customers, R.drawable.ic_people)
         // The shift in one tap (D-068): open it, or close it with the count; cash in and out, reports and past
         // shifts in "Shift & cash" for whoever may.
-        items += if (graph.shifts.current.value == null) R.string.shift_open else R.string.shift_close
-        if (allowed(Perm.CASH_MOVE) || allowed(Perm.SHIFT_REPORT)) items += R.string.menu_shift
-        if (allowed(Perm.OPEN_DRAWER)) items += R.string.menu_open_drawer
+        if (graph.shifts.current.value == null) m.item(R.string.shift_open, R.drawable.ic_shift_open) else m.item(R.string.shift_close, R.drawable.ic_shift_close)
+        if (allowed(Perm.CASH_MOVE) || allowed(Perm.SHIFT_REPORT)) m.item(R.string.menu_shift, R.drawable.ic_cash)
+        if (allowed(Perm.OPEN_DRAWER)) m.item(R.string.menu_open_drawer, R.drawable.ic_drawer)
         val staff = graph.staff.state.value
-        if (staff.loginRequired) items += R.string.menu_lock
         // Someone signed in who may not do everything, and no manager helping yet.
-        if (staff.current?.let { Perm.lacksAny(it.perms) } == true && graph.permissions.helper.value == null) items += R.string.menu_manager_help
-        for ((i, res) in items.withIndex()) m.menu.add(0, res, i, res)
-        val office = ArrayList<Int>(8)
-        if (allowed(Perm.MANAGE_PRODUCTS)) office += listOf(R.string.menu_products, R.string.menu_categories, R.string.promo_title)
-        if (allowed(Perm.MANAGE_STOCK)) office += R.string.menu_inventory
-        if (allowed(Perm.REPORTS)) office += R.string.menu_reports
-        if (allowed(Perm.SETTINGS) || allowed(Perm.MANAGE_STAFF) || allowed(Perm.VIEW_AUDIT)) office += R.string.menu_settings
-        if (allowed(Perm.SETTINGS)) office += listOf(R.string.menu_tax_rates, R.string.menu_diagnostics)
-        if (office.isNotEmpty()) {
-            val manage = m.menu.addSubMenu(0, R.string.menu_manage, items.size, getString(R.string.menu_manage) + "  ›")
-            manage.setHeaderTitle(R.string.menu_manage)
-            for ((i, res) in office.withIndex()) manage.add(0, res, i, res)
+        if (staff.current?.let { Perm.lacksAny(it.perms) } == true && graph.permissions.helper.value == null) {
+            m.item(R.string.menu_manager_help, R.drawable.ic_manager)
         }
-        m.setOnMenuItemClickListener {
-            when (it.itemId) {
+        if (staff.loginRequired) m.item(R.string.menu_lock, R.drawable.ic_lock)
+        // The back office on the same sheet (D-074): it was one level down, behind "Manage shop ›".
+        m.group(R.string.menu_manage)
+        if (allowed(Perm.MANAGE_PRODUCTS)) {
+            m.item(R.string.menu_products, R.drawable.ic_products)
+            m.item(R.string.menu_categories, R.drawable.ic_category)
+            m.item(R.string.promo_title, R.drawable.ic_promo)
+        }
+        if (allowed(Perm.MANAGE_STOCK)) m.item(R.string.menu_inventory, R.drawable.ic_inventory)
+        if (allowed(Perm.REPORTS)) m.item(R.string.menu_reports, R.drawable.ic_reports)
+        if (allowed(Perm.SETTINGS) || allowed(Perm.MANAGE_STAFF) || allowed(Perm.VIEW_AUDIT)) m.item(R.string.menu_settings, R.drawable.ic_settings)
+        if (allowed(Perm.SETTINGS)) {
+            m.item(R.string.menu_tax_rates, R.drawable.ic_tax)
+            m.item(R.string.menu_diagnostics, R.drawable.ic_diagnostics)
+        }
+        // A scan while the Menu is open closes it and goes on the bill as always.
+        m.show(anchor, onKey = { e -> scanKey(e) }) { id ->
+            shieldTaps() // the second tap of a double tap does not land on a tile under the sheet
+            when (id) {
                 R.string.held_title -> showHeld()
                 R.string.sell_discount -> discount()
                 R.string.menu_manager_help -> ApprovalDialog.help(this, graph, scope, 0L, getString(R.string.help_why)) {}
@@ -1644,9 +1666,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 R.string.menu_settings -> startActivity(Intent(this, SettingsActivity::class.java))
                 R.string.menu_diagnostics -> startActivity(Intent(this, DiagnosticsActivity::class.java))
             }
-            true
         }
-        m.show()
     }
 
     // ------------------------------------------------------------------ payment
@@ -1860,10 +1880,16 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val d = AlertDialog.Builder(this).setView(Dialogs.scrolling(v)).create()
         val print = v.findViewById<Button>(R.id.result_print)
         print.visible(device.hasPrinter && (!done.receiptQueued || allowed(Perm.REPRINT))) // a copy needs "Reprint" (D-063)
-        print.setText(if (done.receiptQueued) R.string.result_print_again else R.string.result_print)
+        print.setIconText(R.drawable.ic_print, getString(if (done.receiptQueued) R.string.result_print_again else R.string.result_print))
         print.setOnClickListener { printOnce.run { printReceipt(done.saleId) { print.isEnabled = false } } }
-        v.findViewById<View>(R.id.result_share).setOnClickListener { ReceiptShare.chooseAndShare(this, done.saleId) }
-        v.findViewById<View>(R.id.result_new).setOnClickListener { d.dismiss() }
+        v.findViewById<Button>(R.id.result_share).apply {
+            setIconText(R.drawable.ic_share, getString(R.string.result_share))
+            setOnClickListener { ReceiptShare.chooseAndShare(this@SellActivity, done.saleId) }
+        }
+        v.findViewById<Button>(R.id.result_new).apply {
+            setIconText(R.drawable.ic_cart, getString(R.string.result_new))
+            setOnClickListener { d.dismiss() }
+        }
         d.setOnDismissListener {
             graph.checkout.acknowledge()
             shieldTaps()

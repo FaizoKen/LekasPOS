@@ -1542,6 +1542,40 @@ Running); a `prices` column on `promotion` (lost on tills not yet updated, see a
 that replaces the shelf price (a customer buying 4 pays 3 + 1, which a fixed table would have to spell out for every
 count); greedy biggest-group-first (overcharges, as above).
 
+### D-074 — Icons and groups: the Menu as one sheet of tiles, Settings in groups (2026-10-12)
+The owner: "improve the UI UX, to make more easier for cashier, manager and owner … like put some icon". Every screen
+was words only: the Menu (a platform `PopupMenu`, which shows no icons below API 29) was a list of up to 11 lines plus a
+"Manage shop ›" submenu one level further down; Settings was one flat list of 21 rows; the Inventory hub, the
+Products list and the buttons had no pictures, so a cashier reading slowly or in a second language had to read every
+line to find a job.
+- **The Menu is one sheet of tiles** (`ui/common/MenuSheet.kt`, a `Dialog` under the Menu button): an icon over its
+  word, in three groups — *This bill* (Discount, Held bills with their count, Clear bill in red), *Till* (Sales &
+  refunds, Customers, Open/Close shift, Shift & cash, Open cash drawer, Manager PIN, Lock), *Manage shop* (the back
+  office, now one tap instead of two). Who sees what is unchanged (D-063: only what the person may do). Three tiles a
+  row on a phone, up to five on a tablet; a scanner's first key closes the sheet and the scan goes on the bill; the
+  second tap of a double tap is dropped (`shieldTaps`). Ids are still the labels' string ids.
+- **Settings in five groups** with an icon per row (`RowAdapter`'s new `header`): This till (language, item size,
+  printer, scanner, customer screen) · Shop (store & receipt, payment methods, tax rates, categories, customers) · Staff
+  and cash · Data and backups · Help and app. The Inventory hub has icons too.
+- **Buttons with icons** (`setIconText`, `ui/common/IconLabel.kt`): the icon is a `ReplacementSpan` in the text,
+  centred with the word and drawn in the text's colour and size — compound drawables cannot be tinted below API 23
+  and sit at the button's edge. Hold, Pay, the sale result (Print, Share, New sale), the sale screen (Print a copy,
+  Share, Refund, Void), shift & cash, payment methods by kind (Cash, Card, E-wallet/QR, Credit; "Other" has none),
+  and a few back-office buttons. Deleting and turning off (Delete, Remove PIN, Turn off sync) are red (`Form.button(danger)`).
+- **The Products list** shows each product's picture or colour with its initials (like its tile) and its category, so
+  two products of the same name are told apart; `TileColors.initials` is now shared by the tiles, the customer
+  screen and the list.
+- Icons are Google's Material icons (Apache 2.0, already the source of the existing ones), converted to vector
+  drawables with explicit separators (API 21's path parser) and no `evenOdd` fill (API 24+): about 50 small XML files,
+  a few kB in the APK.
+- Small texts fixed on the way (features.md §20): `error_needs_shift` points to Menu → Open shift; `error_credit_off` to
+  Store & receipt; the last sale's button says "Print receipt" until the receipt was printed; `backup_help` no longer
+  promises a backup before every upgrade.
+Rejected: a navigation drawer or bottom navigation bar (takes room from the bill and the tiles on a 5-inch phone, and
+the selling screen must stay one screen); Material Components' bottom sheet and `PopupMenu.setForceShowIcon` (no new
+libraries, D-002; API 29+); icons without words (cashiers must not guess, D-049); moving the back office to a separate
+home screen (the till opens on selling, D-064).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

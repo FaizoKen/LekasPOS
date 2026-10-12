@@ -17,6 +17,7 @@ import com.lekaspos.data.sale.SaleRow
 import com.lekaspos.domain.print.ReceiptBuilder
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.setIconText
 import com.lekaspos.ui.common.TapOnce
 import com.lekaspos.ui.sell.visible
 import java.util.TimeZone
@@ -45,6 +46,10 @@ class SaleDetailActivity : ScreenActivity() {
         refund = v.findViewById(R.id.btn_refund)
         void = v.findViewById(R.id.btn_void)
         refundVoidRow = v.findViewById(R.id.refund_void_row)
+        print.setIconText(R.drawable.ic_print, getString(R.string.sale_reprint)) // D-074
+        share.setIconText(R.drawable.ic_share, getString(R.string.result_share))
+        refund.setIconText(R.drawable.ic_refund, getString(R.string.sale_refund_action))
+        void.setIconText(R.drawable.ic_void, getString(R.string.sale_void_action))
         // One guard per button: Share right after Print is meant.
         val printOnce = TapOnce()
         val shareOnce = TapOnce()

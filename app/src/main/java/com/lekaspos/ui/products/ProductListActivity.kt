@@ -15,6 +15,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.model.SellMode
+import com.lekaspos.core.model.TileColor
+import com.lekaspos.data.catalog.Category
+import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductListItem
@@ -23,6 +26,7 @@ import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.common.TileColors
 import com.lekaspos.ui.common.onNearEnd
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +34,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** All products by name (keyset-paged), with search; tap to edit, + to add. */
+/**
+ * All products by name (keyset-paged), with search; tap to edit, + to add. Each row shows the product's picture or
+ * colour like its tile, and its category (D-074): two products of the same name are told apart at a glance.
+ */
 class ProductListActivity : ScreenActivity() {
 
     private lateinit var search: EditText
@@ -38,16 +45,23 @@ class ProductListActivity : ScreenActivity() {
     private var job: Job? = null
     private var end = false
 
+    /** Names and colours of the categories, read when the screen starts. */
+    private var categories: Map<Long, Category> = emptyMap()
+
     private val adapter = RowAdapter<ProductListItem>(
         bind = { h, p ->
             val currency = graph.settings.store.value.currency
             val price = MoneyFormat.format(p.price, currency)
+            val category = p.categoryId?.let { categories[it] }
+            val stock = p.stockQty?.let { getString(R.string.product_row_stock, MoneyFormat.formatQty(it)) }
             h.set(
                 title = p.name,
-                subtitle = p.stockQty?.let { getString(R.string.product_row_stock, MoneyFormat.formatQty(it)) },
+                subtitle = listOfNotNull(category?.name, stock).joinToString(" · ").ifEmpty { null },
                 value = if (p.sellMode == SellMode.WEIGHT) "$price/${p.unit}" else price,
                 tag = if (p.active) null else getString(R.string.product_hidden),
             )
+            h.thumb(if (p.imageId == null) TileColors.initials(p.name) else "", TileColors.argb(TileColor.of(p.color, category?.color ?: TileColor.NONE)))
+            graph.pictures.show(h.thumbPicture, p.imageId, scope)
         },
         onClick = { startActivity(ProductEditActivity.newIntent(this, productId = it.id)) },
     )
@@ -97,7 +111,12 @@ class ProductListActivity : ScreenActivity() {
         })
     }
 
-    override fun onStarted(scope: CoroutineScope) = reload(debounce = false) // refresh after edits
+    override fun onStarted(scope: CoroutineScope) {
+        scope.launch {
+            categories = graph.db().read { r -> CategoryDao.list(r).associateBy { it.id } }
+            reload(debounce = false) // refresh after edits
+        }
+    }
 
     private fun reload(debounce: Boolean) {
         job?.cancel()

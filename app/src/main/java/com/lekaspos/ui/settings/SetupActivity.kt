@@ -81,16 +81,16 @@ class SetupActivity : ScreenActivity() {
 
         f.section(getString(R.string.setup_protect))
         f.info(getString(R.string.setup_protect_help))
-        f.button(getString(R.string.safety_setup_drive)) { startActivity(Intent(this, SyncActivity::class.java)) }
-        f.button(getString(R.string.safety_setup_folder)) {
+        f.button(getString(R.string.safety_setup_drive), icon = R.drawable.ic_cloud) { startActivity(Intent(this, SyncActivity::class.java)) }
+        f.button(getString(R.string.safety_setup_folder), icon = R.drawable.ic_backup) {
             startActivity(Intent(this, BackupActivity::class.java).putExtra(BackupActivity.EXTRA_PICK_FOLDER, true))
         }
 
         f.section(getString(R.string.setup_optional))
-        f.button(getString(R.string.setup_printer)) { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
-        f.button(getString(R.string.setup_staff)) { startActivity(Intent(this, StaffActivity::class.java)) }
+        f.button(getString(R.string.setup_printer), icon = R.drawable.ic_print) { startActivity(Intent(this, PrinterSettingsActivity::class.java)) }
+        f.button(getString(R.string.setup_staff), icon = R.drawable.ic_staff) { startActivity(Intent(this, StaffActivity::class.java)) }
         f.info(getString(R.string.setup_join_help))
-        f.button(getString(R.string.setup_join)) {
+        f.button(getString(R.string.setup_join), icon = R.drawable.ic_people) {
             startActivity(Intent(this, SyncActivity::class.java))
             finish()
         }

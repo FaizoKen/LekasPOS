@@ -338,8 +338,10 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/common/PadDialog.kt` | `Context.sideways()`, `Context.keyHeightPx(dp)`, `AlertDialog.wide()`, `class PadDialog(ctx, title)` (`info`, `pad`, `positive`, `neutral`, `negative`, `create`, `sidewaysBody`) | Number/PIN pad dialog layout, upright vs sideways (D-063). |
 | `A/ui/common/Keypad.kt` | `class Keypad(ctx, maxDigits, onChange)` (`digits`, `replacing`, `view`, `set`, `preset`, `clear`, `onKey`) | On-screen number pad over `:core DigitEntry`; drops scanner bursts. |
 | `A/ui/common/PinPad.kt` | `class PinPad` | PIN entry pad. |
-| `A/ui/common/Form.kt` | `class Form(ctx)` (fields, switches, choices, `section`, `row`, `info`, `button`, `save()/restore()`) | Code-built forms (most back-office forms). |
-| `A/ui/common/Rows.kt` | `class RowHolder` (`set`), `class RowAdapter<T>` (`submit`, `append`, `items`), `RecyclerView.onNearEnd` | Standard list rows (`R.layout.item_row`) and keyset paging trigger. |
+| `A/ui/common/Form.kt` | `class Form(ctx)` (fields, switches, choices, `section`, `row`, `info`, `button(label, primary, icon, danger)`, `save()/restore()`) | Code-built forms (most back-office forms). |
+| `A/ui/common/Rows.kt` | `class RowHolder` (`set(…, icon)`, `thumb(initials, argb)`, `thumbPicture`), `class SectionHolder`, `class RowAdapter<T>` (`submit`, `append`, `items`, `header`), `RecyclerView.onNearEnd` | Standard list rows (`R.layout.item_row`: optional icon or product square), group headings (`item_section.xml`), keyset paging trigger. |
+| `A/ui/common/MenuSheet.kt` | `class MenuSheet(activity)` (`group`, `item(id, icon, badge, danger)`, `show(anchor, onKey, onPick)`) | The selling screen's Menu: tiles in groups under the Menu button (D-074). |
+| `A/ui/common/IconLabel.kt` | `fun TextView.setIconText(icon, label)`, `fun iconLabel(ctx, icon, label)`, private `IconSpan` | An icon before a button's word, tinted and sized with the text (D-074). |
 | `A/ui/common/LaunchGuard.kt` | `class LaunchGuard` (`allow`, `SAME_MS=700`) | Same screen not started twice within 700 ms. |
 | `A/ui/common/TapOnce.kt` | `class TapOnce(gapMs=1000)` | Drops double taps on an action. |
 | `A/ui/common/TapViews.kt` | `class TapList`, `class TapScroll` | RecyclerView / ScrollView without pressed-state delay. |
@@ -348,7 +350,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/common/KeyboardTip.kt` | `object KeyboardTip` (`watch`, `unwatch`) | Tells the user once that a keyboard-mode scanner hides the soft keyboard. |
 | `A/ui/common/FitTextView.kt` | `class FitTextView`, `class FitButton`, `TextFit` | One-line text that shrinks to fit. |
 | `A/ui/common/PictureCache.kt` | `class PictureCache` (`catalogChanged`, `trim`, …) | LRU of decoded product pictures (≤ 10 MB). |
-| `A/ui/common/TileColors.kt` | `object TileColors` | Shades of `TileColor` codes. |
+| `A/ui/common/TileColors.kt` | `object TileColors` (`initials`, `argb`, `name`, `tileBackground`, `swatch`) | Shades of `TileColor` codes; a product's initials. |
 | `A/ui/common/ColorPicker.kt` | `class ColorPicker` | Tile colour swatches. |
 | `A/ui/common/WrapRow.kt` | `class WrapRow` | Wrapping row layout. |
 
@@ -393,7 +395,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/customers/CustomerActivities.kt` | `CustomersActivity` (`pickIntent`), `CustomerActivity`, `editCustomer`, `pickCustomer` | Customers and credit. |
 | `A/ui/reports/ReportActivities.kt` | `ReportsActivity`, `SlowMoversActivity` | Reports + exports. |
 | `A/ui/reports/StaffCheckActivity.kt` | `StaffCheckActivity` | Staff check (D-067). |
-| `A/ui/settings/SettingsActivity.kt` | `SettingsActivity` | Settings hub. |
+| `A/ui/settings/SettingsActivity.kt` | `SettingsActivity` | Settings hub, in groups with icons (D-074). |
 | `A/ui/settings/StoreSettingsActivity.kt` | `StoreSettingsActivity` | Store & receipt (synced). |
 | `A/ui/settings/PrinterSettingsActivity.kt` | `PrinterSettingsActivity`, `bluetoothRefused` | Printer & drawer (per till). |
 | `A/ui/settings/ScannerSettingsActivity.kt` | `ScannerSettingsActivity` | Scanner & camera (per till). |
@@ -582,7 +584,7 @@ call after enqueueing a job), `reconnect()` (:135, after settings change). Jobs 
 configChanges legend — **K** = `keyboard|keyboardHidden|navigation|uiMode` (recreated on rotation); **B** = K +
 `orientation|screenSize|screenLayout|smallestScreenSize` (handles rotation itself, D-054). Only Sell, Lock, CameraScan and Diagnostics are K.
 "Guard" = `guard(perm)` in onCreate (screen-level); "actions" = `requireAccess`/`withApproval`/domain `actor` on individual actions.
-Menu = selling screen's Menu (`SellActivity.showMenu`, SellActivity.kt:1580); "Manage shop ›" is its submenu.
+Menu = selling screen's Menu (`SellActivity.showMenu` → `ui/common/MenuSheet.kt`); "Manage shop" is its last group (D-074).
 
 | Activity (file) | cfg | What | Reached from | Permission | Services / DAOs |
 |---|---|---|---|---|---|
@@ -641,14 +643,15 @@ WorkManager's `InitializationProvider` initializer removed (`tools:node="remove"
 ---
 
 ## 6. Navigation summary
-- **Menu** (`SellActivity.showMenu`, :1580): Discount (DISCOUNT, or PRICE_OVERRIDE with a line selected) · Clear bill · Held bills · Sales & refunds / Receipts ·
+- **Menu** (`SellActivity.showMenu`, a `MenuSheet` of tiles in groups This bill / Till / Manage shop, D-074): Discount (DISCOUNT, or PRICE_OVERRIDE with a line selected) · Clear bill · Held bills · Sales & refunds / Receipts ·
   Customers (credit enabled) · Open shift / Close shift (`openShift`/`closeShift`) · Shift & cash · Open cash drawer (OPEN_DRAWER) · Lock / switch user (login on) ·
-  Manager PIN (lacks a perm, no help yet) · **Manage shop ›** Products, Categories, Promotions (MANAGE_PRODUCTS) · Inventory (MANAGE_STOCK) · Reports (REPORTS) ·
+  Manager PIN (lacks a perm, no help yet) · **Manage shop** (a group of the sheet) Products, Categories, Promotions (MANAGE_PRODUCTS) · Inventory (MANAGE_STOCK) · Reports (REPORTS) ·
   Settings (SETTINGS|MANAGE_STAFF|VIEW_AUDIT) · Tax rates, Diagnostics (SETTINGS). The permission tests use SellActivity's private
   `allowed(perm) = graph.permissions.shown(perm)` (SellActivity.kt:633): role **or** a manager's help on the till.
-- **Settings hub** rows (SettingsActivity.kt:57-84): App language · Item size · Customer screen · Store & receipt · Printer & cash drawer · Barcode scanner & camera ·
-  Staff · Shift & cash · Customers · Tax rates · Payment methods · Categories · Activity log · Google Drive backup (Sync) · Backup & restore · Daily sales report to
-  Google Drive · Error reports · App updates · Diagnostics · User guide (opens `guide_url`) · About.
+- **Settings hub** rows (`SettingsActivity.onCreate`, in groups, D-074): *This till* App language · Item size · Printer & cash drawer · Barcode scanner & camera ·
+  Customer screen — *Shop* Store & receipt · Payment methods · Tax rates · Categories · Customers — *Staff and cash* Staff · Shift & cash · Activity log —
+  *Data and backups* Google Drive backup (Sync) · Backup & restore · Daily sales report to Google Drive — *Help and app* User guide (opens `guide_url`) ·
+  App updates · Error reports · Diagnostics · About.
 
 ---
 
@@ -799,7 +802,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `ui/IdleLockTest.kt` | UI | Idle lock after screen off/on. |
 | `ui/LineControlsTest.kt` | UI | Line buttons fit. |
 | `ui/ScreensSmokeTest.kt` | **open every screen** | Explicit lists of Activity classes in `secondaryScreensOpen` (:96), `stockScreensOpenWithTheirData`, `staffShiftAndCustomerScreensOpen`, `reportAndImportScreensOpen`, plus lock screen and selling-screen checks; a new screen must be added to one of these lists. |
-| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact). |
+| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact), also the open Menu (`<lang>-menu.png`). |
 | `ui/SidewaysLayoutTest.kt` | UI | Payment, `PadDialog` (`sidewaysBody()`), PIN dialog fit a 336dp-high sideways phone. |
 | `ui/TopBarLayoutTest.kt` | UI | Top bar pills never cut off. |
 | `ui/common/SharedFilesTest.kt` | files | Shared-file cleanup rules. |
@@ -863,7 +866,8 @@ same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g
 languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
 `colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only);
 `layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `list_with_search.xml`, `item_row.xml`,
-`top_action.xml`, selling-screen layouts; `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.
+`item_section.xml`, `item_menu_tile.xml` (MenuSheet), `top_action.xml`, selling-screen layouts; `drawable/ic_*.xml` icons (Material icons, Apache 2.0; new ones made
+with explicit path separators and no `evenOdd` fill, which API 21 lacks), `Theme.Lekas.Menu` (the Menu sheet); `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.
 
 ---
 

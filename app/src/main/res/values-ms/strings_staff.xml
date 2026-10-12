@@ -180,13 +180,13 @@
     <string name="result_customer">%1$s kini berhutang %2$s</string>
 
     <!-- Penolakan -->
-    <string name="error_needs_shift">Buka syif dahulu (menu → Syif &amp; tunai).</string>
+    <string name="error_needs_shift">Buka syif dahulu (Menu → Buka syif).</string>
     <string name="error_shift_open">Syif sudah dibuka di kaunter ini.</string>
     <string name="error_needs_customer">Pilih pelanggan dahulu.</string>
     <string name="error_over_limit">Melebihi had kredit pelanggan. Pengurus mesti membenarkannya.</string>
     <string name="error_has_balance">Pelanggan ini masih ada baki hutang (atau kredit). Selesaikan baki dahulu.</string>
     <string name="error_last_owner">Tidak boleh: sekurang-kurangnya seorang pemilik mesti boleh log masuk dengan PIN.</string>
-    <string name="error_credit_off">Pelanggan dan kredit dimatikan dalam Tetapan → Kedai.</string>
+    <string name="error_credit_off">Pelanggan dan kredit dimatikan dalam Tetapan → Kedai &amp; resit.</string>
     <string name="error_more_than_owed">Jumlah itu melebihi hutang pelanggan. Untuk memberi kredit kepada pelanggan, gunakan Laraskan baki.</string>
     <string name="error_owner_only">Hanya pemilik boleh membuat perubahan ini.</string>
     <string name="error_void_last_only">Anda hanya boleh membatalkan jualan terakhir yang anda buat di kaunter ini, dalam 5 minit. Minta pengurus membatalkan jualan ini.</string>

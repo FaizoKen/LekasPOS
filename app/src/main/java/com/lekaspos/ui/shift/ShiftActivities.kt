@@ -270,22 +270,22 @@ class ShiftActivity : ScreenActivity() {
         val reports = graph.permissions.allowed(Perm.SHIFT_REPORT)
         if (s == null) {
             form.info(getString(R.string.shift_none))
-            form.button(getString(R.string.shift_open), primary = true) { once.run { openShift(this, graph, scope) {} } }
+            form.button(getString(R.string.shift_open), primary = true, icon = R.drawable.ic_shift_open) { once.run { openShift(this, graph, scope) {} } }
         } else {
             form.section(getString(R.string.shift_current))
             form.row(getString(R.string.shift_opened_by), names[s.openedBy] ?: "-")
             form.row(getString(R.string.shift_opened_at), DateText.dateTime(s.openedAt, tz))
             form.row(getString(R.string.shift_float), money(s.openingFloat))
             if (graph.permissions.shown(Perm.CASH_MOVE)) {
-                form.button(getString(R.string.shift_cash_in)) { moveCash(CashMoveKind.CASH_IN) }
-                form.button(getString(R.string.shift_cash_out)) { moveCash(CashMoveKind.CASH_OUT) }
-                form.button(getString(R.string.shift_drop)) { moveCash(CashMoveKind.DROP) }
+                form.button(getString(R.string.shift_cash_in), icon = R.drawable.ic_add) { moveCash(CashMoveKind.CASH_IN) }
+                form.button(getString(R.string.shift_cash_out), icon = R.drawable.ic_minus) { moveCash(CashMoveKind.CASH_OUT) }
+                form.button(getString(R.string.shift_drop), icon = R.drawable.ic_savings) { moveCash(CashMoveKind.DROP) }
             }
-            if (reports) form.button(getString(R.string.shift_report)) { startActivity(ShiftReportActivity.intent(this, s.id)) }
-            form.button(getString(R.string.shift_close), primary = true) { once.run { close() } }
+            if (reports) form.button(getString(R.string.shift_report), icon = R.drawable.ic_reports) { startActivity(ShiftReportActivity.intent(this, s.id)) }
+            form.button(getString(R.string.shift_close), primary = true, icon = R.drawable.ic_shift_close) { once.run { close() } }
         }
         // Past shifts open their reports only: a list of dates leading nowhere for whoever may not see them.
-        if (reports) form.button(getString(R.string.shift_history)) { startActivity(Intent(this, ShiftsActivity::class.java)) }
+        if (reports) form.button(getString(R.string.shift_history), icon = R.drawable.ic_history) { startActivity(Intent(this, ShiftsActivity::class.java)) }
         content.removeAllViews()
         content.addView(form.view)
     }
@@ -346,7 +346,7 @@ class ShiftReportActivity : ScreenActivity() {
                 for (m in moves) form.row(moveText(m, names), MoneyFormat.format(if (m.kind == CashMoveKind.CASH_IN) m.amount else -m.amount, store.currency))
             }
             if (graph.settings.device.value.hasPrinter) {
-                form.button(getString(R.string.shift_print), primary = true) {
+                form.button(getString(R.string.shift_print), primary = true, icon = R.drawable.ic_print) {
                     printOnce.run { // a double tap printed the report twice
                         launchUi {
                             graph.shifts.print(shiftId)

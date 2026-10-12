@@ -136,9 +136,18 @@ class Form(private val ctx: Context) {
         }
     }
 
-    fun button(label: CharSequence, primary: Boolean = false, onClick: () -> Unit): Button {
-        val b = Button(ctx, null, 0, if (primary) R.style.Widget_Lekas_Button_Primary else R.style.Widget_Lekas_Button_Secondary)
-        b.text = label
+    /**
+     * A full-width button; [icon] (a drawable, 0 = none) in front of its word, [danger] in red for what deletes or
+     * turns off (D-074).
+     */
+    fun button(label: CharSequence, primary: Boolean = false, icon: Int = 0, danger: Boolean = false, onClick: () -> Unit): Button {
+        val style = when {
+            primary -> R.style.Widget_Lekas_Button_Primary
+            danger -> R.style.Widget_Lekas_Button_Danger
+            else -> R.style.Widget_Lekas_Button_Secondary
+        }
+        val b = Button(ctx, null, 0, style)
+        if (icon != 0) b.setIconText(icon, label) else b.text = label
         b.setOnClickListener { onClick() }
         column.addView(b, lp().apply { topMargin = dp(12) })
         return b

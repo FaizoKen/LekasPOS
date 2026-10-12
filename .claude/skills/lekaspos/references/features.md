@@ -1,6 +1,6 @@
 # Features — what the app does today (behaviour reference)
 
-The current behaviour of LekasPOS **1.14.0**, feature by feature, for anyone changing the code. It complements
+The current behaviour of LekasPOS **1.15.0** (plus the unreleased D-074 look), feature by feature, for anyone changing the code. It complements
 the design references (`architecture.md`, `database.md`, `money.md`, `sync.md`): those say *how* it is built,
 this says *what it does* and where. `docs/DECISIONS.md` is the history of *why* (D-numbers below); when it and
 this file disagree, the code wins — fix this file.
@@ -113,7 +113,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   no sales shows none (`BackupService.FRESH_MS` = 3 days).
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
   incl. tax/tax"), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
-- Empty bill: help text and the **last sale** of this app run (`CheckoutService.last`: change again, "Print a copy").
+- Empty bill: help text and the **last sale** of this app run (`CheckoutService.last`: change again, "Print receipt" until
+  its receipt was printed, then "Print a copy").
 
 ### 2.2 Adding items
 - Every path ends in `CartSession.scan(code)` or `addProductById`. Frozen bill (payment/checkout/resume) → error beep.
@@ -160,14 +161,17 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 - Hold: optional name; the held list shows name or time, the staff name (PIN login on), total repriced, lines.
   Resume holds the current bill in its place. Delete via "Delete a bill…" or long-press.
 
-### 2.4 Menu (`showMenu`) — hidden unless allowed
+### 2.4 Menu (`showMenu`, `ui/common/MenuSheet.kt`, D-074) — hidden unless allowed
 
-Discount (bill not empty and DISCOUNT, or PRICE_OVERRIDE with a selected line) · Clear bill (bill not empty) · Held
-bills (any held) · Sales & refunds (REFUND or VOID shown) else Receipts · Customers (credit on) · Open shift / Close
-shift (always) · Shift & cash (CASH_MOVE or SHIFT_REPORT) · Open cash drawer (OPEN_DRAWER) · Lock / switch user (PIN
-login on) · Manager PIN (someone signed in lacks a permission and no help active) · **Manage shop ›**: Products,
-Categories, Promotions (MANAGE_PRODUCTS), Inventory (MANAGE_STOCK), Reports (REPORTS), Settings (SETTINGS or
-MANAGE_STAFF or VIEW_AUDIT), Tax rates, Diagnostics (SETTINGS). Price check is a screen button, not in the Menu.
+A sheet of tiles (icon over the word) under the Menu button, 3 a row on a phone up to 5 on a tablet, in groups; empty
+groups are left out. A hardware key a scanner sends closes it and the scan goes on the bill; the second tap of a double
+tap is dropped. **This bill**: Discount (bill not empty and DISCOUNT, or PRICE_OVERRIDE with a selected line) · Held
+bills (any held; the count on the tile) · Clear bill (bill not empty; red). **Till**: Sales & refunds (REFUND or VOID
+shown) else Receipts · Customers (credit on) · Open shift / Close shift (always) · Shift & cash (CASH_MOVE or
+SHIFT_REPORT) · Open cash drawer (OPEN_DRAWER) · Manager PIN (someone signed in lacks a permission and no help active)
+· Lock / switch user (PIN login on). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Inventory
+(MANAGE_STOCK), Reports (REPORTS), Settings (SETTINGS or MANAGE_STAFF or VIEW_AUDIT), Tax rates, Diagnostics
+(SETTINGS). Price check is a screen button, not in the Menu.
 - Discount (`DiscountDialog`): bill / selected line — Amount (> 0, capped) or Percent (1–100); "No discount";
   line price change (0.00 allowed). Audited `BILL_DISCOUNT`, `LINE_DISCOUNT`, `PRICE_OVERRIDE`. A discounted or
   re-priced line leaves promotions. An emptied bill drops its bill discount.
@@ -258,6 +262,9 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
 
 ## 6. Products, categories, tax rates, payment methods
 
+- Products list (`ui/products/ProductListActivity.kt`): name order, keyset pages; each row shows the picture, else the
+  initials on the product's (or its category's) colour, "category · Stock: n", the price (`/unit` for weighed) and
+  HIDDEN for hidden products (D-074). Search by name, SKU or barcode; an unknown barcode offers "Add product".
 - Product form (`ui/products/ProductEditActivity.kt`): Name*, Selling price* (empty allowed only for open price →
   0), Sold by (piece default / weight / open price; unit pcs↔kg follows), Unit, look (picture 240×240 JPEG q80 centre
   crop, ≤ 40 MB source; 12 colours or none — `product_look`, `product_image`, D-066), barcodes (several, canonical
@@ -401,11 +408,12 @@ codepage 0, cut on, feed 4, auto on, native QR off), `dev.drawer.*` (enabled on,
 (error-report consent), `lekas_updates` (daily check on, test versions off). Receipt logo picture:
 `files/receipt_logo.png` (per phone, not synced, not in backups).
 
-Settings screen order: App language · Item size · Customer screen · Store & receipt · Printer & cash drawer · Barcode
-scanner & camera · Staff · Shift & cash · Customers · Tax rates · Payment methods · Categories · Activity log · Google
-Drive backup · Backup & restore · Daily sales report to Google Drive · Error reports · App updates · Diagnostics ·
-User guide (opens `guide_url`: `guide.html`, or `panduan.html` in Malay — 1.13.1) · About. The hub has no guard;
-each screen guards itself.
+Settings screen, in groups with an icon per row (D-074): **This till** App language · Item size · Printer & cash drawer ·
+Barcode scanner & camera · Customer screen — **Shop** Store & receipt · Payment methods · Tax rates · Categories ·
+Customers — **Staff and cash** Staff · Shift & cash · Activity log — **Data and backups** Google Drive backup · Backup &
+restore · Daily sales report to Google Drive — **Help and app** User guide (opens `guide_url`: `guide.html`, or
+`panduan.html` in Malay — 1.13.1) · App updates · Error reports · Diagnostics · About. The hub has no guard; each
+screen guards itself.
 
 ## 15. Data safety: backups and restore (`domain/backup/BackupService.kt`, `data/backup/*`, D-044, D-048, D-053)
 
@@ -471,6 +479,10 @@ notifications. Google scopes: `drive.appdata` (sync), `drive.file` (daily report
 
 ## 20. Known gaps and inconsistencies (found while writing the user guide, 2026-10-08)
 
+Fixed with D-074 (not released yet): `error_needs_shift` pointed to "Shift & cash" (now Menu → Open shift),
+`error_credit_off` to "Settings → Store", the last sale's button said "Print a copy" for the original receipt, `backup_help`
+promised a backup before every upgrade.
+
 Fixed in 1.13.1 (D-071): a weighed product, a pack or a weight label with no price sold free; a till joining later
 switched "Require an open shift" back on for the whole shop. The guide still warns users of 1.13.0 and older.
 
@@ -481,11 +493,7 @@ Behaviour worth a look (decide with the owner):
   the share is cancelled (`BackupService` `BACKUP_EXPORT_OK` is set when the file is written).
 
 Small things a future change could fix (none loses data):
-- `error_needs_shift` says "menu → Shift & cash"; the Menu has "Open shift" directly and cashiers do not see Shift & cash.
-- `error_credit_off` says "Settings → Store"; the screen is "Store & receipt".
 - Tax rate "Code on receipts (optional)" is stored and listed but never printed.
-- The last-sale panel's button always says "Print a copy", even when it prints the original receipt (auto-print off).
-- `backup_help` says a backup is made "before every app upgrade"; only DB-version-changing upgrades make one.
 - The daily-report help lists 8 columns; the file has 17 (the checks columns were added in 1.12.0).
 - Receive stock / Stock count / product picker reuse the selling screen's unknown-barcode text ("goes on this bill").
 - `PIN_LOCKOUT` entries do not show whose PIN was tried; customer create/edit/delete is not audited.

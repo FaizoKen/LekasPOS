@@ -16,6 +16,16 @@ import com.lekaspos.ui.colorOf
  */
 object TileColors {
 
+    /** "Beras Faiza 10kg" → "BF": in the picture's place on a tile (or list row) without one. */
+    fun initials(name: String): String {
+        val words = name.trim().split(' ').filter { it.isNotEmpty() && it[0].isLetterOrDigit() }
+        return when {
+            words.size >= 2 -> "${words[0].first()}${words[1].first()}"
+            words.size == 1 -> words[0].take(2)
+            else -> ""
+        }.uppercase()
+    }
+
     fun argb(code: Int): Int? = when (TileColor.known(code)) {
         TileColor.RED -> 0xFFC62828.toInt()
         TileColor.PINK -> 0xFFAD1457.toInt()

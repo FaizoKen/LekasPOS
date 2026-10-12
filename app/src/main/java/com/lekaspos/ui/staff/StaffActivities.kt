@@ -238,12 +238,12 @@ class StaffEditActivity : ScreenActivity() {
             form.section(getString(R.string.staff_pin))
             form.info(getString(if (b.hasPin) R.string.staff_pin_set else R.string.staff_no_pin))
             form.button(getString(if (b.hasPin) R.string.staff_pin_change else R.string.staff_pin_set_button)) { setPin(b) }
-            if (b.hasPin) form.button(getString(R.string.staff_pin_remove)) { removePin(b) }
+            if (b.hasPin) form.button(getString(R.string.staff_pin_remove), danger = true) { removePin(b) }
         } else {
             form.info(getString(R.string.staff_pin_after_save))
         }
         form.button(getString(R.string.save), primary = true) { save() }
-        if (b != null) form.button(getString(R.string.delete)) { delete(b) }
+        if (b != null) form.button(getString(R.string.delete), danger = true) { delete(b) }
         content.removeAllViews()
         content.addView(form.view)
     }
@@ -394,7 +394,7 @@ class RoleEditActivity : ScreenActivity() {
         }
         if (b?.isOwner != true) linkVoidLast(b)
         form.button(getString(R.string.save), primary = true) { save() }
-        if (b != null && !b.isOwner && b.sysRole == 0) form.button(getString(R.string.delete)) { delete(b) }
+        if (b != null && !b.isOwner && b.sysRole == 0) form.button(getString(R.string.delete), danger = true) { delete(b) }
         content.removeAllViews()
         content.addView(form.view)
     }

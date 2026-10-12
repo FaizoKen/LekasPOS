@@ -161,7 +161,7 @@ peranan</a>.</p>
 <tr><td>Sebahagian tunai, sebahagian kad</td><td><b>Bayar → Pecah bayaran</b> → taip bahagian pertama → ketik kaedahnya → bayar selebihnya.</td></tr>
 <tr><td>Beri baki</td><td>Amaun <b>Baki</b> yang besar ialah wang yang perlu dipulangkan. Imbas barang pertama pelanggan seterusnya untuk mula semula.</td></tr>
 <tr><td>Pelanggan tanya baki sekali lagi</td><td>Bil kosong menunjukkan <b>Jualan terakhir</b> bersama bakinya.</td></tr>
-<tr><td>Cetak resit sekali lagi</td><td><b>Cetak salinan</b> di bawah jualan terakhir, atau <b>Menu → Jualan &amp; bayaran balik</b>.</td></tr>
+<tr><td>Cetak resit sekali lagi</td><td><b>Cetak salinan</b> di bawah jualan terakhir (<b>Cetak resit</b> jika ia belum dicetak), atau <b>Menu → Jualan &amp; bayaran balik</b>.</td></tr>
 <tr><td>Pelanggan memulangkan barang</td><td><b>Menu → Jualan &amp; bayaran balik</b> → cari jualan itu (taip nombor resit) → <b>Bayaran balik / pulangan</b> → pilih barangnya, taip <b>Sebab</b> → <b>Bayar balik</b>. Pulangkan wangnya — <a href="#refund">butiran</a>.</td></tr>
 <tr><td>Salah kaedah bayaran atau salah barang, baru dibayar</td><td><b>Menu → Jualan &amp; bayaran balik</b> → jualan paling atas → <b>Batalkan</b> → taip sebabnya. Hanya jualan terakhir anda sendiri, dalam 5 minit; kemudian jual semula dengan betul — <a href="#void">butiran</a>.</td></tr>
 <tr><td>Semak harga tanpa menjual</td><td><b>Semak harga</b> → imbas atau taip.</td></tr>
@@ -307,20 +307,24 @@ produk juga melihat <b>Tukar harga</b>: harga baharu digunakan mulai sekarang (b
 dengan harga lama) dan dicatat dalam Log aktiviti.</p>
 
 <h3 id="menu">Menu</h3>
-<p>Menu hanya menunjukkan apa yang boleh dilakukan oleh orang yang sedang log masuk.</p>
+<p>Menu hanya menunjukkan apa yang boleh dilakukan oleh orang yang sedang log masuk, sebagai butang besar bergambar dalam
+tiga kumpulan: <b>Bil ini</b>, <b>Kaunter</b> dan <b>Urus kedai</b>. Imbasan semasa ia terbuka menutupnya dan masuk ke bil seperti biasa.</p>
 <div class="table-wrap"><table>
 <tr><th>Pilihan menu</th><th>Kegunaannya</th></tr>
+<tr><th colspan="2">Bil ini</th></tr>
 <tr><td><b>Diskaun</b></td><td>Diskaun dan perubahan harga pada bil ini.</td></tr>
+<tr><td><b>Bil ditangguh</b></td><td>Bil yang sedang ditangguh. Butangnya menunjukkan bilangannya.</td></tr>
 <tr><td><b>Kosongkan bil</b></td><td>Buang bil yang ada di skrin.</td></tr>
-<tr><td><b>Bil ditangguh</b></td><td>Bil yang sedang ditangguh.</td></tr>
+<tr><th colspan="2">Kaunter</th></tr>
 <tr><td><b>Jualan &amp; bayaran balik</b> (atau <b>Resit</b>)</td><td>Jualan lepas: salinan, bayaran balik, pembatalan — <a href="#sales">butiran</a>.</td></tr>
 <tr><td><b>Pelanggan</b></td><td>Apabila pelanggan dan kredit dihidupkan.</td></tr>
 <tr><td><b>Buka syif</b> / <b>Tutup syif</b></td><td>Mula atau tamatkan syif anda — <a href="#shifts">butiran</a>.</td></tr>
 <tr><td><b>Syif &amp; tunai</b></td><td>Wang masuk, wang keluar, simpanan wang, laporan syif.</td></tr>
 <tr><td><b>Buka laci wang</b></td><td>Membuka laci tanpa jualan (direkodkan).</td></tr>
-<tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan).</td></tr>
 <tr><td><b>PIN pengurus</b></td><td>Pengurus membantu dengan bil ini.</td></tr>
-<tr><td><b>Urus kedai ›</b></td><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Inventori</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b>.</td></tr>
+<tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan).</td></tr>
+<tr><th colspan="2">Urus kedai</th></tr>
+<tr><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Inventori</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b></td><td>Urusan belakang kedai, untuk sesiapa yang dibenarkan.</td></tr>
 </table></div>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
@@ -512,11 +516,11 @@ terminal atau aplikasi bank anda).</li>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="products">7. Produk</h2>
-<p>Semua yang dijual di kaunter ialah <b>produk</b>. Buka senarainya dengan <b>Menu → Urus kedai › → Produk</b>
+<p>Semua yang dijual di kaunter ialah <b>produk</b>. Buka senarainya dengan <b>Menu → Urus kedai → Produk</b>
 (memerlukan kebenaran <i>Sunting produk dan kategori</i>).</p>
 
 <div class="shots">
-<figure><img src="img/ms-products.png" alt="Senarai Produk" width="240" loading="lazy"><figcaption>Produk: cari mengikut nama, SKU atau kod bar, atau imbas.</figcaption></figure>
+<figure><img src="img/ms-products.png" alt="Senarai Produk" width="240" loading="lazy"><figcaption>Produk: setiap satu dengan gambar atau warnanya dan kategorinya. Cari mengikut nama, SKU atau kod bar, atau imbas.</figcaption></figure>
 <figure><img src="img/ms-product-new.png" alt="Borang Produk baru" width="240" loading="lazy"><figcaption>Produk baharu: nama, harga, cara ia dijual, gambar dan warna.</figcaption></figure>
 </div>
 
@@ -635,7 +639,7 @@ Petak berwarna menunjukkan teks putih.</li>
 </ul>
 
 <h3 id="categories">Kategori</h3>
-<p><b>Menu → Urus kedai › → Kategori</b>. Kategori menjadi tab dalam senarai barang di skrin jualan
+<p><b>Menu → Urus kedai → Kategori</b>. Kategori menjadi tab dalam senarai barang di skrin jualan
 (selepas <b>Laris</b> dan <b>Semua</b>) dan mengumpulkan jualan dalam laporan.</p>
 <ul>
 <li><b>+</b> menambah kategori (nama dan warna). Ketik kategori untuk menukar nama atau warnanya.</li>
@@ -645,7 +649,7 @@ dalam laporan kategori.</li>
 </ul>
 
 <h3 id="tax">Kadar cukai</h3>
-<p><b>Menu → Urus kedai › → Kadar cukai</b> (memerlukan <i>Ubah tetapan</i>). Kebanyakan kedai runcit kecil di
+<p><b>Menu → Urus kedai → Kadar cukai</b> (memerlukan <i>Ubah tetapan</i>). Kebanyakan kedai runcit kecil di
 Malaysia tidak mengenakan cukai di kaunter: jika begitu, biarkan senarai ini kosong dan jangan pilih apa-apa di bawah
 <b>Cukai</b> pada produk.</p>
 <ul>
@@ -658,7 +662,7 @@ anda sudah termasuk cukai (cukai dikira daripada harga itu) atau cukai ditambah 
 </ul>
 
 <h3 id="payment-methods">Kaedah bayaran</h3>
-<p><b>Menu → Urus kedai › → Tetapan → Kaedah bayaran</b> (memerlukan <i>Ubah tetapan</i>). Aplikasi bermula dengan
+<p><b>Menu → Urus kedai → Tetapan → Kaedah bayaran</b> (memerlukan <i>Ubah tetapan</i>). Aplikasi bermula dengan
 <b>Tunai</b>, <b>Kad</b>, <b>E-dompet / QR</b> dan <b>Kredit pelanggan</b>. Tambah kaedah anda sendiri, seperti DuitNow atau
 Touch ’n Go, dengan <b>+</b>:</p>
 <ul>
@@ -724,7 +728,7 @@ bagi setiap fail.</li>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="promotions">8. Promosi</h2>
-<p><b>Menu → Urus kedai › → Promosi</b>. Promosi ialah tawaran yang digunakan oleh kaunter <b>dengan sendirinya</b> apabila
+<p><b>Menu → Urus kedai → Promosi</b>. Promosi ialah tawaran yang digunakan oleh kaunter <b>dengan sendirinya</b> apabila
 barang yang betul ada dalam bil — juruwang tidak perlu buat apa-apa.</p>
 <div class="shots">
 <figure><img src="img/ms-promotions.png" alt="Senarai Promosi" width="240" loading="lazy"><figcaption>Promosi: tawaran yang digunakan kaunter dengan sendirinya.</figcaption></figure>
@@ -791,7 +795,7 @@ yang ada harga lain.</li>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="stock">9. Stok</h2>
-<p><b>Menu → Urus kedai › → Inventori</b>, untuk kakitangan yang mempunyai kebenaran <i>Terima, laras dan kira stok</i>
+<p><b>Menu → Urus kedai → Inventori</b>, untuk kakitangan yang mempunyai kebenaran <i>Terima, laras dan kira stok</i>
 (pemilik dan pengurus secara lalai).</p>
 <figure class="wide"><img src="img/ms-inventory.png" alt="Skrin Inventori" width="240" loading="lazy"><figcaption>Inventori: semua tentang stok di satu tempat.</figcaption></figure>
 
@@ -871,7 +875,7 @@ penghantaran, pelarasan dan kiraan bagi satu produk, dengan baki stok selepas se
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="staff">10. Kakitangan, PIN dan peranan</h2>
-<p><b>Menu → Urus kedai › → Tetapan → Kakitangan</b> (perlu kebenaran <i>Urus kakitangan dan peranan</i> — secara lalai hanya pemilik).</p>
+<p><b>Menu → Urus kedai → Tetapan → Kakitangan</b> (perlu kebenaran <i>Urus kakitangan dan peranan</i> — secara lalai hanya pemilik).</p>
 <figure class="wide"><img src="img/ms-staff.png" alt="Skrin Kakitangan" width="240" loading="lazy"><figcaption>Kakitangan: selagi belum ada PIN, aplikasi berjalan sebagai pemilik.</figcaption></figure>
 
 <h3 id="pin-login">Menghidupkan log masuk PIN</h3>
@@ -1080,7 +1084,7 @@ pada <b>Kredit pelanggan</b>: amaun itu kemudian ditolak daripada hutang pelangg
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="reports">13. Laporan</h2>
-<p><b>Menu → Urus kedai › → Laporan</b> (perlu kebenaran <i>Lihat laporan jualan</i>). Laporan merangkumi jualan semua kaunter di
+<p><b>Menu → Urus kedai → Laporan</b> (perlu kebenaran <i>Lihat laporan jualan</i>). Laporan merangkumi jualan semua kaunter di
 kedai (jika Sandaran Google Drive dihidupkan).</p>
 <figure class="wide"><img src="img/ms-reports.png" alt="Skrin Laporan" width="240" loading="lazy"><figcaption>Laporan: pilih tempoh di bahagian atas.</figcaption></figure>
 
@@ -1333,32 +1337,37 @@ gunakan dua akaun Google.</li>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="settings">17. Tetapan</h2>
-<p><b>Menu → Urus kedai › → Tetapan</b>. Kebanyakan tetapan memerlukan kebenaran <i>Ubah tetapan</i> (secara lalai hanya pemilik;
+<p><b>Menu → Urus kedai → Tetapan</b>. Kebanyakan tetapan memerlukan kebenaran <i>Ubah tetapan</i> (secara lalai hanya pemilik;
 orang lain diminta PIN pemilik). Tetapan bertanda <b>kaunter ini</b> hanya berkuat kuasa pada telefon tempat ia diubah;
 yang lain berkuat kuasa untuk seluruh kedai dan sampai ke setiap kaunter melalui Sandaran Google Drive.</p>
-<figure class="wide"><img src="img/ms-settings.png" alt="Skrin Tetapan" width="240" loading="lazy"><figcaption>Tetapan, mengikut susunan ia dipaparkan.</figcaption></figure>
+<figure class="wide"><img src="img/ms-settings.png" alt="Skrin Tetapan" width="240" loading="lazy"><figcaption>Tetapan, dalam kumpulan, mengikut susunan ia dipaparkan.</figcaption></figure>
 <div class="table-wrap"><table>
 <tr><th>Tetapan</th><th>Fungsinya</th><th>Berkuat kuasa untuk</th></tr>
+<tr><th colspan="3">Kaunter ini</th></tr>
 <tr><td><b>Bahasa aplikasi</b></td><td><i>Bahasa telefon</i>, <i>English</i> atau <i>Bahasa Melayu</i> untuk skrin aplikasi. Resit mempunyai bahasanya sendiri.</td><td>telefon ini</td></tr>
 <tr><td><b>Saiz barang di skrin jualan</b></td><td>Petak barang <i>Besar (kurang barang)</i>, <i>Sederhana</i> (lalai) atau <i>Kecil (lebih banyak barang)</i>.</td><td>kaunter ini</td></tr>
-<tr><td><b>Skrin pelanggan (skrin kedua)</b></td><td>Menunjukkan bil kepada pelanggan pada paparan kedua — <a href="#customer-screen">butiran</a>. Hidup secara lalai.</td><td>kaunter ini</td></tr>
-<tr><td><b>Kedai &amp; resit</b></td><td>Butiran kedai, resit, cukai, pembundaran, syif, pelanggan, label penimbang — <a href="#settings-store">di bawah</a>.</td><td>kedai</td></tr>
 <tr><td><b>Pencetak &amp; laci wang</b></td><td>Pencetak resit dan laci — <a href="#settings-printer">di bawah</a>.</td><td>kaunter ini</td></tr>
 <tr><td><b>Pengimbas kod bar &amp; kamera</b></td><td>Uji pengimbas, pengimbas bersiri, imbasan kamera — <a href="#settings-scanner">di bawah</a>.</td><td>kaunter ini</td></tr>
+<tr><td><b>Skrin pelanggan (skrin kedua)</b></td><td>Menunjukkan bil kepada pelanggan pada paparan kedua — <a href="#customer-screen">butiran</a>. Hidup secara lalai.</td><td>kaunter ini</td></tr>
+<tr><th colspan="3">Kedai</th></tr>
+<tr><td><b>Kedai &amp; resit</b></td><td>Butiran kedai, resit, cukai, pembundaran, syif, pelanggan, label penimbang — <a href="#settings-store">di bawah</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kaedah bayaran</b></td><td><a href="#payment-methods">Kaedah bayaran</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kadar cukai</b></td><td><a href="#tax">Kadar cukai</a>.</td><td>kedai</td></tr>
+<tr><td><b>Kategori</b></td><td><a href="#categories">Kategori</a>.</td><td>kedai</td></tr>
+<tr><td><b>Pelanggan</b></td><td><a href="#customers">Bab 12</a>.</td><td>kedai</td></tr>
+<tr><th colspan="3">Kakitangan dan tunai</th></tr>
 <tr><td><b>Kakitangan</b></td><td>Kakitangan, PIN, peranan, bila kaunter dikunci — <a href="#staff">bab 10</a>.</td><td>kedai (kunci: kaunter ini)</td></tr>
 <tr><td><b>Syif &amp; tunai</b></td><td><a href="#shifts">Bab 11</a>.</td><td>kaunter ini</td></tr>
-<tr><td><b>Pelanggan</b></td><td><a href="#customers">Bab 12</a>.</td><td>kedai</td></tr>
-<tr><td><b>Kadar cukai</b></td><td><a href="#tax">Kadar cukai</a>.</td><td>kedai</td></tr>
-<tr><td><b>Kaedah bayaran</b></td><td><a href="#payment-methods">Kaedah bayaran</a>.</td><td>kedai</td></tr>
-<tr><td><b>Kategori</b></td><td><a href="#categories">Kategori</a>.</td><td>kedai</td></tr>
 <tr><td><b>Log aktiviti</b></td><td><a href="#activity-log">Bab 14</a>.</td><td>kedai</td></tr>
+<tr><th colspan="3">Data dan sandaran</th></tr>
 <tr><td><b>Sandaran Google Drive</b></td><td><a href="#drive-backup">Sandaran Google Drive</a>.</td><td>kaunter ini</td></tr>
 <tr><td><b>Sandaran</b></td><td><a href="#phone-backups">Sandaran, salinan ke folder, fail, pemulihan</a>.</td><td>kaunter ini</td></tr>
 <tr><td><b>Laporan jualan harian ke Google Drive</b></td><td><a href="#drive-report">Laporan jualan harian</a>.</td><td>kaunter ini</td></tr>
-<tr><td><b>Laporan ralat</b></td><td><a href="#error-reports">Laporan ralat</a>.</td><td>telefon ini</td></tr>
-<tr><td><b>Kemas kini aplikasi</b></td><td><a href="#updates">Kemas kini aplikasi</a>.</td><td>telefon ini</td></tr>
-<tr><td><b>Diagnostik</b></td><td><a href="#diagnostics">Diagnostik</a>.</td><td>telefon ini</td></tr>
+<tr><th colspan="3">Bantuan dan aplikasi</th></tr>
 <tr><td><b>Panduan pengguna</b></td><td>Membuka panduan ini dalam bahasa aplikasi (LekasPOS 1.13.1 dan lebih baharu).</td><td>—</td></tr>
+<tr><td><b>Kemas kini aplikasi</b></td><td><a href="#updates">Kemas kini aplikasi</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Laporan ralat</b></td><td><a href="#error-reports">Laporan ralat</a>.</td><td>telefon ini</td></tr>
+<tr><td><b>Diagnostik</b></td><td><a href="#diagnostics">Diagnostik</a>.</td><td>telefon ini</td></tr>
 <tr><td><b>Perihal</b></td><td>Versi, lesen, laman web dan dasar privasi.</td><td>—</td></tr>
 </table></div>
 
@@ -1488,7 +1497,7 @@ versi Android dan memori. Laporan ini <b>tidak sekali-kali</b> mengandungi juala
 akaun Google anda. Tukar jawapan anda bila-bila masa di <b>Tetapan → Laporan ralat</b>.</p>
 
 <h3 id="diagnostics">Diagnostik</h3>
-<p><b>Tetapan → Diagnostik</b> (atau Urus kedai › Diagnostik) digunakan untuk menyelesaikan masalah:</p>
+<p><b>Tetapan → Diagnostik</b> (atau Urus kedai Diagnostik) digunakan untuk menyelesaikan masalah:</p>
 <ul>
 <li><b>Kongsi log ralat</b> — menghantar log ralat teknikal telefon (tiada data kedai) kepada orang yang membantu anda.</li>
 <li><b>Hantar laporan kepada pembangun</b> — bersama apa yang berlaku dan, jika anda mahu dibalas, nombor telefon atau e-mel anda.</li>

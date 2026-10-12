@@ -20,6 +20,7 @@ import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.ui.colorOf
 import com.lekaspos.ui.common.Dialogs
+import com.lekaspos.ui.common.iconLabel
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.keys
 import com.lekaspos.ui.common.sideways
@@ -88,9 +89,9 @@ class PaymentDialog(
             v.cash.visible(cash != null)
             v.others.visible(others.isNotEmpty())
             v.othersLabel.setText(if (cash != null) R.string.pay_other_ways else R.string.pay_ways)
-            v.methods(others.map { it.name }) { pay(others[it], null) }
+            v.methods(others.map { label(it) }) { pay(others[it], null) }
             v.split.visible(methods.size > 1)
-            v.partMethods(methods.map { it.name }, methods.indexOf(cash)) { pay(methods[it], enteredAmount()) }
+            v.partMethods(methods.map { label(it) }, methods.indexOf(cash)) { pay(methods[it], enteredAmount()) }
         }
         dialog = AlertDialog.Builder(activity).setView(v.root).create()
         // A touch beside the dialog must not throw away payments already entered (split tender).
@@ -291,6 +292,18 @@ class PaymentDialog(
     }
 
     private fun money(v: Long) = MoneyFormat.format(v, currency)
+
+    /** A method's name with the icon of its kind (D-074): the cashier finds Card or the QR at a glance. */
+    private fun label(m: PaymentMethod): CharSequence {
+        val icon = when (m.kind) {
+            PaymentKind.CASH -> R.drawable.ic_cash
+            PaymentKind.CARD -> R.drawable.ic_card
+            PaymentKind.EWALLET -> R.drawable.ic_qr
+            PaymentKind.CREDIT -> R.drawable.ic_people
+            else -> return m.name
+        }
+        return iconLabel(activity, icon, m.name)
+    }
 
     /** "RM100" for a note: "RM100.00" did not fit a small phone's button (2026-10 review). */
     private fun wholeMoney(v: Long): String {

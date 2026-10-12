@@ -3,7 +3,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="backup_title">Backup &amp; restore</string>
     <string name="settings_backup_sub">Backups on this phone, daily copy to SD card or USB, backup files, restore</string>
-    <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before every app upgrade or restore. These are lost with the phone: keep a copy off it with Google Drive backup, a daily copy to an SD card or USB drive (⋮ menu), or by saving or sharing a backup file. Tap a backup to restore it; hold to delete it.</string>
+    <string name="backup_help">A backup is made every day on this phone (the last 7 are kept), and before a restore and app upgrades that change how the data is stored. These are lost with the phone: keep a copy off it with Google Drive backup, a daily copy to an SD card or USB drive (⋮ menu), or by saving or sharing a backup file. Tap a backup to restore it; hold to delete it.</string>
     <string name="backup_empty">No backups on this phone yet.</string>
     <string name="backup_counts">sales: %1$d · products: %2$d</string>
     <string name="backup_reason_auto">Automatic</string>

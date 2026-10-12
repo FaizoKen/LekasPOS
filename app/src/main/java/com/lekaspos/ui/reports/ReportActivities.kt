@@ -215,10 +215,10 @@ class ReportsActivity : ScreenActivity() {
         for (c in stock.categories.take(12)) {
             f.row(c.name ?: getString(R.string.report_no_category), money(ReportMath.value(c.valueMilli, 1L)))
         }
-        f.button(getString(R.string.report_slow_movers)) { startActivity(SlowMoversActivity.intent(this, rep.period)) }
+        f.button(getString(R.string.report_slow_movers), icon = R.drawable.ic_low_stock) { startActivity(SlowMoversActivity.intent(this, rep.period)) }
         // Who cleared bills, took items off or opened the drawer (D-067): with the activity log's permission.
         if (graph.permissions.shown(Perm.VIEW_AUDIT)) {
-            f.button(getString(R.string.staff_check_title)) { startActivity(StaffCheckActivity.intent(this, rep.period)) }
+            f.button(getString(R.string.staff_check_title), icon = R.drawable.ic_manager) { startActivity(StaffCheckActivity.intent(this, rep.period)) }
         }
         f.info(getString(R.string.report_note))
         body.removeAllViews()

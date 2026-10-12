@@ -66,4 +66,12 @@
     <string name="help_add_product">Menambah produk memerlukan PIN pengurus. Pengurus kemudian menambahnya, dan ia masuk ke bil ini.</string>
     <string name="sell_not_found_manager">Belum ada produk dengan kod bar %1$s. Pengurus boleh menambahkannya sekarang (PIN mereka dahulu): ia disimpan untuk lain kali dan masuk ke bil ini.</string>
     <string name="safety_tell_owner">Sila beritahu pemilik kedai: mereka boleh membetulkannya dalam Menu → Urus kedai → Tetapan.</string>
+    <!-- Kumpulan Menu dan Tetapan (D-074). -->
+    <string name="menu_group_bill">Bil ini</string>
+    <string name="menu_group_till">Kaunter</string>
+    <string name="settings_group_till">Kaunter ini</string>
+    <string name="settings_group_shop">Kedai</string>
+    <string name="settings_group_staff">Kakitangan dan tunai</string>
+    <string name="settings_group_data">Data dan sandaran</string>
+    <string name="settings_group_help">Bantuan dan aplikasi</string>
 </resources>

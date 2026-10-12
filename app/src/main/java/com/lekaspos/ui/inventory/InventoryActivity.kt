@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 /** Inventory hub: receive, adjust, count, low stock, suppliers, deliveries, stock changes. */
 class InventoryActivity : ScreenActivity() {
 
-    private class Entry(val title: Int, val subtitle: Int, val open: () -> Unit)
+    private class Entry(val title: Int, val subtitle: Int, val icon: Int, val open: () -> Unit)
 
     private var lowCount: Long? = null
     private lateinit var adapter: RowAdapter<Entry>
@@ -24,23 +24,23 @@ class InventoryActivity : ScreenActivity() {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.inv_title), R.layout.list_plain) ?: return
         val entries = listOf(
-            Entry(R.string.inv_receive, R.string.inv_receive_sub) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, ReceiveActivity::class.java)) } },
-            Entry(R.string.inv_adjust, R.string.inv_adjust_sub) {
+            Entry(R.string.inv_receive, R.string.inv_receive_sub, R.drawable.ic_receive) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, ReceiveActivity::class.java)) } },
+            Entry(R.string.inv_adjust, R.string.inv_adjust_sub, R.drawable.ic_adjust) {
                 requireAccess(Perm.MANAGE_STOCK) {
                     @Suppress("DEPRECATION")
                     startActivityForResult(ProductPickActivity.intent(this, getString(R.string.inv_adjust)), REQ_ADJUST)
                 }
             },
-            Entry(R.string.inv_count, R.string.inv_count_sub) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, CountSessionsActivity::class.java)) } },
-            Entry(R.string.inv_low_stock, R.string.inv_low_stock_sub) { startActivity(Intent(this, LowStockActivity::class.java)) },
-            Entry(R.string.inv_suppliers, R.string.inv_suppliers_sub) { startActivity(Intent(this, SuppliersActivity::class.java)) },
-            Entry(R.string.inv_purchases, R.string.inv_purchases_sub) { startActivity(PurchasesActivity.intent(this, null)) },
-            Entry(R.string.inv_movements, R.string.inv_movements_sub) { startActivity(Intent(this, MovementsActivity::class.java)) },
+            Entry(R.string.inv_count, R.string.inv_count_sub, R.drawable.ic_count) { requireAccess(Perm.MANAGE_STOCK) { startActivity(Intent(this, CountSessionsActivity::class.java)) } },
+            Entry(R.string.inv_low_stock, R.string.inv_low_stock_sub, R.drawable.ic_low_stock) { startActivity(Intent(this, LowStockActivity::class.java)) },
+            Entry(R.string.inv_suppliers, R.string.inv_suppliers_sub, R.drawable.ic_supplier) { startActivity(Intent(this, SuppliersActivity::class.java)) },
+            Entry(R.string.inv_purchases, R.string.inv_purchases_sub, R.drawable.ic_deliveries) { startActivity(PurchasesActivity.intent(this, null)) },
+            Entry(R.string.inv_movements, R.string.inv_movements_sub, R.drawable.ic_stock_changes) { startActivity(Intent(this, MovementsActivity::class.java)) },
         )
         adapter = RowAdapter(
             bind = { h, e ->
                 val tag = if (e.title == R.string.inv_low_stock) lowCount?.takeIf { it > 0L }?.toString() else null
-                h.set(getString(e.title), getString(e.subtitle), tag = tag)
+                h.set(getString(e.title), getString(e.subtitle), tag = tag, icon = e.icon)
             },
             onClick = { it.open() },
         )

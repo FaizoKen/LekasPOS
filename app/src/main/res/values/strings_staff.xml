@@ -182,13 +182,13 @@
     <string name="result_customer">%1$s now owes %2$s</string>
 
     <!-- Refusals -->
-    <string name="error_needs_shift">Open a shift first (menu → Shift &amp; cash).</string>
+    <string name="error_needs_shift">Open a shift first (Menu → Open shift).</string>
     <string name="error_shift_open">A shift is already open on this till.</string>
     <string name="error_needs_customer">Choose the customer first.</string>
     <string name="error_over_limit">Over the customer\'s credit limit. A manager must allow it.</string>
     <string name="error_has_balance">This customer still owes money (or has credit). Settle the balance first.</string>
     <string name="error_last_owner">Not possible: at least one owner must be able to sign in with a PIN.</string>
-    <string name="error_credit_off">Customers and credit are switched off in Settings → Store.</string>
+    <string name="error_credit_off">Customers and credit are switched off in Settings → Store &amp; receipt.</string>
     <string name="error_more_than_owed">That is more than the customer owes. To give the customer credit, use Adjust balance.</string>
     <string name="error_owner_only">Only an owner may make this change.</string>
     <string name="error_void_last_only">You can void only the last sale you made on this till, within 5 minutes. Ask a manager to void this one.</string>

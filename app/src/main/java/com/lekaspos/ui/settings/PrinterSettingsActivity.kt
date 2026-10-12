@@ -96,7 +96,7 @@ class PrinterSettingsActivity : ScreenActivity() {
         f.section(getString(R.string.printer_section_device))
         printerLabel = f.info("")
         renderPrinter()
-        f.button(getString(R.string.printer_choose)) { choosePrinter() }
+        f.button(getString(R.string.printer_choose), icon = R.drawable.ic_print) { choosePrinter() }
         f.button(getString(R.string.printer_bt_settings)) {
             try {
                 startActivity(Bluetooth.settingsIntent())
@@ -132,8 +132,8 @@ class PrinterSettingsActivity : ScreenActivity() {
         // One guard per button: opening the drawer right after the test page is meant.
         val testOnce = TapOnce()
         val drawerOnce = TapOnce()
-        f.button(getString(R.string.printer_test)) { testOnce.run { testPrint() } }
-        f.button(getString(R.string.printer_open_drawer)) { drawerOnce.run { openDrawer() } }
+        f.button(getString(R.string.printer_test), icon = R.drawable.ic_receipt) { testOnce.run { testPrint() } }
+        f.button(getString(R.string.printer_open_drawer), icon = R.drawable.ic_drawer) { drawerOnce.run { openDrawer() } }
         clearQueue = f.button(getString(R.string.printer_clear_queue, 0)) { clearQueue() }
         clearQueue.visible(false)
         content.removeAllViews()

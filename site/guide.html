@@ -155,7 +155,7 @@ shop can work like that. Once PINs are set, each person signs in and sees only t
 <tr><td>Part cash, part card</td><td><b>Pay → Split payment</b> → type the first part → tap its method → pay the rest.</td></tr>
 <tr><td>Give change</td><td>The big <b>Change</b> amount is what to give back. Scan the next customer's first item to start again.</td></tr>
 <tr><td>Customer asks for the change again</td><td>The empty bill shows the <b>Last sale</b> with its change.</td></tr>
-<tr><td>Print the receipt again</td><td><b>Print a copy</b> under the last sale, or <b>Menu → Sales &amp; refunds</b>.</td></tr>
+<tr><td>Print the receipt again</td><td><b>Print a copy</b> under the last sale (<b>Print receipt</b> when it was not printed yet), or <b>Menu → Sales &amp; refunds</b>.</td></tr>
 <tr><td>Customer brings an item back</td><td><b>Menu → Sales &amp; refunds</b> → find the sale (type the receipt number) → <b>Refund / return</b> → choose the items, type the <b>Reason</b> → <b>Refund</b>. Give the money back — <a href="#refund">details</a>.</td></tr>
 <tr><td>Wrong payment method or wrong items, just paid</td><td><b>Menu → Sales &amp; refunds</b> → the top sale → <b>Void</b> → type why. Only your own last sale, within 5 minutes; then sell it again the right way — <a href="#void">details</a>.</td></tr>
 <tr><td>Check a price without selling</td><td><b>Price check</b> → scan or type.</td></tr>
@@ -295,20 +295,24 @@ prices, stock and any running promotion, without touching the bill. Staff allowe
 recorded in the Activity log.</p>
 
 <h3 id="menu">The Menu</h3>
-<p>The Menu shows only what the signed-in person may do.</p>
+<p>The Menu shows only what the signed-in person may do, as large buttons with pictures in three groups:
+<b>This bill</b>, <b>Till</b> and <b>Manage shop</b>. A scan while it is open closes it and goes on the bill as usual.</p>
 <div class="table-wrap"><table>
 <tr><th>Menu entry</th><th>What it is</th></tr>
+<tr><th colspan="2">This bill</th></tr>
 <tr><td><b>Discount</b></td><td>Discounts and price changes on this bill.</td></tr>
+<tr><td><b>Held bills</b></td><td>Bills on hold. The button shows how many.</td></tr>
 <tr><td><b>Clear bill</b></td><td>Throw away the bill on the screen.</td></tr>
-<tr><td><b>Held bills</b></td><td>Bills on hold.</td></tr>
+<tr><th colspan="2">Till</th></tr>
 <tr><td><b>Sales &amp; refunds</b> (or <b>Receipts</b>)</td><td>Past sales: copies, refunds, voids — <a href="#sales">details</a>.</td></tr>
 <tr><td><b>Customers</b></td><td>When customers and credit are on.</td></tr>
 <tr><td><b>Open shift</b> / <b>Close shift</b></td><td>Start or end your shift — <a href="#shifts">details</a>.</td></tr>
 <tr><td><b>Shift &amp; cash</b></td><td>Cash in, cash out, cash drops, shift reports.</td></tr>
 <tr><td><b>Open cash drawer</b></td><td>Opens the drawer without a sale (recorded).</td></tr>
-<tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on).</td></tr>
 <tr><td><b>Manager PIN</b></td><td>A manager helps with this bill.</td></tr>
-<tr><td><b>Manage shop ›</b></td><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Inventory</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b>.</td></tr>
+<tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on).</td></tr>
+<tr><th colspan="2">Manage shop</th></tr>
+<tr><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Inventory</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b></td><td>The back office, for whoever may use it.</td></tr>
 </table></div>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
@@ -496,11 +500,11 @@ e-wallet on your terminal or bank app).</li>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="products">7. Products</h2>
-<p>Everything the till sells is a <b>product</b>. Open the list with <b>Menu → Manage shop › → Products</b>
+<p>Everything the till sells is a <b>product</b>. Open the list with <b>Menu → Manage shop → Products</b>
 (needs the permission <i>Edit products and categories</i>).</p>
 
 <div class="shots">
-<figure><img src="img/en-products.png" alt="The Products list" width="240" loading="lazy"><figcaption>Products: search by name, SKU or barcode, or scan.</figcaption></figure>
+<figure><img src="img/en-products.png" alt="The Products list" width="240" loading="lazy"><figcaption>Products: each with its picture or colour and its category. Search by name, SKU or barcode, or scan.</figcaption></figure>
 <figure><img src="img/en-product-new.png" alt="The New product form" width="240" loading="lazy"><figcaption>A new product: name, price, how it is sold, picture and colour.</figcaption></figure>
 </div>
 
@@ -617,7 +621,7 @@ colour. A coloured tile shows white text.</li>
 </ul>
 
 <h3 id="categories">Categories</h3>
-<p><b>Menu → Manage shop › → Categories</b>. Categories become the tabs of the selling screen's item list
+<p><b>Menu → Manage shop → Categories</b>. Categories become the tabs of the selling screen's item list
 (after <b>Popular</b> and <b>All</b>) and group the sales in reports.</p>
 <ul>
 <li><b>+</b> adds one (a name and a colour). Tap a category to rename it or change its colour.</li>
@@ -627,7 +631,7 @@ sales in the category report.</li>
 </ul>
 
 <h3 id="tax">Tax rates</h3>
-<p><b>Menu → Manage shop › → Tax rates</b> (needs <i>Change settings</i>). Most small grocery shops in
+<p><b>Menu → Manage shop → Tax rates</b> (needs <i>Change settings</i>). Most small grocery shops in
 Malaysia charge no tax at the till: then leave this list empty and choose nothing under <b>Tax</b> on the
 products.</p>
 <ul>
@@ -640,7 +644,7 @@ already contain the tax (the tax is worked out of the price) or the tax is added
 </ul>
 
 <h3 id="payment-methods">Payment methods</h3>
-<p><b>Menu → Manage shop › → Settings → Payment methods</b> (needs <i>Change settings</i>). The app starts with
+<p><b>Menu → Manage shop → Settings → Payment methods</b> (needs <i>Change settings</i>). The app starts with
 <b>Cash</b>, <b>Card</b>, <b>E-wallet / QR</b> and <b>Customer credit</b>. Add your own, such as DuitNow or
 Touch ’n Go, with <b>+</b>:</p>
 <ul>
@@ -706,7 +710,7 @@ per file.</li>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="promotions">8. Promotions</h2>
-<p><b>Menu → Manage shop › → Promotions</b>. Promotions are deals the till applies <b>by itself</b> when the
+<p><b>Menu → Manage shop → Promotions</b>. Promotions are deals the till applies <b>by itself</b> when the
 right items are on the bill — the cashier does nothing.</p>
 <div class="shots">
 <figure><img src="img/en-promotions.png" alt="The Promotions list" width="240" loading="lazy"><figcaption>Promotions: the deals the till applies by itself.</figcaption></figure>
@@ -770,7 +774,7 @@ price, and tills older than 1.15.0 use only the first price of a promotion with 
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="stock">9. Stock</h2>
-<p><b>Menu → Manage shop › → Inventory</b>, for staff with the permission <i>Receive, adjust and count stock</i>
+<p><b>Menu → Manage shop → Inventory</b>, for staff with the permission <i>Receive, adjust and count stock</i>
 (owner and manager by default).</p>
 <figure class="wide"><img src="img/en-inventory.png" alt="The Inventory screen" width="240" loading="lazy"><figcaption>Inventory: everything about stock in one place.</figcaption></figure>
 
@@ -849,7 +853,7 @@ delivery, adjustment and count of one product, with the stock after each. Tap a 
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="staff">10. Staff, PINs and roles</h2>
-<p><b>Menu → Manage shop › → Settings → Staff</b> (needs <i>Manage staff and roles</i> — by default only the owner).</p>
+<p><b>Menu → Manage shop → Settings → Staff</b> (needs <i>Manage staff and roles</i> — by default only the owner).</p>
 <figure class="wide"><img src="img/en-staff.png" alt="The Staff screen" width="240" loading="lazy"><figcaption>Staff: while no PIN is set, the app runs as the owner.</figcaption></figure>
 
 <h3 id="pin-login">Turning on PIN login</h3>
@@ -1056,7 +1060,7 @@ credit.</li>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="reports">13. Reports</h2>
-<p><b>Menu → Manage shop › → Reports</b> (needs <i>See sales reports</i>). Reports include the sales of every till of
+<p><b>Menu → Manage shop → Reports</b> (needs <i>See sales reports</i>). Reports include the sales of every till of
 the shop (with Google Drive backup on).</p>
 <figure class="wide"><img src="img/en-reports.png" alt="The Reports screen" width="240" loading="lazy"><figcaption>Reports: pick a period at the top.</figcaption></figure>
 
@@ -1301,32 +1305,37 @@ two Google accounts.</li>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="settings">17. Settings</h2>
-<p><b>Menu → Manage shop › → Settings</b>. Most settings need the permission <i>Change settings</i> (only the owner by
+<p><b>Menu → Manage shop → Settings</b>. Most settings need the permission <i>Change settings</i> (only the owner by
 default; others are asked for an owner's PIN). Settings marked <b>this till</b> apply only to the phone they are
 changed on; the others apply to the whole shop and reach every till through Google Drive backup.</p>
-<figure class="wide"><img src="img/en-settings.png" alt="The Settings screen" width="240" loading="lazy"><figcaption>Settings, in the order they appear.</figcaption></figure>
+<figure class="wide"><img src="img/en-settings.png" alt="The Settings screen" width="240" loading="lazy"><figcaption>Settings, in groups, in the order they appear.</figcaption></figure>
 <div class="table-wrap"><table>
 <tr><th>Setting</th><th>What it does</th><th>Applies to</th></tr>
+<tr><th colspan="3">This till</th></tr>
 <tr><td><b>App language</b></td><td><i>Phone's language</i>, <i>English</i> or <i>Bahasa Melayu</i> for the screens. Receipts have their own language.</td><td>this phone</td></tr>
 <tr><td><b>Item size on the selling screen</b></td><td><i>Large (fewer items)</i>, <i>Medium</i> (default) or <i>Small (more items)</i> tiles.</td><td>this till</td></tr>
-<tr><td><b>Customer screen (second screen)</b></td><td>Shows the bill to customers on a second display — <a href="#customer-screen">details</a>. On by default.</td><td>this till</td></tr>
-<tr><td><b>Store &amp; receipt</b></td><td>Shop details, receipt, tax, rounding, shifts, customers, scale labels — <a href="#settings-store">below</a>.</td><td>shop</td></tr>
 <tr><td><b>Printer &amp; cash drawer</b></td><td>Receipt printer and drawer — <a href="#settings-printer">below</a>.</td><td>this till</td></tr>
 <tr><td><b>Barcode scanner &amp; camera</b></td><td>Test a scanner, serial scanner, camera scanning — <a href="#settings-scanner">below</a>.</td><td>this till</td></tr>
+<tr><td><b>Customer screen (second screen)</b></td><td>Shows the bill to customers on a second display — <a href="#customer-screen">details</a>. On by default.</td><td>this till</td></tr>
+<tr><th colspan="3">Shop</th></tr>
+<tr><td><b>Store &amp; receipt</b></td><td>Shop details, receipt, tax, rounding, shifts, customers, scale labels — <a href="#settings-store">below</a>.</td><td>shop</td></tr>
+<tr><td><b>Payment methods</b></td><td><a href="#payment-methods">Payment methods</a>.</td><td>shop</td></tr>
+<tr><td><b>Tax rates</b></td><td><a href="#tax">Tax rates</a>.</td><td>shop</td></tr>
+<tr><td><b>Categories</b></td><td><a href="#categories">Categories</a>.</td><td>shop</td></tr>
+<tr><td><b>Customers</b></td><td><a href="#customers">Chapter 12</a>.</td><td>shop</td></tr>
+<tr><th colspan="3">Staff and cash</th></tr>
 <tr><td><b>Staff</b></td><td>Staff, PINs, roles, when the till locks — <a href="#staff">chapter 10</a>.</td><td>shop (lock: this till)</td></tr>
 <tr><td><b>Shift &amp; cash</b></td><td><a href="#shifts">Chapter 11</a>.</td><td>this till</td></tr>
-<tr><td><b>Customers</b></td><td><a href="#customers">Chapter 12</a>.</td><td>shop</td></tr>
-<tr><td><b>Tax rates</b></td><td><a href="#tax">Tax rates</a>.</td><td>shop</td></tr>
-<tr><td><b>Payment methods</b></td><td><a href="#payment-methods">Payment methods</a>.</td><td>shop</td></tr>
-<tr><td><b>Categories</b></td><td><a href="#categories">Categories</a>.</td><td>shop</td></tr>
 <tr><td><b>Activity log</b></td><td><a href="#activity-log">Chapter 14</a>.</td><td>shop</td></tr>
+<tr><th colspan="3">Data and backups</th></tr>
 <tr><td><b>Google Drive backup</b></td><td><a href="#drive-backup">Google Drive backup</a>.</td><td>this till</td></tr>
 <tr><td><b>Backup &amp; restore</b></td><td><a href="#phone-backups">Backups, folder copy, files, restore</a>.</td><td>this till</td></tr>
 <tr><td><b>Daily sales report to Google Drive</b></td><td><a href="#drive-report">Daily sales report</a>.</td><td>this till</td></tr>
-<tr><td><b>Error reports</b></td><td><a href="#error-reports">Error reports</a>.</td><td>this phone</td></tr>
-<tr><td><b>App updates</b></td><td><a href="#updates">App updates</a>.</td><td>this phone</td></tr>
-<tr><td><b>Diagnostics</b></td><td><a href="#diagnostics">Diagnostics</a>.</td><td>this phone</td></tr>
+<tr><th colspan="3">Help and app</th></tr>
 <tr><td><b>User guide</b></td><td>Opens this guide in the app's language (LekasPOS 1.13.1 and newer).</td><td>—</td></tr>
+<tr><td><b>App updates</b></td><td><a href="#updates">App updates</a>.</td><td>this phone</td></tr>
+<tr><td><b>Error reports</b></td><td><a href="#error-reports">Error reports</a>.</td><td>this phone</td></tr>
+<tr><td><b>Diagnostics</b></td><td><a href="#diagnostics">Diagnostics</a>.</td><td>this phone</td></tr>
 <tr><td><b>About</b></td><td>Version, licence, website and privacy policy.</td><td>—</td></tr>
 </table></div>
 
@@ -1456,7 +1465,7 @@ model, Android version and memory. It <b>never</b> holds your sales, products, p
 Google account. Change your answer any time in <b>Settings → Error reports</b>.</p>
 
 <h3 id="diagnostics">Diagnostics</h3>
-<p><b>Settings → Diagnostics</b> (or Manage shop › Diagnostics) is for solving problems:</p>
+<p><b>Settings → Diagnostics</b> (or Manage shop Diagnostics) is for solving problems:</p>
 <ul>
 <li><b>Share the error log</b> — sends the phone's technical error log (no shop data) to whoever is helping you.</li>
 <li><b>Send a report to the developer</b> — with what happened and, if you want a reply, your phone or e-mail.</li>

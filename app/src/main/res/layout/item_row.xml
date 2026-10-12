@@ -11,6 +11,46 @@
     android:paddingEnd="16dp"
     android:paddingBottom="8dp">
 
+    <!-- A hub row's icon (Settings, Inventory): RowHolder.set(icon = ...). -->
+    <ImageView
+        android:id="@+id/row_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/icon_circle_bg"
+        android:importantForAccessibility="no"
+        android:padding="9dp"
+        android:tint="@color/brand"
+        android:visibility="gone" />
+
+    <!-- A product's picture, else its initials on its colour (the Products list): RowHolder.thumb. -->
+    <FrameLayout
+        android:id="@+id/row_thumb"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/thumb_bg"
+        android:importantForAccessibility="noHideDescendants"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/row_thumb_initials"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/row_thumb_picture"
+            android:importantForAccessibility="no"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+    </FrameLayout>
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"

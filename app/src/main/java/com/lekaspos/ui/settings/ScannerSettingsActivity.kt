@@ -88,7 +88,7 @@ class ScannerSettingsActivity : ScreenActivity() {
         sppLabel = f.info("")
         sppState = f.info("")
         renderSpp()
-        f.button(getString(R.string.scanner_spp_choose)) { chooseScanner() }
+        f.button(getString(R.string.scanner_spp_choose), icon = R.drawable.ic_scanner) { chooseScanner() }
         f.button(getString(R.string.scanner_spp_forget)) {
             address = null
             scannerName = null

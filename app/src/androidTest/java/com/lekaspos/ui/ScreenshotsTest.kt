@@ -126,6 +126,8 @@ class ScreenshotsTest {
             shoot(newProduct, File(dir, "$lang-product-new.png"))
             // The payment over the bill: how the customer pays (D-064).
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay.png")) { it.findViewById<View>(R.id.btn_pay).performClick() }
+            // The Menu: every job as a tile in its group (D-074).
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-menu.png")) { it.findViewById<View>(R.id.btn_menu).performClick() }
             // Its second step: "Other amount", RM100 typed — the change shows.
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay-cash.png")) { a ->
                 val total = graph.cart.state.value.priced.total

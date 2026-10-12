@@ -67,4 +67,12 @@
     <string name="help_add_product">Adding a product needs a manager\'s PIN. The manager then adds it, and it goes on this bill.</string>
     <string name="sell_not_found_manager">No product has barcode %1$s yet. A manager can add it now (their PIN first): it is saved for next time and goes on this bill.</string>
     <string name="safety_tell_owner">Please tell the shop owner: they can fix this in Menu → Manage shop → Settings.</string>
+    <!-- Groups of the Menu and of Settings (D-074). -->
+    <string name="menu_group_bill">This bill</string>
+    <string name="menu_group_till">Till</string>
+    <string name="settings_group_till">This till</string>
+    <string name="settings_group_shop">Shop</string>
+    <string name="settings_group_staff">Staff and cash</string>
+    <string name="settings_group_data">Data and backups</string>
+    <string name="settings_group_help">Help and app</string>
 </resources>

@@ -302,7 +302,10 @@ restore that `Db.open` applies before opening the database (D-044).
   payment"; (2) only when asked for, the keypad: the cash given with the live change and "Done", or one
   part of a split payment with every method. Taps within 500 ms of a step appearing are ignored (a double
   tap would pay). `PaymentViews` builds the button rows for both layouts (tests measure them).
-- Menu: cashier jobs first (Discount first, for whoever may); the back office under one "Manage shop" submenu.
+- Menu (`MenuSheet`, D-074): one sheet of tiles, an icon over each word, in groups — This bill (Discount first, for
+  whoever may), Till, Manage shop (the back office, one tap away). Hubs (Settings, Inventory) give each row an icon
+  (`RowHolder.set(icon)`), Settings in groups (`RowAdapter(header)`); buttons put an icon before the word with
+  `setIconText` (a span: tinted and centred on API 21, unlike compound drawables).
 - Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from
   `sum_day_product` over 30 days, kept 10 minutes; products read fresh by id). Tiles of products
   on the bill are highlighted with "×n"; picking a search result closes the search.

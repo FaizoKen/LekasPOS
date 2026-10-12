@@ -33,6 +33,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Discount typed by staff | Discount (bill / item) | Diskaun (bil / item) | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT` |
 | Price changed on the bill | price changed | harga diubah | `PRICE_OVERRIDE` |
 | Customer-facing second display | Customer screen (second screen) | Skrin pelanggan (skrin kedua) | `CustomerDisplay`, `dev.customer_screen` |
+| The Menu's groups (D-074) | This bill / Till / Manage shop | Bil ini / Kaunter / Urus kedai | `MenuSheet.group`, `menu_group_*`, `menu_manage` |
 
 ## Products and stock
 
@@ -93,6 +94,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | New version | App updates; Update x.y.z; What's new | Kemas kini aplikasi; Kemas kini x.y.z; Apa yang baharu | `AppUpdates`, `UpdateWorker` |
 | Reports to the developer | Error reports; Send a report to the developer | Laporan ralat; Hantar laporan kepada pembangun | `ErrorReports`, `relay/` |
 | Settings that travel vs stay | (store-wide) / this till | — | `setting` (LWW) vs `meta dev.*` |
+| The Settings screen's groups (D-074) | This till / Shop / Staff and cash / Data and backups / Help and app | Kaunter ini / Kedai / Kakitangan dan tunai / Data dan sandaran / Bantuan dan aplikasi | `settings_group_*` |
 
 ## Words to avoid in user-facing text
 

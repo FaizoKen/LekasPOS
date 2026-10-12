@@ -22,7 +22,7 @@ message, a new feature — in the same change:
 1. Find every mention: search both files for the old label (EN in `guide.html`, the `values-ms` text in `panduan.html`)
    and for the feature's chapter (`id="…"` anchors are the same in both files, e.g. `#payment`, `#shifts`).
 2. Edit **both** languages. Quote labels exactly as the strings say (`values/` for English, `values-ms/` for Malay) and
-   put them in `<b>…</b>`; menu paths as **Menu → Manage shop › → …**. Keep `id`s identical in both files; a new section
+   put them in `<b>…</b>`; menu paths as **Menu → Manage shop → …** (a group of the Menu, D-074). Keep `id`s identical in both files; a new section
    gets the same new `id` in both (the table of contents is a hand-kept `<nav class="toc">` list — add it there too).
 3. Plain language: short sentences, the shop's point of view, no code words (say "till", not "device"; "a manager's
    PIN", not "approval token"). Facts must match the code; `references/features.md` is the quick check.
@@ -90,8 +90,8 @@ Steps:
 3. **Entry point** — pick one:
    - Settings hub: add an `Entry(R.string.widgets_title, R.string.widgets_sub, WidgetsActivity::class.java)` to the list in
      `SettingsActivity.onCreate` (SettingsActivity.kt:57-84). The hub has no guard; the screen must guard itself.
-   - Selling-screen menu: in `SellActivity.showMenu` (SellActivity.kt:1580) add the string id to `items` (cashier jobs) or `office`
-     ("Manage shop ›" submenu) **only when `allowed(perm)`** — SellActivity's private `allowed` is `graph.permissions.shown(perm)` (SellActivity.kt:633), so a manager's
+   - Selling-screen menu: in `SellActivity.showMenu` add `m.item(R.string.widgets_title, R.drawable.ic_widgets)` under the
+     right `m.group(...)` (This bill / Till / Manage shop) **only when `allowed(perm)`** — SellActivity's private `allowed` is `graph.permissions.shown(perm)` (SellActivity.kt:633), so a manager's
      help also shows it (D-063: only what the person may do is listed), and a `when` branch
      `R.string.widgets_title -> startActivity(Intent(this, WidgetsActivity::class.java))`. Menu item ids are the string resource ids.
    - From another screen: `startActivity(Intent(this, WidgetsActivity::class.java))` or a `companion fun intent(ctx, id)` with extras

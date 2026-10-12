@@ -221,7 +221,7 @@ class CustomerScreen(host: Activity, display: Display, private val graph: AppGra
         lastProduct = productId
         lastPicture.visibility = View.GONE
         lastPicture.setImageDrawable(null)
-        lastInitials.text = line?.let { initials(it.name) }.orEmpty()
+        lastInitials.text = line?.let { TileColors.initials(it.name) }.orEmpty()
         val id = line?.productId ?: return paint(TileColor.NONE)
         val (look, colors) = graph.db().read { r ->
             ProductLookDao.get(r, id) to (categoryColors ?: CategoryDao.list(r).associate { it.id to it.color })
@@ -249,15 +249,6 @@ class CustomerScreen(host: Activity, display: Display, private val graph: AppGra
         if (l.fixed || (l.qty == 1000L && !l.weighed)) return amount
         val qty = if (l.weighed) "${MoneyFormat.formatQty(l.qty)} ${l.unit ?: "kg"}" else MoneyFormat.formatQty(l.qty)
         return "$qty × ${money(l.unitPrice)} = $amount"
-    }
-
-    private fun initials(name: String): String {
-        val words = name.trim().split(' ').filter { it.isNotEmpty() && it[0].isLetterOrDigit() }
-        return when {
-            words.size >= 2 -> "${words[0].first()}${words[1].first()}"
-            words.size == 1 -> words[0].take(2)
-            else -> ""
-        }.uppercase()
     }
 
     /** The bill's lines; the one just added on a light yellow. */

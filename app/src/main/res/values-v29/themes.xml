@@ -11,4 +11,8 @@
     <style name="Theme.Lekas.Dialog" parent="Base.Theme.Lekas.Dialog">
         <item name="android:forceDarkAllowed">false</item>
     </style>
+
+    <style name="Theme.Lekas.Menu" parent="Base.Theme.Lekas.Menu">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
 </resources>

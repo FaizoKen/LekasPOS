@@ -288,7 +288,7 @@
     <string name="settings_guide">User guide</string>
     <string name="settings_guide_sub">How to use LekasPOS, step by step (opens the website)</string>
     <string name="about_text">LekasPOS %1$s — a free, open-source point-of-sale app, licensed under the GNU General Public License v3.0: you may use, study, share and change it. Your data stays on this phone, and in your own Google Drive only if you turn on Google Drive backup. New versions: Settings → App updates, or Website &amp; updates.</string>
-    <string name="about_notices">Includes open-source software: AndroidX libraries (Core, RecyclerView, WorkManager, Room), Kotlin and kotlinx.coroutines, and the ZXing barcode library — all under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, under the Android Software Development Kit License.</string>
+    <string name="about_notices">Includes open-source software: AndroidX libraries (Core, RecyclerView, WorkManager, Room), Kotlin and kotlinx.coroutines, the ZXing barcode library and Google\'s Material icons — all under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, under the Android Software Development Kit License.</string>
     <string name="about_privacy">Privacy policy</string>
     <string name="about_website">Website &amp; updates</string>
     <string name="section_store">Store</string>

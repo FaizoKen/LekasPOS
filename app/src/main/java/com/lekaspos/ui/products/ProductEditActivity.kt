@@ -250,13 +250,13 @@ class ProductEditActivity : ScreenActivity() {
                 opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
             }
         } else {
-            form.button(getString(R.string.hist_title)) { startActivity(StockHistoryActivity.intent(this, p.id)) }
-            form.button(getString(R.string.inv_adjust)) { adjustProduct(p.id) { reloadStock(p.id) } }
+            form.button(getString(R.string.hist_title), icon = R.drawable.ic_history) { startActivity(StockHistoryActivity.intent(this, p.id)) }
+            form.button(getString(R.string.inv_adjust), icon = R.drawable.ic_adjust) { adjustProduct(p.id) { reloadStock(p.id) } }
         }
         active = form.switch(getString(R.string.product_active), p?.active ?: true)
         form.button(getString(R.string.save), primary = true) { save() }
         if (p == null && intent.getBooleanExtra(EXTRA_SERIES, false)) form.button(getString(R.string.product_save_next)) { save(next = true) }
-        if (p != null) form.button(getString(R.string.delete)) { delete() }
+        if (p != null) form.button(getString(R.string.delete), danger = true) { delete() }
         content.removeAllViews()
         content.addView(form.view)
     }

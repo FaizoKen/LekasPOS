@@ -178,7 +178,7 @@ class PromotionEditActivity : ScreenActivity() {
         productList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         f.add(productList)
         renderProducts()
-        f.button(getString(R.string.promo_add_product)) {
+        f.button(getString(R.string.promo_add_product), icon = R.drawable.ic_add) {
             @Suppress("DEPRECATION")
             startActivityForResult(ProductPickActivity.intent(this, getString(R.string.promo_add_product)), REQ_PICK)
         }
@@ -190,7 +190,7 @@ class PromotionEditActivity : ScreenActivity() {
         active = f.switch(getString(R.string.promo_active), p?.active ?: true)
 
         f.button(getString(R.string.save), primary = true) { save() }
-        if (p != null) f.button(getString(R.string.delete)) { delete(p) }
+        if (p != null) f.button(getString(R.string.delete), danger = true) { delete(p) }
         content.removeAllViews()
         content.addView(f.view)
         showKind()

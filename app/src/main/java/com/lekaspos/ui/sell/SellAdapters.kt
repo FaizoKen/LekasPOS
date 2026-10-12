@@ -307,7 +307,7 @@ class ProductTileAdapter(
         h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
         h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
         h.pictureBox.visibility = if (p.imageId != null || rowHasPicture(position)) View.VISIBLE else View.GONE
-        h.initials.text = if (p.imageId == null) initials(p.name) else ""
+        h.initials.text = if (p.imageId == null) TileColors.initials(p.name) else ""
         showPicture(h.picture, p.imageId)
         bindBadge(h, p)
         h.itemView.setOnClickListener { onClick(p) }
@@ -331,16 +331,6 @@ class ProductTileAdapter(
         h.texts.setPadding(pad, pad, pad, pad)
         h.itemView.minimumHeight = (s.minHeightDp * d).toInt()
         if (s.pictureHeightPx > 0) h.pictureBox.layoutParams = h.pictureBox.layoutParams.also { it.height = s.pictureHeightPx }
-    }
-
-    /** "Beras Faiza 10kg" → "BF": in the picture's place on a tile without one. */
-    private fun initials(name: String): String {
-        val words = name.trim().split(' ').filter { it.isNotEmpty() && it[0].isLetterOrDigit() }
-        return when {
-            words.size >= 2 -> "${words[0].first()}${words[1].first()}"
-            words.size == 1 -> words[0].take(2)
-            else -> ""
-        }.uppercase()
     }
 
     /** White text on a coloured tile; the plain tile as before. */

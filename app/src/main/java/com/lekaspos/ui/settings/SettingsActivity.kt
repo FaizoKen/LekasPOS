@@ -30,16 +30,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Settings hub. */
+/** Settings hub: in groups, each row with its icon (D-074). */
 class SettingsActivity : ScreenActivity() {
 
     private class Entry(
         val title: Int,
         val subtitle: Int?,
         val target: Class<*>?,
+        val icon: Int = 0,
         val sub: (() -> String?)? = null,
+        /** A group's heading instead of a row. */
+        val header: Boolean = false,
         val action: (() -> Unit)? = null,
     )
+
+    private fun group(title: Int) = Entry(title, null, null, header = true)
 
     private var adapter: RowAdapter<Entry>? = null
 
@@ -55,42 +60,48 @@ class SettingsActivity : ScreenActivity() {
         super.onCreate(savedInstanceState)
         val v = setScreen(getString(R.string.settings_title), R.layout.list_plain) ?: return
         val entries = listOf(
-            Entry(R.string.settings_language, null, null, sub = { languageName(AppLanguage.get(this)) }) { chooseLanguage() },
-            Entry(R.string.settings_tiles, null, null, sub = { tileName(graph.settings.device.value.tileSize) }) { chooseTiles() },
-            Entry(R.string.settings_customer_screen, null, null, sub = { customerScreenLine() }) { customerScreen() },
-            Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java),
-            Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java),
-            Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java),
-            Entry(R.string.staff_title, R.string.settings_staff_sub, StaffActivity::class.java),
-            Entry(R.string.shift_title, R.string.settings_shift_sub, ShiftActivity::class.java),
-            Entry(R.string.customers_title, R.string.settings_customers_sub, CustomersActivity::class.java),
-            Entry(R.string.menu_tax_rates, null, TaxRatesActivity::class.java),
-            Entry(R.string.pm_title, R.string.settings_pm_sub, PaymentMethodsActivity::class.java),
-            Entry(R.string.menu_categories, null, CategoriesActivity::class.java),
-            Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java),
-            Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java),
-            Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java),
-            Entry(R.string.drive_report_title, null, null, sub = { DriveReportUi.subtitle(this, graph.dailyReport.status.value) }) {
+            group(R.string.settings_group_till),
+            Entry(R.string.settings_language, null, null, R.drawable.ic_language, sub = { languageName(AppLanguage.get(this)) }) { chooseLanguage() },
+            Entry(R.string.settings_tiles, null, null, R.drawable.ic_grid, sub = { tileName(graph.settings.device.value.tileSize) }) { chooseTiles() },
+            Entry(R.string.settings_printer, R.string.settings_printer_sub, PrinterSettingsActivity::class.java, R.drawable.ic_print),
+            Entry(R.string.settings_scanner, R.string.settings_scanner_sub, ScannerSettingsActivity::class.java, R.drawable.ic_scanner),
+            Entry(R.string.settings_customer_screen, null, null, R.drawable.ic_cast, sub = { customerScreenLine() }) { customerScreen() },
+            group(R.string.settings_group_shop),
+            Entry(R.string.settings_store, R.string.settings_store_sub, StoreSettingsActivity::class.java, R.drawable.ic_store),
+            Entry(R.string.pm_title, R.string.settings_pm_sub, PaymentMethodsActivity::class.java, R.drawable.ic_card),
+            Entry(R.string.menu_tax_rates, null, TaxRatesActivity::class.java, R.drawable.ic_tax),
+            Entry(R.string.menu_categories, null, CategoriesActivity::class.java, R.drawable.ic_category),
+            Entry(R.string.customers_title, R.string.settings_customers_sub, CustomersActivity::class.java, R.drawable.ic_people),
+            group(R.string.settings_group_staff),
+            Entry(R.string.staff_title, R.string.settings_staff_sub, StaffActivity::class.java, R.drawable.ic_staff),
+            Entry(R.string.shift_title, R.string.settings_shift_sub, ShiftActivity::class.java, R.drawable.ic_cash),
+            Entry(R.string.settings_audit, R.string.settings_audit_sub, AuditLogActivity::class.java, R.drawable.ic_history),
+            group(R.string.settings_group_data),
+            Entry(R.string.sync_title, R.string.settings_sync_sub, SyncActivity::class.java, R.drawable.ic_cloud),
+            Entry(R.string.backup_title, R.string.settings_backup_sub, BackupActivity::class.java, R.drawable.ic_backup),
+            Entry(R.string.drive_report_title, null, null, R.drawable.ic_upload_file, sub = { DriveReportUi.subtitle(this, graph.dailyReport.status.value) }) {
                 DriveReportUi.open(this)
             },
-            Entry(R.string.error_reports_title, null, null, sub = { reportsLine() }) { chooseReports() },
+            group(R.string.settings_group_help),
+            // The user guide on the website, in the app's language (D-070): the shop's manual, kept true with each release.
+            Entry(R.string.settings_guide, R.string.settings_guide_sub, null, R.drawable.ic_guide) { open(getString(R.string.guide_url)) },
             // Both are the shop's choices like the other settings: a cashier turned the daily update
             // check or the error reports off (2026-10 review).
-            Entry(R.string.update_settings_title, null, null, sub = { UpdateUi.subtitle(this, graph.updates.status.value) }) {
+            Entry(R.string.update_settings_title, null, null, R.drawable.ic_update, sub = { UpdateUi.subtitle(this, graph.updates.status.value) }) {
                 // For this one change: a manager's PIN here no longer opened the rest of Settings too.
                 withApproval(Perm.SETTINGS) { UpdateUi.settings(this, scope) }
             },
-            Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java),
-            // The user guide on the website, in the app's language (D-070): the shop's manual, kept true with each release.
-            Entry(R.string.settings_guide, R.string.settings_guide_sub, null) { open(getString(R.string.guide_url)) },
-            Entry(R.string.settings_about, null, null, sub = { aboutLine() }) { about() },
+            Entry(R.string.error_reports_title, null, null, R.drawable.ic_bug, sub = { reportsLine() }) { chooseReports() },
+            Entry(R.string.menu_diagnostics, null, DiagnosticsActivity::class.java, R.drawable.ic_diagnostics),
+            Entry(R.string.settings_about, null, null, R.drawable.ic_info, sub = { aboutLine() }) { about() },
         )
         val adapter = RowAdapter<Entry>(
-            bind = { h, e -> h.set(getString(e.title), e.sub?.invoke() ?: e.subtitle?.let { getString(it) }) },
+            bind = { h, e -> h.set(getString(e.title), e.sub?.invoke() ?: e.subtitle?.let { getString(it) }, icon = e.icon) },
             onClick = { e ->
                 val action = e.action
                 if (action != null) action() else e.target?.let { startActivity(Intent(this, it)) }
             },
+            header = { e -> if (e.header) getString(e.title) else null },
         )
         adapter.submit(entries)
         this.adapter = adapter
