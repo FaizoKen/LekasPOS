@@ -12,17 +12,14 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -279,7 +276,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 width = (billPaneDp() * resources.displayMetrics.density).toInt()
                 weight = 0f
             }
-            alignBill()
         }
 
         cartList.layoutManager = LinearLayoutManager(this)
@@ -872,26 +868,6 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     /** Settings → Item tiles on this till (DeviceSettings.TILES_*), as the grid shows it now. */
     private var tileSize = DeviceSettings.TILES_MEDIUM
-
-    /**
-     * Two panes (D-076): the bill's summary moves from under the bill to a band above it, as tall as the search
-     * row and chips beside it less the brand bar, so the bill's first line is level with the first row of tiles.
-     * The chips count while a search hides them: the bill does not jump. A brand bar on two lines (many pills)
-     * leaves no band: the bill then starts a little lower.
-     */
-    private fun alignBill() {
-        val band = findViewById<ViewGroup>(R.id.bill_header)
-        (summary.parent as ViewGroup).removeView(summary)
-        band.addView(summary, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL))
-        val searchRow = findViewById<View>(R.id.search_row)
-        val topBar = findViewById<View>(R.id.top_bar)
-        val align = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            val h = (searchRow.height + categoryList.layoutParams.height - topBar.height).coerceAtLeast(0)
-            if (band.minimumHeight != h) band.post { band.minimumHeight = h } // not inside this layout pass
-        }
-        searchRow.addOnLayoutChangeListener(align)
-        topBar.addOnLayoutChangeListener(align)
-    }
 
     /**
      * The bill pane's width beside the tiles (D-066): about a third of the screen, at least what its

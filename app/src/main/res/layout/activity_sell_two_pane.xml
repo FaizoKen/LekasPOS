@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Selling screen, two panes (landscape, tablets): catalogue on the left from the top of the screen, bill on the
-     right under the brand bar (store name, pills, Menu). The bill's first line is level with the first row of
-     tiles (SellActivity.alignBill): the owner asked for both lists to start on one line, and the tiles to get
-     the height the full-width bar took (2026-10-13). -->
+     right right under the brand bar (store name, pills, Menu). The tiles get the height the full-width bar took
+     (the owner, 2026-10-13, D-076). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root"
@@ -32,9 +31,7 @@
             android:layout_weight="3"
             android:orientation="vertical">
 
-            <include
-                android:id="@+id/search_row"
-                layout="@layout/sell_search" />
+            <include layout="@layout/sell_search" />
 
             <include
                 layout="@layout/sell_catalog"
@@ -56,15 +53,6 @@
             android:orientation="vertical">
 
             <include layout="@layout/sell_top_bar" />
-
-            <!-- The bill's summary ("3 items · discount …", moved here from under the bill): its height is set
-                 so the bill starts level with the tiles. -->
-            <FrameLayout
-                android:id="@+id/bill_header"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp" />
 
             <include
                 layout="@layout/sell_cart"

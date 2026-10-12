@@ -1592,25 +1592,25 @@ the selling screen must stay one screen); Material Components' bottom sheet and 
 libraries, D-002; API 29+); icons without words (cashiers must not guess, D-049); moving the back office to a separate
 home screen (the till opens on selling, D-064).
 
-### D-076 — Buttons that look like buttons, the tiles from the top, the beep on the till (1.17.0, 2026-10-13)
+### D-076 — Buttons that look like buttons, the tiles from the top, the beep on the till (1.17.0 / 1.17.1, 2026-10-13)
 The owner's feedback on 1.16.1 (2026-10-13): "some button is not looks like button"; a customer screen cast to a TV
 took the beeps with it "while that screen doesn't have sound"; the catalogue "looks confusing … it should 'All' as
-default … the item is auto missing from list"; held sideways, the tiles should start at the top and level with the
-bill; "share option i think is useless because tab tills basically just tills".
+default … the item is auto missing from list"; held sideways, the tiles should start at the top ("maybe no need header on right
+side"); "share option i think is useless because tab tills basically just tills".
 - **Every tappable control has a button's shape.** Android's dialog buttons (OK, Cancel, Delete… — 91 of them) were
   bare words: the dialog theme now gives them our outlined button, the main one filled (`Widget.Lekas.Button.Bar`,
   `.Bar.Main`). The payment's Cancel, Back and Split payment (`Widget.Lekas.Button.Text`, removed) are outlined
-  buttons; the selling screen's Price check and Items tools are outlined (filled while open); Menu sits in a darker box
-  like the pills beside it; Diagnostics' Stop / Delete test data / Share report are real buttons. Three "Tap here" texts
+  buttons; the selling screen's Price check and Items tools are outlined (filled while open); Menu is a pill like the
+  others on the bar ("⋮ Menu" on one line; 1.17.0's darker box "looks not nice", 1.17.1); Diagnostics' Stop / Delete test data / Share report are real buttons. Three "Tap here" texts
   became buttons: the Products list's "Add product" for an unknown barcode, the camera's "Allow camera" / "Open
   settings", and the customer's balance (tapping it opened the actions) is now plain with **Take a repayment** and
   **More** under it.
 - **The catalogue opens on All**, the first chip; Popular (the 40 best sellers of 30 days) is next to it. Opened on
   Popular, the other products looked missing.
 - **Two panes: the tiles from the top.** Held sideways and on tablets the green bar (store name, pills, Menu) is over the
-  bill only; the search row, chips and tiles start at the top of the screen. The bill's summary ("3 items · discount")
-  moved from under the bill to a band above it, as tall as the search row and chips less the bar, so the bill's first
-  line is level with the first row of tiles (`SellActivity.alignBill`). On Android 15+, where the app draws under the
+  bill only; the search row, chips and tiles start at the top of the screen; the bill starts right under the bar, as before.
+  (1.17.0 moved the bill's summary to a band above the bill so its first line was level with the first row of tiles;
+  the owner wanted the bill right under the bar again — 1.17.1.) On Android 15+, where the app draws under the
   status bar, a strip of the bar's colour goes there (`status_strip`).
 - **No Share on the "sale done" window.** A till has no app to share to; the cashier saw the button after every sale. A
   receipt is still shared from Sales & refunds → the sale (a shop running the till on its phone).

@@ -865,7 +865,7 @@ same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g
 ### 9.6 Resources (`RES/`)
 `values/` + `values-ms/`: `strings.xml` (496/495 entries), `strings_{a11y,cashier,display,fraud,hw,look,promo,reports,safety,staff,sync,update}.xml` (same files in both
 languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Button.Bar(.Main) (dialog buttons, set by `Theme.Lekas.Dialog`, D-076),Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
-`colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only; `status_strip`, `search_row`, `cart_side` with the top bar and `bill_header`, D-076);
+`colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only; `status_strip`, `cart_side` with the top bar, D-076);
 `layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`,
 `item_section.xml`, `item_menu_tile.xml` (MenuSheet), `top_action.xml`, selling-screen layouts; `drawable/ic_*.xml` icons (Material icons, Apache 2.0; new ones made
 with explicit path separators and no `evenOdd` fill, which API 21 lacks), `Theme.Lekas.Menu` (the Menu sheet); `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.

@@ -103,12 +103,12 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 ### 2.1 Layout
 - Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
   bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). Two panes (D-076): search row, chips and tiles from the
-  top of the screen; the top bar over the bill only; the summary in a band above the bill (`bill_header`) so the bill
-  starts level with the first row of tiles (`alignBill`); a brand-colour `status_strip` under the status bar on
+  top of the screen; the top bar over the bill only, the bill right under it (1.17.1: a band above the bill that lined it up
+  with the tiles was taken out at the owner's request); a brand-colour `status_strip` under the status bar on
   Android 15+. Recreated on rotation (like the lock screen, camera and
   Diagnostics; back-office screens are not, D-054). Orientation locked while the payment is open.
-- Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu** (in a darker
-  box, `top_button_bg`; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
+- Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu** (a pill like the
+  others, `pill_info_bg`, "⋮ Menu" on one line, 1.17.1; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
   shown and a non-Play install). Pills that do not fit wrap to a second line.
 - Safety pill, first match wins (`renderSafety`): Data problem → Backup: sign in (sync on, auth needed) → Not
   backed up (sync on, changes waiting, no success for 24 h) → Storage almost full (free < max(300 MB, DB + 100 MB,
@@ -116,7 +116,7 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   (`safety_pill_at_risk`, sync off). Without SETTINGS a tap shows `safety_tell_owner`. A shop with no products and
   no sales shows none (`BackupService.FRESH_MS` = 3 days).
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
-  incl. tax/tax"; above the bill in two panes), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
+  incl. tax/tax"), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
 - Empty bill: help text and the **last sale** of this app run (`CheckoutService.last`: change again, "Print receipt" until
   its receipt was printed, then "Print a copy").
 

@@ -39,7 +39,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
-| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top, level with the bill; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test build **v1.17.0** (build 180, pre-release, branch `ui-feedback`) — waiting for the owner's phone check |
+| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test build v1.17.0 (build 180) → **1.17.1** on branch `ui-feedback`: the bill right under the bar again, Menu a pill (the owner's check of 1.17.0) |
 
 ## Open questions for the user
 
@@ -2036,11 +2036,11 @@ bill only") and where Share goes ("remove after a sale only").
 - [x] **Buttons**: an audit of everything tappable that showed as bare text. Dialog buttons (91, Android's bare words) get
       our outlined shape, the main one filled (`Theme.Lekas.Dialog` → `Widget.Lekas.Button.Bar`); the payment's Cancel /
       Back / Split payment outlined (`Widget.Lekas.Button.Text` removed); Price check and Items outlined; Menu in a darker
-      box; Diagnostics' three buttons; Products list "Add product" button for an unknown barcode; camera "Allow camera" /
+      box (a pill in 1.17.1); Diagnostics' three buttons; Products list "Add product" button for an unknown barcode; camera "Allow camera" /
       "Open settings" button; a customer's balance no longer a hidden tap: **Take a repayment** and **More** under it
 - [x] **Catalogue opens on All** (first chip), Popular next to it
 - [x] **Two panes**: search, chips and tiles from the top; the top bar over the bill only; the bill's summary in a band
-      above the bill sized so its first line is level with the first row of tiles (`alignBill`); a brand strip under the
+      above the bill sized so its first line is level with the first row of tiles (`alignBill`, taken out in 1.17.1); a brand strip under the
       status bar on Android 15+
 - [x] **No Share on the sale-done window** (Sales & refunds → the sale keeps it)
 - [x] **Settings → Beep sound** (per till): This till's speaker (default) / Customer screen, when connected / Off;
@@ -2061,16 +2061,25 @@ bill only") and where Share goes ("remove after a sale only").
       assets `LekasPOS.apk`, `LekasPOS-1.17.0.apk`, `mapping-1.17.0.txt`; SHA-256 `20360ce4…0ced`; certificate SHA-256
       `0a67abec…d4b9`; What's new in English and Malay. 1.16.1 stays the latest release; phones with "Include test
       versions" are offered it
-- [ ] The owner's phone check; then merge `ui-feedback` into `main`, perf FULL, public release (smoke baseline, guide's
-      "For LekasPOS 1.17.0")
+- [x] The owner's check of v1.17.0 (2026-10-13): "on right side, its on item list after header position like before..and
+      menu button at header looks not nice please fix it properly" → 1.17.1 (below)
+
+### 1.17.1 — the bill right under the bar; Menu a pill
+
+- [x] Two panes: the band above the bill (`bill_header`, `alignBill`) taken out — the bill starts right under the green bar
+      as before 1.17.0; the summary ("3 items …") back beside the total
+- [x] Menu: a pill like the others on the bar (`pill_info_bg`, 40dp drawn in its 56dp target, "⋮ Menu" on one line);
+      `top_button_bg` removed; the bar's end padding 8dp so the pill does not touch the screen's edge
+- [x] Docs: guide EN + MS (the totals line), `features.md`, `codemap.md`, D-076, this file
+- [ ] CI; guide pictures; test build v1.17.1
 
 ### Needs real-device testing (1.17.0)
 
 1. **Beep with the customer screen** (the reason for the setting): cast to the TV (or HDMI), scan an item: the beep comes
    from the tablet. Settings → Beep sound → Customer screen, when connected: from the TV. Off: silent. Not found: the low
    tone, same choices.
-2. **Tablet held sideways** and a phone held sideways: tiles start at the top; the bill's first line level with the first
-   row of tiles; the store name, pills and Menu above the bill; with many pills (held bills, backup, printer) nothing
+2. **Tablet held sideways** and a phone held sideways: tiles start at the top; the bill right under the store name, pills
+   and Menu; with many pills (held bills, backup, printer) nothing
    cut off.
 3. **Selling screen opens on All** (with sales in the last 30 days, Popular is the second chip).
 4. **Dialogs**: any confirm (e.g. Clear bill, Delete a product): the buttons have a border, the main one green.
