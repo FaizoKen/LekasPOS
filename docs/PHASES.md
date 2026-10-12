@@ -36,7 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
-| — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | the owner asked to release it (2026-10-12) |
+| — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 
 ## Open questions for the user
@@ -1964,6 +1964,14 @@ some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner
       touched by this change; worth a look on its own
 - [x] Guide pictures refreshed from run 38261007337: phone `sell`, `sell-empty`, `pay`, `settings`, `inventory`,
       `products`, `shift`, the new `menu` (EN + MS), and `tablet-sell`
+
+- [x] CI on main a136574 (run 38263926799, **build 169**): all jobs green — instrumented API 21 and 36, tablet, release smoke
+      (upgrade from 1.15.0) API 21 and 36, lint. Release APK **1,654,673 bytes**; certificate SHA-256 `0a67abec…d4b9`
+- [x] **v1.16.0 is the latest release** (2026-10-12; no pre-release first, at the owner's request). Assets `LekasPOS.apk`,
+      `LekasPOS-1.16.0.apk`, `mapping-1.16.0.txt`; SHA-256 `6021eab8…26bf` (the website's Download link checked); notes
+      with What's new in English and Malay. Smoke baseline (`PREV_APK_URL`) v1.16.0; the guide says "For LekasPOS 1.16.0";
+      `llms.txt` mentions the Menu's groups. Privacy policy unchanged (nothing new stored, sent or asked). Shops on 1.6.1+
+      are offered it inside the app
 
 ### Needs real-device testing (1.16.0)
 

@@ -27,7 +27,8 @@ Facts an assistant should get right when helping a LekasPOS user:
   printer, USB/Bluetooth barcode scanners (keyboard mode, or serial SPP), the phone camera, weighing-scale barcode
   labels (no scale cable), and a customer screen on a second display (HDMI, USB-C or Miracast screen mirroring — not
   Google Home "Cast screen").
-- Where things are: the selling screen's Menu → Manage shop → Products, Categories, Promotions, Inventory, Reports,
+- Where things are: the selling screen's Menu (buttons with pictures in groups: This bill, Till, Manage shop; from
+  1.16.0) → Manage shop → Products, Categories, Promotions, Inventory, Reports,
   Settings, Tax rates, Diagnostics. Shifts: Menu → Open shift / Close shift. Past sales, refunds, voids:
   Menu → Sales & refunds.
 
