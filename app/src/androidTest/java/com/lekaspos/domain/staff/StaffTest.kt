@@ -125,7 +125,7 @@ class StaffTest {
         val approval = assertNotNull(gate.approve(manager, "5555", Perm.VOID).second)
         assertEquals(manager, gate.actor(Perm.VOID, approval).approvedBy)
         assertEquals(cashier, gate.actor(Perm.VOID, approval).staffId)
-        assertNull(gate.actorOrNull(Perm.REFUND, approval)) // an approval covers one permission
+        assertNull(gate.actorOrNull(Perm.OPEN_DRAWER, approval)) // an approval covers one permission (REFUND: her own since 1.14.0)
 
         // A screen holding the approval allows it until the screen closes or the till locks.
         val token = gate.elevate(approval)
