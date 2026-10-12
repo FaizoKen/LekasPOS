@@ -1480,6 +1480,42 @@ Rejected: refusing to sell a product with no price (stops the till for want of a
 cashier keeps going); a synced "shifts done" setting key (shops that already did it on 1.12.1–1.13.0 have no
 such key, the log entry they all have); a fourth About button (AlertDialog has three).
 
+### D-072 — Cashiers refund, take returns and void the sale they just made (1.14.0, 2026-10-12)
+The owner: "i think we just give access to cashier "refund/return" right ? please implement this properly". A customer
+bringing an item back waited for a manager's PIN (Menu → Manager PIN, then the PIN again on the refund); the owner
+prefers the cashier keeps going, with the action on record for the owner (as D-067, D-071).
+- **REFUND in the Cashier role by default** (`Perm.DEFAULT_CASHIER`, the seed of a new shop). A refund is a new
+  numbered document with its reason, linked to the sale, limited to what was bought and not yet returned.
+- **Voids:** then asked "how about void, should we give access to cashier too?" — "you decide and do your best". Not
+  the full void: it takes a whole sale out of the books, and "sell, void later, keep the cash" leaves the drawer count
+  right. A new permission **"Void their own last sale (within 5 minutes)"** (`Perm.VOID_LAST`, bit 18; in the Cashier
+  default) covers the honest need — the wrong payment method, the wrong items, a customer who changed their mind at
+  the counter: only a sale made by the person signed in, on this till, still its latest sale or refund, in the shift
+  still open, 0–5 minutes old (`core/staff/VoidLast`; checked on the sale screen and again in the void's transaction,
+  else "…Ask a manager to void this one."). No PIN asked; audited `SALE_VOID` like any void. `VOID` includes it
+  (`Perm.implied` in `effective`, `lacksAny`, `addsTo`, the grant check), so manager roles need no new bit; the role
+  editor shows it on and locked while "Void sales" is on.
+- **Shops made before 1.14.0** get both (`Perm.CASHIER_1_14`) once on their built-in Cashier role
+  (`StaffService.upgradeCashierRole`, before the first load of who may do what): a real LWW write, so every till ends
+  up the same (the seed rows of two app versions tie at (0, 0) and would differ for good); audited `ROLE_CHANGE`
+  "Cashier: refunds and void own last sale on (LekasPOS 1.14.0)". Once per shop: skipped when the synced activity log
+  has that entry (a till that updates later, or after the owner switched them off), when the role has both already,
+  and on a till whose seed had them (LOCAL `upgrade.cashier_1_14`, set by `Seed.insert`, also when a new till joins a
+  shop). The owner switches either off in Staff → Roles and it stays off. Custom roles are not changed.
+- **On record:** every refund and void is in the activity log (with the receipt and the reason), in Reports → Staff
+  check per person and in the shift report (cash paid back comes out of the expected cash).
+- Known gaps: a new 1.14.0 till whose owner switches these off before an older till of the same shop updates — that
+  till then adds them again (it has no log entry to see); rare, the owner switches them off once more. The 5 minutes
+  are measured by the phone's clock: a clock set back could stretch them (the "check the date and time" warning and the
+  activity log still show it).
+Rejected: a database migration (only the roles nobody edited, at (0, 0): shops that ever touched the Cashier role would
+not get it, and seed rows of two versions would differ for good); a refund limit or "same day only" for cashiers (more
+rules at the till; the owner prefers the record); lending REFUND through a manager's help at the till (help is for one
+bill; D-067 took refunds out of it on purpose); giving cashiers every void (a void rewrites the day's books, see
+above); "void own last sale" without a time limit or for any of their sales (the longer it is possible, the more it
+is the fraud and not the fix); tying it to REFUND instead of a permission of its own (the owner could not keep one
+without the other).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

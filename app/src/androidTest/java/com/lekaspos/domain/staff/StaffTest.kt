@@ -436,4 +436,46 @@ class StaffTest {
         assertTrue(events.count { it == Entity.STAFF } >= 2)
         assertTrue(events.count { it == Entity.AUDIT } >= 4)
     }
+
+    @Test
+    fun cashiersGetTheirOneFourteenPermissionsOncePerShop() = runBlocking {
+        val db = graph.db()
+        fun cashierRole() = runBlocking { assertNotNull(db.read { RoleDao.get(it, Seed.Ids.ROLE_CASHIER) }) }
+        fun logged() = runBlocking {
+            db.read { AuditDao.existsWithDetail(it, AuditAction.ROLE_CHANGE, StaffService.CASHIER_1_14_DETAIL) }
+        }
+        // A new shop: the seed has it, nothing to add or to record.
+        assertTrue(Perm.has(cashierRole().perms, Perm.CASHIER_1_14))
+        graph.staffAdmin.upgradeCashierRole()
+        assertFalse(logged())
+
+        // A shop made before 1.14.0 (its own Cashier edit kept): refunds and "void own last sale" added once, synced, on record.
+        val before = (Perm.DEFAULT_CASHIER and Perm.CASHIER_1_14.inv()) or Perm.DISCOUNT
+        db.write(reserveIds = 0L) { tx ->
+            tx.update("UPDATE role SET perms = ? WHERE id = ?", before, Seed.Ids.ROLE_CASHIER)
+            Meta.put(tx.db, Seed.CASHIER_1_14_DONE, null)
+        }
+        db.syncEnabled = true
+        graph.staffAdmin.upgradeCashierRole()
+        assertEquals(before or Perm.CASHIER_1_14, cashierRole().perms)
+        assertTrue(logged())
+        val roleEvents = db.read { r -> r.queryList("SELECT entity FROM outbox") { it.getInt(0) } }.count { it == Entity.ROLE }
+        assertTrue(roleEvents >= 1) // a real version: every till ends up with it
+
+        // The owner switches it off: another till (or this one again) leaves it off — the shop's log says it was done.
+        graph.staffAdmin.saveRole(cashierRole(), cashierRole().name, before)
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Seed.CASHIER_1_14_DONE, null) }
+        graph.staffAdmin.upgradeCashierRole()
+        assertEquals(before, cashierRole().perms)
+        assertEquals("1", db.read { Meta.get(it, Seed.CASHIER_1_14_DONE) })
+
+        // Signed in, the cashier refunds without a manager; other voids than the last sale still need one.
+        val (_, cashier) = team()
+        graph.staffAdmin.saveRole(cashierRole(), cashierRole().name, Perm.DEFAULT_CASHIER)
+        graph.staff.lock()
+        graph.staff.signIn(cashier, "1111")
+        assertEquals(cashier, graph.permissions.actor(Perm.REFUND).staffId)
+        assertNull(graph.permissions.actorOrNull(Perm.VOID))
+        assertEquals(cashier, graph.permissions.actor(Perm.VOID_LAST).staffId)
+    }
 }

@@ -477,6 +477,7 @@ abstract class ScreenActivity : Activity(), DialogHost {
                     ActionRefused.Reason.WRONG_PIN -> R.string.pin_wrong_plain
                     ActionRefused.Reason.MORE_THAN_OWED -> R.string.error_more_than_owed
                     ActionRefused.Reason.OWNER_ONLY -> R.string.error_owner_only
+                    ActionRefused.Reason.VOID_LAST_ONLY -> R.string.error_void_last_only
                 },
             )
             // A picked file that is no sound backup: said in the screen's language, not the English message.

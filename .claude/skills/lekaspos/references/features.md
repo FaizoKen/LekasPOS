@@ -1,6 +1,6 @@
 # Features — what the app does today (behaviour reference)
 
-The current behaviour of LekasPOS **1.13.1**, feature by feature, for anyone changing the code. It complements
+The current behaviour of LekasPOS **1.14.0**, feature by feature, for anyone changing the code. It complements
 the design references (`architecture.md`, `database.md`, `money.md`, `sync.md`): those say *how* it is built,
 this says *what it does* and where. `docs/DECISIONS.md` is the history of *why* (D-numbers below); when it and
 this file disagree, the code wins — fix this file.
@@ -39,7 +39,8 @@ keep both true (see `recipes.md` → "Change something users see").
 | `DISCOUNT` | Give discounts | ✓ | |
 | `PRICE_OVERRIDE` | Change prices on a bill | ✓ | |
 | `VOID` | Void sales | ✓ | |
-| `REFUND` | Refunds | ✓ | |
+| `VOID_LAST` | Void their own last sale (within 5 minutes) | (included in VOID) | ✓ (since 1.14.0, D-072) |
+| `REFUND` | Refunds | ✓ | ✓ (since 1.14.0, D-072) |
 | `REPRINT` | Print receipt copies | ✓ | ✓ |
 | `OPEN_DRAWER` | Open the cash drawer | ✓ | |
 | `CASH_MOVE` | Cash in, cash out and drops | ✓ | |
@@ -55,6 +56,16 @@ keep both true (see `recipes.md` → "Change something users see").
 | `MANAGE_STAFF` | Manage staff and roles | | |
 
 Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); never renumber.
+- **Cashiers refund and void the sale just made (1.14.0, D-072)**: `REFUND` and `VOID_LAST` are in `DEFAULT_CASHIER`
+  (the seed of a new shop). A shop made before gets them (`Perm.CASHIER_1_14`) once on its built-in Cashier role
+  (`StaffService.upgradeCashierRole`, run by the first `StaffSession` load): a real LWW write (seed rows of two app
+  versions tie at (0, 0)), audited `ROLE_CHANGE` with `CASHIER_1_14_DETAIL`; skipped when the synced log already has
+  that entry, when the role has both, and on a till whose seed had them (LOCAL `upgrade.cashier_1_14`, set by
+  `Seed.insert`). The owner can switch either off in Roles; it stays off. Custom roles are not touched. Every refund
+  and void is on record (activity log, Reports → Staff check per person, the shift report).
+- **`VOID` includes `VOID_LAST`** (`Perm.implied`, used by `effective`, `lacksAny`, `addsTo` and the grant check):
+  manager roles need no new bit. The role editor shows "Void their own last sale" on and locked while "Void sales" is
+  on, and saves the role's own choice for it.
 
 ### 1.2 Three ways a missing permission is supplied (`ui/staff/StaffUi.kt`, `ui/common/ScreenActivity.kt`)
 
@@ -231,7 +242,7 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
 
 - List of every till's sales, newest first; search by receipt number (exact, digits only = this till first, `R…` =
   refunds). Detail buttons: Print copy (printer + REPRINT), Share (REPRINT), Refund / return (sale, not voided,
-  REFUND), Void (not voided, VOID).
+  REFUND), Void (not voided, VOID — or VOID_LAST for the sale just made, `SaleActions.mayVoidAsLast`; no PIN asked).
 - Refund: per-line quantities (partial, repeatable), "Put the returned items back into stock" (default on), reason
   required, "Pay back with" (default: credit if any credit was used, else the method that paid most); amounts pro
   rata to the sen (`core/refund/Refunds.kt`), cash rounding mirrored; its own receipt number (`…-R000045`); joins the
@@ -239,6 +250,11 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
 - Void: reason required; the sale leaves reports and stock is reversed; the void belongs to this till's **current**
   shift ("Voided (cash)"); credit reversed; drawer may open. A sale with live refunds cannot be voided ("void the
   refunds first"); refunds can be voided. Audited `SALE_VOID`. D-019.
+- **Void own last sale** (`VOID_LAST` without `VOID`, `core/staff/VoidLast.kt`): only a SALE made by the person signed
+  in, on this till, still the till's latest sale or refund, in the shift still open (or none, both), sold 0–5 min ago
+  (`WINDOW_MS`). Checked when the sale screen loads and again in the void's transaction; otherwise refused
+  `VOID_LAST_ONLY` ("…Ask a manager to void this one."). Otherwise a void like any other (reason, drawer, credit,
+  audit without `approved_by`). D-072.
 
 ## 6. Products, categories, tax rates, payment methods
 

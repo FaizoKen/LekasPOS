@@ -454,6 +454,16 @@ object SaleDao {
         args(deviceNo.toLong() shl 41, (deviceNo.toLong() + 1L) shl 41),
     ) { it.getLong(0) }
 
+    /** This till's own latest sale or refund (its ids are one range, in order), or null. */
+    fun lastOwnId(db: SQLiteDatabase, deviceNo: Int): Long? = db.queryOne(
+        "SELECT id FROM sale WHERE id >= ? AND id < ? ORDER BY id DESC LIMIT 1",
+        args(deviceNo.toLong() shl 41, (deviceNo.toLong() + 1L) shl 41),
+    ) { it.getLong(0) }
+
+    /** The shift a sale or refund was made in, or null (no shift open then). */
+    fun shiftOf(db: SQLiteDatabase, saleId: Long): Long? =
+        db.queryOne("SELECT shift_id FROM sale WHERE id = ?", args(saleId)) { it.longOrNull(0) }
+
     /** When the latest sale or refund was made (index `sale_sold`), or null when there is none. */
     fun lastSoldAt(db: SQLiteDatabase): Long? = db.queryOne("SELECT sold_at FROM sale ORDER BY sold_at DESC LIMIT 1", args()) { it.getLong(0) }
 

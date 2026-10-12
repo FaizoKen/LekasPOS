@@ -109,7 +109,10 @@ class StaffSession(private val graph: AppGraph) {
         val db = graph.db()
         val first = !_state.value.loaded
         // The idle time of this device decides whether the stored sign-in may come back.
-        if (first) graph.settings.load()
+        if (first) {
+            graph.settings.load()
+            graph.staffAdmin.upgradeCashierRole() // 1.14.0 (D-072), before the roles are read
+        }
         while (true) {
             val g = generation
             val inMemory = _state.value.current?.id

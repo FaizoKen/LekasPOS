@@ -92,12 +92,21 @@ class StaffRulesTest {
     fun rolePermissions() {
         assertEquals(Perm.ALL, Perm.effective(SysRole.OWNER, 0L))
         assertEquals(Perm.DEFAULT_CASHIER, Perm.effective(SysRole.CASHIER, Perm.DEFAULT_CASHIER))
-        assertEquals(5L, Perm.effective(SysRole.NONE, 5L))
+        assertEquals(6L, Perm.effective(SysRole.NONE, 6L))
+        assertEquals(5L or Perm.VOID_LAST, Perm.effective(SysRole.NONE, 5L)) // VOID includes VOID_LAST
         assertTrue(Perm.has(Perm.DEFAULT_MANAGER, Perm.VOID or Perm.REFUND))
         assertFalse(Perm.has(Perm.DEFAULT_MANAGER, Perm.SETTINGS))
         assertFalse(Perm.has(Perm.DEFAULT_MANAGER, Perm.MANAGE_STAFF))
         assertFalse(Perm.has(Perm.DEFAULT_CASHIER, Perm.VOID))
         assertTrue(Perm.has(Perm.DEFAULT_CASHIER, Perm.REPRINT))
+        assertTrue(Perm.has(Perm.DEFAULT_CASHIER, Perm.REFUND)) // 1.14.0 (D-072): refunds without a manager
+        assertTrue(Perm.has(Perm.DEFAULT_CASHIER, Perm.VOID_LAST)) // and the sale just made
+        assertFalse(Perm.has(Perm.DEFAULT_CASHIER, Perm.OPEN_DRAWER))
+        // VOID includes VOID_LAST: a manager's role needs no new switch, and is not "lacking" it.
+        assertTrue(Perm.has(Perm.effective(SysRole.MANAGER, Perm.DEFAULT_MANAGER), Perm.VOID_LAST))
+        assertFalse(Perm.has(Perm.DEFAULT_MANAGER, Perm.VOID_LAST))
+        assertEquals(Perm.REFUND, Perm.implied(Perm.REFUND))
+        assertFalse(Perm.addsTo(Perm.implied(Perm.VOID), Perm.VOID))
         // Every bit appears once in the editor list, and the list covers every bit in use.
         assertEquals(Perm.LIST.size, Perm.LIST.toSet().size)
         var all = 0L
@@ -106,7 +115,7 @@ class StaffRulesTest {
             all = all or p
         }
         assertEquals(all, all or Perm.DEFAULT_MANAGER or Perm.DEFAULT_CASHIER)
-        assertEquals((1L shl 18) - 1L, all)
+        assertEquals((1L shl 19) - 1L, all)
         // Clearing a bill needs no permission any more (D-063): the editor has no switch for it.
         assertFalse(Perm.CANCEL_BILL in Perm.ROLE_EDITOR)
         assertEquals(Perm.LIST.size - 1, Perm.ROLE_EDITOR.size)

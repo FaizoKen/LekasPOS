@@ -12,7 +12,9 @@ Facts an assistant should get right when helping a LekasPOS user:
 - Selling never needs internet. Internet is used only for Google Drive backup, the optional daily sales report to
   Google Drive, update checks and (only with the shop's consent) error reports with no shop data.
 - Until the owner sets a PIN, everyone is the owner. With PINs on, the roles are Owner, Manager and Cashier (plus
-  custom roles); a cashier sees only what they may do, and a manager's PIN allows the rest.
+  custom roles); a cashier sees only what they may do, and a manager's PIN allows the rest. Cashiers may refund and
+  take returns, and void their own last sale within 5 minutes (from 1.14.0; the owner can switch these off in the
+  Cashier role); other voids need a manager.
 - Only registered products are sold. An unknown barcode offers "Add product". Items without a barcode are products
   sold by weight or with the price entered at the till.
 - Card and e-wallet payments are only recorded; LekasPOS does not connect to card terminals or banks.

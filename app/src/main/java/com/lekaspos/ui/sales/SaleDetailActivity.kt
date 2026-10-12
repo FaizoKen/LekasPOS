@@ -95,7 +95,9 @@ class SaleDetailActivity : ScreenActivity() {
             print.visible(hasPrinter && p.shown(Perm.REPRINT))
             share.visible(p.shown(Perm.REPRINT))
             val canRefund = header.kind == SaleKind.SALE && !header.voided && p.shown(Perm.REFUND)
-            val canVoid = !header.voided && p.shown(Perm.VOID)
+            // Without VOID: the sale this person has just made here, within minutes (D-072).
+            voidAsLast = !p.allowed(Perm.VOID) && graph.sales.mayVoidAsLast(saleId)
+            val canVoid = !header.voided && (p.shown(Perm.VOID) || voidAsLast)
             refund.visible(canRefund)
             void.visible(canVoid)
             val gap = if (canRefund) (6 * resources.displayMetrics.density).toInt() else 0
@@ -112,6 +114,9 @@ class SaleDetailActivity : ScreenActivity() {
         }
     }
 
+    /** Void is shown as "void own last sale" ([com.lekaspos.domain.sale.SaleActions.mayVoidAsLast]): no PIN asked. */
+    private var voidAsLast = false
+
     private fun confirmVoid() {
         Dialogs.input(
             this, getString(R.string.sale_void_title), getString(R.string.reason_hint),
@@ -122,13 +127,14 @@ class SaleDetailActivity : ScreenActivity() {
                 toast(R.string.reason_required)
                 return@input false
             }
-            withApproval(Perm.VOID) { approval ->
+            val done: (com.lekaspos.domain.Approval?) -> Unit = { approval ->
                 launchUi {
                     graph.sales.void(saleId, reason, approval)
                     toast(R.string.sale_voided_done)
                     load()
                 }
             }
+            if (voidAsLast) done(null) else withApproval(Perm.VOID) { done(it) }
             true
         }
     }

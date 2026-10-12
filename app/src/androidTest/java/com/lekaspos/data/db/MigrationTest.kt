@@ -95,7 +95,7 @@ class MigrationTest {
             val perms = db.readBlocking { r -> r.queryList("SELECT id, perms FROM role ORDER BY id") { it.getLong(0) to it.getLong(1) } }.toMap()
             assertEquals(0L, perms[1L]) // the owner role always has everything
             assertEquals(Perm.DEFAULT_MANAGER, perms[2L])
-            assertEquals(Perm.DEFAULT_CASHIER, perms[3L])
+            assertEquals(49184L, perms[3L]) // the v3 default; 1.14.0 adds Perm.CASHIER_1_14 at run time (D-072)
             assertEquals(0L, perms[99L]) // edited roles are left alone
             val shift = db.readBlocking { r -> r.queryList("SELECT shift_id FROM credit_entry WHERE id = 7") { it.isNull(0) } }
             assertEquals(listOf(true), shift) // old credit entries: no shift

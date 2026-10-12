@@ -34,6 +34,12 @@ object Seed {
         const val STAFF_OWNER = 1L
     }
 
+    /**
+     * LOCAL meta: this till's Cashier role needs nothing added for 1.14.0 (StaffService.upgradeCashierRole, D-072) —
+     * made from a seed that has it, or added once already.
+     */
+    const val CASHIER_1_14_DONE = "upgrade.cashier_1_14"
+
     fun insert(db: SQLiteDatabase, names: SeedNames, now: Long) {
         fun role(id: Long, name: String, sysRole: Int, perms: Long) = db.execSQL(
             "INSERT INTO role(id, name, sys_role, perms, created_at, updated_at, ver_hlc, ver_dev) " +
@@ -43,6 +49,7 @@ object Seed {
         role(Ids.ROLE_OWNER, names.owner, SysRole.OWNER, 0L) // the owner role always has every permission
         role(Ids.ROLE_MANAGER, names.manager, SysRole.MANAGER, Perm.DEFAULT_MANAGER)
         role(Ids.ROLE_CASHIER, names.cashier, SysRole.CASHIER, Perm.DEFAULT_CASHIER)
+        Meta.put(db, CASHIER_1_14_DONE, "1") // the seed has Perm.CASHIER_1_14 already (D-072)
 
         fun method(id: Long, name: String, kind: Int, opensDrawer: Boolean, sort: Int) = db.execSQL(
             "INSERT INTO payment_method(id, name, kind, opens_drawer, sort, active, created_at, " +

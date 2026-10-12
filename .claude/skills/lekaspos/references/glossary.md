@@ -27,6 +27,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Receipt and its copies | Receipt / Print a copy / COPY | Resit / Cetak salinan / SALINAN | `ReceiptBuilder`, `PrintJobKind.REPRINT` |
 | Money back for returned items | Refund / return | Bayaran balik / pulangan | `SaleKind.REFUND`, `RefundActivity` |
 | Cancel a whole sale | Void / VOIDED | Batalkan / DIBATALKAN | `sale_void`, `SaleStatus.VOIDED` |
+| A cashier undoing the sale just made | Void their own last sale (within 5 minutes) | Batalkan jualan terakhir sendiri (dalam 5 minit) | `Perm.VOID_LAST`, `VoidLast` |
 | Automatic deal | Promotion; Special price; Buy X get Y free | Promosi; Harga istimewa; Beli X percuma Y | `promotion`, `PromoKind` |
 | Discount typed by staff | Discount (bill / item) | Diskaun (bil / item) | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT` |
 | Price changed on the bill | price changed | harga diubah | `PRICE_OVERRIDE` |

@@ -204,11 +204,17 @@ object Perm {
 
     /** Go over a credit limit, adjust a customer's balance. */
     const val CREDIT_LIMIT = 1L shl 16
+
+    /**
+     * Void the sale they have just made on this till, within minutes (1.14.0, D-072; the rule: `core/staff/VoidLast`).
+     * [VOID] includes it ([effective]).
+     */
+    const val VOID_LAST = 1L shl 18
     const val ALL = -1L
 
     /** Every permission bit, in the order the role editor lists them (names of old audit entries too). */
     val LIST: List<Long> = listOf(
-        DISCOUNT, PRICE_OVERRIDE, CANCEL_BILL, VOID, REFUND, REPRINT, OPEN_DRAWER, CASH_MOVE, SHIFT_REPORT,
+        DISCOUNT, PRICE_OVERRIDE, CANCEL_BILL, VOID, VOID_LAST, REFUND, REPRINT, OPEN_DRAWER, CASH_MOVE, SHIFT_REPORT,
         CUSTOMERS, CREDIT_SALE, CREDIT_LIMIT, MANAGE_PRODUCTS, MANAGE_STOCK, REPORTS, VIEW_AUDIT, SETTINGS, MANAGE_STAFF,
     )
 
@@ -216,16 +222,24 @@ object Perm {
     val ROLE_EDITOR: List<Long> = LIST - CANCEL_BILL
 
     /** Some permission a role can be given is missing from [perms]: a manager may unlock it on the till. */
-    fun lacksAny(perms: Long): Boolean = ROLE_EDITOR.any { !has(perms, it) }
+    fun lacksAny(perms: Long): Boolean = ROLE_EDITOR.any { !has(implied(perms), it) }
 
     /** [helper] may do something [own] may not (retired bits do not count): a manager who can help on the till. */
-    fun addsTo(helper: Long, own: Long): Boolean = ROLE_EDITOR.any { has(helper, it) && !has(own, it) }
+    fun addsTo(helper: Long, own: Long): Boolean = ROLE_EDITOR.any { has(implied(helper), it) && !has(implied(own), it) }
 
     /** Seed roles' starting permissions (the owner edits them in Settings → Staff → Roles). */
     const val DEFAULT_MANAGER: Long = DISCOUNT or PRICE_OVERRIDE or CANCEL_BILL or VOID or REFUND or REPRINT or
         OPEN_DRAWER or CASH_MOVE or SHIFT_REPORT or CUSTOMERS or CREDIT_SALE or CREDIT_LIMIT or MANAGE_PRODUCTS or
         MANAGE_STOCK or VIEW_AUDIT or REPORTS
-    const val DEFAULT_CASHIER: Long = REPRINT or CUSTOMERS or CREDIT_SALE
+
+    /**
+     * [CASHIER_1_14] since 1.14.0 (D-072): cashiers refund, take returns and void the sale they have just made
+     * themselves, on record (activity log, Staff check); other voids stay with managers.
+     */
+    const val DEFAULT_CASHIER: Long = REFUND or VOID_LAST or REPRINT or CUSTOMERS or CREDIT_SALE
+
+    /** What 1.14.0 gives the built-in Cashier role of a shop made before it, once (StaffService.upgradeCashierRole). */
+    const val CASHIER_1_14: Long = REFUND or VOID_LAST
 
     /**
      * What a manager's help at the till lends the cashier for the bill on it (D-067): discounts, prices,
@@ -235,8 +249,11 @@ object Perm {
      */
     const val TILL_HELP: Long = DISCOUNT or PRICE_OVERRIDE or CUSTOMERS or CREDIT_SALE
 
-    /** What a role may do: the owner role everything, other roles their stored bits. */
-    fun effective(sysRole: Int, perms: Long): Long = if (sysRole == SysRole.OWNER) ALL else perms
+    /** What a role may do: the owner role everything, other roles their stored bits with what they include. */
+    fun effective(sysRole: Int, perms: Long): Long = if (sysRole == SysRole.OWNER) ALL else implied(perms)
+
+    /** [perms] with the permissions they include: [VOID] voids any sale, so also the last one ([VOID_LAST]). */
+    fun implied(perms: Long): Long = if (has(perms, VOID)) perms or VOID_LAST else perms
 
     fun has(perms: Long, perm: Long): Boolean = perms and perm == perm
 

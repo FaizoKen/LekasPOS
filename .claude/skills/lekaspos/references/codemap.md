@@ -158,6 +158,7 @@ Streaming CSV in/out and the product CSV format (D-041, D-042).
 | File | Main declarations | Purpose |
 |---|---|---|
 | `C/staff/PinHash.kt` | `object PinHash` (PBKDF2 "p2:iter:salt:hash", `ITERATIONS=4000`, `MIN/MAX_LENGTH`), `object PinLockout` (`FREE_TRIES=5`, 30 s→15 min), `object RecoveryCode` (12 chars) | PIN storage, wrong-PIN waits, owner recovery code (D-037). |
+| `C/staff/VoidLast.kt` | `object VoidLast` (`WINDOW_MS` = 5 min, `data class Sale`, `allowed`) | "Void their own last sale" (`Perm.VOID_LAST`): own sale, this till, its latest document, same open shift, ≤ 5 min (D-072). |
 | `C/staff/StaffChecks.kt` | `Tally`, `ActionTotal`, `data class Checks` (`of`, `ACTIONS`, `warning`), `data class StaffCheck` (`rank`) | Folds audit-log totals into "what the owner should look at" (D-067). |
 
 ### 2.19 `core.sync`
@@ -214,7 +215,7 @@ Opening, schema, migrations, seeds, SQL helpers, damage handling, derived rebuil
 | `A/data/db/DbOpenHelper.kt` | `class DbOpenHelper : SQLiteOpenHelper` | WAL; `onCreate` = `Schema.STATEMENTS` + `Seed.insert` + `Meta.createIdentity`; `onUpgrade` = `Migrations.migrate`; `onDowngrade` throws; `onOpen` turns FKs on + `synchronous=FULL`, `cache_size=-4000`, `journal_size_limit`. |
 | `A/data/db/Schema.kt` | `object Schema` (`VERSION = 9` at :11, `FILE_NAME="lekaspos.db"`, `STATEMENTS`, `LWW_TABLES`, `EVENT_TABLES`, `DERIVED_TABLES`, `LOCAL_TABLES`, `GENERATED_ID_TABLES`, `normalize`; DDL constants `SUM_YEAR_PRODUCT`, `SHIFT_OPEN_INDEX`, `SUM_CATEGORY`, `SUM_PRODUCT_INDEXES`, `PROMOTION`, `PRODUCT_LOOK`, `PRODUCT_IMAGE`, `SYNC_DEFERRED`) | Authoritative DDL of the current version; DDL needed by a migration is a named constant reused in `STATEMENTS`. |
 | `A/data/db/Migrations.kt` | `class Migration(from, to, migrate)`, `object Migrations` (`ALL` :17, `migrate`) | v1→v9 steps (one version at a time, `require(to == from + 1)`). |
-| `A/data/db/Seed.kt` | `data class SeedNames`, `object Seed` (`Ids.ROLE_OWNER=1/MANAGER=2/CASHIER=3`, `PM_CASH=1/CARD=2/EWALLET=3/CREDIT=4`, `STAFF_OWNER=1`; `insert`, `renameUntouched`, `ensureOwner`) | Seed rows at version (0,0) with device_no 0 ids. |
+| `A/data/db/Seed.kt` | `data class SeedNames`, `object Seed` (`Ids.ROLE_OWNER=1/MANAGER=2/CASHIER=3`, `PM_CASH=1/CARD=2/EWALLET=3/CREDIT=4`, `STAFF_OWNER=1`; `CASHIER_1_14_DONE` meta key, set by `insert`; `insert`, `renameUntouched`, `ensureOwner`) | Seed rows at version (0,0) with device_no 0 ids. |
 | `A/data/db/Meta.kt` | `object Meta` (key constants, `get/getLong/put/increment/createIdentity/docSeqKey`) | LOCAL key/value store (`meta`). |
 | `A/data/db/Sql.kt` | top-level `args`, `queryList`, `queryOne`, `longOrNull`, `long`, `stringOrNull`, `pragma`, `SQLiteStatement.bindAll`, `Cursor.longOrNull/stringOrNull/bool` | DAO helpers; every cursor closed with `use`. `rawQuery` binds strings only on API 21. |
 | `A/data/db/DerivedRebuild.kt` | `object DerivedRebuild` (`summaries`, `refundedAmounts`, `saleStatus`, `stockLevels`, `customerBalances`, `all`, `MAINTENANCE_QUERIES`) | Set-based rebuild of every DERIVED table; must equal the incremental paths. |
@@ -242,7 +243,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 | `A/data/report/ReportDao.kt` | `Totals`, `PaymentTotal`, `ProductTotal`, `StaffTotal`, `CategoryTotal`, `SlowMover`, `StockValue`, `ReceiptRow`; `object ReportDao` (`totals`, `days`, `byPayment`, `byStaff`, `summary`, `products`, `byCategory`, `eachProduct`, `slowMovers`, `stockValue`, `receipts`, `receiptsOfDays`, `HOT_QUERIES`) | Report reads from `sum_*` tables. |
 | `A/data/report/SummaryRange.kt` | `object SummaryRange` (`plan`, `all`, `qty`, `categories`, `HAS_SALES`) | Builds the UNION of year/month/day summary pieces for a period. |
 | `A/data/sale/ReceiptNumbers.kt` | `object ReceiptNumbers` (`defaultPrefix`, `prefix`, `format`, `candidates`, `isNumber`, `prefixesOf`) | Per-device receipt numbers `{prefix}{R?}{seq:06}`. |
-| `A/data/sale/SaleDao.kt` | `object SaleDao` (`commit` :59, `void` :142, `recomputeRefunded`, `applyRemote`, `applyRemoteVoid`, `exportRows`, `history`, `byReceipt`, `lines`, `productHistory`, `lastOwnSoldAt`, `isVoided`, `HOT_QUERIES`) | The complete-sale transaction (lines, payments, stock, summaries, outbox `Entity.SALE`) and voids (`Entity.SALE_VOID`). |
+| `A/data/sale/SaleDao.kt` | `object SaleDao` (`commit` :59, `void` :142, `recomputeRefunded`, `applyRemote`, `applyRemoteVoid`, `exportRows`, `history`, `byReceipt`, `lines`, `productHistory`, `lastOwnSoldAt`, `lastOwnId`, `shiftOf`, `isVoided`, `HOT_QUERIES`) | The complete-sale transaction (lines, payments, stock, summaries, outbox `Entity.SALE`) and voids (`Entity.SALE_VOID`). |
 | `A/data/sale/SaleModels.kt` | `SaleDraft`, `SaleLineDraft`, `PaymentDraft`, `CommittedSale`, `SaleRow`, `SaleLineRow`, `ProductSaleRow` | Value objects for sales. |
 | `A/data/sale/SaleQueries.kt` | `SaleHeader`, `SaleLineFull`, `PaymentRow`, `object SaleQueries` (`header`, `lines`, `payments`, `refundedByLine`, `refundsOf`, `receiptNo`, `soldByWeight`, `HOT_QUERIES`) | Read side of one sale (detail, refund). |
 | `A/data/sale/Summaries.kt` | `object Summaries` (`Input`, `LineSum`, `PaySum`, `apply(tx, input, sign, voided)`, `recategorize`, `MONTHS_FROM_DAYS`, `YEARS_FROM_MONTHS`, `CATEGORIES_FROM_PRODUCTS`, `HOT_QUERIES`) | Incremental maintenance of every `sum_*` table. |
@@ -276,14 +277,14 @@ must also update memory run in `withContext(NonCancellable)`.
 | `A/domain/promo/PromotionService.kt` | `class PromotionService` (`version`, `load`, `all`, `active`, `forProduct`, `save`, `delete`) | Promotions kept in memory. |
 | `A/domain/report/DailyReportUpload.kt` | `class DailyReportUpload` (`Status`, `load`, `turnOn`, `turnOff`, `atStart`, `upload`) | Daily sales CSV to the owner's Drive (D-065). |
 | `A/domain/report/ReportService.kt` | `class ReportService` (`Report`, `Stock`, `enum Export {SUMMARY, DAILY, PRODUCTS, RECEIPTS}`, `build`, `slowMovers`, `stock`, `staffCheck`, `export`, `write`) | Reports and CSV exports from summaries. |
-| `A/domain/sale/SaleActions.kt` | `class ActionRefused(reason)`, `class SaleActions` (`refundInfo`, `refund`, `void` :153, `print`, `recordShare`, `openDrawer`) | Refunds, voids, reprints, drawer; canonical "permission + audit in one tx" example. |
+| `A/domain/sale/SaleActions.kt` | `class ActionRefused(reason)`, `class SaleActions` (`refundInfo`, `refund`, `void` :158 (VOID, or VOID_LAST for the sale just made → `VOID_LAST_ONLY`), `mayVoidAsLast`, `print`, `recordShare`, `openDrawer`) | Refunds, voids, reprints, drawer; canonical "permission + audit in one tx" example. |
 | `A/domain/sell/BarcodeLookup.kt` | `sealed class Resolution {Plain, Scale, NotFound}`, `object BarcodeLookup` (`resolve`, `unitPrice`, `labelQty`) | What a scanned code means. |
 | `A/domain/sell/CartSession.kt` | `class CartSession` | The open bill (see §4.3). |
 | `A/domain/sell/CheckoutService.kt` | `data class Tender`, `class CheckoutService` | Completes a sale (see §4.4). |
 | `A/domain/sell/PopularItems.kt` | `class PopularItems` (`load`) | "Popular" tab ranking (30 days, cached 10 min, meta `dev.popular`). |
 | `A/domain/sell/PriceCheck.kt` | `class PriceCheck` (`Pack`, `Info`, `lookup`, `setPrice`) | Price check without touching the bill. |
 | `A/domain/shift/ShiftService.kt` | `class ShiftService` | Shifts and cash (see §4.8). |
-| `A/domain/staff/StaffService.kt` | `class StaffService` (`staff`, `roles`, `save`, `delete`, `setPin`, `changeOwnPin`, `newRecoveryCode`, `hasRecoveryCode`, `recover`, `saveRole` :179, `deleteRole`) | Staff, roles, PINs (MANAGE_STAFF; owner rules). |
+| `A/domain/staff/StaffService.kt` | `class StaffService` (`staff`, `roles`, `save`, `delete`, `setPin`, `changeOwnPin`, `newRecoveryCode`, `hasRecoveryCode`, `recover`, `saveRole`, `deleteRole`, `upgradeCashierRole` — 1.14.0 `Perm.CASHIER_1_14` (REFUND, VOID_LAST) for the Cashier role once per shop, audited `CASHIER_1_14_DETAIL`, D-072) | Staff, roles, PINs (MANAGE_STAFF; owner rules). |
 
 ### 3.5 `com.lekaspos.hw.*` — hardware
 | File | Main declarations | Purpose |
@@ -364,7 +365,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/sell/TopBarLayout.kt` | `class TopBarLayout` | Top bar with pills and Menu. |
 | `A/ui/sell/Beeper.kt` | `class Beeper` | Scan beeps on their own thread. |
 | `A/ui/staff/LockActivity.kt` | `class LockActivity : Activity, DialogHost` | PIN sign-in over the selling screen. |
-| `A/ui/staff/StaffActivities.kt` | `StaffActivity`, `StaffEditActivity`, `RolesActivity`, `RoleEditActivity`, `changeOwnPin`, private `asOwnerIfRefused` | Settings → Staff. |
+| `A/ui/staff/StaffActivities.kt` | `StaffActivity`, `StaffEditActivity`, `RolesActivity`, `RoleEditActivity`, `changeOwnPin`, private `asOwnerIfRefused` | Settings → Staff. Role editor: "Void sales" on shows "Void their own last sale" on and locked (D-072). |
 | `A/ui/staff/StaffUi.kt` | `permLabel` :30, `waitText`, `checkMessage`, `Activity.withApproval` :71, `object ApprovalDialog` (`show`, `help`), `askPin`, `askNewPin`, `showRecoveryCode` | Permission labels, approval dialogs, PIN dialogs. |
 | `A/ui/shift/ShiftActivities.kt` | `cashCountButton`, `openShift` :68, `closeShift` :122, `offerShiftCount` :176, `ShiftActivity`, `ShiftReportActivity`, `ShiftsActivity` | Shift & cash. |
 | `A/ui/shift/CashCountDialog.kt` | `class CashCountDialog` | Notes/coins count. |
@@ -499,17 +500,17 @@ locks if `lockAfterSale`; `suspend complete(...)` (:129) → `graph.cart.checkou
 ### 4.5 `StaffSession` (`A/domain/StaffSession.kt`)
 `data class Signed`, `data class State(loaded, loginRequired, current)` with `locked`; `sealed Check {Ok, WrongPin, Wait, NotAllowed}`.
 `state` (:59), `staffId` (:62, owner id 1 while no login), `perms` (:69 — **0 until loaded**, `Perm.ALL` only when loaded and login off),
-`load()` (:101), `reload()` (:106), `signIn()` (:169), `lock()` (:217), `screenStarted()` (:240), `screenStopped()`, `activity()` (:275: true = just
-locked, drop the event), `dialogActivity()` (:289), `recordApproval()` (:302), `touch()` (:314), `lockIfIdle()` (:343), `waitMs()`, `check(staffId, pin, perm)` (:415).
+`load()` (:101), `reload()` (:106), `signIn()` (:172), `lock()` (:220), `screenStarted()` (:243), `screenStopped()`, `activity()` (:278: true = just
+locked, drop the event), `dialogActivity()` (:292), `recordApproval()` (:305), `touch()` (:317), `lockIfIdle()` (:346), `waitMs()`, `check(staffId, pin, perm)` (:418).
 Meta keys: `session.staff`, `session.away_at`, `session.seen_at`, `pin.fails.<id>`, `pin.last_fail.<id>`, `pin.last_fail_rt.<id>`.
 
-### 4.6 `PermissionGate` (`A/domain/StaffSession.kt:492`)
+### 4.6 `PermissionGate` (`A/domain/StaffSession.kt:495`)
 | Function | Meaning |
 |---|---|
 | `allowed(perm)` (:498) | role has it, or an elevation (screen approval / till help) grants it |
 | `shown(perm)` (:504) | `allowed` or a manager's till help covers it → **use to hide/show controls** |
 | `ownRole(perm)` | role only |
-| `actor(perm, approval?)` (:516) | `Actor(staffId, approvedBy)` or throws `ActionRefused(NOT_ALLOWED)` — **domain services call this** |
+| `actor(perm, approval?)` (:519) | `Actor(staffId, approvedBy)` or throws `ActionRefused(NOT_ALLOWED)` — **domain services call this** |
 | `actorOrNull` (:519) | same, null instead of throwing |
 | `approve(staffId, pin, perm)` (:528) | PIN check → `Approval` |
 | `approveHelp`, `helper: StateFlow<Approval?>`, `startHelp(approval, lend)`, `endHelp`, `endHelpIfExpired` | manager help on the till (lends `Perm.TILL_HELP or lend`, 5 min) |
@@ -720,6 +721,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `shift/ShiftReportTest.kt` | Shift report maths/layout. |
 | `staff/StaffChecksTest.kt` | `Checks.of`, ranking (D-067). |
 | `staff/StaffRulesTest.kt` | PIN hash, lockout, `Perm` rules (UNVERIFIED exact coverage). |
+| `staff/VoidLastTest.kt` | `VoidLast`: the sale just made vs. late, another's, another till's, after another sale, after the shift (D-072). |
 | `sync/LwwTest.kt` | Field versions, `winningFields`, `stampAbove`. |
 | `sync/SyncNamesTest.kt` | File names, cursors. |
 | `text/DigitEntryTest.kt` | Keypad entry and preset. |
@@ -783,8 +785,8 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `domain/sell/PriceCheckTest.kt` | domain | Price check lookups. |
 | `domain/sell/SellingFixesTest.kt` | domain | Review fixes: credit, audit, cart writer, drawer. |
 | `domain/shift/ShiftTest.kt` | domain | Expected cash, required shift, cash moves permission. |
-| `domain/staff/StaffCheckTest.kt` | domain | Shared till: removals, handover, help, staff check (D-067). |
-| `domain/staff/StaffTest.kt` | domain | PIN login, approvals, lockout waits, idle lock. |
+| `domain/staff/StaffCheckTest.kt` | domain | Shared till: removals, handover, help, staff check (D-067); a cashier voids only the sale just made (D-072). |
+| `domain/staff/StaffTest.kt` | domain | PIN login, approvals, lockout waits, idle lock, roles; cashiers' 1.14.0 permissions once per shop (D-072). |
 | `hw/ZxingTest.kt` | API 21 | ZXing 3.3.3 works below API 24. |
 | `hw/printer/BandedRenderTest.kt` | render | Banded image render == whole page. |
 | `perf/PerfSuiteTest.kt` | **perf** | Generates data, runs suite; query plans always enforced; budgets only with `-e assertBudgets true`; `-e perfScale TINY\|QUICK\|FULL`. Excluded from the normal instrumented run. |
@@ -884,7 +886,7 @@ All in `C/model/Codes.kt` unless stated. Stored in the DB and in sync files.
 | `PrintJobStatus` (:70) | `print_job.status` | PENDING=0, DONE=1, FAILED=2 |
 | `SysRole` (:76) | `role.sys_role` | NONE=0, OWNER=1, MANAGER=2, CASHIER=3 |
 | `AuditAction` (:84) | `audit_log.action` | SALE_VOID=1, REFUND=2, PRICE_OVERRIDE=3, LINE_DISCOUNT=4, BILL_DISCOUNT=5, DRAWER_OPEN=6, REPRINT=7, PRODUCT_PRICE_CHANGE=8, PRODUCT_DELETE=9, BILL_CANCEL=10, APPROVAL=11, SIGN_IN=12, PIN_LOCKOUT=13, STAFF_CHANGE=14, ROLE_CHANGE=15, SHIFT_OPEN=16, SHIFT_CLOSE=17, CASH_IN=18, CASH_OUT=19, CASH_DROP=20, CREDIT_ADJUST=21, CREDIT_OVER_LIMIT=22, OWNER_PIN_RESET=23, PRODUCT_IMPORT=24, PROMOTION_CHANGE=25, CREDIT_LIMIT_CHANGE=26, SETTINGS_CHANGE=27, CREDIT_PAYMENT=28, LINE_REMOVE=29, LINE_REMOVE_AFTER_PAY=30, BILL_CANCEL_AFTER_PAY=31, STOCK_WRITE_OFF=32, SHIFT_CONTINUED=33, FLOAT_DIFFERENCE=34 (next free: 35). Sets: `CLEARED`, `REMOVED`, `AFTER_PAY`. |
-| `Perm` (:167) | `role.perms` bitmask (Long); `audit_log.amount` of APPROVAL | VOID=1<<0, REFUND=1<<1, PRICE_OVERRIDE=1<<2, DISCOUNT=1<<3, OPEN_DRAWER=1<<4, REPRINT=1<<5, MANAGE_PRODUCTS=1<<6, SETTINGS=1<<7, CANCEL_BILL=1<<8 (retired, D-063), MANAGE_STOCK=1<<9, MANAGE_STAFF=1<<10, CASH_MOVE=1<<11, SHIFT_REPORT=1<<12, VIEW_AUDIT=1<<13, CUSTOMERS=1<<14, CREDIT_SALE=1<<15, CREDIT_LIMIT=1<<16, REPORTS=1<<17 (next free bit: 18); ALL=−1. `LIST` (role-editor order), `ROLE_EDITOR` (= LIST − CANCEL_BILL), `DEFAULT_MANAGER`, `DEFAULT_CASHIER`, `TILL_HELP` (DISCOUNT, PRICE_OVERRIDE, CUSTOMERS, CREDIT_SALE), `effective`, `has`, `merge`, `lacksAny`, `addsTo`. Frozen numeric values used in migrations: 129919 (manager v3), 49184 (cashier v3), 131072 (REPORTS v4). |
+| `Perm` (:167) | `role.perms` bitmask (Long); `audit_log.amount` of APPROVAL | VOID=1<<0, REFUND=1<<1, PRICE_OVERRIDE=1<<2, DISCOUNT=1<<3, OPEN_DRAWER=1<<4, REPRINT=1<<5, MANAGE_PRODUCTS=1<<6, SETTINGS=1<<7, CANCEL_BILL=1<<8 (retired, D-063), MANAGE_STOCK=1<<9, MANAGE_STAFF=1<<10, CASH_MOVE=1<<11, SHIFT_REPORT=1<<12, VIEW_AUDIT=1<<13, CUSTOMERS=1<<14, CREDIT_SALE=1<<15, CREDIT_LIMIT=1<<16, REPORTS=1<<17, VOID_LAST=1<<18 (D-072; next free bit: 19); ALL=−1. `LIST` (role-editor order), `ROLE_EDITOR` (= LIST − CANCEL_BILL), `DEFAULT_MANAGER`, `DEFAULT_CASHIER` (REFUND, VOID_LAST since 1.14.0, D-072), `CASHIER_1_14`, `implied` (VOID includes VOID_LAST; used by `effective`, `lacksAny`, `addsTo`), `TILL_HELP` (DISCOUNT, PRICE_OVERRIDE, CUSTOMERS, CREDIT_SALE), `effective`, `has`, `merge`, `lacksAny`, `addsTo`. Frozen numeric values used in migrations: 129919 (manager v3), 49184 (cashier v3), 131072 (REPORTS v4). |
 | `CountSessionStatus` (:256) | `count_session.status` | OPEN=0, FINISHED=1 |
 | `PrintJobKind` (:262) | `print_job.kind` | RECEIPT=1, REPRINT=2, TEST=3, DRAWER=4, SHIFT=5 (`ref_id` = shift id) |
 | `PromoKind` (:273) | `promotion.kind` | MULTI_PRICE=0, BUY_GET_FREE=1 |
@@ -903,5 +905,5 @@ Store setting keys (`SettingKeys`, Settings.kt:20, "never rename a key"): `store
 Per-till meta keys: `dev.printer.{address,name,paper,mode,chinese,codepage,cut,feed,auto,native_qr}`, `dev.drawer.{enabled,pin}`, `dev.scanner.{address,name}`,
 `dev.camera.enabled`, `dev.lock.{minutes,after_sale}`, `dev.tiles`, `dev.customer_screen`, `dev.setup_done`, `dev.popular`, `dev.backup_*`, `dev.db_problem`.
 Other LOCAL meta: identity (`device_uuid`, `device_no`, `store_uuid`, `created_at`, `id_reserved`, `hlc_last`, `sync_enabled`, `receipt_prefix`, `doc_seq_<kind>`),
-`sync.*`, `session.*`, `pin.*`, `shift.left`, `upgrade.lock_default`, `upgrade.shifts_on`, `draft.receive`, `draft.receive.done`, `import.products.progress`,
+`sync.*`, `session.*`, `pin.*`, `shift.left`, `upgrade.lock_default`, `upgrade.shifts_on`, `upgrade.cashier_1_14` (`Seed.CASHIER_1_14_DONE`), `draft.receive`, `draft.receive.done`, `import.products.progress`,
 `drive_report.*`, `identity.renew`.

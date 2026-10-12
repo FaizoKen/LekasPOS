@@ -155,7 +155,9 @@ shop can work like that. Once PINs are set, each person signs in and sees only t
 <tr><td>Part cash, part card</td><td><b>Pay → Split payment</b> → type the first part → tap its method → pay the rest.</td></tr>
 <tr><td>Give change</td><td>The big <b>Change</b> amount is what to give back. Scan the next customer's first item to start again.</td></tr>
 <tr><td>Customer asks for the change again</td><td>The empty bill shows the <b>Last sale</b> with its change.</td></tr>
-<tr><td>Print the receipt again</td><td><b>Print a copy</b> under the last sale, or <b>Menu → Receipts</b>.</td></tr>
+<tr><td>Print the receipt again</td><td><b>Print a copy</b> under the last sale, or <b>Menu → Sales &amp; refunds</b>.</td></tr>
+<tr><td>Customer brings an item back</td><td><b>Menu → Sales &amp; refunds</b> → find the sale (type the receipt number) → <b>Refund / return</b> → choose the items, type the <b>Reason</b> → <b>Refund</b>. Give the money back — <a href="#refund">details</a>.</td></tr>
+<tr><td>Wrong payment method or wrong items, just paid</td><td><b>Menu → Sales &amp; refunds</b> → the top sale → <b>Void</b> → type why. Only your own last sale, within 5 minutes; then sell it again the right way — <a href="#void">details</a>.</td></tr>
 <tr><td>Check a price without selling</td><td><b>Price check</b> → scan or type.</td></tr>
 <tr><td>A discount or a new price</td><td>Ask a manager: <b>Menu → Manager PIN</b>, then <b>Menu → Discount</b>.</td></tr>
 <tr><td>Leave the till</td><td>Tap your name at the top → <b>Lock / switch user</b> (or <b>Menu → Lock / switch user</b>).</td></tr>
@@ -449,8 +451,11 @@ this till, newest first — and of every till of the shop when Google Drive back
 <code>R45</code> finds refunds.</li>
 <li>Tap a sale to see the receipt, with <b>Print copy</b>, <b>Share</b>, <b>Refund / return</b> and <b>Void</b> for those
 allowed. A sale with refunds lists them.</li>
-<li>Cashiers do not see <b>Refund / return</b> or <b>Void</b>. Ask a manager to tap <b>Menu → Manager PIN</b> and type
-their PIN, then open the sale: the buttons appear, and the manager types their PIN again to confirm.</li>
+<li>Cashiers may refund and take returns themselves (unless the owner switched <b>Refunds</b> off for them in
+<a href="#roles">Roles</a>); every refund is in the Activity log and Staff check under the name of who made it.
+Cashiers see <b>Void</b> only on the last sale they made on this till, for 5 minutes (see <a href="#void">Void</a>).
+For any other void, ask a manager to tap <b>Menu → Manager PIN</b> and type their PIN, then open the sale: the button
+appears, and the manager types their PIN again to confirm.</li>
 </ul>
 
 <h3 id="refund">Refund or return</h3>
@@ -481,6 +486,10 @@ terminal or e-wallet as well. For cash, hand the money back from the drawer.</p>
 of the shift that is open now. Credit is given back.</li>
 <li>A sale with refunds cannot be voided: void the refunds first. A refund can itself be voided.</li>
 <li>Voids are recorded in the Activity log and shown in the Staff check.</li>
+<li><b>Cashiers</b> may void only the sale they have just made: their own, on this till, the last one made on it, in the
+same shift, within 5 minutes — for example the wrong payment method, or a customer who changed their mind at the
+counter. Anything older needs a manager (the app says so). The owner can switch <b>Void their own last sale (within 5
+minutes)</b> off in the Cashier role.</li>
 <li>A void only corrects the records: give the customer's money back yourself (cash from the drawer; card or
 e-wallet on your terminal or bank app).</li>
 </ul>
@@ -869,7 +878,8 @@ your own role with <b>+</b> (for example “Senior cashier”).</p>
 <tr><td>Give discounts</td><td>Bill and item discounts</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Change prices on a bill</td><td>Change an item's price on the bill</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Void sales</td><td>Void a sale or refund</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Refunds</td><td>Refunds and returns</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Void their own last sale (within 5 minutes)</td><td>Void the sale just made (on with Void sales)</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Refunds</td><td>Refunds and returns</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Print receipt copies</td><td>Receipt copies and sharing old receipts</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Open the cash drawer</td><td>Open the drawer without a sale</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Cash in, cash out and drops</td><td>Cash movements during a shift</td><td>✓</td><td>✓</td><td></td></tr>
@@ -887,6 +897,10 @@ your own role with <b>+</b> (for example “Senior cashier”).</p>
 <ul>
 <li>The <b>Owner</b> role can always do everything. Owner, Manager and Cashier cannot be deleted, but Manager and
 Cashier can be changed.</li>
+<li>From LekasPOS 1.14.0 cashiers may refund and void their own last sale. A shop that used an older version gets
+<b>Refunds</b> and <b>Void their own last sale</b> on its <b>Cashier</b> role once, with a line in the Activity log.
+Rather keep them for managers? Switch them off in the Cashier role: they stay off. Roles you made yourself are not
+changed.</li>
 <li>Only an owner can make someone an owner or change an owner. Nobody can widen their own role or give
 permissions they do not have themselves.</li>
 <li>A removed person can no longer sign in; their name stays on their sales, receipts and in the Activity log.</li>
@@ -900,8 +914,8 @@ types their PIN; the action is recorded as the cashier's, “approved by” the 
 <li><b>A whole bill</b>: <b>Menu → Manager PIN</b>. For this bill the cashier may give discounts, change prices
 and handle customers and credit, until the bill is paid, held or cleared (or 5 minutes pass). The top bar shows
 <b>Manager: name ✕</b> — tap it to end the help. The manager's other jobs appear too (Open cash drawer, the
-<b>Refund / return</b> and <b>Void</b> buttons on a receipt, Manage shop), but each asks for the manager's PIN again.
-Cashiers never see refunds and voids otherwise.</li>
+<b>Void</b> button on a receipt, Manage shop), but each asks for the manager's PIN again. Otherwise cashiers see
+<b>Void</b> only on the sale they have just made.</li>
 <li><b>A back-office screen</b> (Products, Inventory, Reports…): the manager's PIN is asked once and holds until
 that screen is closed.</li>
 </ul>

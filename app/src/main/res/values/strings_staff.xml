@@ -74,6 +74,7 @@
     <string name="perm_price">Change prices on a bill</string>
     <string name="perm_cancel_bill">Cancel a bill</string>
     <string name="perm_void">Void sales</string>
+    <string name="perm_void_last">Void their own last sale (within 5 minutes)</string>
     <string name="perm_refund">Refunds</string>
     <string name="perm_reprint">Print receipt copies</string>
     <string name="perm_drawer">Open the cash drawer</string>
@@ -190,6 +191,7 @@
     <string name="error_credit_off">Customers and credit are switched off in Settings → Store.</string>
     <string name="error_more_than_owed">That is more than the customer owes. To give the customer credit, use Adjust balance.</string>
     <string name="error_owner_only">Only an owner may make this change.</string>
+    <string name="error_void_last_only">You can void only the last sale you made on this till, within 5 minutes. Ask a manager to void this one.</string>
     <string name="error_owner_pin_first">Set a PIN for an owner first, so someone can always manage staff.</string>
     <string name="error_seed_role">The owner, manager and cashier roles cannot be removed.</string>
     <string name="error_role_in_use">Staff still have this role. Give them another role first.</string>

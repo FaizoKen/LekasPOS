@@ -161,7 +161,9 @@ peranan</a>.</p>
 <tr><td>Sebahagian tunai, sebahagian kad</td><td><b>Bayar → Pecah bayaran</b> → taip bahagian pertama → ketik kaedahnya → bayar selebihnya.</td></tr>
 <tr><td>Beri baki</td><td>Amaun <b>Baki</b> yang besar ialah wang yang perlu dipulangkan. Imbas barang pertama pelanggan seterusnya untuk mula semula.</td></tr>
 <tr><td>Pelanggan tanya baki sekali lagi</td><td>Bil kosong menunjukkan <b>Jualan terakhir</b> bersama bakinya.</td></tr>
-<tr><td>Cetak resit sekali lagi</td><td><b>Cetak salinan</b> di bawah jualan terakhir, atau <b>Menu → Resit</b>.</td></tr>
+<tr><td>Cetak resit sekali lagi</td><td><b>Cetak salinan</b> di bawah jualan terakhir, atau <b>Menu → Jualan &amp; bayaran balik</b>.</td></tr>
+<tr><td>Pelanggan memulangkan barang</td><td><b>Menu → Jualan &amp; bayaran balik</b> → cari jualan itu (taip nombor resit) → <b>Bayaran balik / pulangan</b> → pilih barangnya, taip <b>Sebab</b> → <b>Bayar balik</b>. Pulangkan wangnya — <a href="#refund">butiran</a>.</td></tr>
+<tr><td>Salah kaedah bayaran atau salah barang, baru dibayar</td><td><b>Menu → Jualan &amp; bayaran balik</b> → jualan paling atas → <b>Batalkan</b> → taip sebabnya. Hanya jualan terakhir anda sendiri, dalam 5 minit; kemudian jual semula dengan betul — <a href="#void">butiran</a>.</td></tr>
 <tr><td>Semak harga tanpa menjual</td><td><b>Semak harga</b> → imbas atau taip.</td></tr>
 <tr><td>Diskaun atau harga baharu</td><td>Minta bantuan pengurus: <b>Menu → PIN pengurus</b>, kemudian <b>Menu → Diskaun</b>.</td></tr>
 <tr><td>Tinggalkan kaunter</td><td>Ketik nama anda di bahagian atas → <b>Kunci / tukar pengguna</b> (atau <b>Menu → Kunci / tukar pengguna</b>).</td></tr>
@@ -462,9 +464,12 @@ apabila sandaran Google Drive dihidupkan. Jualan yang dibatalkan ditanda <b>DIBA
 <code>R45</code> menjumpai bayaran balik.</li>
 <li>Ketik jualan untuk melihat resitnya, dengan <b>Cetak salinan</b>, <b>Kongsi</b>, <b>Bayaran balik / pulangan</b> dan
 <b>Batalkan</b> bagi mereka yang dibenarkan. Jualan yang ada bayaran balik turut menyenaraikannya.</li>
-<li>Juruwang tidak melihat <b>Bayaran balik / pulangan</b> atau <b>Batalkan</b>. Minta pengurus mengetik <b>Menu → PIN
-pengurus</b> dan menaip PIN mereka, kemudian buka jualan itu: butang itu muncul, dan pengurus menaip PIN mereka sekali
-lagi untuk mengesahkan.</li>
+<li>Juruwang boleh membuat bayaran balik dan menerima pulangan sendiri (kecuali pemilik telah mematikan <b>Bayaran
+balik</b> untuk mereka dalam <a href="#roles">Peranan</a>); setiap bayaran balik tercatat dalam Log aktiviti dan
+Semakan staf atas nama orang yang membuatnya. Juruwang melihat <b>Batalkan</b> hanya pada jualan terakhir yang mereka buat di kaunter
+ini, selama 5 minit (lihat <a href="#void">Membatalkan jualan</a>). Untuk pembatalan lain, minta pengurus mengetik
+<b>Menu → PIN pengurus</b> dan menaip PIN mereka, kemudian buka jualan itu: butang itu muncul, dan pengurus menaip PIN
+mereka sekali lagi untuk mengesahkan.</li>
 </ul>
 
 <h3 id="refund">Bayaran balik atau pulangan</h3>
@@ -497,6 +502,10 @@ bagi syif yang sedang dibuka sekarang. Kredit dikembalikan.</li>
 <li>Jualan yang ada bayaran balik tidak boleh dibatalkan: batalkan bayaran balik itu dahulu. Bayaran balik itu sendiri
 boleh dibatalkan.</li>
 <li>Pembatalan direkodkan dalam Log aktiviti dan ditunjukkan dalam Semakan staf.</li>
+<li><b>Juruwang</b> hanya boleh membatalkan jualan yang baru dibuatnya: jualannya sendiri, di kaunter ini, jualan terakhir
+di kaunter itu, dalam syif yang sama, dalam 5 minit — contohnya salah kaedah bayaran, atau pelanggan yang berubah fikiran
+di kaunter. Jualan yang lebih lama memerlukan pengurus (aplikasi akan memberitahu). Pemilik boleh mematikan <b>Batalkan
+jualan terakhir sendiri (dalam 5 minit)</b> dalam peranan Juruwang.</li>
 <li>Pembatalan hanya membetulkan rekod: pulangkan sendiri wang pelanggan (tunai dari laci; kad atau e-dompet melalui
 terminal atau aplikasi bank anda).</li>
 </ul>
@@ -889,7 +898,8 @@ pemulihan baharu</b> membuat kod baharu (kod lama tidak lagi berfungsi).</li>
 <tr><td>Beri diskaun</td><td>Diskaun bil dan diskaun barang</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Ubah harga dalam bil</td><td>Mengubah harga barang dalam bil</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Batalkan jualan</td><td>Membatalkan jualan atau bayaran balik</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Bayaran balik</td><td>Bayaran balik dan pemulangan barang</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Batalkan jualan terakhir sendiri (dalam 5 minit)</td><td>Membatalkan jualan yang baru dibuat (hidup bersama Batalkan jualan)</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Bayaran balik</td><td>Bayaran balik dan pemulangan barang</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Cetak salinan resit</td><td>Salinan resit dan berkongsi resit lama</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Buka laci wang</td><td>Membuka laci tanpa jualan</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Wang masuk, wang keluar dan simpanan</td><td>Pergerakan tunai semasa syif</td><td>✓</td><td>✓</td><td></td></tr>
@@ -907,6 +917,10 @@ pemulihan baharu</b> membuat kod baharu (kod lama tidak lagi berfungsi).</li>
 <ul>
 <li>Peranan <b>Pemilik</b> sentiasa boleh melakukan semuanya. Pemilik, Pengurus dan Juruwang tidak boleh dipadam, tetapi Pengurus dan
 Juruwang boleh diubah.</li>
+<li>Mulai LekasPOS 1.14.0 juruwang boleh membuat bayaran balik dan membatalkan jualan terakhir sendiri. Kedai yang
+menggunakan versi lama mendapat <b>Bayaran balik</b> dan <b>Batalkan jualan terakhir sendiri</b> pada peranan
+<b>Juruwang</b> sekali sahaja, dengan satu baris dalam Log aktiviti. Mahu untuk pengurus sahaja? Matikannya dalam peranan
+Juruwang: ia kekal mati. Peranan yang anda buat sendiri tidak diubah.</li>
 <li>Hanya pemilik boleh menjadikan seseorang pemilik atau mengubah pemilik. Tiada sesiapa boleh meluaskan peranannya sendiri atau memberi
 kebenaran yang dia sendiri tiada.</li>
 <li>Orang yang telah dibuang tidak lagi boleh log masuk; namanya kekal pada jualan dan resitnya serta dalam Log aktiviti.</li>
@@ -919,9 +933,9 @@ apabila melebihi had kredit pelanggan), kaunter memaparkan <b>Kelulusan pengurus
 nama juruwang, “diluluskan oleh” pengurus.</li>
 <li><b>Satu bil penuh</b>: <b>Menu → PIN pengurus</b>. Untuk bil ini, juruwang boleh memberi diskaun, mengubah harga dan menguruskan pelanggan
 serta kredit, sehingga bil dibayar, ditangguh atau dikosongkan (atau selepas 5 minit). Bar atas memaparkan <b>Pengurus: nama ✕</b> — ketik
-untuk menamatkan bantuan itu. Tugas lain pengurus turut dipaparkan (Buka laci wang, butang <b>Bayaran balik /
-pulangan</b> dan <b>Batalkan</b> pada resit, Urus kedai), tetapi setiap satu meminta PIN pengurus sekali lagi. Selain
-cara ini, juruwang tidak pernah melihat bayaran balik dan pembatalan.</li>
+untuk menamatkan bantuan itu. Tugas lain pengurus turut dipaparkan (Buka laci wang, butang <b>Batalkan</b> pada
+resit, Urus kedai), tetapi setiap satu meminta PIN pengurus sekali lagi. Selain cara ini, juruwang melihat
+<b>Batalkan</b> hanya pada jualan yang baru dibuatnya.</li>
 <li><b>Skrin pengurusan</b> (Produk, Inventori, Laporan…): PIN pengurus diminta sekali dan kekal sah sehingga skrin itu ditutup.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>

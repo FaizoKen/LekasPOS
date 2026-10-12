@@ -72,6 +72,7 @@
     <string name="perm_price">Ubah harga dalam bil</string>
     <string name="perm_cancel_bill">Batalkan bil</string>
     <string name="perm_void">Batalkan jualan</string>
+    <string name="perm_void_last">Batalkan jualan terakhir sendiri (dalam 5 minit)</string>
     <string name="perm_refund">Bayaran balik</string>
     <string name="perm_reprint">Cetak salinan resit</string>
     <string name="perm_drawer">Buka laci wang</string>
@@ -188,6 +189,7 @@
     <string name="error_credit_off">Pelanggan dan kredit dimatikan dalam Tetapan → Kedai.</string>
     <string name="error_more_than_owed">Jumlah itu melebihi hutang pelanggan. Untuk memberi kredit kepada pelanggan, gunakan Laraskan baki.</string>
     <string name="error_owner_only">Hanya pemilik boleh membuat perubahan ini.</string>
+    <string name="error_void_last_only">Anda hanya boleh membatalkan jualan terakhir yang anda buat di kaunter ini, dalam 5 minit. Minta pengurus membatalkan jualan ini.</string>
     <string name="error_owner_pin_first">Tetapkan PIN pemilik dahulu, supaya sentiasa ada yang boleh mengurus kakitangan.</string>
     <string name="error_seed_role">Peranan pemilik, pengurus dan juruwang tidak boleh dibuang.</string>
     <string name="error_role_in_use">Masih ada kakitangan dengan peranan ini. Beri mereka peranan lain dahulu.</string>

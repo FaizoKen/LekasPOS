@@ -1,5 +1,6 @@
 package com.lekaspos.domain.sale
 
+import android.database.sqlite.SQLiteDatabase
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.CreditKind
@@ -13,6 +14,7 @@ import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.core.refund.RefundPart
 import com.lekaspos.core.refund.RefundSource
 import com.lekaspos.core.refund.Refunds
+import com.lekaspos.core.staff.VoidLast
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.catalog.PaymentMethod
 import com.lekaspos.data.customer.CustomerDao
@@ -45,6 +47,9 @@ class ActionRefused(val reason: Reason) : Exception(reason.name) {
 
         /** 2026-10 review: only an owner may make this change (an owner's PIN for it is asked for). */
         OWNER_ONLY,
+
+        /** 1.14.0 (D-072): "void own last sale" covers only the sale just made here ([VoidLast]); others need VOID. */
+        VOID_LAST_ONLY,
     }
 }
 
@@ -151,7 +156,10 @@ class SaleActions(private val graph: AppGraph) {
      * drawer (which opens) and credit charges on a customer's account are reversed.
      */
     suspend fun void(saleId: Long, reason: String, approval: Approval? = null) {
-        val actor = graph.permissions.actor(Perm.VOID, approval)
+        // Without VOID, "void own last sale" (D-072): only the sale just made, checked again in the transaction.
+        val p = graph.permissions
+        val lastOnly = p.actorOrNull(Perm.VOID, approval) == null && p.allowed(Perm.VOID_LAST)
+        val actor = p.actor(if (lastOnly) Perm.VOID_LAST else Perm.VOID, approval)
         val staffId = actor.staffId
         val device = graph.settings.device.value
         val shiftRequired = graph.settings.store.value.shiftRequired
@@ -160,6 +168,7 @@ class SaleActions(private val graph: AppGraph) {
             val shiftId = openShift(tx, shiftRequired)
             val h = SaleQueries.header(tx.db, saleId) ?: throw ActionRefused(ActionRefused.Reason.NOT_FOUND)
             if (h.voided) throw ActionRefused(ActionRefused.Reason.VOIDED)
+            if (lastOnly && !isLastOf(tx.db, tx.deviceNo, h, staffId, shiftId)) throw ActionRefused(ActionRefused.Reason.VOID_LAST_ONLY)
             // Refunds of this sale must be voided first, or stock and totals would be reversed twice.
             // (Counted as documents, not by amount: a return of a free or fully discounted item is worth 0.00.)
             if (h.kind == SaleKind.SALE && SaleQueries.refundsOf(tx.db, saleId).any { it.status != SaleStatus.VOIDED }) {
@@ -182,6 +191,20 @@ class SaleActions(private val graph: AppGraph) {
             }
         }
         graph.printer.wake()
+    }
+
+    /**
+     * The person signed in may void [saleId] without VOID, as the sale they have just made ([VoidLast], D-072):
+     * the sale screen shows Void for it. Checked again when the void is made.
+     */
+    suspend fun mayVoidAsLast(saleId: Long): Boolean {
+        val p = graph.permissions
+        if (!p.allowed(Perm.VOID_LAST)) return false
+        val db = graph.db()
+        return db.read { r ->
+            val h = SaleQueries.header(r, saleId)
+            h != null && !h.voided && isLastOf(r, db.deviceNo, h, graph.staff.staffId, ShiftDao.current(r, db.deviceNo)?.id)
+        }
     }
 
     /**
@@ -230,6 +253,13 @@ class SaleActions(private val graph: AppGraph) {
     companion object {
         /** A receipt asked for this long after its sale is a copy ([print]). */
         private const val FIRST_RECEIPT_MS = 24L * 60L * 60L * 1000L
+
+        /** [h] is the sale [staffId] has just made on till [deviceNo], in its open shift [shiftId] ([VoidLast]). */
+        private fun isLastOf(db: SQLiteDatabase, deviceNo: Int, h: SaleHeader, staffId: Long, shiftId: Long?): Boolean =
+            VoidLast.allowed(
+                VoidLast.Sale(h.id, h.kind, h.staffId, h.soldAt, SaleDao.shiftOf(db, h.id)),
+                staffId, deviceNo, SaleDao.lastOwnId(db, deviceNo), shiftId, System.currentTimeMillis(),
+            )
 
         /**
          * This till's open shift, read inside the write transaction: a shift closed meanwhile (on the

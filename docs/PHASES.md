@@ -35,6 +35,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.13.0**: customer screen on a second display — Miracast (Screen mirroring, Smart View, Wireless display), HDMI or USB-C; the bill, the item just added with its picture, the total, the change (D-069) | **released** 2026-10-08 (v1.13.0, build 145) — tested by the owner: "all good"; also carries 1.10.0–1.12.1 |
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | in progress — code, tests and docs done locally; CI and test build next |
 
 ## Open questions for the user
 
@@ -1829,3 +1830,40 @@ Found by the user guide's fact-check (D-070); the owner (2026-10-08): "yup do it
    phone (or after Clear storage on a spare one) join the shop through Google Drive → sign in → the setting is still
    off on both tills.
 4. **User guide:** Settings → User guide → the guide opens in the browser (Malay app: the Malay guide).
+
+## 1.14.0 — cashiers refund, take returns and void the sale they just made (D-072)
+
+The owner (2026-10-12): "i think we just give access to cashier "refund/return" right ? please implement this properly";
+on voids: "you decide and do your best".
+
+- [x] **Refunds in the Cashier role:** new shops have it in the seed; shops from before get it once on the built-in
+      Cashier role (a synced change, in the activity log as "Cashier: refunds on (LekasPOS 1.14.0)"); the owner can
+      switch "Refunds" off in Staff → Roles and it stays off; custom roles unchanged
+- [x] **"Void their own last sale (within 5 minutes)"**, a new permission (on for Cashier, included in "Void sales"):
+      the cashier's own sale, this till's latest, same shift, ≤ 5 min — no PIN; anything else still needs a manager
+      ("…Ask a manager to void this one."). Given to older shops' Cashier role with Refunds, in the same one change
+- [x] Tests: `VoidLastTest` (the rule); `StaffRulesTest.rolePermissions` (defaults, VOID includes VOID_LAST);
+      `StaffTest.cashiersGetTheirOneFourteenPermissionsOncePerShop` (new shop, older shop, the owner's "off" kept, the
+      cashier refunds without a PIN); `StaffCheckTest.aCashierVoidsOnlyTheSaleJustMade`;
+      `StaffCheckTest.aManagersHelpLendsTheBillsPermissionsOnly` and `MigrationTest` adjusted. Local: JVM tests pass,
+      instrumented tests compile
+- [x] User guide (both languages: quick guide rows "Customer brings an item back" and "Wrong payment method or wrong
+      items, just paid", §6 and Void, roles table and note, manager's help), `llms.txt`, `features.md`, `codemap.md`,
+      `glossary.md`, D-072. Privacy policy unchanged (nothing new stored or sent)
+- [ ] CI (API 21 + 36), release smoke, release APK size, test build
+- [ ] The owner's phone check (below)
+
+### Needs real-device testing (1.14.0)
+
+1. **Upgrade:** install the 1.14.0 test build over 1.13.1 on a till with a cashier who signs in with a PIN. Settings →
+   Activity log: "Cashier: refunds and void own last sale on (LekasPOS 1.14.0)". Staff → ⋮ → Roles → Cashier:
+   **Refunds** and **Void their own last sale (within 5 minutes)** are on. Roles → Manager: the second shows on and
+   cannot be switched while **Void sales** is on.
+2. **Cashier refund:** sign in as the cashier → Menu shows **Sales & refunds** (not Receipts) → a sale → **Refund /
+   return** → one item, reason "rosak" → Refund: no manager's PIN asked; the drawer opens for cash; the receipt prints.
+   Activity log and Reports → Staff check list the refund under the cashier's name.
+3. **Cashier void:** as the cashier, sell one item by cash → Menu → Sales & refunds → that sale → **Void** → "salah
+   bayaran" → no PIN; the drawer opens; the sale shows VOIDED. Sell twice more: the older of the two shows no **Void**;
+   wait 6 minutes: the newer shows none either. A sale made by the owner shows no **Void** for the cashier.
+4. **The owner says no:** Roles → Cashier → Refunds off → Save. Restart the app (and on a second till that syncs, update
+   it after this): Refunds stays off; the cashier sees **Receipts** again and no Refund / return.

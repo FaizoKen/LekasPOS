@@ -32,6 +32,7 @@ fun permLabel(perm: Long): Int = when (perm) {
     Perm.PRICE_OVERRIDE -> R.string.perm_price
     Perm.CANCEL_BILL -> R.string.perm_cancel_bill
     Perm.VOID -> R.string.perm_void
+    Perm.VOID_LAST -> R.string.perm_void_last
     Perm.REFUND -> R.string.perm_refund
     Perm.REPRINT -> R.string.perm_reprint
     Perm.OPEN_DRAWER -> R.string.perm_drawer

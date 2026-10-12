@@ -392,11 +392,32 @@ class RoleEditActivity : ScreenActivity() {
             sw.isEnabled = b?.isOwner != true
             switches[p] = sw
         }
+        if (b?.isOwner != true) linkVoidLast(b)
         form.button(getString(R.string.save), primary = true) { save() }
         if (b != null && !b.isOwner && b.sysRole == 0) form.button(getString(R.string.delete)) { delete(b) }
         content.removeAllViews()
         content.addView(form.view)
     }
+
+    /**
+     * "Void sales" includes "Void their own last sale" (`Perm.implied`, D-072): while it is on, the second shows on and
+     * cannot be switched; switched off again, the second is back to what it was ([voidLastOwn], also what is saved).
+     */
+    private fun linkVoidLast(b: Role?) {
+        val void = switches[Perm.VOID] ?: return
+        val last = switches[Perm.VOID_LAST] ?: return
+        voidLastOwn = b?.let { Perm.has(it.perms, Perm.VOID_LAST) } ?: false
+        fun show() {
+            last.isEnabled = !void.isChecked
+            last.isChecked = void.isChecked || voidLastOwn
+        }
+        last.setOnCheckedChangeListener { _, on -> if (last.isEnabled) voidLastOwn = on }
+        void.setOnCheckedChangeListener { _, _ -> show() }
+        show()
+    }
+
+    /** The role's own "Void their own last sale" switch, apart from what "Void sales" includes. */
+    private var voidLastOwn = false
 
     /** A save is running: a second tap on Save made a new role twice (2026-10 review). */
     private var saving = false
@@ -410,6 +431,7 @@ class RoleEditActivity : ScreenActivity() {
         }
         var perms = (before?.perms ?: 0L) and Perm.CANCEL_BILL // a retired bit has no switch: left as it is
         for ((p, sw) in switches) if (sw.isChecked) perms = perms or p
+        if (Perm.has(perms, Perm.VOID)) perms = if (voidLastOwn) perms or Perm.VOID_LAST else perms and Perm.VOID_LAST.inv()
         asOwnerIfRefused({ saving = it }) { approval ->
             graph.staffAdmin.saveRole(before, n, perms, approval)
             finish()

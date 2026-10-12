@@ -9,6 +9,8 @@ import com.lekaspos.core.staff.PinHash
 import com.lekaspos.core.staff.RecoveryCode
 import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.Db
+import com.lekaspos.data.db.Meta
+import com.lekaspos.data.db.Seed
 import com.lekaspos.data.settings.SettingKeys
 import com.lekaspos.data.settings.SettingsDao
 import com.lekaspos.data.staff.Role
@@ -204,6 +206,32 @@ class StaffService(private val graph: AppGraph) {
     }
 
     /**
+     * 1.14.0 (D-072): cashiers refund, take returns and void the sale they have just made without a manager — on
+     * record in the activity log and Staff check. New shops have it in the seed ([Perm.DEFAULT_CASHIER]); a shop made
+     * before gets [Perm.CASHIER_1_14] once on its built-in Cashier role, with a real version so every till ends up
+     * the same (seed rows of two app versions tie at (0, 0)). Once per shop: not when the synced activity log shows
+     * another till did it; the owner can switch either off in Staff → Roles and it stays off. Custom roles are left
+     * alone. Runs before the first load of who may do what ([StaffSession]); writer thread.
+     */
+    suspend fun upgradeCashierRole() {
+        val db = graph.db()
+        if (db.read { Meta.get(it, Seed.CASHIER_1_14_DONE) } != null) return
+        withContext(NonCancellable) {
+            db.write(reserveIds = 2L) { tx ->
+                val role = RoleDao.get(tx.db, Seed.Ids.ROLE_CASHIER)
+                val shopDidIt = AuditDao.existsWithDetail(tx.db, AuditAction.ROLE_CHANGE, CASHIER_1_14_DETAIL)
+                if (role != null && !shopDidIt && !Perm.has(role.perms, Perm.CASHIER_1_14)) {
+                    val now = System.currentTimeMillis()
+                    val perms = role.perms or Perm.CASHIER_1_14
+                    RoleDao.update(tx, role, role.name, perms, now)
+                    AuditDao.log(tx, AuditAction.ROLE_CHANGE, null, now, Entity.ROLE, role.id, perms, CASHIER_1_14_DETAIL)
+                }
+                Meta.put(tx.db, Seed.CASHIER_1_14_DONE, "1")
+            }
+        }
+    }
+
+    /**
      * [write], then the reload of who may do what (after [beforeReload]): both finished also when the
      * screen that asked closes meanwhile — cancelled right after the commit, the reload never ran and
      * a deactivated cashier, or a narrowed role, kept its permissions in memory (2026-10 review).
@@ -254,7 +282,8 @@ class StaffService(private val graph: AppGraph) {
         if (!graph.staff.state.value.loginRequired) return
         val me = graph.staff.state.value.current
         if (isOwner(tx, me?.id) || isOwner(tx, approval?.staffId)) return
-        val added = perms and (before?.perms ?: 0L).inv()
+        // Against what the role could do already: a role with VOID shows "void own last sale" switched on (included).
+        val added = Perm.implied(perms) and (before?.effective ?: 0L).inv()
         val mine = (me?.let { StaffDao.get(tx.db, it.id)?.perms } ?: 0L) or
             (approval?.let { a -> StaffDao.get(tx.db, a.staffId)?.takeIf { it.canSignIn }?.perms } ?: 0L)
         val ownRole = before != null && me != null && StaffDao.get(tx.db, me.id)?.roleId == before.id
@@ -283,4 +312,9 @@ class StaffService(private val graph: AppGraph) {
     private fun recoveryHash(tx: Db.Tx): String? = SettingsDao.all(tx.db)[SettingKeys.OWNER_RECOVERY]
 
     private fun describe(name: String, role: Role, active: Boolean) = "${name.trim()} (${role.name}${if (active) "" else ", inactive"})"
+
+    companion object {
+        /** The activity-log detail of [Perm.CASHIER_1_14] given to the Cashier role: synced, so every till knows it was done. */
+        const val CASHIER_1_14_DETAIL = "Cashier: refunds and void own last sale on (LekasPOS 1.14.0)"
+    }
 }

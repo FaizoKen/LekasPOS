@@ -144,8 +144,9 @@ class StaffCheckTest {
         p.startHelp(help)
         assertTrue(p.allowed(Perm.DISCOUNT))
         assertTrue(p.allowed(Perm.PRICE_OVERRIDE))
+        assertTrue(p.allowed(Perm.REFUND)) // the cashier's own since 1.14.0 (D-072)
         // Money out of the drawer and the back office show, but ask for the manager's PIN again.
-        for (perm in listOf(Perm.VOID, Perm.REFUND, Perm.OPEN_DRAWER, Perm.CASH_MOVE, Perm.MANAGE_PRODUCTS, Perm.SETTINGS)) {
+        for (perm in listOf(Perm.VOID, Perm.OPEN_DRAWER, Perm.CASH_MOVE, Perm.MANAGE_PRODUCTS, Perm.SETTINGS)) {
             assertFalse(p.allowed(perm), "help lends $perm")
             assertTrue(p.shown(perm), "help shows $perm")
             assertNull(p.actorOrNull(perm))
@@ -289,6 +290,36 @@ class StaffCheckTest {
         graph.settings.saveStore(graph.settings.store.value.copy(handoverCount = false))
         val cashier = graph.staffAdmin.save(null, "Siti", Seed.Ids.ROLE_CASHIER, true)
         assertNull(graph.shifts.handoverDue(cashier))
+    }
+
+    @Test
+    fun aCashierVoidsOnlyTheSaleJustMade() = runBlocking {
+        val db = graph.db()
+        cart.addProduct(product("Gula", 500L))
+        val owners = graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CASH, PaymentKind.CASH, "Cash", true, 500L, 500L, 0L)), 0L)
+        val cashier = signInCashier()
+        suspend fun sell(name: String): Long {
+            cart.addProduct(product(name, 500L))
+            return graph.checkout.complete(listOf(Tender(Seed.Ids.PM_CASH, PaymentKind.CASH, "Cash", true, 500L, 500L, 0L)), 0L).saleId
+        }
+        suspend fun refusedLastOnly(saleId: Long) {
+            val e = runCatching { graph.sales.void(saleId, "wrong") }.exceptionOrNull()
+            assertEquals(com.lekaspos.domain.sale.ActionRefused.Reason.VOID_LAST_ONLY, (e as? com.lekaspos.domain.sale.ActionRefused)?.reason)
+        }
+        assertFalse(graph.permissions.allowed(Perm.VOID))
+        assertTrue(graph.permissions.allowed(Perm.VOID_LAST))
+        val first = sell("Milo")
+        val second = sell("Kopi")
+        assertFalse(graph.sales.mayVoidAsLast(owners.saleId)) // the owner's sale
+        assertFalse(graph.sales.mayVoidAsLast(first)) // another sale was made since
+        refusedLastOnly(owners.saleId)
+        refusedLastOnly(first)
+        assertTrue(graph.sales.mayVoidAsLast(second))
+        graph.sales.void(second, "wrong payment method")
+        val entry = db.read { AuditDao.byAction(it, AuditAction.SALE_VOID, null) }.single()
+        assertEquals(cashier, entry.staffId)
+        assertNull(entry.approvedBy) // no manager needed, on record under her name
+        assertFalse(graph.sales.mayVoidAsLast(second)) // voided already
     }
 
     @Test
