@@ -75,6 +75,27 @@ class TopBarLayoutTest {
         }
     }
 
+    /** The cashier's name beside Menu on the narrowest phone: one line, and the two clearly apart (1.17.2). */
+    @Test
+    fun oneShortPillStaysBesideMenuOnASmallPhone() {
+        for (pill in listOf(R.id.staff_chip to "Siti", R.id.sync_state to "Not backed up", R.id.sync_state to "Tiada sandaran")) {
+            val bar = bar()
+            for (id in listOf(R.id.staff_chip, R.id.held_pill, R.id.sync_state, R.id.printer_state, R.id.helper_pill)) {
+                bar.findViewById<View>(id).visibility = View.GONE
+            }
+            bar.findViewById<TextView>(R.id.title).text = "LekasPOS"
+            val p = bar.findViewById<TextView>(pill.first).apply {
+                text = pill.second
+                visibility = View.VISIBLE
+            }
+            val width = (320 * density).toInt()
+            bar.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            bar.layout(0, 0, width, bar.measuredHeight)
+            assertEquals((56 * density).toInt(), bar.measuredHeight, "one line with \"${pill.second}\"")
+            assertTrue(p.right <= bar.findViewById<View>(R.id.btn_menu).left - (16 * density).toInt(), "\"${pill.second}\" apart from Menu")
+        }
+    }
+
     @Test
     fun withoutPillsTheBarIsOneLine() {
         val bar = bar()

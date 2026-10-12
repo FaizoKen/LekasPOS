@@ -2086,6 +2086,9 @@ bill only") and where Share goes ("remove after a sale only").
 
 - [x] `TopBarLayout`: 16dp of space before Menu (`MENU_GAP_DP`), 8dp between pills (was 4dp); `TopBarLayoutTest` checks a
       pill on Menu's line ends at least 16dp before it
+- [x] CI run 38294450576 (build 183) green, but its 320dp phone picture put "Not backed up" on a second line (the space
+      before Menu took the room) → the store name's minimum on the first line 72dp (was 96; it ends in "…"); new test
+      `oneShortPillStaysBesideMenuOnASmallPhone` (320dp, the cashier's name or "Not backed up" in EN/MS: one line)
 - [x] Docs: `features.md`, D-076, this file. User guide: no words changed (pictures refreshed)
 - [ ] CI; guide pictures; test build v1.17.2
 

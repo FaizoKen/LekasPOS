@@ -140,7 +140,11 @@ class TopBarLayout(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         const val MENU_GAP_DP = 16
         const val ROW_DP = 56
 
-        /** Room always left for the store name on the first line. */
-        const val MIN_TITLE_DP = 96
+        /**
+         * Room always left for the store name on the first line (it ends in "…" when shorter). 72, not 96, since the
+         * Menu pill and the space before it (1.17.1–1.17.2): at 96 a 320dp phone put its one pill on a second line,
+         * which took the bill's room.
+         */
+        const val MIN_TITLE_DP = 72
     }
 }

@@ -108,7 +108,7 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   Android 15+. Recreated on rotation (like the lock screen, camera and
   Diagnostics; back-office screens are not, D-054). Orientation locked while the payment is open.
 - Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu** (a pill like the
-  others, `pill_info_bg`, "⋮ Menu" on one line, 1.17.1; 16dp of space before it and 8dp between pills, 1.17.2; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
+  others, `pill_info_bg`, "⋮ Menu" on one line, 1.17.1; 16dp of space before it and 8dp between pills, the store name at least 72dp, 1.17.2; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
   shown and a non-Play install). Pills that do not fit wrap to a second line.
 - Safety pill, first match wins (`renderSafety`): Data problem → Backup: sign in (sync on, auth needed) → Not
   backed up (sync on, changes waiting, no success for 24 h) → Storage almost full (free < max(300 MB, DB + 100 MB,
