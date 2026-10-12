@@ -36,7 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
-| — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner asked to release it; offered in the app to shops on 1.6.1+ |
+| — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 
@@ -2017,6 +2017,8 @@ Found while explaining a flaky test after 1.16.0; the owner asked to release it 
 - [x] Perf FULL on the released code (run 38273185989, a4bc401): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
       lines), all 108 query plans ok; API 21 sale commit p95 12.9 ms (150), multi-word search p95 4.3 ms (50), scan to cart
       p95 0.64 ms (20), report_month 213 ms (1,000), report_year 244 ms (3,000); cold start to a usable till about 0.7 s
+
+- [x] The owner tested it on the phone (2026-10-13): "tested and all good"
 
 ### Needs real-device testing (1.16.1)
 
