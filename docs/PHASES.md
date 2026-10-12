@@ -39,7 +39,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
-| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top, level with the bill; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | on branch `ui-feedback` — CI, then a test build for the owner's phone check |
+| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top, level with the bill; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test build **v1.17.0** (build 180, pre-release, branch `ui-feedback`) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2057,7 +2057,12 @@ bill only") and where Share goes ("remove after a sale only").
 - [x] Guide pictures refreshed: phone `sell`, `sell-empty`, `pay`, `pay-cash`, `menu`, `settings` (EN + MS) from run
       38285530283; `tablet-sell` from run 38281967213 (the tablet emulator's "System UI isn't responding" covered the
       later runs' tablet pictures; the selling screen is the same)
-- [ ] Test build for the owner
+- [x] **Test build v1.17.0** (2026-10-13, the owner: "yup do it"): pre-release on 268c9bf, build 180 (CI run 38285530283),
+      assets `LekasPOS.apk`, `LekasPOS-1.17.0.apk`, `mapping-1.17.0.txt`; SHA-256 `20360ce4…0ced`; certificate SHA-256
+      `0a67abec…d4b9`; What's new in English and Malay. 1.16.1 stays the latest release; phones with "Include test
+      versions" are offered it
+- [ ] The owner's phone check; then merge `ui-feedback` into `main`, perf FULL, public release (smoke baseline, guide's
+      "For LekasPOS 1.17.0")
 
 ### Needs real-device testing (1.17.0)
 
