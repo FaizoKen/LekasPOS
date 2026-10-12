@@ -20,6 +20,7 @@ class TopBarLayout(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
 
     private val density = resources.displayMetrics.density
     private val gap = (GAP_DP * density).toInt()
+    private val menuGap = (MENU_GAP_DP * density).toInt()
     private val minTitle = (MIN_TITLE_DP * density).toInt()
     private val rowHeight = (ROW_DP * density).toInt()
 
@@ -43,7 +44,7 @@ class TopBarLayout(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         menu.measure(atMost, heightSpec(menu))
 
         // First line: the pills that fit between a readable name and the Menu button, in order.
-        val room = inner - menu.measuredWidth - minTitle
+        val room = inner - menu.measuredWidth - menuGap - minTitle
         var used = 0
         var fits = true
         for (i in 1 until n - 1) {
@@ -58,7 +59,7 @@ class TopBarLayout(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
                 fits = false
             }
         }
-        val titleWidth = (inner - menu.measuredWidth - used).coerceAtLeast(0)
+        val titleWidth = (inner - menu.measuredWidth - menuGap - used).coerceAtLeast(0)
         title.measure(MeasureSpec.makeMeasureSpec(titleWidth, MeasureSpec.EXACTLY), heightSpec(title))
         firstLineHeight = maxOf(firstLineHeight, title.measuredHeight, menu.measuredHeight)
 
@@ -130,7 +131,13 @@ class TopBarLayout(context: Context, attrs: AttributeSet?) : ViewGroup(context, 
         getChildMeasureSpec(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 0, c.layoutParams.height)
 
     private companion object {
-        const val GAP_DP = 4
+        const val GAP_DP = 8
+
+        /**
+         * Space before Menu: a pill right beside it (the cashier's name) read as one button with it (the owner,
+         * 2026-10-13, 1.17.2).
+         */
+        const val MENU_GAP_DP = 16
         const val ROW_DP = 56
 
         /** Room always left for the store name on the first line. */

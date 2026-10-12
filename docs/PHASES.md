@@ -39,7 +39,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.16.1**: a clock corrected back a moment no longer signs the cashier out after Android restarted the app (D-075) | **released** 2026-10-12 (v1.16.1, build 173) — the owner tested it on the phone (2026-10-13): "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | **released** 2026-10-12 (v1.16.0, build 169) — the owner asked to release it without a test build first; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
-| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180) and **v1.17.1** (build 182: the bill right under the bar again, Menu a pill) — waiting for the owner's phone check |
+| — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) → **1.17.2** on branch `ui-feedback`: Menu apart from the cashier's name |
 
 ## Open questions for the user
 
@@ -2080,8 +2080,14 @@ bill only") and where Share goes ("remove after a sale only").
       `tablet-sell` (EN + MS); the tablet's dialog checked (Cancel outlined, Clear bill filled)
 - [x] **Test build v1.17.1** (2026-10-13): pre-release on 675e78e, build 182, assets `LekasPOS.apk`, `LekasPOS-1.17.1.apk`,
       `mapping-1.17.1.txt`; SHA-256 `78126fe9…b982`; certificate SHA-256 `0a67abec…d4b9`. 1.16.1 stays the latest release
-- [ ] The owner's phone check; then merge `ui-feedback` into `main`, perf FULL, public release (smoke baseline, guide's
-      "For LekasPOS 1.17.1")
+- [x] The owner on v1.17.1 (2026-10-13): "i mean menu button bad because it too close with cashier name button" → 1.17.2
+
+### 1.17.2 — Menu apart from the pill beside it
+
+- [x] `TopBarLayout`: 16dp of space before Menu (`MENU_GAP_DP`), 8dp between pills (was 4dp); `TopBarLayoutTest` checks a
+      pill on Menu's line ends at least 16dp before it
+- [x] Docs: `features.md`, D-076, this file. User guide: no words changed (pictures refreshed)
+- [ ] CI; guide pictures; test build v1.17.2
 
 ### Needs real-device testing (1.17.0)
 

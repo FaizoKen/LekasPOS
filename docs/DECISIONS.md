@@ -1592,7 +1592,7 @@ the selling screen must stay one screen); Material Components' bottom sheet and 
 libraries, D-002; API 29+); icons without words (cashiers must not guess, D-049); moving the back office to a separate
 home screen (the till opens on selling, D-064).
 
-### D-076 — Buttons that look like buttons, the tiles from the top, the beep on the till (1.17.0 / 1.17.1, 2026-10-13)
+### D-076 — Buttons that look like buttons, the tiles from the top, the beep on the till (1.17.0–1.17.2, 2026-10-13)
 The owner's feedback on 1.16.1 (2026-10-13): "some button is not looks like button"; a customer screen cast to a TV
 took the beeps with it "while that screen doesn't have sound"; the catalogue "looks confusing … it should 'All' as
 default … the item is auto missing from list"; held sideways, the tiles should start at the top ("maybe no need header on right
@@ -1601,7 +1601,8 @@ side"); "share option i think is useless because tab tills basically just tills"
   bare words: the dialog theme now gives them our outlined button, the main one filled (`Widget.Lekas.Button.Bar`,
   `.Bar.Main`). The payment's Cancel, Back and Split payment (`Widget.Lekas.Button.Text`, removed) are outlined
   buttons; the selling screen's Price check and Items tools are outlined (filled while open); Menu is a pill like the
-  others on the bar ("⋮ Menu" on one line; 1.17.0's darker box "looks not nice", 1.17.1); Diagnostics' Stop / Delete test data / Share report are real buttons. Three "Tap here" texts
+  others on the bar ("⋮ Menu" on one line; 1.17.0's darker box "looks not nice", 1.17.1; 16dp apart from the
+  pill beside it — the cashier's name "too close" — and 8dp between pills, 1.17.2); Diagnostics' Stop / Delete test data / Share report are real buttons. Three "Tap here" texts
   became buttons: the Products list's "Add product" for an unknown barcode, the camera's "Allow camera" / "Open
   settings", and the customer's balance (tapping it opened the actions) is now plain with **Take a repayment** and
   **More** under it.

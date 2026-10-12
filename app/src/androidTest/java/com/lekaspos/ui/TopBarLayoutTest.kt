@@ -64,6 +64,10 @@ class TopBarLayoutTest {
             for (p in pills) {
                 assertTrue(p.width > 0 && p.left >= 0 && p.right <= bar.width && p.bottom <= bar.height, "pill inside the bar at ${widthDp}dp")
                 assertTrue(!Rect.intersects(rect(p), rect(menu)), "pill under Menu at ${widthDp}dp")
+                // A pill beside Menu is clearly apart from it (1.17.2: the cashier's name read as part of Menu).
+                if (p.top < menu.bottom && p.bottom > menu.top) {
+                    assertTrue(p.right <= menu.left - (16 * density).toInt(), "pill too close to Menu at ${widthDp}dp")
+                }
             }
             for (i in pills.indices) for (j in i + 1 until pills.size) {
                 assertTrue(!Rect.intersects(rect(pills[i]), rect(pills[j])), "pills overlap at ${widthDp}dp")
@@ -80,6 +84,7 @@ class TopBarLayoutTest {
         assertEquals((56 * density).toInt(), bar.measuredHeight)
         bar.layout(0, 0, width, bar.measuredHeight)
         val title = bar.findViewById<View>(R.id.title)
-        assertEquals(bar.findViewById<View>(R.id.btn_menu).left, title.right) // the name takes the rest of the line
+        // The name takes the rest of the line, up to the space before Menu.
+        assertEquals(bar.findViewById<View>(R.id.btn_menu).left - (16 * density).toInt(), title.right)
     }
 }
