@@ -1542,7 +1542,7 @@ Running); a `prices` column on `promotion` (lost on tills not yet updated, see a
 that replaces the shelf price (a customer buying 4 pays 3 + 1, which a fixed table would have to spell out for every
 count); greedy biggest-group-first (overcharges, as above).
 
-### D-074 — Icons and groups: the Menu as one sheet of tiles, Settings in groups (2026-10-12)
+### D-074 — Icons and groups: the Menu as one sheet of tiles, Settings in groups (1.16.0, 2026-10-12)
 The owner: "improve the UI UX, to make more easier for cashier, manager and owner … like put some icon". Every screen
 was words only: the Menu (a platform `PopupMenu`, which shows no icons below API 29) was a list of up to 11 lines plus a
 "Manage shop ›" submenu one level further down; Settings was one flat list of 21 rows; the Inventory hub, the

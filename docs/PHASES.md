@@ -36,7 +36,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **Documentation** (no app change): user guide in English and Malay on the website with screenshots; `llms.txt`; AI docs — `AGENTS.md`, skill references `codemap`, `features`, `recipes`, `glossary`; website check in `pages.yml` (D-070) | **live** 2026-10-08 — https://faizoken.github.io/LekasPOS/guide.html (commit 9085b8f); the owner's read-through pending |
 | — | **1.13.1**: nothing without a price sells free (weighed item at 0.00 asks its price per kg; packs and weight labels too); "Require an open shift" turned on once per shop, not again by a till that joins; Settings → User guide (D-071) | **released** 2026-10-09 (v1.13.1, build 152) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.14.0**: cashiers refund and take returns themselves and void their own last sale within 5 minutes, on record; shops from before get it once on the Cashier role, the owner can switch it off (D-072) | **released** 2026-10-12 (v1.14.0, build 158) — the owner tested it: "all good"; asked by a shop (reports issue #9) |
-| — | **Next (unreleased)**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | on branch `ui-icons`, waiting for CI and the owner's look on the phone |
+| — | **1.16.0**: icons and groups — the Menu as one sheet of tiles (This bill, Till, Manage shop: the back office one tap away), Settings in five groups with icons, icons on Inventory, the main buttons and payment methods, product pictures in the Products list, red Delete buttons, four misleading texts fixed (D-074) | the owner asked to release it (2026-10-12) |
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 
 ## Open questions for the user
@@ -1936,10 +1936,11 @@ RM4) — "please fix this issue in better way and do it your best".
 
 ---
 
-## Next (unreleased) — icons and groups (D-074)
+## 1.16.0 — icons and groups (D-074)
 
 Asked by the owner (2026-10-12): "improve the UI UX, to make more easier for cashier, manager and owner … like put
-some icon". Branch `ui-icons` (main untouched); no version bump yet.
+some icon". Built on branch `ui-icons`, merged into `main` for 1.16.0. The owner asked to go straight to the public release
+("yup do it until public release"), without a test build on the phone first.
 
 - [x] **Menu = one sheet of tiles** (`MenuSheet`): icon over word, groups This bill / Till / Manage shop — the back
       office one tap away (was behind "Manage shop ›"); held-bill count on its tile; Clear bill in red; same rules for
@@ -1964,7 +1965,7 @@ some icon". Branch `ui-icons` (main untouched); no version bump yet.
 - [x] Guide pictures refreshed from run 38261007337: phone `sell`, `sell-empty`, `pay`, `settings`, `inventory`,
       `products`, `shift`, the new `menu` (EN + MS), and `tablet-sell`
 
-### Needs real-device testing (D-074)
+### Needs real-device testing (1.16.0)
 
 1. **Menu as cashier** (PIN on, Cashier role): only This bill and Till tiles; no Manage shop group. Tap a tile twice
    fast: one screen opens. Scan while the Menu is open: it closes and the item goes on the bill.

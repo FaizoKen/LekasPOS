@@ -1,6 +1,6 @@
 # Features — what the app does today (behaviour reference)
 
-The current behaviour of LekasPOS **1.15.0** (plus the unreleased D-074 look), feature by feature, for anyone changing the code. It complements
+The current behaviour of LekasPOS **1.16.0**, feature by feature, for anyone changing the code. It complements
 the design references (`architecture.md`, `database.md`, `money.md`, `sync.md`): those say *how* it is built,
 this says *what it does* and where. `docs/DECISIONS.md` is the history of *why* (D-numbers below); when it and
 this file disagree, the code wins — fix this file.
@@ -479,7 +479,7 @@ notifications. Google scopes: `drive.appdata` (sync), `drive.file` (daily report
 
 ## 20. Known gaps and inconsistencies (found while writing the user guide, 2026-10-08)
 
-Fixed with D-074 (not released yet): `error_needs_shift` pointed to "Shift & cash" (now Menu → Open shift),
+Fixed in 1.16.0 (D-074): `error_needs_shift` pointed to "Shift & cash" (now Menu → Open shift),
 `error_credit_off` to "Settings → Store", the last sale's button said "Print a copy" for the original receipt, `backup_help`
 promised a backup before every upgrade.
 
