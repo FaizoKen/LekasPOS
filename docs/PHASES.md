@@ -2014,6 +2014,10 @@ Found while explaining a flaky test after 1.16.0; the owner asked to release it 
       SHA-256 `ae92a050…9306` (the website's Download link checked); What's new in English and Malay. Smoke baseline
       (`PREV_APK_URL`) v1.16.1; the guide says "For LekasPOS 1.16.1"
 
+- [x] Perf FULL on the released code (run 38273185989, a4bc401): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 12.9 ms (150), multi-word search p95 4.3 ms (50), scan to cart
+      p95 0.64 ms (20), report_month 213 ms (1,000), report_year 244 ms (3,000); cold start to a usable till about 0.7 s
+
 ### Needs real-device testing (1.16.1)
 
 1. PIN login on, a cashier signed in, lock after 5 min: swipe the app away (Android ends it), open it again within a
