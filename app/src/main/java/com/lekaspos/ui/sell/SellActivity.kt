@@ -248,7 +248,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         heldPill = findViewById(R.id.held_pill)
         updatePill = findViewById(R.id.update_pill)
         helperPill = findViewById(R.id.helper_pill)
-        cameraButton = findViewById(R.id.btn_camera)
+        // Phones upright: inside the open search box (the row's room goes to the chips, D-078).
+        cameraButton = findViewById(if (findViewById<View>(R.id.cart_side) != null) R.id.btn_camera else R.id.btn_camera_box)
         search = findViewById(R.id.search)
         searchClear = findViewById(R.id.search_clear)
         searchBox = findViewById(R.id.search_box)

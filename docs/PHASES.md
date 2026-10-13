@@ -2207,13 +2207,16 @@ close shift (like open shift do)"; and "cash in, cash out, cash drop is same as 
 The owner (2026-10-13): "put category, all, popular etc on top part (you can change search bar to button only) because
 after click search all category will be disappear and search bar will be fill that space".
 
-- [x] Selling screen tool row: **Search**, category chips (All, Popular, categories; scroll sideways), camera, **Price
-      check**, **Items** (phones). The chips' own row under the box is gone (the tiles get 56dp)
+- [x] Selling screen tool row: **Search**, category chips (All, Popular, categories; scroll sideways), camera (two panes;
+      inside the open box on a phone upright), **Price check**, **Items** (phones). The chips' own row under the box is
+      gone (the tiles get 56dp)
 - [x] **Search** opens the box in the chips' place with the keyboard; ✕, Back, a finished search or leaving it empty closes
       it; typing on a keyboard opens it; scanners need nothing tapped. On a phone a chip tapped over the bill opens its items
 - [x] Empty-bill help text (EN + BM) says "tap Search" and "tap a category or Items"
 - [x] Docs: user guide EN + MS (cheat sheet, screen, adding items, camera, search, items), `features.md`, D-078. Nothing new
       stored or sent: privacy unchanged
+- [x] First CI run 38414863853 (736bf1d): all jobs green; its phone picture (320dp) showed half of "All" beside the camera →
+      the camera moved into the open box on a phone upright, chips a little narrower
 - [x] Local: `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
 - [ ] CI on the branch; test build v1.19.0; screenshots refreshed from CI; the owner's phone check; release APK size
 
@@ -2224,4 +2227,5 @@ after click search all category will be disappear and search bar will be fill th
 2. Tap **Search**: the box opens where the chips were, with the keyboard. Type, tap a result: it is added, the box closes and
    the chips come back. Tap Search, then ✕ (or Back twice): closed. Scan with a scanner while the box is open: added.
 3. Phone sideways / tablet: the same row above the tiles on the left; the tiles start right under it.
-4. Camera button (Settings → Barcode scanner & camera on): one tap opens the camera, with the box open or closed.
+4. Camera button (Settings → Barcode scanner & camera on): sideways or tablet, one tap in the row; phone upright, Search then the
+   camera in the box. Items keep being added until Back.

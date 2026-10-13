@@ -1658,10 +1658,12 @@ after click search all category will be disappear and search bar will be fill th
 - **Search** opens the box in the chips' place with the keyboard; the chips hide while it is open (they hid during a search
   before too). It closes with ✕, Back, a finished search (scan, pick, Items closed) or when left empty without focus.
   Typing on a keyboard opens it by itself; a keyboard-wedge scanner still needs nothing tapped.
-- The camera left the search box for the row, so it stays one tap away. On a phone upright the chips also show over the
-  bill: a tap on one opens the catalogue on it.
-Rejected: the camera only inside the open box (two taps for shops scanning with the phone); hiding Price check or Items
-behind the Menu to give the chips more room on a 360dp phone (they are used all day; the chips scroll).
+- The camera: in the row on two panes (tablets, phones sideways); on a phone upright inside the open search box. The
+  first CI pictures had it in the row there too, and a 320dp phone showed half of "All" between Search and the camera.
+  The camera keeps adding items until Back, so Search → camera is one extra tap per bill, not per item. On a phone upright
+  the chips also show over the bill: a tap on one opens the catalogue on it. Chips 14dp padding (16 before).
+Rejected: hiding Price check or Items behind the Menu to give the chips more room on a phone (they are used all day; the
+chips scroll); a second row for the chips on phones only (the row the owner asked to remove).
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

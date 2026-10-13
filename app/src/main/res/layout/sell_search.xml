@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One row above the tiles: a Search button, the category chips (All, Popular, the shop's categories), the camera
-     scanner, then labelled tools: Price check, and Items (phones; two-pane screens always show the items). Search
+     scanner (two panes; on a phone upright it is inside the open box), then labelled tools: Price check, and Items (phones; two-pane screens always show the items). Search
      opens the box in the chips' place until the search is done (the owner, 2026-10-13: the chips had a row of
      their own under the box and took the tiles' room). Only registered products are sold (D-050): an unknown
      barcode is registered first. -->
@@ -40,6 +40,7 @@
         android:id="@+id/category_list"
         android:layout_width="0dp"
         android:layout_height="56dp"
+        android:layout_marginStart="2dp"
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingStart="0dp"
@@ -74,7 +75,18 @@
             android:paddingEnd="4dp"
             android:singleLine="true" />
 
-        <!-- Clears the text, or with none closes the search: the chips come back. -->
+        <!-- Phones upright: the camera is here, the row has no room for it beside the chips. -->
+        <ImageButton
+            android:id="@+id/btn_camera_box"
+            style="@style/Widget.Lekas.IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/sell_camera"
+            android:src="@drawable/ic_camera"
+            android:tint="@color/brand"
+            android:visibility="gone" />
+
+        <!-- Closes the search (the text with it): the chips come back. -->
         <ImageButton
             android:id="@+id/search_clear"
             style="@style/Widget.Lekas.IconButton"
@@ -84,6 +96,7 @@
             android:src="@drawable/ic_close" />
     </LinearLayout>
 
+    <!-- Two panes (tablets, phones sideways): the camera in the row, open search or not. -->
     <ImageButton
         android:id="@+id/btn_camera"
         style="@style/Widget.Lekas.IconButton"
