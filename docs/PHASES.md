@@ -2224,7 +2224,9 @@ after click search all category will be disappear and search bar will be fill th
 - [x] **Test build v1.19.0** (2026-10-13): pre-release on 2edb2e2, build 195; SHA-256 `b7a073ad…4008`; certificate
       `0a67abec…d4b9`; `mapping-1.19.0.txt` attached. 1.18.0 stays the latest release
 - [x] Guide pictures refreshed from that run: `en/ms-sell`, `en/ms-sell-empty`, `en/ms-tablet-sell` (1280 px)
-- [ ] The owner's phone check
+- [x] The owner asked for a background colour on the row (2026-10-13): a light green-grey band with a line under it; the
+      chips white with an outline on it
+- [ ] CI and a test build with the band; the owner's phone check
 
 ### Needs real-device testing (1.19.0)
 

@@ -1662,6 +1662,9 @@ after click search all category will be disappear and search bar will be fill th
   first CI pictures had it in the row there too, and a 320dp phone showed half of "All" between Search and the camera.
   The camera keeps adding items until Back, so Search → camera is one extra tap per bill, not per item. On a phone upright
   the chips also show over the bill: a tap on one opens the catalogue on it. Chips 14dp padding (16 before).
+- The row is a light green-grey band with a line under it (the owner: "should we put some background color on top part.
+  for better to see right ?"): the white buttons, chips and search box stand out on it, apart from the bill and tiles.
+  The chips are white with an outline there (they were the band's colour). Not brand green: the top bar above already is.
 Rejected: hiding Price check or Items behind the Menu to give the chips more room on a phone (they are used all day; the
 chips scroll); a second row for the chips on phones only (the row the owner asked to remove).
 

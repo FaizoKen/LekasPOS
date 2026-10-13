@@ -8,6 +8,10 @@
     <!-- Field outline: at least 3:1 against white (non-text contrast). -->
     <color name="field_stroke">#7D8A85</color>
     <color name="chip_bg">#E3ECE8</color>
+    <!-- The selling screen's tool row band and the line under it (tool_row_bg); darker than chip_bg, so a chosen Items
+         (icon_toggle_bg) still shows on it. -->
+    <color name="tool_row">#D8E6DF</color>
+    <color name="tool_row_line">#B4C7BE</color>
     <color name="highlight">#FFF3CF</color>
     <color name="text_primary">#1C1F1E</color>
     <color name="text_secondary">#5B6461</color>

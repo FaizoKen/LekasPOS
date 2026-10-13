@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The selling screen's tool row (Search, chips, Price check, Items): a light band with a line under it, so the
+     buttons stand apart from the bill and the tiles below (the owner, 2026-10-13, D-078). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/tool_row_line" />
+        </shape>
+    </item>
+    <item android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/tool_row" />
+        </shape>
+    </item>
+</layer-list>

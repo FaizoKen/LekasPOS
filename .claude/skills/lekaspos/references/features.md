@@ -104,7 +104,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 - Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
   bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). One tool row above the bill/tiles (`sell_search.xml`,
   D-078): **Search** button, category chips (scroll sideways), camera (two panes only; a phone upright has it inside the
-  open box, `btn_camera_box`), Price check, Items (phones).
+  open box, `btn_camera_box`), Price check, Items (phones). The row is a light band (`tool_row_bg`: `tool_row` with a
+  `tool_row_line` under it); its chips are white with an outline (`category_chip_bg`), brand when chosen.
   **Search** opens the box in the chips' place (`searchOpen`; keyboard up); typing on a keyboard opens it too; ✕, Back,
   a search finished (scan, pick, Items closed) or the field left empty and unfocused closes it. On a phone a chip
   tapped over the bill opens the catalogue on it. Two panes (D-076): the tool row and tiles from the
