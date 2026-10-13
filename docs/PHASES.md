@@ -42,7 +42,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
-| — | **1.19.0**: the category chips in the top row beside a **Search** button; Search opens the box in their place; the camera a button of its own (D-078) | in progress — code and docs done; CI and a test build next |
+| — | **1.19.0**: the category chips in the top row beside a **Search** button; Search opens the box in their place; the camera a button of its own (D-078) | test build **v1.19.0** (build 195) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2218,7 +2218,13 @@ after click search all category will be disappear and search bar will be fill th
 - [x] First CI run 38414863853 (736bf1d): all jobs green; its phone picture (320dp) showed half of "All" beside the camera →
       the camera moved into the open box on a phone upright, chips a little narrower
 - [x] Local: `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
-- [ ] CI on the branch; test build v1.19.0; screenshots refreshed from CI; the owner's phone check; release APK size
+- [x] CI run 38418220321 (2edb2e2, build 195): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,666,671 bytes**. Its 320dp phone picture: Search, All, the next chip peeking, Price
+      check, Items
+- [x] **Test build v1.19.0** (2026-10-13): pre-release on 2edb2e2, build 195; SHA-256 `b7a073ad…4008`; certificate
+      `0a67abec…d4b9`; `mapping-1.19.0.txt` attached. 1.18.0 stays the latest release
+- [x] Guide pictures refreshed from that run: `en/ms-sell`, `en/ms-sell-empty`, `en/ms-tablet-sell` (1280 px)
+- [ ] The owner's phone check
 
 ### Needs real-device testing (1.19.0)
 
