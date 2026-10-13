@@ -2245,7 +2245,10 @@ after click search all category will be disappear and search bar will be fill th
       ("For LekasPOS 1.19.1" live)
 - [x] **v1.19.1 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
       website's Download link serves it (SHA-256 `a88f8af4…676f` checked). Shops on 1.6.1 or later are offered it inside the app
-- [ ] Perf FULL on the released code (run 38434288815, 867d8f1)
+- [x] Perf FULL on the released code (run 38434288815, 867d8f1): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 17.4 ms (150), multi-word search p95 4.9 ms (50), scan to cart
+      p95 0.61 ms (20), report_month 179 ms (1,000), report_year 236 ms (3,000); cold start to a usable till on API 21 about
+      0.64 s, API 29 about 0.8 s, API 36 about 0.6 s
 
 ### Needs real-device testing (1.19.0)
 
