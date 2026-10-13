@@ -12,7 +12,7 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
-    <!-- An empty bill: how to start, and the last sale (its change, and a copy of the receipt).
+    <!-- An empty bill: the last sale (its change, and a copy of the receipt), then how to start.
          No scrollbar: a shown scrollbar schedules its fade (~1.2 s), which holds a closed screen
          in memory until then (found by SoakTest). -->
     <ScrollView
@@ -28,29 +28,13 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
-                style="@style/Text.Lekas.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/sell_empty_title"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/cart_empty_help"
-                style="@style/Text.Lekas.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="4dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="15sp" />
-
+            <!-- The last sale first: its change is what the cashier needs now, and on a phone the help text pushed it
+                 below the totals bar (D-078). -->
             <LinearLayout
                 android:id="@+id/last_sale"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginBottom="20dp"
                 android:background="@drawable/card_bg"
                 android:orientation="vertical"
                 android:padding="12dp"
@@ -93,6 +77,24 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/result_print_again" />
             </LinearLayout>
+
+            <TextView
+                style="@style/Text.Lekas.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sell_empty_title"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/cart_empty_help"
+                style="@style/Text.Lekas.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp" />
         </LinearLayout>
     </ScrollView>
 </FrameLayout>

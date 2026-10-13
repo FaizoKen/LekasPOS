@@ -3,6 +3,9 @@
 <resources>
     <string name="sell_tool_items">Barang</string>
     <string name="sell_search_hint_short">Cari</string>
+    <string name="sell_tool_camera">Kamera</string>
+    <string name="tile_stock">Stok %1$s</string>
+    <string name="tile_stock_none">Habis</string>
     <string name="sell_total">Jumlah</string>
     <string name="sell_popular">Laris</string>
     <plurals name="held_pill">
@@ -10,8 +13,8 @@
     </plurals>
     <string name="menu_manage">Urus kedai</string>
     <string name="sell_empty_title">Imbas barang untuk mula</string>
-    <string name="sell_empty_help">• Imbas kod bar, atau taip nama di kotak carian.\n• Tiada kod bar (sayur, kuih…)? Ketik Barang dan pilih.\n• Kod bar yang belum dikenali? Ia meminta produk ditambah dahulu.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
-    <string name="sell_empty_help_wide">• Imbas kod bar, taip nama di kotak carian, atau ketik barang di sebelah kiri.\n• Kod bar yang belum dikenali? Ia meminta produk ditambah dahulu.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
+    <string name="sell_empty_help">• Imbas kod bar, atau ketik Cari dan taip nama.\n• Tiada kod bar (sayur, kuih…)? Ketik satu kategori atau Barang dan pilih.\n• Kod bar yang belum dikenali? Ia meminta produk ditambah dahulu.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
+    <string name="sell_empty_help_wide">• Imbas kod bar, ketik Cari dan taip nama, atau ketik barang di sebelah kiri.\n• Kod bar yang belum dikenali? Ia meminta produk ditambah dahulu.\n• Ketik satu baris bil untuk menukar bilangan, atau untuk membuangnya.</string>
     <string name="last_sale_title">Jualan terakhir · %1$s · resit %2$s</string>
     <string name="last_sale_received">Jumlah %1$s · diterima %2$s</string>
     <string name="last_sale_paid">Jumlah %1$s · dibayar</string>

@@ -13,7 +13,7 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="panduan.html" hreflang="ms" lang="ms">Bahasa Melayu</a> · <a href="index.html">Home</a></p>
 <h1><img class="logo" src="icon.svg" alt="" width="48" height="48"> LekasPOS user guide</h1>
-<p class="updated">For LekasPOS 1.18.0 · Last updated 13 October 2026</p>
+<p class="updated">For LekasPOS 1.19.1 · Last updated 14 October 2026</p>
 <p>LekasPOS is a free point-of-sale app for small grocery shops and mini markets. It runs on an Android phone or tablet and works fully offline. This guide explains everything it does, for the owner, managers and cashiers. New here? Read <a href="#start">Getting started</a>; cashiers can start with the <a href="#cashier">Quick guide for cashiers</a>. Words in <b>bold</b> are the words you see in the app.</p>
 
 <nav class="toc" id="contents" aria-label="Contents">
@@ -143,7 +143,7 @@ shop can work like that. Once PINs are set, each person signs in and sees only t
 <tr><th>To…</th><th>Do this</th></tr>
 <tr><td>Sign in</td><td>Tap your name, type your PIN, tap <b>OK</b>. Not your name? Tap <b>Not you?</b></td></tr>
 <tr><td>Start the day</td><td>If the till asks <b>Start the shift</b>, count the cash in the drawer and tap <b>OK</b>.</td></tr>
-<tr><td>Add an item</td><td>Scan its barcode. Or type its name in <b>Search</b> and tap it. Or tap <b>Items</b> and tap the item.</td></tr>
+<tr><td>Add an item</td><td>Scan its barcode. Or tap <b>Search</b>, type its name and tap it. Or tap <b>Items</b> (or a category) and tap the item.</td></tr>
 <tr><td>Item without a barcode (vegetables, kuih)</td><td>Tap <b>Items</b> (or search), tap it, then type the weight or the price if asked.</td></tr>
 <tr><td>Barcode not found</td><td>The till says <b>Barcode not found</b>. Call a manager: they tap <b>Add product</b>, type their PIN, the name and the price.</td></tr>
 <tr><td>Change how many</td><td>Tap the line, then <b>+</b> or <b>−</b>, or tap the number and type it.</td></tr>
@@ -171,7 +171,7 @@ seen the total. That is normal — a wrong item is taken off every day — and p
 <p>The selling screen opens when you start the app. Everything about one customer happens here.</p>
 <div class="shots">
 <figure><img src="img/en-sell.png" alt="The selling screen on a phone" width="240" loading="lazy"><figcaption>On a phone: the bill, with the last item's buttons.</figcaption></figure>
-<figure><img src="img/en-sell-empty.png" alt="An empty bill with the last sale" width="240" loading="lazy"><figcaption>An empty bill explains how to start and shows the last sale.</figcaption></figure>
+<figure><img src="img/en-sell-empty.png" alt="An empty bill with the last sale" width="240" loading="lazy"><figcaption>An empty bill shows the last sale (the change to give, Print receipt) and how to start.</figcaption></figure>
 </div>
 <figure class="wide"><img src="img/en-tablet-sell.png" alt="The selling screen on a tablet" loading="lazy"><figcaption>On a tablet (or a phone held sideways): the items on the left from the top of the screen, the bill on the right under the top bar.</figcaption></figure>
 
@@ -180,8 +180,11 @@ seen the total. That is normal — a wrong item is taken off every day — and p
 <li><b>Top bar</b>: the shop's name, your name (when PINs are on), small coloured buttons (“pills”) when
 something needs attention, and <b>Menu</b>. On a tablet or a phone held sideways the top bar is above the bill
 only, so the items get the whole height.</li>
-<li><b>Search</b> box with the <b>camera</b> button inside it, <b>Price check</b>, and on phones <b>Items</b>
-(opens the item list; tap again or Back for the bill).</li>
+<li>One row of buttons: <b>Search</b>, the category tabs (<b>All</b>, <b>Popular</b>, your categories; slide them
+sideways for more), <b>Price check</b>, and on phones <b>Items</b> (opens the item list; tap again or Back for the bill).
+<b>Search</b> opens the search box in the tabs' place; <b>✕</b> or Back closes it and the tabs come back. On a
+tablet or a phone held sideways the row also has <b>Camera</b>; on a phone held upright the camera button is inside the
+open search box, which then takes the whole row.</li>
 <li><b>The bill</b>: one line per item with its quantity, price and amount.</li>
 <li><b>Totals</b>: the number of items (plus any discount and tax), the big <b>Total</b>, and the buttons
 <b>Hold</b> and <b>Pay</b>. The owner, managers and cashiers all see the same screen.</li>
@@ -214,16 +217,16 @@ the printer settings.</td></tr>
 <dt>Barcode scanner</dt><dd>Just scan — nothing needs to be tapped first. USB and Bluetooth scanners in
 “keyboard” mode work without any setup. You hear a short beep when the item is added and a low tone when
 something is wrong.</dd>
-<dt>Camera</dt><dd>Tap the camera inside the search box. Hold each barcode inside the frame: each item is
+<dt>Camera</dt><dd>Tap <b>Camera</b> (on a phone held upright: tap <b>Search</b>, then the camera in the box). Hold each barcode inside the frame: each item is
 added with a beep (<b>Added: …</b>). An item that needs a weight or a price, or a barcode the till does not know,
 closes the camera and the till asks you. <b>Torch</b> turns on the light. Go back when done.</dd>
-<dt>Search</dt><dd>Type part of the name (<i>milo 1k</i> finds “Milo 1kg”), or the first digits of a barcode.
+<dt>Search</dt><dd>Tap <b>Search</b>, then type part of the name (<i>milo 1k</i> finds “Milo 1kg”), or the first digits of a barcode.
 Tap the item. Typing a whole barcode or SKU and pressing Enter adds it directly.</dd>
-<dt>Items (the item list)</dt><dd>On a phone tap <b>Items</b>; on a tablet it is always on the left. The tabs
-are <b>All</b> (shown when the till opens), <b>Popular</b> (your best sellers of the last 30 days), and one per
-category. Tap a tile to add
-it. A tile already on the bill shows <b>×2</b>. A tile shows the price and, for counted products, how many are in
-stock.</dd>
+<dt>Items (the item list)</dt><dd>On a phone tap <b>Items</b> or a category tab; on a tablet it is always on
+the left. The tabs, beside <b>Search</b>, are <b>All</b> (shown when the till opens), <b>Popular</b> (your best sellers
+of the last 30 days), and one per category. Tap a tile to add
+it. A tile already on the bill shows <b>×2</b>. A tile shows the price and, for counted products, the stock beside it:
+<b>5 left</b>, or <b>None left</b> (it still sells).</dd>
 </dl>
 
 <h3 id="weighed">Weighed items, items priced at the till, packs and scale labels</h3>

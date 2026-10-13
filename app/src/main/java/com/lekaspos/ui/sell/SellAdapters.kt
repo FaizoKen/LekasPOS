@@ -1,6 +1,7 @@
 package com.lekaspos.ui.sell
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -303,9 +304,7 @@ class ProductTileAdapter(
             SellMode.OPEN_PRICE -> ctx.getString(R.string.tile_open_price)
             else -> price
         }
-        val stock = p.stockQty
-        h.stock.text = if (stock == null) "" else MoneyFormat.formatQty(stock)
-        h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE // its own line: none when not tracked
+        bindStock(h, p.stockQty)
         h.pictureBox.visibility = if (p.imageId != null || rowHasPicture(position)) View.VISIBLE else View.GONE
         h.initials.text = if (p.imageId == null) TileColors.initials(p.name) else ""
         showPicture(h.picture, p.imageId)
@@ -342,7 +341,6 @@ class ProductTileAdapter(
             h.itemView.setBackgroundResource(R.drawable.tile_bg)
             h.name.setTextColor(h.nameColor)
             h.price.setTextColor(h.priceColor)
-            h.stock.setTextColor(h.stockColor)
             h.initials.setTextColor(h.stockColor)
             h.inBill.setBackgroundResource(R.drawable.count_bg)
             h.inBill.setTextColor(ctx.colorOf(R.color.text_on_brand))
@@ -351,11 +349,23 @@ class ProductTileAdapter(
             val white = ctx.colorOf(R.color.text_on_brand)
             h.name.setTextColor(white)
             h.price.setTextColor(white)
-            h.stock.setTextColor(white)
             h.initials.setTextColor(white)
             h.inBill.setBackgroundResource(R.drawable.count_bg_light)
             h.inBill.setTextColor(ctx.colorOf(R.color.text_primary))
         }
+    }
+
+    /**
+     * "5 left" beside the price, only when the product has a stock count; "None left" at zero or below (sold past
+     * the count: it still sells). D-078: a bare "-1" or "5" read as nothing. Not red: "Track stock" is on by
+     * default, and a shop that never counts would see every tile it sold from in red.
+     */
+    private fun bindStock(h: Holder, stock: Long?) {
+        h.stock.visibility = if (stock == null) View.GONE else View.VISIBLE
+        if (stock == null) return
+        val ctx = h.itemView.context
+        h.stock.text = if (stock <= 0L) ctx.getString(R.string.tile_stock_none) else ctx.getString(R.string.tile_stock, MoneyFormat.formatQty(stock))
+        h.stock.setTextColor(if (h.color == TileColor.NONE) h.stockColor else ColorStateList.valueOf(ctx.colorOf(R.color.text_on_brand)))
     }
 
     private fun bindBadge(h: Holder, p: ProductListItem) {

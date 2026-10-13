@@ -42,6 +42,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
+| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **releasing** v1.19.1 (build 197) — the owner asked to publish it ("ok publish when CI done"); test build v1.19.0 (build 195) before it |
 
 ## Open questions for the user
 
@@ -2200,3 +2201,64 @@ close shift (like open shift do)"; and "cash in, cash out, cash drop is same as 
 3. Menu → Shift & cash with a shift open, as the owner: Close shift and Shift report on top, then "Money in and out of the
    drawer" with the three buttons and their captions, in English and Malay; each keypad shows the caption; **Pay from
    drawer** refuses an empty note. The shift report and the activity log show the new words; a printed report fits 58 mm.
+
+## 1.19.0 — the category chips beside a Search button (D-078)
+
+The owner (2026-10-13): "put category, all, popular etc on top part (you can change search bar to button only) because
+after click search all category will be disappear and search bar will be fill that space".
+
+- [x] Selling screen tool row: **Search**, category chips (All, Popular, categories; scroll sideways), camera (two panes;
+      inside the open box on a phone upright), **Price check**, **Items** (phones). The chips' own row under the box is
+      gone (the tiles get 56dp)
+- [x] **Search** opens the box in the chips' place with the keyboard; ✕, Back, a finished search or leaving it empty closes
+      it; typing on a keyboard opens it; scanners need nothing tapped. On a phone a chip tapped over the bill opens its items
+- [x] Empty-bill help text (EN + BM) says "tap Search" and "tap a category or Items"
+- [x] Docs: user guide EN + MS (cheat sheet, screen, adding items, camera, search, items), `features.md`, D-078. Nothing new
+      stored or sent: privacy unchanged
+- [x] First CI run 38414863853 (736bf1d): all jobs green; its phone picture (320dp) showed half of "All" beside the camera →
+      the camera moved into the open box on a phone upright, chips a little narrower
+- [x] Local: `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
+- [x] CI run 38418220321 (2edb2e2, build 195): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,666,671 bytes**. Its 320dp phone picture: Search, All, the next chip peeking, Price
+      check, Items
+- [x] **Test build v1.19.0** (2026-10-13): pre-release on 2edb2e2, build 195; SHA-256 `b7a073ad…4008`; certificate
+      `0a67abec…d4b9`; `mapping-1.19.0.txt` attached. 1.18.0 stays the latest release
+- [x] Guide pictures refreshed from that run: `en/ms-sell`, `en/ms-sell-empty`, `en/ms-tablet-sell` (1280 px)
+- [x] The owner asked for a background colour on the row (2026-10-13): a light green-grey band with a line under it; the
+      chips white with an outline on it
+- [x] The owner asked to "audit properly and polish the main tills screen UI UX" (2026-10-14) → **1.19.1** (D-078):
+      the tool row 56dp with 48dp outlines (as high as the top bar on two panes; 12dp more bill on a phone); **Camera** a
+      tool with its word on two panes; the open search box the whole row on a phone upright; chips fade at the edges; tile
+      stock beside the price, "5 left" / "None left" (BM "Stok 5" / "Habis"); the last sale first on an empty bill.
+      `ScreenshotsTest`: three categories in the test shop, new pictures `sell-items` (phone: Items) and `sell-search`
+- [x] CI run 38428148298 (06a7e12, build 197): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,669,504 bytes**. Pictures checked: on the tablet the band is as high as the top bar and
+      the tile prices line up; on the phone the open search box has the whole row and the empty bill starts with the change
+- [x] **Test build v1.19.1** (2026-10-14): pre-release on 06a7e12, build 197; SHA-256 `a88f8af4…676f`; certificate
+      `0a67abec…d4b9`; `mapping-1.19.1.txt` attached. 1.18.0 stays the latest release
+- [x] Guide pictures from that run: `en/ms-sell`, `-sell-empty`, `-tablet-sell`, and the pay, cash, Menu and dialog pictures
+      (the selling screen behind them)
+- [ ] The owner's phone check (the owner asked to publish without it first)
+- [ ] The owner asked to publish it (2026-10-14, "ok publish when CI done"): `search-button` merged into `main`; smoke baseline
+      (`PREV_APK_URL`) v1.19.1; the guide says "For LekasPOS 1.19.1"; privacy policy unchanged. After CI on main: v1.19.1
+      made the latest release with public notes; perf FULL
+
+### Needs real-device testing (1.19.0)
+
+1. Phone upright, empty bill: the row shows Search, All, Popular, the categories, camera, Price check, Items. Slide the
+   chips sideways. Tap a category: the items of that category open. Items or Back: the bill again.
+2. Tap **Search**: the box opens where the chips were, with the keyboard. Type, tap a result: it is added, the box closes and
+   the chips come back. Tap Search, then ✕ (or Back twice): closed. Scan with a scanner while the box is open: added.
+3. Phone sideways / tablet: the same row above the tiles on the left; the tiles start right under it.
+4. Camera button (Settings → Barcode scanner & camera on): sideways or tablet, one tap in the row; phone upright, Search then the
+   camera in the box. Items keep being added until Back.
+
+### Needs real-device testing (1.19.1)
+
+5. Tablet or phone sideways: the band with Search, the chips and Camera / Price check is exactly as high as the green top
+   bar over the bill (no step between them). Camera opens the camera.
+6. Phone upright: tap Search — the box takes the whole row (Price check and Items hide until ✕ or Back); typing has room.
+7. Tiles of products with a stock count: "5 left" or "None left" beside the price, prices of a row on one line (Malay:
+   "Stok 5" / "Habis").
+8. Finish a cash sale with change on a phone: on the empty bill the last sale and its change show at the top without
+   scrolling; the help text is below it.
