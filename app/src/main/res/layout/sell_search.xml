@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Search or scan, with the camera scanner inside the box, then labelled tools: Price check,
-     and Items (phones; two-pane screens always show the items). Only registered products are
-     sold (D-050): an unknown barcode is registered first. -->
+<!-- One row above the tiles: a Search button, the category chips (All, Popular, the shop's categories), the camera
+     scanner, then labelled tools: Price check, and Items (phones; two-pane screens always show the items). Search
+     opens the box in the chips' place until the search is done (the owner, 2026-10-13: the chips had a row of
+     their own under the box and took the tiles' room). Only registered products are sold (D-050): an unknown
+     barcode is registered first. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -14,6 +16,36 @@
     android:paddingBottom="4dp">
 
     <LinearLayout
+        android:id="@+id/btn_search"
+        style="@style/Widget.Lekas.Tool"
+        android:contentDescription="@string/sell_search_hint">
+
+        <ImageView
+            style="@style/Widget.Lekas.ToolIcon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_search" />
+
+        <TextView
+            style="@style/Text.Lekas.ToolLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxWidth="96dp"
+            android:maxLines="2"
+            android:text="@string/sell_search_hint_short" />
+    </LinearLayout>
+
+    <com.lekaspos.ui.common.TapList
+        android:id="@+id/category_list"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="0dp"
+        android:paddingEnd="4dp" />
+
+    <LinearLayout
         android:id="@+id/search_box"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -22,7 +54,8 @@
         android:background="@drawable/field_bg"
         android:gravity="center_vertical"
         android:minHeight="56dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <EditText
             android:id="@+id/search"
@@ -41,25 +74,25 @@
             android:paddingEnd="4dp"
             android:singleLine="true" />
 
+        <!-- Clears the text, or with none closes the search: the chips come back. -->
         <ImageButton
             android:id="@+id/search_clear"
             style="@style/Widget.Lekas.IconButton"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:contentDescription="@string/clear"
-            android:src="@drawable/ic_close"
-            android:visibility="gone" />
-
-        <ImageButton
-            android:id="@+id/btn_camera"
-            style="@style/Widget.Lekas.IconButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:contentDescription="@string/sell_camera"
-            android:src="@drawable/ic_camera"
-            android:tint="@color/brand"
-            android:visibility="gone" />
+            android:src="@drawable/ic_close" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btn_camera"
+        style="@style/Widget.Lekas.IconButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:contentDescription="@string/sell_camera"
+        android:src="@drawable/ic_camera"
+        android:tint="@color/brand"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/btn_price_check"

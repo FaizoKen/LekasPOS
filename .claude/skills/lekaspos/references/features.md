@@ -102,13 +102,17 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 
 ### 2.1 Layout
 - Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
-  bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). Two panes (D-076): search row, chips and tiles from the
+  bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). One tool row above the bill/tiles (`sell_search.xml`,
+  D-078): **Search** button, category chips (scroll sideways), camera, Price check, Items (phones).
+  **Search** opens the box in the chips' place (`searchOpen`; keyboard up); typing on a keyboard opens it too; ✕, Back,
+  a search finished (scan, pick, Items closed) or the field left empty and unfocused closes it. On a phone a chip
+  tapped over the bill opens the catalogue on it. Two panes (D-076): the tool row and tiles from the
   top of the screen; the top bar over the bill only, the bill right under it (1.17.1: a band above the bill that lined it up
   with the tiles was taken out at the owner's request); a brand-colour `status_strip` under the status bar on
   Android 15+. Recreated on rotation (like the lock screen, camera and
   Diagnostics; back-office screens are not, D-054). Orientation locked while the payment is open.
 - Top bar (`TopBarLayout`): store name (blank → "LekasPOS"), staff chip (Lock / Change my PIN), pills, **Menu** (a pill like the
-  others, `pill_info_bg`, "⋮ Menu" on one line, 1.17.1; 16dp of space before it and 8dp between pills, the store name at least 72dp, 1.17.2; Price check and Items beside the search are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
+  others, `pill_info_bg`, "⋮ Menu" on one line, 1.17.1; 16dp of space before it and 8dp between pills, the store name at least 72dp, 1.17.2; Search, Price check and Items in the tool row are outlined, `icon_toggle_bg`, D-076). Pill order: held (`held_pill`) → one safety pill → printer pill → manager help → update (`update_pill`, needs SETTINGS
   shown and a non-Play install). Pills that do not fit wrap to a second line.
 - Safety pill, first match wins (`renderSafety`): Data problem → Backup: sign in (sync on, auth needed) → Not
   backed up (sync on, changes waiting, no success for 24 h) → Storage almost full (free < max(300 MB, DB + 100 MB,

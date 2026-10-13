@@ -167,6 +167,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var cameraButton: View
     private lateinit var search: EditText
     private lateinit var searchClear: View
+    private lateinit var searchBox: View
+    private lateinit var searchButton: View
+
+    /** The search box is open in the category chips' place (Search tapped, or something typed). */
+    private var searchOpen = false
     private var browseButton: View? = null
     private lateinit var cartPanel: View
     private lateinit var cartList: RecyclerView
@@ -246,6 +251,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         cameraButton = findViewById(R.id.btn_camera)
         search = findViewById(R.id.search)
         searchClear = findViewById(R.id.search_clear)
+        searchBox = findViewById(R.id.search_box)
+        searchButton = findViewById(R.id.btn_search)
         browseButton = findViewById(R.id.btn_browse)
         cartPanel = findViewById(R.id.cart_panel)
         cartList = findViewById(R.id.cart_list)
@@ -323,6 +330,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
             }
         }
         searchClear.setOnClickListener { clearSearch() }
+        searchButton.setOnClickListener { openSearch() }
+        // Left without a word typed (a tile tapped, the keyboard put away and the screen tapped): the chips come back.
+        search.setOnFocusChangeListener { _, focused -> if (!focused && searchOpen && search.text.isEmpty()) clearSearch() }
         browseButton?.setOnClickListener { toggleCatalog() }
         browseButton?.visible(!twoPane)
         findViewById<View>(R.id.btn_price_check).setOnClickListener { showPriceCheck() }
@@ -970,17 +980,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
             cartPanel.visible(!catalog)
             browseButton?.isSelected = catalog
         }
-        categoryList.visible(!searching)
+        // The search box takes the chips' place in the row while open (the owner, 2026-10-13).
+        searchBox.visible(searchOpen)
+        searchButton.visible(!searchOpen)
+        categoryList.visible(!searchOpen)
         updateBackHandling()
     }
 
     private fun toggleCatalog() {
         catalogOpen = !catalogOpen
-        if (!catalogOpen && search.text.isNotEmpty()) clearSearch() else showPanels()
+        if (!catalogOpen && searchOpen) clearSearch() else showPanels()
     }
 
     /** True when back should close the catalogue/search instead of leaving the app. */
-    private fun backConsumable(): Boolean = !twoPane && (catalogOpen || search.text.isNotEmpty())
+    private fun backConsumable(): Boolean = searchOpen || (!twoPane && catalogOpen)
 
     private fun handleBack(): Boolean {
         if (!backConsumable()) return false
@@ -991,7 +1004,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
             return true
         }
         catalogOpen = false
-        if (search.text.isNotEmpty()) clearSearch() else showPanels()
+        if (searchOpen) clearSearch() else showPanels()
         return true
     }
 
@@ -1291,7 +1304,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     // ------------------------------------------------------------------ search & catalogue
 
     private fun onSearchChanged(text: String) {
-        searchClear.visible(text.isNotEmpty())
+        if (text.isNotEmpty()) searchOpen = true // typed on a keyboard with the box closed
         showPanels()
         searchJob?.cancel()
         if (text.isBlank()) {
@@ -1351,8 +1364,20 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
     }
 
+    /** Search tapped: the box opens in the chips' place, with the keyboard. */
+    private fun openSearch() {
+        searchOpen = true
+        showPanels()
+        search.requestFocus()
+        search.post {
+            if (search.hasFocus()) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(search, 0)
+        }
+    }
+
+    /** The search is done: the box closes and the chips come back. */
     private fun clearSearch() {
-        search.setText("")
+        searchOpen = false
+        if (search.text.isNotEmpty()) search.setText("") // an empty one set again would read the tiles from the top
         search.clearFocus()
         hideKeyboard()
         showPanels()
@@ -1423,6 +1448,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         selectedCategory = id
         categoryAdapter.selected = id
         loadCatalog(reset = true)
+        // On a phone the chips show above the bill too: a tap on one opens its items.
+        if (!twoPane && !catalogOpen) {
+            catalogOpen = true
+            showPanels()
+        }
     }
 
     private fun loadCatalog(reset: Boolean) {

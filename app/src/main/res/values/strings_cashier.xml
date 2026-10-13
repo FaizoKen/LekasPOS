@@ -11,8 +11,8 @@
     </plurals>
     <string name="menu_manage">Manage shop</string>
     <string name="sell_empty_title">Scan an item to start</string>
-    <string name="sell_empty_help">• Scan a barcode, or type a name in the search box.\n• No barcode (loose vegetables, kuih…)? Tap Items and pick it.\n• A barcode the till does not know? It asks to add the product first.\n• Tap a line on the bill to change how many, or to remove it.</string>
-    <string name="sell_empty_help_wide">• Scan a barcode, type a name in the search box, or tap an item on the left.\n• A barcode the till does not know? It asks to add the product first.\n• Tap a line on the bill to change how many, or to remove it.</string>
+    <string name="sell_empty_help">• Scan a barcode, or tap Search and type a name.\n• No barcode (loose vegetables, kuih…)? Tap a category or Items and pick it.\n• A barcode the till does not know? It asks to add the product first.\n• Tap a line on the bill to change how many, or to remove it.</string>
+    <string name="sell_empty_help_wide">• Scan a barcode, tap Search and type a name, or tap an item on the left.\n• A barcode the till does not know? It asks to add the product first.\n• Tap a line on the bill to change how many, or to remove it.</string>
     <string name="last_sale_title">Last sale · %1$s · receipt %2$s</string>
     <string name="last_sale_received">Total %1$s · received %2$s</string>
     <string name="last_sale_paid">Total %1$s · paid</string>

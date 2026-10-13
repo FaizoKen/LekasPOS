@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The tiles. Their category chips are in the row above, beside the Search button (sell_search). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/catalog_panel"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:visibility="gone">
-
-    <com.lekaspos.ui.common.TapList
-        android:id="@+id/category_list"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:clipToPadding="false"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp" />
 
     <FrameLayout
         android:layout_width="match_parent"

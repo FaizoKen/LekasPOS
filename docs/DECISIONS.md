@@ -1649,6 +1649,20 @@ steps fit a closing time and a spinner is one tap); keeping the industry words "
 only (the words themselves were the confusion; the guide still names them so either is understood); making "Close shift"
 the only way to lock (a cashier going to the toilet would have to count the drawer).
 
+### D-078 — The category chips beside a Search button; the box opens in their place (1.19.0, 2026-10-13)
+The owner (2026-10-13): "put category, all, popular etc on top part (you can change search bar to button only) because
+after click search all category will be disappear and search bar will be fill that space".
+- The selling screen's tool row is now **Search** (a button like Price check and Items), the category chips (All, Popular,
+  the shop's categories; they scroll sideways), the camera, **Price check** and, on phones, **Items**. The chips' own row
+  under the search box is gone: the tiles get its 56dp.
+- **Search** opens the box in the chips' place with the keyboard; the chips hide while it is open (they hid during a search
+  before too). It closes with ✕, Back, a finished search (scan, pick, Items closed) or when left empty without focus.
+  Typing on a keyboard opens it by itself; a keyboard-wedge scanner still needs nothing tapped.
+- The camera left the search box for the row, so it stays one tap away. On a phone upright the chips also show over the
+  bill: a tap on one opens the catalogue on it.
+Rejected: the camera only inside the open box (two taps for shops scanning with the phone); hiding Price check or Items
+behind the Menu to give the chips more room on a 360dp phone (they are used all day; the chips scroll).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.
