@@ -16,6 +16,7 @@ import com.lekaspos.app.LekasApp
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.TileColor
 import com.lekaspos.core.pricing.Settlement
+import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.db.Seed
 import com.lekaspos.data.product.ProductLook
@@ -91,15 +92,25 @@ class ScreenshotsTest {
             val db = graph.db()
             graph.cart.load()
             if (graph.cart.state.value.cart.items.isEmpty()) {
-                val items = listOf("Milo Tin 1.5kg" to 3_890L, "Roti Gardenia Putih" to 420L, "Telur Gred A (30 biji)" to 1_650L)
-                for ((name, price) in items) {
-                    graph.cart.addProduct(TestDb.sellable(db, TestDb.product(db, name, price)))
+                // A shop's categories: their chips show beside Search (D-078).
+                val now = System.currentTimeMillis()
+                val drinks = db.write { tx -> CategoryDao.insert(tx, "Minuman", TileColor.TEAL, 0, now) }
+                val kitchen = db.write { tx -> CategoryDao.insert(tx, "Barang dapur", TileColor.NONE, 0, now) }
+                val breakfast = db.write { tx -> CategoryDao.insert(tx, "Sarapan", TileColor.AMBER, 0, now) }
+                val items = listOf(
+                    Triple("Milo Tin 1.5kg", 3_890L, drinks), Triple("Roti Gardenia Putih", 420L, breakfast),
+                    Triple("Telur Gred A (30 biji)", 1_650L, breakfast),
+                )
+                for ((name, price, category) in items) {
+                    graph.cart.addProduct(TestDb.sellable(db, TestDb.product(db, name, price, categoryId = category)))
                 }
                 // More products for the tiles, with colours and a picture (D-066).
                 val more = listOf(
-                    "Beras Faiza 10kg" to TileColor.BROWN, "Gula Pasir 1kg" to TileColor.NONE, "Minyak Masak Saji 5kg" to TileColor.AMBER,
-                    "Teh Boh 250g" to TileColor.GREEN, "Kopi O Cap Kapal 200g" to TileColor.BROWN, "Maggi Kari 5 pek" to TileColor.ORANGE,
-                    "Sardin Ayam 425g" to TileColor.RED, "Susu Pekat Manis" to TileColor.BLUE, "Air Mineral 1.5L" to TileColor.TEAL,
+                    Triple("Beras Faiza 10kg", TileColor.BROWN, kitchen), Triple("Gula Pasir 1kg", TileColor.NONE, kitchen),
+                    Triple("Minyak Masak Saji 5kg", TileColor.AMBER, kitchen), Triple("Teh Boh 250g", TileColor.GREEN, drinks),
+                    Triple("Kopi O Cap Kapal 200g", TileColor.BROWN, drinks), Triple("Maggi Kari 5 pek", TileColor.ORANGE, kitchen),
+                    Triple("Sardin Ayam 425g", TileColor.RED, kitchen), Triple("Susu Pekat Manis", TileColor.BLUE, drinks),
+                    Triple("Air Mineral 1.5L", TileColor.TEAL, drinks),
                 )
                 val picture = android.graphics.Bitmap.createBitmap(240, 240, android.graphics.Bitmap.Config.ARGB_8888).apply {
                     val c = android.graphics.Canvas(this)
@@ -108,7 +119,7 @@ class ScreenshotsTest {
                 }
                 val jpeg = java.io.ByteArrayOutputStream().also { picture.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
                 for ((i, entry) in more.withIndex()) {
-                    val id = TestDb.product(db, entry.first, 500L + i * 250L)
+                    val id = TestDb.product(db, entry.first, 500L + i * 250L, categoryId = entry.third)
                     db.write(reserveIds = 2L) { tx ->
                         val now = System.currentTimeMillis()
                         val image = if (i == 0) ProductLookDao.addImage(tx, id, android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP), null, now) else null
@@ -125,6 +136,15 @@ class ScreenshotsTest {
             for ((name, cls) in screens) shoot(Intent(ctx, cls), File(dir, "$lang-$name.png"))
             val newProduct = Intent(ctx, ProductEditActivity::class.java).putExtra(ProductEditActivity.EXTRA_BARCODE, "9556001234567")
             shoot(newProduct, File(dir, "$lang-product-new.png"))
+            // The items (on a phone after Items; two panes show them anyway) and the search box open in the chips'
+            // place with "mi" typed (D-078).
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-items.png")) {
+                it.findViewById<View>(R.id.btn_browse).takeIf { b -> b.visibility == View.VISIBLE }?.performClick()
+            }
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-search.png")) {
+                it.findViewById<View>(R.id.btn_search).performClick()
+                it.findViewById<android.widget.EditText>(R.id.search).setText("mi")
+            }
             // The payment over the bill: how the customer pays (D-064).
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-pay.png")) { it.findViewById<View>(R.id.btn_pay).performClick() }
             // The Menu: every job as a tile in its group (D-074).

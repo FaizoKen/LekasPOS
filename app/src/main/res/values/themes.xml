@@ -116,7 +116,7 @@
     </style>
 
     <!-- Selling screen tool: an icon over a word, so nobody has to guess what it does (D-049).
-         At least 56dp high, taller when a large font puts the word on two lines. -->
+         At least 56dp high (its outline 48dp, tool_bg), taller when a large font puts the word on two lines. -->
     <style name="Widget.Lekas.Tool" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -128,7 +128,7 @@
         <item name="android:paddingTop">4dp</item>
         <item name="android:paddingEnd">6dp</item>
         <item name="android:paddingBottom">4dp</item>
-        <item name="android:background">@drawable/icon_toggle_bg</item>
+        <item name="android:background">@drawable/tool_bg</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>

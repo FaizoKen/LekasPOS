@@ -3,6 +3,9 @@
 <resources>
     <string name="sell_tool_items">Barang</string>
     <string name="sell_search_hint_short">Cari</string>
+    <string name="sell_tool_camera">Kamera</string>
+    <string name="tile_stock">Stok %1$s</string>
+    <string name="tile_stock_none">Habis</string>
     <string name="sell_total">Jumlah</string>
     <string name="sell_popular">Laris</string>
     <plurals name="held_pill">

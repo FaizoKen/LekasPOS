@@ -1665,6 +1665,21 @@ after click search all category will be disappear and search bar will be fill th
 - The row is a light green-grey band with a line under it (the owner: "should we put some background color on top part.
   for better to see right ?"): the white buttons, chips and search box stand out on it, apart from the bill and tiles.
   The chips are white with an outline there (they were the band's colour). Not brand green: the top bar above already is.
+- **1.19.1, the selling screen audited** (the owner: "audit properly and polish the main tills screen UI UX"):
+  - The tool row is 56dp with every outline drawn 48dp inside (`tool_bg`, `search_field_bg`, like the chips): on two
+    panes it is exactly as high as the top bar beside it (it was 13dp taller, a step between the panes), and a phone gets
+    12dp more bill.
+  - **Camera** on two panes is a tool with its word (D-049), not a bare icon floating on the band.
+  - A phone upright with the search open hides Price check and Items: on a 320dp phone the box beside them left no room
+    to type (its own icon, the camera and ✕ took it all).
+  - The chips fade at the edges where more scroll in.
+  - Tiles: the stock sits beside the price as "5 left" / "None left" (BM "Stok 5" / "Habis" — not "Baki", the app's
+    word for the change). Before: a bare "5" or "-1" on a line of its own that lifted that tile's price above its
+    neighbours'. Not red at none: Track stock is on by default and a shop that never counts would see red everywhere.
+  - Empty bill: the last sale (the change to give) first, then the help text — on a phone the help pushed the change
+    below the totals bar.
+  Kept: the totals bar (summary on its own line: beside the total it squeezed the total at large fonts); the store name
+  cut short on a small phone beside the pills (the pills matter more to the cashier).
 Rejected: hiding Price check or Items behind the Menu to give the chips more room on a phone (they are used all day; the
 chips scroll); a second row for the chips on phones only (the row the owner asked to remove).
 

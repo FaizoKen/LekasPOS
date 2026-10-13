@@ -169,6 +169,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private lateinit var searchClear: View
     private lateinit var searchBox: View
     private lateinit var searchButton: View
+    private lateinit var priceCheckButton: View
 
     /** The search box is open in the category chips' place (Search tapped, or something typed). */
     private var searchOpen = false
@@ -335,8 +336,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         // Left without a word typed (a tile tapped, the keyboard put away and the screen tapped): the chips come back.
         search.setOnFocusChangeListener { _, focused -> if (!focused && searchOpen && search.text.isEmpty()) clearSearch() }
         browseButton?.setOnClickListener { toggleCatalog() }
-        browseButton?.visible(!twoPane)
-        findViewById<View>(R.id.btn_price_check).setOnClickListener { showPriceCheck() }
+        priceCheckButton = findViewById(R.id.btn_price_check)
+        priceCheckButton.setOnClickListener { showPriceCheck() }
         findViewById<TextView>(R.id.cart_empty_help).setText(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)
         if (!twoPane) search.setHint(R.string.sell_search_hint_short) // room for the tools beside it
         lastSalePrint.setOnClickListener { printLastSale() }
@@ -985,6 +986,9 @@ class SellActivity : Activity(), LineActions, DialogHost {
         searchBox.visible(searchOpen)
         searchButton.visible(!searchOpen)
         categoryList.visible(!searchOpen)
+        // A phone upright: the open box takes the whole row (beside two tools, 320dp left it no room to type).
+        priceCheckButton.visible(twoPane || !searchOpen)
+        browseButton?.visible(!twoPane && !searchOpen)
         updateBackHandling()
     }
 

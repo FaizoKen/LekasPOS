@@ -16,6 +16,9 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Throw the bill away | Clear bill | Kosongkan bil | `CartSession.clear`, `BILL_CANCEL` |
 | The product tiles | Items (button), catalogue | Barang, katalog | `sell_catalog`, `ProductTileAdapter` |
 | Best sellers tab | Popular | Laris | `PopularItems` |
+| Open the search box (selling screen) | Search | Cari | `btn_search`, `searchOpen` |
+| Scan with the phone's camera (tool on two panes) | Camera | Kamera | `btn_camera`, `btn_camera_box`, `CameraScanActivity` |
+| A tile's stock beside its price | 5 left / None left | Stok 5 / Habis | `tile_stock`, `tile_stock_none` (not "Baki": that is the change) |
 | See a price without selling | Price check | Semak harga | `PriceCheck`, `PriceCheckDialog` |
 | Barcode the till does not know | Barcode not found | Kod bar tidak dijumpai | `ScanResult.NotFound` |
 | Total of the bill | Total / Total to pay | Jumlah / Jumlah perlu dibayar | `PricedCart.total` |

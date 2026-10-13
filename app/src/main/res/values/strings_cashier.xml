@@ -3,6 +3,10 @@
 <resources>
     <string name="sell_tool_items">Items</string>
     <string name="sell_search_hint_short">Search</string>
+    <string name="sell_tool_camera">Camera</string>
+    <!-- A tile's stock, beside its price (only for products whose stock is counted) -->
+    <string name="tile_stock">%1$s left</string>
+    <string name="tile_stock_none">None left</string>
     <string name="sell_total">Total</string>
     <string name="sell_popular">Popular</string>
     <plurals name="held_pill">

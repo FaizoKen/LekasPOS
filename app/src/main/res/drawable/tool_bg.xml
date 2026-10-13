@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A selling-screen tool (Widget.Lekas.Tool): its outline drawn 48dp high inside the 56dp touch target, like the
+     chips beside it, so the tool row is as high as the top bar on two panes (D-078). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/icon_toggle_bg"
+    android:insetTop="4dp"
+    android:insetBottom="4dp" />

@@ -103,12 +103,14 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 ### 2.1 Layout
 - Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
   bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). One tool row above the bill/tiles (`sell_search.xml`,
-  D-078): **Search** button, category chips (scroll sideways), camera (two panes only; a phone upright has it inside the
-  open box, `btn_camera_box`), Price check, Items (phones). The row is a light band (`tool_row_bg`: `tool_row` with a
+  D-078): **Search** button, category chips (scroll sideways, faded edges), **Camera** (a tool with its word, two panes only;
+  a phone upright has an icon inside the open box, `btn_camera_box`), Price check, Items (phones). 56dp high, every outline
+  drawn 48dp inside (`tool_bg`, `search_field_bg`, `category_chip_bg`): as high as the top bar beside it on two panes. The row is a light band (`tool_row_bg`: `tool_row` with a
   `tool_row_line` under it); its chips are white with an outline (`category_chip_bg`), brand when chosen.
   **Search** opens the box in the chips' place (`searchOpen`; keyboard up); typing on a keyboard opens it too; ✕, Back,
   a search finished (scan, pick, Items closed) or the field left empty and unfocused closes it. On a phone a chip
-  tapped over the bill opens the catalogue on it. Two panes (D-076): the tool row and tiles from the
+  tapped over the bill opens the catalogue on it. A phone upright with the box open hides Price check and Items: the box
+  takes the whole row. Two panes (D-076): the tool row and tiles from the
   top of the screen; the top bar over the bill only, the bill right under it (1.17.1: a band above the bill that lined it up
   with the tiles was taken out at the owner's request); a brand-colour `status_strip` under the status bar on
   Android 15+. Recreated on rotation (like the lock screen, camera and
@@ -123,7 +125,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   no sales shows none (`BackupService.FRESH_MS` = 3 days).
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
   incl. tax/tax"), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
-- Empty bill: help text and the **last sale** of this app run (`CheckoutService.last`: change again, "Print receipt" until
+- Empty bill: the **last sale** first (D-078: on a phone the help text pushed its change below the totals), then the help
+  text. The last sale is that of this app run (`CheckoutService.last`: change again, "Print receipt" until
   its receipt was printed, then "Print a copy").
 
 ### 2.2 Adding items
@@ -142,7 +145,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   no spaces), else ≥ 6 digits → unknown-barcode flow, else a single result is added.
 - Catalogue: chips All (chosen when the screen opens, D-076) → Popular (if sales in 30 days; `PopularItems`: top 40 by
   qty over 30 days from `sum_day_product`, cached 10 min, rebuilt if > 3 days) → categories (by name). Tiles: picture, colour (product, else category),
-  price (`/unit` for weighed, "Enter price" for open price), stock if tracked, "×n" badge when on the bill. Sizes per
+  price (`/unit` for weighed, "Enter price" for open price), stock beside the price when the product has a stock count
+  ("5 left" / "None left", EN; "Stok 5" / "Habis", BM; not red: Track stock is on by default), "×n" badge when on the bill. Sizes per
   till `dev.tiles` (Large 150 / Medium 112 / Small 88dp min width × font scale, 2–10 per row). Taps are queued; a
   400 ms shield after a search pick.
 - Sell modes: piece (adds 1; price 0.00 asks the price, 0.00 accepted), weight (asks weight, 3 decimals, > 0, each

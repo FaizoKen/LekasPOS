@@ -42,7 +42,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
-| — | **1.19.0**: the category chips in the top row beside a **Search** button; Search opens the box in their place; the camera a button of its own (D-078) | test build **v1.19.0** (build 195) — waiting for the owner's phone check |
+| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | test build v1.19.0 (build 195); **v1.19.1** next |
 
 ## Open questions for the user
 
@@ -2226,7 +2226,12 @@ after click search all category will be disappear and search bar will be fill th
 - [x] Guide pictures refreshed from that run: `en/ms-sell`, `en/ms-sell-empty`, `en/ms-tablet-sell` (1280 px)
 - [x] The owner asked for a background colour on the row (2026-10-13): a light green-grey band with a line under it; the
       chips white with an outline on it
-- [ ] CI and a test build with the band; the owner's phone check
+- [x] The owner asked to "audit properly and polish the main tills screen UI UX" (2026-10-14) → **1.19.1** (D-078):
+      the tool row 56dp with 48dp outlines (as high as the top bar on two panes; 12dp more bill on a phone); **Camera** a
+      tool with its word on two panes; the open search box the whole row on a phone upright; chips fade at the edges; tile
+      stock beside the price, "5 left" / "None left" (BM "Stok 5" / "Habis"); the last sale first on an empty bill.
+      `ScreenshotsTest`: three categories in the test shop, new pictures `sell-items` (phone: Items) and `sell-search`
+- [ ] CI; test build v1.19.1; guide pictures; the owner's phone check
 
 ### Needs real-device testing (1.19.0)
 
@@ -2237,3 +2242,13 @@ after click search all category will be disappear and search bar will be fill th
 3. Phone sideways / tablet: the same row above the tiles on the left; the tiles start right under it.
 4. Camera button (Settings → Barcode scanner & camera on): sideways or tablet, one tap in the row; phone upright, Search then the
    camera in the box. Items keep being added until Back.
+
+### Needs real-device testing (1.19.1)
+
+5. Tablet or phone sideways: the band with Search, the chips and Camera / Price check is exactly as high as the green top
+   bar over the bill (no step between them). Camera opens the camera.
+6. Phone upright: tap Search — the box takes the whole row (Price check and Items hide until ✕ or Back); typing has room.
+7. Tiles of products with a stock count: "5 left" or "None left" beside the price, prices of a row on one line (Malay:
+   "Stok 5" / "Habis").
+8. Finish a cash sale with change on a phone: on the empty bill the last sale and its change show at the top without
+   scrolling; the help text is below it.
