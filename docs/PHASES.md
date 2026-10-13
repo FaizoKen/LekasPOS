@@ -42,7 +42,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
-| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 
 ## Open questions for the user
 
@@ -2238,7 +2238,7 @@ after click search all category will be disappear and search bar will be fill th
       `0a67abec…d4b9`; `mapping-1.19.1.txt` attached. 1.18.0 stays the latest release
 - [x] Guide pictures from that run: `en/ms-sell`, `-sell-empty`, `-tablet-sell`, and the pay, cash, Menu and dialog pictures
       (the selling screen behind them)
-- [ ] The owner's phone check (the owner asked to publish without it first)
+- [x] The owner's phone check (2026-10-14, after the release): "i was check and all good"
 - [x] The owner asked to publish it (2026-10-14, "ok publish when CI done"): `search-button` merged into `main`; smoke baseline
       (`PREV_APK_URL`) v1.19.1; the guide says "For LekasPOS 1.19.1"; privacy policy unchanged
 - [x] CI on main 867d8f1 (run 38432218670): all jobs green, release smoke upgrading from 1.19.1. Pages published the guide
