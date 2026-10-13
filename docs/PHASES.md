@@ -42,7 +42,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
-| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | test build v1.19.0 (build 195); **v1.19.1** next |
+| — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | test builds v1.19.0 (build 195) and **v1.19.1** (build 197) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2231,7 +2231,14 @@ after click search all category will be disappear and search bar will be fill th
       tool with its word on two panes; the open search box the whole row on a phone upright; chips fade at the edges; tile
       stock beside the price, "5 left" / "None left" (BM "Stok 5" / "Habis"); the last sale first on an empty bill.
       `ScreenshotsTest`: three categories in the test shop, new pictures `sell-items` (phone: Items) and `sell-search`
-- [ ] CI; test build v1.19.1; guide pictures; the owner's phone check
+- [x] CI run 38428148298 (06a7e12, build 197): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,669,504 bytes**. Pictures checked: on the tablet the band is as high as the top bar and
+      the tile prices line up; on the phone the open search box has the whole row and the empty bill starts with the change
+- [x] **Test build v1.19.1** (2026-10-14): pre-release on 06a7e12, build 197; SHA-256 `a88f8af4…676f`; certificate
+      `0a67abec…d4b9`; `mapping-1.19.1.txt` attached. 1.18.0 stays the latest release
+- [x] Guide pictures from that run: `en/ms-sell`, `-sell-empty`, `-tablet-sell`, and the pay, cash, Menu and dialog pictures
+      (the selling screen behind them)
+- [ ] The owner's phone check
 
 ### Needs real-device testing (1.19.0)
 
