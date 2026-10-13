@@ -2144,7 +2144,12 @@ Scale PLU ("item code on weighing-scale labels").
       v1.17.3; the guide says "For LekasPOS 1.17.3". Privacy policy unchanged
 - [x] The owner's phone check (2026-10-13): "i was check and all good" — the captions and the SKU field in English and
       Malay, and a scan with the cursor in the SKU field going to Barcodes
-- [ ] CI on main; perf FULL on the released code
+- [x] CI on main 43e2021 (run 38407529527): all jobs green, release smoke upgrading from 1.18.0. Pages published the guide
+      ("For LekasPOS 1.18.0" live)
+- [x] Perf FULL on the released code (run 38407594008, 43e2021): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 12.8 ms (150), multi-word search p95 5.1 ms (50), scan to cart
+      p95 0.57 ms (20), report_month 186 ms (1,000), report_year 235 ms (3,000); cold start to a usable till on API 21 about
+      0.7 s (the first run after install 3.2 s), API 29 about 0.85 s, API 36 about 0.7 s
 
 ### Needs real-device testing (1.17.3)
 
@@ -2182,7 +2187,12 @@ close shift (like open shift do)"; and "cash in, cash out, cash drop is same as 
       notes (What's new in English and Malay); the website's Download link serves it (SHA-256 `0296d6d5…214f` checked).
       Shops on 1.6.1 or later are offered it inside the app. `shift-close` merged into `main`; smoke baseline (`PREV_APK_URL`)
       v1.18.0; the guide says "For LekasPOS 1.18.0". Privacy policy unchanged
-- [ ] CI on main; perf FULL on the released code
+- [x] CI on main 43e2021 (run 38407529527): all jobs green, release smoke upgrading from 1.18.0. Pages published the guide
+      ("For LekasPOS 1.18.0" live)
+- [x] Perf FULL on the released code (run 38407594008, 43e2021): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 12.8 ms (150), multi-word search p95 5.1 ms (50), scan to cart
+      p95 0.57 ms (20), report_month 186 ms (1,000), report_year 235 ms (3,000); cold start to a usable till on API 21 about
+      0.7 s (the first run after install 3.2 s), API 29 about 0.85 s, API 36 about 0.7 s
 
 ### Needs real-device testing (1.18.0)
 
