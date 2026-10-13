@@ -2239,9 +2239,13 @@ after click search all category will be disappear and search bar will be fill th
 - [x] Guide pictures from that run: `en/ms-sell`, `-sell-empty`, `-tablet-sell`, and the pay, cash, Menu and dialog pictures
       (the selling screen behind them)
 - [ ] The owner's phone check (the owner asked to publish without it first)
-- [ ] The owner asked to publish it (2026-10-14, "ok publish when CI done"): `search-button` merged into `main`; smoke baseline
-      (`PREV_APK_URL`) v1.19.1; the guide says "For LekasPOS 1.19.1"; privacy policy unchanged. After CI on main: v1.19.1
-      made the latest release with public notes; perf FULL
+- [x] The owner asked to publish it (2026-10-14, "ok publish when CI done"): `search-button` merged into `main`; smoke baseline
+      (`PREV_APK_URL`) v1.19.1; the guide says "For LekasPOS 1.19.1"; privacy policy unchanged
+- [x] CI on main 867d8f1 (run 38432218670): all jobs green, release smoke upgrading from 1.19.1. Pages published the guide
+      ("For LekasPOS 1.19.1" live)
+- [x] **v1.19.1 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
+      website's Download link serves it (SHA-256 `a88f8af4…676f` checked). Shops on 1.6.1 or later are offered it inside the app
+- [ ] Perf FULL on the released code (run 38434288815, 867d8f1)
 
 ### Needs real-device testing (1.19.0)
 
