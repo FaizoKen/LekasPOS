@@ -41,7 +41,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
-| — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | in progress — code, tests and docs done locally; waiting for the owner's go for a test build |
+| — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | test build **v1.18.0** (build 190) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2173,7 +2173,11 @@ close shift (like open shift do)"; and "cash in, cash out, cash drop is same as 
       D-077. Screenshots unchanged (the pictured screens did not change). Nothing new stored about people or sent: privacy
       unchanged
 - [x] Local: `:core:test`, `:app:testDebugUnitTest`, `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
-- [ ] CI on the branch; test build v1.18.0; the owner's phone check; release APK size
+- [x] CI run 38401914242 (277156b, build 190): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,665,986 bytes**
+- [x] **Test build v1.18.0** (2026-10-13): pre-release on 277156b, build 190; SHA-256 `0296d6d5…214f`; certificate
+      `0a67abec…d4b9`; `mapping-1.18.0.txt` attached. 1.17.3 stays the latest release
+- [ ] The owner's phone check
 
 ### Needs real-device testing (1.18.0)
 
