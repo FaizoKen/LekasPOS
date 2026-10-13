@@ -117,9 +117,10 @@ fun openShift(a: Activity, graph: AppGraph, scope: CoroutineScope, title: CharSe
  * Closes this till's shift in three short steps (D-068): count all the cash in the drawer; how much stays in it
  * as change for the next shift (this shift's opening amount, pre-filled); then one screen that says what to take
  * out for the owner, with an optional note. Whoever may see shift reports gets the report; a cashier (blind close)
- * is told only what to take out and what to leave.
+ * is told only what to take out and what to leave. With [then] (Lock / switch user, D-077) everyone is told that
+ * (the report stays in Past shifts), and [then] runs once it is read.
  */
-fun closeShift(a: Activity, graph: AppGraph, scope: CoroutineScope) {
+fun closeShift(a: Activity, graph: AppGraph, scope: CoroutineScope, then: (() -> Unit)? = null) {
     val shift = graph.shifts.current.value ?: return
     val currency = graph.settings.store.value.currency
     fun money(v: Long) = MoneyFormat.format(v, currency)
@@ -149,10 +150,13 @@ fun closeShift(a: Activity, graph: AppGraph, scope: CoroutineScope) {
                 scope.launch {
                     try {
                         graph.shifts.close(counted, note.ifEmpty { null }, leave)
-                        if (graph.permissions.allowed(Perm.SHIFT_REPORT)) {
+                        if (then == null && graph.permissions.allowed(Perm.SHIFT_REPORT)) {
                             a.startActivity(ShiftReportActivity.intent(a, shift.id))
                         } else {
-                            Dialogs.message(a, a.getString(R.string.shift_closed), a.getString(R.string.shift_closed_take, money(counted - leave), money(leave)))
+                            val told = Dialogs.message(a, a.getString(R.string.shift_closed), a.getString(R.string.shift_closed_take, money(counted - leave), money(leave)))
+                            if (then != null) {
+                                if (told.isShowing) told.setOnDismissListener { then() } else then()
+                            }
                         }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -231,6 +235,20 @@ private fun countHandover(a: Activity, graph: AppGraph, scope: CoroutineScope, o
     }.show()
 }
 
+/**
+ * The words of a cash movement (D-077): its name, what it is for, and what to write about it. "Cash out" (money
+ * spent) and "Cash drop" (extra cash taken to safety) read as the same thing; now each says what it is.
+ */
+internal class MoveWords(val label: Int, val help: Int, val reason: Int, val icon: Int) {
+    companion object {
+        fun of(kind: Int): MoveWords = when (kind) {
+            CashMoveKind.CASH_IN -> MoveWords(R.string.shift_cash_in, R.string.shift_cash_in_help, R.string.shift_cash_in_reason, R.drawable.ic_add)
+            CashMoveKind.CASH_OUT -> MoveWords(R.string.shift_cash_out, R.string.shift_cash_out_help, R.string.shift_cash_out_reason, R.drawable.ic_minus)
+            else -> MoveWords(R.string.shift_drop, R.string.shift_drop_help, R.string.shift_drop_reason, R.drawable.ic_savings)
+        }
+    }
+}
+
 /** The till's shift: open it, move cash in and out, close it with the counted cash (D-038). */
 class ShiftActivity : ScreenActivity() {
 
@@ -276,13 +294,18 @@ class ShiftActivity : ScreenActivity() {
             form.row(getString(R.string.shift_opened_by), names[s.openedBy] ?: "-")
             form.row(getString(R.string.shift_opened_at), DateText.dateTime(s.openedAt, tz))
             form.row(getString(R.string.shift_float), money(s.openingFloat))
-            if (graph.permissions.shown(Perm.CASH_MOVE)) {
-                form.button(getString(R.string.shift_cash_in), icon = R.drawable.ic_add) { moveCash(CashMoveKind.CASH_IN) }
-                form.button(getString(R.string.shift_cash_out), icon = R.drawable.ic_minus) { moveCash(CashMoveKind.CASH_OUT) }
-                form.button(getString(R.string.shift_drop), icon = R.drawable.ic_savings) { moveCash(CashMoveKind.DROP) }
-            }
-            if (reports) form.button(getString(R.string.shift_report), icon = R.drawable.ic_reports) { startActivity(ShiftReportActivity.intent(this, s.id)) }
             form.button(getString(R.string.shift_close), primary = true, icon = R.drawable.ic_shift_close) { once.run { close() } }
+            if (reports) form.button(getString(R.string.shift_report), icon = R.drawable.ic_reports) { startActivity(ShiftReportActivity.intent(this, s.id)) }
+            if (graph.permissions.shown(Perm.CASH_MOVE)) {
+                // Each with what it is for (D-077): "Cash out" and "Cash drop" read as the same thing.
+                form.section(getString(R.string.shift_money_section))
+                form.info(getString(R.string.shift_money_help))
+                for (kind in intArrayOf(CashMoveKind.CASH_IN, CashMoveKind.CASH_OUT, CashMoveKind.DROP)) {
+                    val w = MoveWords.of(kind)
+                    form.button(getString(w.label), icon = w.icon) { moveCash(kind) }
+                    form.info(getString(w.help))
+                }
+            }
         }
         // Past shifts open their reports only: a list of dates leading nowhere for whoever may not see them.
         if (reports) form.button(getString(R.string.shift_history), icon = R.drawable.ic_history) { startActivity(Intent(this, ShiftsActivity::class.java)) }
@@ -291,17 +314,12 @@ class ShiftActivity : ScreenActivity() {
     }
 
     private fun moveCash(kind: Int) {
-        val title = getString(
-            when (kind) {
-                CashMoveKind.CASH_IN -> R.string.shift_cash_in
-                CashMoveKind.CASH_OUT -> R.string.shift_cash_out
-                else -> R.string.shift_drop
-            },
-        )
+        val w = MoveWords.of(kind)
+        val title = getString(w.label)
         withApproval(Perm.CASH_MOVE) { approval ->
-            AmountDialog(this, title, AmountDialog.Kind.MONEY, graph.settings.store.value.currency) { amount ->
+            AmountDialog(this, title, AmountDialog.Kind.MONEY, graph.settings.store.value.currency, message = getString(w.help)) { amount ->
                 val needReason = kind == CashMoveKind.CASH_OUT
-                Dialogs.input(this, title, getString(if (needReason) R.string.shift_reason_required else R.string.shift_reason_optional)) { reason ->
+                Dialogs.input(this, title, getString(w.reason)) { reason ->
                     if (needReason && reason.isEmpty()) return@input false
                     launchUi {
                         graph.shifts.moveCash(kind, amount, reason.ifEmpty { null }, approval)
@@ -361,13 +379,7 @@ class ShiftReportActivity : ScreenActivity() {
     }
 
     private fun moveText(m: CashMove, names: Map<Long, String>): String {
-        val kind = getString(
-            when (m.kind) {
-                CashMoveKind.CASH_IN -> R.string.shift_cash_in
-                CashMoveKind.CASH_OUT -> R.string.shift_cash_out
-                else -> R.string.shift_drop
-            },
-        )
+        val kind = getString(MoveWords.of(m.kind).label)
         return listOfNotNull(DateText.time(m.at, tz), kind, m.reason, m.staffId?.let { names[it] }).joinToString(" · ")
     }
 

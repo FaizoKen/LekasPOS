@@ -4,7 +4,11 @@ import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.staff.ActionTotal
 import com.lekaspos.core.staff.Checks
 import com.lekaspos.core.staff.Tally
+import com.lekaspos.core.time.DateText
+import com.lekaspos.core.time.Days
+import java.util.TimeZone
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -39,6 +43,27 @@ class ShiftGuideTest {
         assertNull(LeftInDrawer.decode("garbage"))
         assertNull(LeftInDrawer.decode("-5|1|2"))
         assertNull(LeftInDrawer.decode("1|x|2"))
+    }
+
+    @Test
+    fun theClosingTimeReminder() {
+        val tz = TimeZone.getTimeZone("Asia/Kuala_Lumpur")
+        val midnight = Days.startOfDay(today, tz)
+        fun at(h: Int, m: Int = 0) = midnight + (h * 60L + m) * 60_000L
+        val ten = 22 * 60
+        // Before the closing time: nothing; from it on, asked once, then again 30 minutes after "Not yet".
+        assertFalse(ShiftGuide.closeDue(ten, at(21, 59), tz, at(8), 0L))
+        assertTrue(ShiftGuide.closeDue(ten, at(22), tz, at(8), 0L))
+        assertFalse(ShiftGuide.closeDue(ten, at(22, 20), tz, at(8), at(22)))
+        assertTrue(ShiftGuide.closeDue(ten, at(22, 30), tz, at(8), at(22)))
+        // Off, no shift open, or a shift opened after the closing time (working late on purpose): never.
+        assertFalse(ShiftGuide.closeDue(ShiftGuide.CLOSE_OFF, at(23), tz, at(8), 0L))
+        assertFalse(ShiftGuide.closeDue(ten, at(23), tz, null, 0L))
+        assertFalse(ShiftGuide.closeDue(ten, at(23), tz, at(22, 15), 0L))
+        // Yesterday's shift, still open at today's closing time: asked.
+        assertTrue(ShiftGuide.closeDue(ten, at(22), tz, at(8) - Days.DAY_MS, 0L))
+        assertEquals("22:00", DateText.timeOfDay(ten))
+        assertEquals("09:30", DateText.timeOfDay(570))
     }
 
     @Test

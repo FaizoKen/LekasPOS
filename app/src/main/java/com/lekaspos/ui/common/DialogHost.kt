@@ -25,6 +25,9 @@ class DialogTracker : DialogHost {
         dialogs.add(d)
     }
 
+    /** A question or message is on the screen (a reminder of the till's own waits for it). */
+    fun anyShowing(): Boolean = dialogs.any { it.isShowing }
+
     fun dismissAll() {
         for (d in ArrayList(dialogs)) if (d.isShowing) d.dismiss()
         dialogs.clear()

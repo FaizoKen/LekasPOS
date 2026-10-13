@@ -54,7 +54,7 @@ class ShiftReportTest {
         assertEquals("763.00", cashRows["Expected cash"])
         assertEquals("760.00", cashRows["Counted cash"])
         assertEquals("-3.00", cashRows["Over / short"])
-        assertEquals("-1,000.00", cashRows["Cash drops"])
+        assertEquals("-1,000.00", cashRows["Extra cash taken out"])
         assertTrue(full.any { it.title == "Customer credit" })
         assertEquals("Sales (120)", full.first { it.title == "Sales" }.rows[0].label)
 

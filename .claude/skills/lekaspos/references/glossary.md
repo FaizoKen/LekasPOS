@@ -71,8 +71,10 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | One person's time at one till | shift; Open shift / Close shift; Start the shift | syif; Buka syif / Tutup syif; Mulakan syif | `shift`, `ShiftService` |
 | Change in the drawer at the start | Opening float | Wang apungan | `shift.opening_float` |
 | What stays for the next shift | Leave in the drawer | Tinggal dalam laci | meta `shift.left`, `LeftInDrawer` |
-| Cash movements | Cash in / Cash out / Cash drop | Wang masuk / Wang keluar / Simpanan wang | `CashMoveKind` |
+| Money in and out of the drawer (D-077; was "Cash in / Cash out / Cash drop") | Add cash / Pay from drawer / Take out extra cash; report: Cash added / Paid from drawer / Extra cash taken out | Tambah wang / Bayar dari laci / Keluarkan wang lebihan; laporan: Wang ditambah / Dibayar dari laci / Wang lebihan diambil | `CashMoveKind` CASH_IN / CASH_OUT / DROP, `MoveWords` |
 | Expected vs counted | Expected cash / Counted cash / Over / short | Tunai dijangka / Tunai dikira / Lebih / kurang | `ShiftReport`, `ShiftText` |
+| Leaving the till with a shift open | Close the shift? / Close shift / Lock only | Tutup syif? / Tutup syif / Kunci sahaja | `SellActivity.lockTill` |
+| The closing-time reminder | Remind to close the shift at / No reminder; Closing time / Not yet | Ingatkan tutup syif pada / Tiada peringatan; Waktu tutup kedai / Belum lagi | `shift.close_at`, `ShiftGuide.closeDue` |
 | Another person takes the till | Take over the till? / Count the drawer / Not now | Ambil alih kaunter? / Kira laci / Bukan sekarang | `ShiftService.handover`, `SHIFT_CONTINUED` |
 | Customers and debts | Customers and credit (pay later); owes; credit limit | Pelanggan dan kredit (bayar kemudian); hutang; had kredit | `customer`, `credit_entry`, `customer_balance` |
 | Paying a debt | Take a repayment | Terima bayaran hutang | `CreditKind.PAYMENT` |

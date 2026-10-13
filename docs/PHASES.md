@@ -41,6 +41,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.15.0**: a multi-buy with several prices ("2 for RM3, 3 for RM4"), the bill takes the cheapest mix; promotions made per price on the same products combine (D-073) | **released** 2026-10-12 (v1.15.0, build 162) — the owner tested it: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.17.0**: the owner's feedback on 1.16.1 — every tappable control looks like a button (dialog buttons, payment, "Tap here" texts); the catalogue opens on All; held sideways the tiles start at the top; no Share after a sale; Settings → Beep sound (this till's speaker by default, not the cast TV) (D-076) | test builds v1.17.0 (build 180), v1.17.1 (build 182: the bill right under the bar again, Menu a pill) and v1.17.2 (build 184: Menu apart from the cashier's name) | **released** 2026-10-13 (v1.17.2, build 184) — the owner asked to release it ("yup publish it"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
+| — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | in progress — code, tests and docs done locally; waiting for the owner's go for a test build |
 
 ## Open questions for the user
 
@@ -2150,3 +2151,37 @@ Scale PLU ("item code on weighing-scale labels").
 1. Products → + and an existing product, in English and Malay: the Barcodes caption and the SKU field with its hint and
    caption read well and wrap cleanly on the phone and held sideways; at the largest font size nothing is cut.
 2. With the cursor in the SKU field, a scanner still adds the code to Barcodes (not into the SKU).
+
+## 1.18.0 — the till asks to close the shift; Add cash, Pay from drawer, Take out extra cash (D-077)
+
+The owner (2026-10-13): the shift should be closed "if want switch user cashier or closing.. make easier and not forgot to
+close shift (like open shift do)"; and "cash in, cash out, cash drop is same as cash out? and when to use?".
+
+- [x] **Lock / switch user** with a shift open on this till asks **Close the shift?** — **Close shift** (count, leave in the
+      drawer, confirm, "take out X, leave Y", then the till locks) or **Lock only**
+- [x] **Closing-time reminder**: Store & receipt → **Remind to close the shift at** (No reminder by default; 12:00–23:30 every
+      half hour, synced). At that time the till asks **Closing time** → **Close shift** / **Not yet** (again in 30 min); not
+      over a bill, a payment or another question; not for a shift opened after the closing time. "Yesterday's shift is still
+      open" names the setting
+- [x] **Shift & cash**: "Money in and out of the drawer" with **Add cash**, **Pay from drawer** (money spent, reason
+      required), **Take out extra cash** (kept safe, not spent), each with a caption; the keypad repeats it and the note asks
+      "From where?" / "What was it paid for?" / "Where did it go?". The shift report, activity log and permission use the
+      same words (EN + BM). Stored codes unchanged; no schema change
+- [x] `:core` `ShiftGuide.closeDue` + `DateText.timeOfDay` with tests; `SettingsModelTest` for `shift.close_at`
+- [x] Docs: user guide EN + MS (cheat sheet, Menu table, drawer, permissions, shift settings, money in and out — now a table
+      with examples —, closing a shift, shift report, activity log, word list), `features.md`, `glossary.md`, `codemap.md`,
+      D-077. Screenshots unchanged (the pictured screens did not change). Nothing new stored about people or sent: privacy
+      unchanged
+- [x] Local: `:core:test`, `:app:testDebugUnitTest`, `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
+- [ ] CI on the branch; test build v1.18.0; the owner's phone check; release APK size
+
+### Needs real-device testing (1.18.0)
+
+1. With PINs on and a shift open: name at the top → **Lock / switch user** → **Close the shift?**. **Lock only** locks at once.
+   **Close shift** → count → leave → confirm → "Take out … leave …" → OK → the sign-in screen. Back on the question = nothing.
+2. Store & receipt → **Remind to close the shift at** → a time a few minutes ahead → Save. Stay on the selling screen with
+   an empty bill: within about 15 s after that time **Closing time** shows. **Not yet** → asked again 30 min later. With
+   items on the bill it waits until the sale is done. On a second till (synced) the setting is there too.
+3. Menu → Shift & cash with a shift open, as the owner: Close shift and Shift report on top, then "Money in and out of the
+   drawer" with the three buttons and their captions, in English and Malay; each keypad shows the caption; **Pay from
+   drawer** refuses an empty note. The shift report and the activity log show the new words; a printed report fits 58 mm.

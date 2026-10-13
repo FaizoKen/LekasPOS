@@ -12,6 +12,8 @@ import com.lekaspos.R
 import com.lekaspos.core.barcode.ScaleTemplate
 import com.lekaspos.core.model.Perm
 import com.lekaspos.core.money.CurrencySpec
+import com.lekaspos.core.shift.ShiftGuide
+import com.lekaspos.core.time.DateText
 import com.lekaspos.data.settings.StoreSettings
 import com.lekaspos.hw.printer.Images
 import com.lekaspos.ui.common.Dialogs
@@ -49,6 +51,10 @@ class StoreSettingsActivity : ScreenActivity() {
     private lateinit var templates: EditText
     private lateinit var shiftRequired: Switch
     private lateinit var handover: Switch
+    private lateinit var closeAt: Spinner
+
+    /** The closing-time reminder's choices, minutes after midnight (ShiftGuide.CLOSE_OFF first). */
+    private var closeTimes: List<Int> = emptyList()
     private lateinit var credit: Switch
     private var form: Form? = null
 
@@ -138,6 +144,15 @@ class StoreSettingsActivity : ScreenActivity() {
         f.info(getString(R.string.shift_required_help))
         handover = f.switch(getString(R.string.shift_handover), s.handoverCount)
         f.info(getString(R.string.shift_handover_help))
+        // Every half hour from noon (D-077); a time set elsewhere that is not on the list is kept.
+        closeTimes = (listOf(ShiftGuide.CLOSE_OFF) + (CLOSE_FIRST until ShiftGuide.MINUTES_PER_DAY step 30) + s.closeReminder)
+            .distinct().sorted()
+        closeAt = f.choice(
+            getString(R.string.shift_close_at),
+            closeTimes.map { if (it == ShiftGuide.CLOSE_OFF) getString(R.string.shift_close_at_off) else DateText.timeOfDay(it) },
+            closeTimes.indexOf(s.closeReminder),
+        )
+        f.info(getString(R.string.shift_close_at_help))
         credit = f.switch(getString(R.string.credit_enabled), s.creditEnabled)
         f.info(getString(R.string.credit_enabled_help))
 
@@ -188,6 +203,7 @@ class StoreSettingsActivity : ScreenActivity() {
             scaleTemplates = tpl,
             shiftRequired = shiftRequired.isChecked,
             handoverCount = handover.isChecked,
+            closeReminder = closeTimes.getOrElse(closeAt.selectedItemPosition) { old.closeReminder },
             creditEnabled = credit.isChecked,
         )
         launchUi {
@@ -229,5 +245,8 @@ class StoreSettingsActivity : ScreenActivity() {
     companion object {
         private const val REQ_LOGO = 11
         private const val STATE_FORM = "lekas.store.form"
+
+        /** The earliest closing time offered: noon. */
+        private const val CLOSE_FIRST = 12 * 60
     }
 }

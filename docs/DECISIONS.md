@@ -1625,6 +1625,30 @@ theme rule fixes all 91); the beep as a notification sound (plays on the speaker
 notification volume, which shops mute); keeping the full-width bar and only pushing the bill down (the owner chose the bar
 over the bill: the tiles get its height).
 
+### D-077 — The till asks to close the shift; the drawer's money moves say what they are (1.18.0, 2026-10-13)
+The owner (2026-10-13): "open shift need to close shift right? if want switch user cashier or closing.. make easier and
+not forgot to close shift (like open shift do)" and "shift & cash makes user confuse what is cash in, cash out, cash drop
+is same as cash out? and when to use?".
+- **Lock / switch user asks "Close the shift?"** when a shift is open on this till: **Close shift** runs the usual three-step
+  close, shows everyone "take out X, leave Y" (no report screen in between — the report stays in Past shifts and still
+  auto-prints for whoever may see it), then locks; **Lock only** is the short break. Auto-lock and lock-after-sale never
+  ask (nobody is there to answer).
+- **Closing-time reminder**, the close's counterpart of "Start the shift": store setting `shift.close_at` (synced; "No
+  reminder" by default; 12:00–23:30 every half hour in Store & receipt). Past that time with a shift open on this till that
+  began before it, someone signed in, an empty bill, no payment and no other dialog, the till asks **Closing time** →
+  **Close shift** / **Not yet** (again 30 minutes later). A shift opened after the closing time is someone working late:
+  not reminded. The rule is `ShiftGuide.closeDue` (`:core`, tested). "Yesterday's shift is still open" now names the setting.
+- **Cash in / Cash out / Cash drop renamed** to what they are: **Add cash**, **Pay from drawer** (money spent; reason
+  required), **Take out extra cash** (kept safe, not spent) — BM Tambah wang / Bayar dari laci / Keluarkan wang lebihan.
+  Shift & cash groups them under "Money in and out of the drawer" with a caption under each button; the keypad repeats it
+  and the note asks a question per kind ("What was it paid for?", "Where did it go?", "From where?"). The shift report,
+  activity log and permission use the same words. Stored codes (`CashMoveKind`, `AuditAction.CASH_*`) are unchanged.
+Rejected: asking on the Back key when leaving the app (shops go in and out all day; it would nag); a reminder on by
+default at a guessed hour (shops close from 18:00 to after midnight, some never); a time picker for any minute (half-hour
+steps fit a closing time and a spinner is one tap); keeping the industry words "cash out / cash drop" with a help text
+only (the words themselves were the confusion; the guide still names them so either is understood); making "Close shift"
+the only way to lock (a cashier going to the toilet would have to count the drawer).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

@@ -76,7 +76,7 @@
     <string name="perm_refund">Bayaran balik</string>
     <string name="perm_reprint">Cetak salinan resit</string>
     <string name="perm_drawer">Buka laci wang</string>
-    <string name="perm_cash_move">Wang masuk, wang keluar dan simpanan</string>
+    <string name="perm_cash_move">Tambah wang, bayar dari laci, keluarkan wang lebihan</string>
     <string name="perm_shift_report">Lihat tunai dijangka dan laporan syif</string>
     <string name="perm_customers">Urus pelanggan, terima bayaran hutang</string>
     <string name="perm_credit_sale">Jual secara kredit</string>
@@ -92,7 +92,7 @@
     <string name="menu_shift">Syif &amp; tunai</string>
     <string name="menu_lock">Kunci / tukar pengguna</string>
     <string name="shift_title">Syif &amp; tunai</string>
-    <string name="settings_shift_sub">Buka dan tutup syif, wang masuk dan keluar, laporan syif</string>
+    <string name="settings_shift_sub">Buka dan tutup syif, wang masuk dan keluar laci, laporan syif</string>
     <string name="shift_none">Tiada syif dibuka di kaunter ini.</string>
     <string name="shift_open">Buka syif</string>
     <string name="shift_float_hint">Wang tunai yang dimasukkan ke laci pada permulaan (untuk baki).</string>
@@ -100,10 +100,9 @@
     <string name="shift_opened_by">Dibuka oleh</string>
     <string name="shift_opened_at">Dibuka</string>
     <string name="shift_float">Wang apungan</string>
-    <string name="shift_cash_in">Wang masuk</string>
-    <string name="shift_cash_out">Wang keluar</string>
-    <string name="shift_drop">Simpanan wang</string>
-    <string name="shift_reason_optional">Sebab (pilihan)</string>
+    <string name="shift_cash_in">Tambah wang</string>
+    <string name="shift_cash_out">Bayar dari laci</string>
+    <string name="shift_drop">Keluarkan wang lebihan</string>
     <string name="shift_reason_required">Sebab (wajib)</string>
     <string name="shift_cash_done">Direkod: %1$s</string>
     <string name="shift_report">Laporan syif</string>

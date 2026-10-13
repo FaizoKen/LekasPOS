@@ -43,7 +43,7 @@ yang anda lihat dalam aplikasi.</p>
 <li><a href="#staff">Kakitangan, PIN dan peranan</a>
 <ol><li><a href="#pin-login">Menghidupkan log masuk PIN</a></li><li><a href="#sign-in">Log masuk dan mengunci kaunter</a></li><li><a href="#forgot-pin">Lupa PIN</a></li><li><a href="#roles">Peranan dan kebenaran</a></li><li><a href="#manager-pin">Apabila juruwang memerlukan pengurus</a></li></ol></li>
 <li><a href="#shifts">Syif dan wang tunai</a>
-<ol><li><a href="#shift-settings">Perlukah saya menggunakan syif?</a></li><li><a href="#open-shift">Membuka syif</a></li><li><a href="#cash-moves">Wang masuk, wang keluar dan simpanan wang</a></li><li><a href="#close-shift">Menutup syif</a></li><li><a href="#handover">Pertukaran juruwang</a></li><li><a href="#shift-report">Laporan syif</a></li></ol></li>
+<ol><li><a href="#shift-settings">Perlukah saya menggunakan syif?</a></li><li><a href="#open-shift">Membuka syif</a></li><li><a href="#cash-moves">Wang masuk dan keluar laci</a></li><li><a href="#close-shift">Menutup syif</a></li><li><a href="#handover">Pertukaran juruwang</a></li><li><a href="#shift-report">Laporan syif</a></li></ol></li>
 <li><a href="#customers">Pelanggan dan kredit</a>
 <ol><li><a href="#customer-list">Pelanggan</a></li><li><a href="#credit-sale">Menjual secara kredit</a></li><li><a href="#repayment">Bayaran hutang dan pelarasan</a></li></ol></li>
 <li><a href="#reports">Laporan</a>
@@ -166,8 +166,8 @@ peranan</a>.</p>
 <tr><td>Salah kaedah bayaran atau salah barang, baru dibayar</td><td><b>Menu → Jualan &amp; bayaran balik</b> → jualan paling atas → <b>Batalkan</b> → taip sebabnya. Hanya jualan terakhir anda sendiri, dalam 5 minit; kemudian jual semula dengan betul — <a href="#void">butiran</a>.</td></tr>
 <tr><td>Semak harga tanpa menjual</td><td><b>Semak harga</b> → imbas atau taip.</td></tr>
 <tr><td>Diskaun atau harga baharu</td><td>Minta bantuan pengurus: <b>Menu → PIN pengurus</b>, kemudian <b>Menu → Diskaun</b>.</td></tr>
-<tr><td>Tinggalkan kaunter</td><td>Ketik nama anda di bahagian atas → <b>Kunci / tukar pengguna</b> (atau <b>Menu → Kunci / tukar pengguna</b>).</td></tr>
-<tr><td>Akhir hari</td><td><b>Menu → Tutup syif</b> → kira semua wang tunai → nyatakan berapa yang ditinggalkan dalam laci → keluarkan selebihnya untuk pemilik.</td></tr>
+<tr><td>Tinggalkan kaunter</td><td>Ketik nama anda di bahagian atas → <b>Kunci / tukar pengguna</b> (atau <b>Menu → Kunci / tukar pengguna</b>). Jika syif anda dibuka, kaunter bertanya <b>Tutup syif?</b>: <b>Tutup syif</b> apabila anda balik atau orang lain ambil alih, <b>Kunci sahaja</b> untuk rehat sekejap.</td></tr>
+<tr><td>Akhir hari</td><td><b>Menu → Tutup syif</b> (atau <b>Tutup syif</b> apabila kaunter mengingatkan anda pada waktu tutup kedai) → kira semua wang tunai → nyatakan berapa yang ditinggalkan dalam laci → keluarkan selebihnya untuk pemilik.</td></tr>
 </table></div>
 <div class="note"><p>Semua yang anda buang daripada bil dicatat dalam log aktiviti, terutamanya selepas pelanggan melihat
 jumlahnya. Itu perkara biasa — barang yang salah dibuang setiap hari — dan ia melindungi anda sama seperti ia
@@ -321,10 +321,10 @@ tiga kumpulan: <b>Bil ini</b>, <b>Kaunter</b> dan <b>Urus kedai</b>. Imbasan sem
 <tr><td><b>Jualan &amp; bayaran balik</b> (atau <b>Resit</b>)</td><td>Jualan lepas: salinan, bayaran balik, pembatalan — <a href="#sales">butiran</a>.</td></tr>
 <tr><td><b>Pelanggan</b></td><td>Apabila pelanggan dan kredit dihidupkan.</td></tr>
 <tr><td><b>Buka syif</b> / <b>Tutup syif</b></td><td>Mula atau tamatkan syif anda — <a href="#shifts">butiran</a>.</td></tr>
-<tr><td><b>Syif &amp; tunai</b></td><td>Wang masuk, wang keluar, simpanan wang, laporan syif.</td></tr>
+<tr><td><b>Syif &amp; tunai</b></td><td>Tambah wang, bayar dari laci, keluarkan wang lebihan, laporan syif.</td></tr>
 <tr><td><b>Buka laci wang</b></td><td>Membuka laci tanpa jualan (direkodkan).</td></tr>
 <tr><td><b>PIN pengurus</b></td><td>Pengurus membantu dengan bil ini.</td></tr>
-<tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan).</td></tr>
+<tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan). Jika syif dibuka, ia bertanya dahulu sama ada mahu menutupnya.</td></tr>
 <tr><th colspan="2">Urus kedai</th></tr>
 <tr><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Inventori</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b></td><td>Urusan belakang kedai, untuk sesiapa yang dibenarkan.</td></tr>
 </table></div>
@@ -456,7 +456,7 @@ kertas dan penutup</i> bermakna pencetak berhenti menerima data.</li>
 <h3 id="drawer">Laci wang</h3>
 <p>Laci disambung ke pencetak dan dibuka melaluinya. Ia terbuka sendiri untuk kaedah bayaran yang ditanda
 <b>Membuka laci wang</b> (tunai), bayaran balik yang dibayar dengan kaedah itu, jualan tunai yang dibatalkan,
-pelanggan yang membayar hutang kredit secara tunai, wang apungan semasa syif dibuka, serta wang masuk/keluar.
+pelanggan yang membayar hutang kredit secara tunai, wang apungan semasa syif dibuka, wang yang ditambah, bayaran dari laci dan wang lebihan yang dikeluarkan.
 <b>Menu → Buka laci wang</b> membukanya tanpa jualan (memerlukan kebenaran dan direkodkan). Laci hanya terbuka melalui
 pencetak: apabila pencetak dimatikan atau di luar jangkauan, laci kekal tertutup (arahan membuka yang menunggu lebih
 daripada 2 minit dibuang) — gunakan kuncinya. Jika laci tidak pernah terbuka, semak <b>Laci wang disambung ke pencetak</b> dan cuba <b>Pin 5</b> sebagai ganti Pin 2.</p>
@@ -934,7 +934,7 @@ pemulihan baharu</b> membuat kod baharu (kod lama tidak lagi berfungsi).</li>
 <tr><td>Bayaran balik</td><td>Bayaran balik dan pemulangan barang</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Cetak salinan resit</td><td>Salinan resit dan berkongsi resit lama</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Buka laci wang</td><td>Membuka laci tanpa jualan</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Wang masuk, wang keluar dan simpanan</td><td>Pergerakan tunai semasa syif</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Tambah wang, bayar dari laci, keluarkan wang lebihan</td><td>Wang masuk dan keluar laci semasa syif</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Lihat tunai dijangka dan laporan syif</td><td>Laporan syif, syif lepas, lebih/kurang</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Urus pelanggan, terima bayaran hutang</td><td>Tambah/sunting pelanggan, bayaran hutang</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Jual secara kredit</td><td>Bayar dengan kredit pelanggan dalam had</td><td>✓</td><td>✓</td><td>✓</td></tr>
@@ -975,7 +975,7 @@ resit, Urus kedai), tetapi setiap satu meminta PIN pengurus sekali lagi. Selain 
 <h2 id="shifts">11. Syif dan wang tunai</h2>
 <p><b>Syif</b> ialah masa seseorang bertugas di satu kaunter, dari mengira laci wang pada permulaan hingga mengiranya semula pada
 akhirnya. Aplikasi mengira berapa banyak wang tunai yang <b>sepatutnya</b> ada dalam laci, jadi sebarang perbezaan terus kelihatan.</p>
-<figure class="wide"><img src="img/ms-shift.png" alt="Skrin Syif dan tunai" width="240" loading="lazy"><figcaption>Syif &amp; tunai: buka syif, pergerakan tunai, laporan.</figcaption></figure>
+<figure class="wide"><img src="img/ms-shift.png" alt="Skrin Syif dan tunai" width="240" loading="lazy"><figcaption>Syif &amp; tunai: buka atau tutup syif, wang masuk dan keluar laci, laporan.</figcaption></figure>
 
 <h3 id="shift-settings">Perlukah saya menggunakan syif?</h3>
 <p>Di <b>Tetapan → Kedai &amp; resit → Syif dan pelanggan</b>:</p>
@@ -985,6 +985,9 @@ pengurus boleh log masuk dengan PIN. Pemilik boleh mematikannya semula dan ia ke
 lebih lama, kaunter baharu yang menyertai kedai boleh menghidupkannya semula, jadi semak tetapan ini selepas menambah
 kaunter).</li>
 <li><b>Kira laci apabila juruwang bertukar</b> — hidup secara lalai (lihat <a href="#handover">Pertukaran juruwang</a>).</li>
+<li><b>Ingatkan tutup syif pada</b> — <b>Tiada peringatan</b> secara lalai. Pilih waktu tutup kedai (setiap setengah jam
+dari 12:00 hingga 23:30) dan setiap kaunter meminta syifnya ditutup pada waktu itu (lihat <a href="#close-shift">Menutup
+syif</a>).</li>
 </ul>
 
 <h3 id="open-shift">Membuka syif</h3>
@@ -998,17 +1001,36 @@ kiraan anda berbeza, kaunter bertanya <b>Tidak sama dengan yang ditinggalkan</b>
 (perbezaannya direkodkan untuk pemilik).</li>
 </ol>
 
-<h3 id="cash-moves">Wang masuk, wang keluar dan simpanan wang</h3>
-<p><b>Menu → Syif &amp; tunai</b>, semasa syif dibuka di kaunter ini (perlu kebenaran <i>Wang masuk, wang keluar dan simpanan</i>):</p>
-<ul>
-<li><b>Wang masuk</b> — wang yang dimasukkan ke dalam laci (cth. tambahan wang kecil).</li>
-<li><b>Wang keluar</b> — wang yang dikeluarkan untuk sesuatu tujuan (cth. membayar pembekal); sebab wajib diisi.</li>
-<li><b>Simpanan wang</b> — wang yang dibawa ke peti besi atau ke bank semasa kedai beroperasi.</li>
-</ul>
-<p>Setiap satu membuka laci, mengubah tunai dijangka dan direkodkan bersama nama orang yang melakukannya.</p>
+<h3 id="cash-moves">Wang masuk dan keluar laci</h3>
+<p><b>Menu → Syif &amp; tunai</b>, semasa syif dibuka di kaunter ini (perlu kebenaran <i>Tambah wang, bayar dari laci,
+keluarkan wang lebihan</i>). Rekod setiap wang yang dimasukkan atau dikeluarkan semasa syif, supaya kiraan semasa tutup
+syif tepat. Setiap butang menerangkan kegunaannya:</p>
+<div class="table-wrap"><table>
+<tr><th>Butang</th><th>Gunakan apabila</th><th>Contoh</th></tr>
+<tr><td><b>Tambah wang</b></td><td>Anda memasukkan lagi wang <b>ke dalam</b> laci.</td><td>Pemilik membawa RM50 duit
+kecil. Catatan: pilihan (“Dari mana?”).</td></tr>
+<tr><td><b>Bayar dari laci</b></td><td>Wang laci <b>dibelanjakan</b> — ia keluar dari kedai.</td><td>Bayar pembekal roti
+semasa hantar barang, beli ais atau beg plastik. Anda mesti nyatakan untuk apa.</td></tr>
+<tr><td><b>Keluarkan wang lebihan</b></td><td>Wang dalam laci terlalu banyak dan anda bawa sebahagian <b>untuk
+disimpan</b> — bukan dibelanjakan.</td><td>RM500 dibawa ke peti besi atau diserahkan kepada pemilik pada waktu petang.
+Catatan: pilihan (“Dibawa ke mana?”).</td></tr>
+</table></div>
+<p>Setiap satu membuka laci, mengubah tunai dijangka dan direkodkan bersama nama orang yang melakukannya. Kedai lain
+memanggilnya “wang masuk”, “wang keluar” dan “simpanan wang”. Tidak pasti yang mana? Tanya: <i>adakah wang itu
+dibelanjakan?</i> Ya → <b>Bayar dari laci</b>. Tidak, hanya dibawa ke tempat selamat → <b>Keluarkan wang
+lebihan</b>.</p>
 
 <h3 id="close-shift">Menutup syif</h3>
-<p><b>Menu → Tutup syif</b>, dalam tiga langkah:</p>
+<p>Tutup syif apabila anda balik atau orang lain mengambil alih kaunter. Anda tidak perlu ingat di mana:</p>
+<ul>
+<li><b>Kunci / tukar pengguna</b> semasa syif dibuka bertanya <b>Tutup syif?</b> — <b>Tutup syif</b> mengira laci dan
+kemudian mengunci kaunter; <b>Kunci sahaja</b> untuk rehat sekejap.</li>
+<li>Jika pemilik menetapkan <b>Ingatkan tutup syif pada</b> (Tetapan → Kedai &amp; resit), kaunter bertanya <b>Waktu
+tutup kedai</b> pada waktu itu, jika syif masih dibuka dan tiada bil di skrin. <b>Belum lagi</b> bertanya semula 30
+minit kemudian. Syif yang dibuka selepas waktu tutup (bekerja lewat) tidak diingatkan.</li>
+<li>Anda sentiasa boleh menggunakan <b>Menu → Tutup syif</b>.</li>
+</ul>
+<p>Menutup syif mengambil tiga langkah:</p>
 <ol>
 <li><b>Kira laci</b>: kira semua wang tunai dan taip jumlahnya (atau <b>Kira wang &amp; syiling</b>).</li>
 <li><b>Tinggal dalam laci</b>: berapa yang ditinggalkan sebagai wang kecil untuk syif seterusnya (sudah diisi dengan wang apungan syif ini).</li>
@@ -1017,7 +1039,9 @@ sahkan.</li>
 </ol>
 <p>Juruwang kemudian hanya melihat <i>“Keluarkan RM… untuk pemilik dan tinggalkan RM… dalam laci”</i> (penutupan “buta” — mereka tidak
 diberitahu jumlah yang dijangka). Kakitangan yang dibenarkan melihat laporan syif mendapat <b>laporan syif</b>. Laporan
-ini dicetak dengan sendirinya jika resit dicetak selepas setiap jualan; jika tidak, ketik <b>Cetak laporan</b>.</p>
+ini dicetak dengan sendirinya jika resit dicetak selepas setiap jualan; jika tidak, ketik <b>Cetak laporan</b>. Jika
+ditutup melalui <b>Kunci / tukar pengguna</b>, semua orang melihat mesej “Keluarkan … tinggalkan …” dan kaunter kemudian
+dikunci; laporannya ada dalam <b>Syif &amp; tunai → Syif lepas</b>.</p>
 <div class="tip"><p>Terlupa menutup syif semalam? Pada waktu pagi kaunter memaparkan <b>Syif semalam masih dibuka</b>:
 <b>Kira laci</b> menutup syif itu dan memulakan syif hari ini dengan kiraan yang sama.</p></div>
 
@@ -1038,7 +1062,7 @@ pembatalan, diskaun, cukai, setiap kaedah bayaran, dan laci wang:</p>
 <tr><th>Baris</th><th>Maksud</th></tr>
 <tr><td>Wang apungan</td><td>Wang tunai yang dikira pada permulaan syif.</td></tr>
 <tr><td>+ Jualan tunai, Bayaran balik tunai (−), Dibatalkan (tunai) (−)</td><td>Wang tunai yang diterima dan dibayar balik dalam syif ini.</td></tr>
-<tr><td>+ Wang masuk, − Wang keluar, − Simpanan wang</td><td>Pergerakan tunai.</td></tr>
+<tr><td>+ Wang ditambah, − Dibayar dari laci, − Wang lebihan diambil</td><td>Wang yang dimasukkan atau dikeluarkan semasa syif (<a href="#cash-moves">butiran</a>).</td></tr>
 <tr><td>+ Bayaran hutang tunai</td><td>Pelanggan yang membayar hutang mereka secara tunai.</td></tr>
 <tr><td><b>Tunai dijangka</b></td><td>Jumlah yang sepatutnya ada dalam laci.</td></tr>
 <tr><td><b>Tunai dikira</b></td><td>Jumlah yang dikira semasa syif ditutup.</td></tr>
@@ -1166,7 +1190,7 @@ dahulu, bersama siapa yang melakukannya, siapa yang meluluskannya, amaun dan but
 tindakan sahaja.</p>
 <p>Yang direkodkan: pembatalan, bayaran balik, diskaun dan tukar harga, barang dibuang daripada bil atau bil dikosongkan (ditandakan jika
 selepas jumlah ditunjuk), laci dibuka tanpa jualan, salinan resit, perubahan harga/kos/kod bar produk, produk dipadam, import, promosi,
-stok dihapus kira, log masuk dan terlalu banyak PIN salah, perubahan kakitangan dan peranan, syif, wang masuk/keluar/simpanan,
+stok dihapus kira, log masuk dan terlalu banyak PIN salah, perubahan kakitangan dan peranan, syif, wang ditambah / dibayar dari laci / wang lebihan dikeluarkan,
 perbezaan wang apungan, had kredit, bayaran hutang dan pelarasan, jualan kredit melebihi had, kelulusan pengurus dan perubahan tetapan
 (termasuk sandaran yang dipulihkan).</p>
 <p>Rekod tidak boleh disunting atau dipadam.</p>
@@ -1643,7 +1667,9 @@ itu.</dd>
 <tr><td>Promosi</td><td>Promotion</td><td>Tawaran yang dikenakan oleh kaunter secara automatik.</td></tr>
 <tr><td>Syif</td><td>Shift</td><td>Masa seseorang di satu kaunter, dari kiraan ke kiraan.</td></tr>
 <tr><td>Wang apungan</td><td>Float</td><td>Wang kecil dalam laci pada permulaan syif.</td></tr>
-<tr><td>Simpanan wang</td><td>Cash drop</td><td>Wang tunai yang dibawa dari laci ke peti besi atau bank.</td></tr>
+<tr><td>Tambah wang</td><td>Add cash</td><td>Wang tambahan dimasukkan ke dalam laci semasa syif (cth. duit kecil).</td></tr>
+<tr><td>Bayar dari laci</td><td>Pay from drawer</td><td>Wang laci yang dibelanjakan (cth. bayar pembekal). Juga dipanggil “wang keluar” atau “cash out”.</td></tr>
+<tr><td>Keluarkan wang lebihan</td><td>Take out extra cash</td><td>Wang lebihan dibawa ke peti besi atau kepada pemilik — disimpan, bukan dibelanjakan. Juga dipanggil “simpanan wang” atau “cash drop”.</td></tr>
 <tr><td>Tunai dijangka / lebih / kurang</td><td>Expected cash / over / short</td><td>Jumlah yang sepatutnya ada dalam laci, dan perbezaannya.</td></tr>
 <tr><td>Kredit pelanggan</td><td>Customer credit</td><td>Bayar kemudian; pelanggan berhutang kepada kedai.</td></tr>
 <tr><td>Pemilik / Pengurus / Juruwang</td><td>Owner / Manager / Cashier</td><td>Peranan yang sedia ada dalam aplikasi.</td></tr>

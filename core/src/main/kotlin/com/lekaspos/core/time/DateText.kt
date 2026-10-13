@@ -41,6 +41,10 @@ object DateText {
         return StringBuilder(5).also { appendTime(it, Checked.floorMod(local, Days.DAY_MS)) }.toString()
     }
 
+    /** "HH:mm" of [minute] minutes after midnight (a time of day, e.g. the store's closing time). */
+    fun timeOfDay(minute: Int): String =
+        StringBuilder(5).also { appendTime(it, Checked.floorMod(minute.toLong(), 1440L) * 60_000L) }.toString()
+
     private fun appendDate(sb: StringBuilder, epochDay: Long) {
         val ymd = Days.toYmd(epochDay)
         pad2(sb, ymd % 100)

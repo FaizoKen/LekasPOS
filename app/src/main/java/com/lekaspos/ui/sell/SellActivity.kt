@@ -417,6 +417,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                     shiftDay = today
                     usingStaff()?.let { checkShift(it) }
                 }
+                checkClosing()
             }
         }
         s.launch {
@@ -666,7 +667,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         m.menu.add(0, R.string.staff_change_own_pin, 1, R.string.staff_change_own_pin)
         m.setOnMenuItemClickListener {
             when (it.itemId) {
-                R.string.menu_lock -> graph.staff.lock()
+                R.string.menu_lock -> lockTill()
                 R.string.staff_change_own_pin -> changeOwnPin(this, graph, scope)
             }
             true
@@ -851,6 +852,48 @@ class SellActivity : Activity(), LineActions, DialogHost {
             ShiftGuide.Ask.OPEN -> openShift(this, graph, scope, getString(R.string.shift_start_title)) {}
             else -> offerShiftCount(this, graph, scope, p)
         }
+    }
+
+    /**
+     * Lock / switch user (D-077): with a shift open on this till, whoever leaves is asked whether to close it
+     * first — going home or handing the till over, the drawer is counted now; a short break locks only.
+     */
+    private fun lockTill() {
+        if (graph.shifts.current.value == null) return graph.staff.lock()
+        android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.lock_close_title)
+            .setMessage(R.string.lock_close_message)
+            .setPositiveButton(R.string.shift_close) { _, _ -> closeShift(this, graph, scope) { graph.staff.lock() } }
+            .setNegativeButton(R.string.lock_only) { _, _ -> graph.staff.lock() }
+            .create()
+            .trackedBy(this)
+            .also { if (!isFinishing && !isDestroyed) it.show() }
+    }
+
+    /** When the closing-time reminder last asked (0: not yet), so "Not yet" waits half an hour. */
+    private var closeAskedAt = 0L
+
+    /**
+     * The closing-time reminder (D-077), the close's counterpart of "Start the shift": past the store's closing
+     * time with a shift open on this till, someone signed in, no bill, payment or other question on the screen.
+     */
+    private fun checkClosing() {
+        val shift = graph.shifts.current.value ?: return
+        val closeAt = graph.settings.store.value.closeReminder
+        val now = System.currentTimeMillis()
+        if (!ShiftGuide.closeDue(closeAt, now, TimeZone.getDefault(), shift.openedAt, closeAskedAt)) return
+        if (isFinishing || usingStaff() == null || busyForShift() || dialogs.anyShowing()) return
+        if (!graph.cart.state.value.cart.isEmpty) return // a customer at the till: after their sale
+        closeAskedAt = now
+        android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.close_time_title)
+            .setMessage(getString(R.string.close_time_message, DateText.timeOfDay(closeAt)))
+            .setPositiveButton(R.string.shift_close) { _, _ -> closeShift(this, graph, scope) }
+            .setNegativeButton(R.string.close_time_later, null)
+            .setCancelable(false) // one answer or the other: a tap beside it is not "Not yet" by mistake
+            .create()
+            .trackedBy(this)
+            .also { it.show() }
     }
 
     /** A payment, or the change of the sale just made, is on the screen: the shift question waits. */
@@ -1658,7 +1701,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
                 R.string.shift_open -> openShift(this, graph, scope) {}
                 R.string.shift_close -> closeShift(this, graph, scope)
                 R.string.menu_customers -> startActivity(Intent(this, CustomersActivity::class.java))
-                R.string.menu_lock -> graph.staff.lock()
+                R.string.menu_lock -> lockTill()
                 R.string.menu_open_drawer -> openDrawer()
                 R.string.menu_cancel_bill -> clearBill()
                 R.string.menu_settings -> startActivity(Intent(this, SettingsActivity::class.java))

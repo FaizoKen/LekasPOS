@@ -1,5 +1,8 @@
 package com.lekaspos.core.shift
 
+import com.lekaspos.core.time.Days
+import java.util.TimeZone
+
 /**
  * What the till asks when someone starts using it (D-068), so a shift is never forgotten and nobody has
  * to know where to find it: the selling screen asks once per person and shift, in plain words.
@@ -30,6 +33,26 @@ object ShiftGuide {
         openedDay < today -> Ask.NEW_DAY
         openedBy != me && handover -> Ask.HANDOVER
         else -> Ask.NONE
+    }
+
+    /** No closing-time reminder (the store setting `shift.close_at`). */
+    const val CLOSE_OFF = -1
+
+    const val MINUTES_PER_DAY = 1440
+
+    /** After "Not yet", the closing-time reminder asks again this much later. */
+    const val CLOSE_AGAIN_MS = 30L * 60_000L
+
+    /**
+     * The closing-time reminder (D-077), the close's counterpart of "Start the shift": a shift is open on this
+     * till ([openedAt]), the store's closing time [closeAtMinute] (minutes after midnight, [CLOSE_OFF] = no
+     * reminder) has passed today, the shift was opened before it (one opened later is someone working late on
+     * purpose), and the till did not ask in the last [CLOSE_AGAIN_MS] ([lastAsked]; 0 = not asked yet).
+     */
+    fun closeDue(closeAtMinute: Int, now: Long, tz: TimeZone, openedAt: Long?, lastAsked: Long): Boolean {
+        if (closeAtMinute !in 0 until MINUTES_PER_DAY || openedAt == null) return false
+        val closeAt = Days.startOfDay(Days.epochDay(now, tz), tz) + closeAtMinute * 60_000L
+        return now >= closeAt && openedAt < closeAt && now - lastAsked >= CLOSE_AGAIN_MS
     }
 }
 

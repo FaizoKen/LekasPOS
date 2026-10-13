@@ -39,7 +39,7 @@
 <li><a href="#staff">Staff, PINs and roles</a>
 <ol><li><a href="#pin-login">Turning on PIN login</a></li><li><a href="#sign-in">Signing in and locking</a></li><li><a href="#forgot-pin">Forgotten PIN</a></li><li><a href="#roles">Roles and permissions</a></li><li><a href="#manager-pin">When a cashier needs a manager</a></li></ol></li>
 <li><a href="#shifts">Shifts and cash</a>
-<ol><li><a href="#shift-settings">Do I need shifts?</a></li><li><a href="#open-shift">Opening a shift</a></li><li><a href="#cash-moves">Cash in, cash out and drops</a></li><li><a href="#close-shift">Closing a shift</a></li><li><a href="#handover">Handover between cashiers</a></li><li><a href="#shift-report">The shift report</a></li></ol></li>
+<ol><li><a href="#shift-settings">Do I need shifts?</a></li><li><a href="#open-shift">Opening a shift</a></li><li><a href="#cash-moves">Money in and out of the drawer</a></li><li><a href="#close-shift">Closing a shift</a></li><li><a href="#handover">Handover between cashiers</a></li><li><a href="#shift-report">The shift report</a></li></ol></li>
 <li><a href="#customers">Customers and credit</a>
 <ol><li><a href="#customer-list">Customers</a></li><li><a href="#credit-sale">Selling on credit</a></li><li><a href="#repayment">Repayments and adjustments</a></li></ol></li>
 <li><a href="#reports">Reports</a>
@@ -160,8 +160,8 @@ shop can work like that. Once PINs are set, each person signs in and sees only t
 <tr><td>Wrong payment method or wrong items, just paid</td><td><b>Menu → Sales &amp; refunds</b> → the top sale → <b>Void</b> → type why. Only your own last sale, within 5 minutes; then sell it again the right way — <a href="#void">details</a>.</td></tr>
 <tr><td>Check a price without selling</td><td><b>Price check</b> → scan or type.</td></tr>
 <tr><td>A discount or a new price</td><td>Ask a manager: <b>Menu → Manager PIN</b>, then <b>Menu → Discount</b>.</td></tr>
-<tr><td>Leave the till</td><td>Tap your name at the top → <b>Lock / switch user</b> (or <b>Menu → Lock / switch user</b>).</td></tr>
-<tr><td>End of the day</td><td><b>Menu → Close shift</b> → count all the cash → say how much stays in the drawer → take the rest out for the owner.</td></tr>
+<tr><td>Leave the till</td><td>Tap your name at the top → <b>Lock / switch user</b> (or <b>Menu → Lock / switch user</b>). If your shift is open, the till asks <b>Close the shift?</b>: <b>Close shift</b> when you go home or someone else takes over, <b>Lock only</b> for a short break.</td></tr>
+<tr><td>End of the day</td><td><b>Menu → Close shift</b> (or <b>Close shift</b> when the till reminds you at closing time) → count all the cash → say how much stays in the drawer → take the rest out for the owner.</td></tr>
 </table></div>
 <div class="note"><p>Everything you take off a bill is written in the activity log, especially after the customer has
 seen the total. That is normal — a wrong item is taken off every day — and protects you as much as the shop.</p></div>
@@ -310,10 +310,10 @@ recorded in the Activity log.</p>
 <tr><td><b>Sales &amp; refunds</b> (or <b>Receipts</b>)</td><td>Past sales: copies, refunds, voids — <a href="#sales">details</a>.</td></tr>
 <tr><td><b>Customers</b></td><td>When customers and credit are on.</td></tr>
 <tr><td><b>Open shift</b> / <b>Close shift</b></td><td>Start or end your shift — <a href="#shifts">details</a>.</td></tr>
-<tr><td><b>Shift &amp; cash</b></td><td>Cash in, cash out, cash drops, shift reports.</td></tr>
+<tr><td><b>Shift &amp; cash</b></td><td>Add cash, pay from drawer, take out extra cash, shift reports.</td></tr>
 <tr><td><b>Open cash drawer</b></td><td>Opens the drawer without a sale (recorded).</td></tr>
 <tr><td><b>Manager PIN</b></td><td>A manager helps with this bill.</td></tr>
-<tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on).</td></tr>
+<tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on). With a shift open, it first asks whether to close it.</td></tr>
 <tr><th colspan="2">Manage shop</th></tr>
 <tr><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Inventory</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b></td><td>The back office, for whoever may use it.</td></tr>
 </table></div>
@@ -443,7 +443,7 @@ cover</i> means the printer stopped taking data.</li>
 <h3 id="drawer">The cash drawer</h3>
 <p>The drawer plugs into the printer and opens through it. It opens by itself for payment methods marked
 <b>Opens the cash drawer</b> (cash), refunds paid that way, a voided cash sale, a customer repaying credit in
-cash, a shift's opening float and cash in/out. <b>Menu → Open cash drawer</b> opens it without a sale (needs the
+cash, a shift's opening float, added cash, payments from the drawer and extra cash taken out. <b>Menu → Open cash drawer</b> opens it without a sale (needs the
 permission and is recorded). The drawer opens only through the printer: when the printer is off or out of reach the
 drawer stays shut (an opening that waits more than 2 minutes is dropped) — use its key. If it never opens, check
 <b>Cash drawer connected to the printer</b> and try <b>Pin 5</b> instead of Pin 2.</p>
@@ -911,7 +911,7 @@ your own role with <b>+</b> (for example “Senior cashier”).</p>
 <tr><td>Refunds</td><td>Refunds and returns</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Print receipt copies</td><td>Receipt copies and sharing old receipts</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Open the cash drawer</td><td>Open the drawer without a sale</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Cash in, cash out and drops</td><td>Cash movements during a shift</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Add cash, pay from the drawer, take out extra cash</td><td>Money in and out of the drawer during a shift</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>See expected cash and shift reports</td><td>Shift reports, past shifts, over/short</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Manage customers, take repayments</td><td>Add/edit customers, repayments</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Sell on credit</td><td>Pay with customer credit within the limit</td><td>✓</td><td>✓</td><td>✓</td></tr>
@@ -953,7 +953,7 @@ that screen is closed.</li>
 <h2 id="shifts">11. Shifts and cash</h2>
 <p>A <b>shift</b> is one person's time at one till, from counting the cash drawer at the start to counting it at
 the end. The app works out how much cash <b>should</b> be in the drawer, so any difference is seen at once.</p>
-<figure class="wide"><img src="img/en-shift.png" alt="The Shift and cash screen" width="240" loading="lazy"><figcaption>Shift &amp; cash: open a shift, cash movements, reports.</figcaption></figure>
+<figure class="wide"><img src="img/en-shift.png" alt="The Shift and cash screen" width="240" loading="lazy"><figcaption>Shift &amp; cash: open or close a shift, money in and out of the drawer, reports.</figcaption></figure>
 
 <h3 id="shift-settings">Do I need shifts?</h3>
 <p>In <b>Settings → Store &amp; receipt → Shifts and customers</b>:</p>
@@ -962,6 +962,9 @@ the end. The app works out how much cash <b>should</b> be in the drawer, so any 
 manager can sign in with a PIN. The owner can switch it off again and it stays off (on LekasPOS 1.13.0 and older a
 new till joining the shop could switch it on again, so check it after adding a till).</li>
 <li><b>Count the drawer when the cashier changes</b> — on by default (see <a href="#handover">Handover</a>).</li>
+<li><b>Remind to close the shift at</b> — <b>No reminder</b> by default. Pick the shop's closing time (every half hour
+from 12:00 to 23:30) and each till asks to close its shift at that time (see <a href="#close-shift">Closing a
+shift</a>).</li>
 </ul>
 
 <h3 id="open-shift">Opening a shift</h3>
@@ -975,17 +978,35 @@ counted. If you count something else, the till asks <b>Not what was left</b>: <b
 count (the difference is recorded for the owner).</li>
 </ol>
 
-<h3 id="cash-moves">Cash in, cash out and drops</h3>
-<p><b>Menu → Shift &amp; cash</b>, while a shift is open on this till (needs <i>Cash in, cash out and drops</i>):</p>
-<ul>
-<li><b>Cash in</b> — money put into the drawer (e.g. more change).</li>
-<li><b>Cash out</b> — money taken out for something (e.g. paying a supplier); a reason is required.</li>
-<li><b>Cash drop</b> — money taken to the safe or the bank during the day.</li>
-</ul>
-<p>Each opens the drawer, changes the expected cash and is recorded with who did it.</p>
+<h3 id="cash-moves">Money in and out of the drawer</h3>
+<p><b>Menu → Shift &amp; cash</b>, while a shift is open on this till (needs <i>Add cash, pay from the drawer, take out
+extra cash</i>). Record any cash put in or taken out during the shift, so the count at the close comes out right.
+Each button says what it is for:</p>
+<div class="table-wrap"><table>
+<tr><th>Button</th><th>Use it when</th><th>Example</th></tr>
+<tr><td><b>Add cash</b></td><td>You put more cash <b>into</b> the drawer.</td><td>The owner brings RM50 of small
+change. Note: optional (“From where?”).</td></tr>
+<tr><td><b>Pay from drawer</b></td><td>Cash from the drawer is <b>spent</b> — it leaves the shop.</td><td>Paying the
+bread supplier on delivery, buying ice or plastic bags. You must say what it paid for.</td></tr>
+<tr><td><b>Take out extra cash</b></td><td>There is too much cash in the drawer and you take some <b>to keep it
+safe</b> — it is not spent.</td><td>RM500 moved to the safe or handed to the owner in the afternoon. Note: optional
+(“Where did it go?”).</td></tr>
+</table></div>
+<p>Each opens the drawer, changes the expected cash and is recorded with who did it. Other shops call these “cash in”,
+“cash out” (or “paid out”) and “cash drop”. Not sure which one? Ask: <i>was the money spent?</i> Yes → <b>Pay from
+drawer</b>. No, only moved somewhere safe → <b>Take out extra cash</b>.</p>
 
 <h3 id="close-shift">Closing a shift</h3>
-<p><b>Menu → Close shift</b>, in three steps:</p>
+<p>Close the shift when you go home or someone else takes over the till. You do not have to remember where:</p>
+<ul>
+<li><b>Lock / switch user</b> with a shift open asks <b>Close the shift?</b> — <b>Close shift</b> counts the drawer and
+then locks the till; <b>Lock only</b> is for a short break.</li>
+<li>When the owner set <b>Remind to close the shift at</b> (Settings → Store &amp; receipt), the till asks
+<b>Closing time</b> at that time, if the shift is still open and no bill is on the screen. <b>Not yet</b> asks
+again 30 minutes later. A shift opened after the closing time (working late) is not reminded.</li>
+<li>You can always use <b>Menu → Close shift</b>.</li>
+</ul>
+<p>Closing takes three steps:</p>
 <ol>
 <li><b>Count the drawer</b>: count all the cash and type the total (or <b>Count notes &amp; coins</b>).</li>
 <li><b>Leave in the drawer</b>: how much stays as change for the next shift (filled in with this shift's float).</li>
@@ -994,7 +1015,9 @@ short), and confirm.</li>
 </ol>
 <p>A cashier then sees only <i>“Take out RM… for the owner and leave RM… in the drawer”</i> (a “blind” close — they
 are not told what was expected). Staff allowed to see shift reports get the <b>shift report</b>. It prints by
-itself when receipts print after every sale; otherwise tap <b>Print report</b>.</p>
+itself when receipts print after every sale; otherwise tap <b>Print report</b>. Closed from <b>Lock / switch
+user</b>, everyone sees the “Take out … leave …” message and the till then locks; the report is in <b>Shift &amp; cash →
+Past shifts</b>.</p>
 <div class="tip"><p>Forgot to close yesterday? In the morning the till says <b>Yesterday's shift is still open</b>:
 <b>Count the drawer</b> closes it and starts today's shift with the same count.</p></div>
 
@@ -1015,7 +1038,7 @@ voids, discounts, tax, each payment method, and the cash drawer:</p>
 <tr><th>Line</th><th>Meaning</th></tr>
 <tr><td>Opening float</td><td>Cash counted at the start.</td></tr>
 <tr><td>+ Cash sales, Cash refunds (−), Voided (cash) (−)</td><td>Cash taken and paid back in this shift.</td></tr>
-<tr><td>+ Cash in, − Cash out, − Cash drops</td><td>Cash movements.</td></tr>
+<tr><td>+ Cash added, − Paid from drawer, − Extra cash taken out</td><td>Money put in or taken out during the shift (<a href="#cash-moves">details</a>).</td></tr>
 <tr><td>+ Credit repaid in cash</td><td>Customers paying their debt in cash.</td></tr>
 <tr><td><b>Expected cash</b></td><td>What should be in the drawer.</td></tr>
 <tr><td><b>Counted cash</b></td><td>What was counted at the close.</td></tr>
@@ -1142,7 +1165,7 @@ of action.</p>
 <p>Recorded: voids, refunds, discounts and price changes, items taken off a bill or bills cleared (marked when
 after the total was shown), the drawer opened without a sale, receipt copies, product price/cost/barcode changes,
 deleted products, imports, promotions, stock written off, sign-ins and too many wrong PINs, staff and role
-changes, shifts, cash in/out/drops, float differences, credit limits, repayments and adjustments, over-limit
+changes, shifts, cash added / paid from the drawer / extra cash taken out, float differences, credit limits, repayments and adjustments, over-limit
 credit sales, manager approvals and settings changes (including backups restored).</p>
 <p>Entries cannot be edited or deleted.</p>
 <p class="top"><a href="#contents">↑ Contents</a></p>
@@ -1609,7 +1632,9 @@ phone</a>. Without it, save a backup file on the old phone after the last sale a
 <tr><td>Promotion</td><td>Promosi</td><td>A deal the till applies by itself.</td></tr>
 <tr><td>Shift</td><td>Syif</td><td>One person's time at one till, from count to count.</td></tr>
 <tr><td>Float</td><td>Wang apungan</td><td>The change in the drawer at the start of a shift.</td></tr>
-<tr><td>Cash drop</td><td>Simpanan wang</td><td>Cash taken from the drawer to the safe or bank.</td></tr>
+<tr><td>Add cash</td><td>Tambah wang</td><td>More cash put in the drawer during a shift (e.g. small change).</td></tr>
+<tr><td>Pay from drawer</td><td>Bayar dari laci</td><td>Cash spent from the drawer (e.g. paying a supplier). Also called “cash out” or “paid out”.</td></tr>
+<tr><td>Take out extra cash</td><td>Keluarkan wang lebihan</td><td>Extra cash taken to the safe or the owner — kept, not spent. Also called a “cash drop”.</td></tr>
 <tr><td>Expected cash / over / short</td><td>Tunai dijangka / lebih / kurang</td><td>What should be in the drawer, and the difference.</td></tr>
 <tr><td>Customer credit</td><td>Kredit pelanggan</td><td>Pay later; the customer owes the shop.</td></tr>
 <tr><td>Owner / Manager / Cashier</td><td>Pemilik / Pengurus / Juruwang</td><td>The built-in roles.</td></tr>

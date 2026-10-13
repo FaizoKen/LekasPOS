@@ -43,7 +43,7 @@ keep both true (see `recipes.md` → "Change something users see").
 | `REFUND` | Refunds | ✓ | ✓ (since 1.14.0, D-072) |
 | `REPRINT` | Print receipt copies | ✓ | ✓ |
 | `OPEN_DRAWER` | Open the cash drawer | ✓ | |
-| `CASH_MOVE` | Cash in, cash out and drops | ✓ | |
+| `CASH_MOVE` | Add cash, pay from the drawer, take out extra cash | ✓ | |
 | `SHIFT_REPORT` | See expected cash and shift reports | ✓ | |
 | `CUSTOMERS` | Manage customers, take repayments | ✓ | ✓ |
 | `CREDIT_SALE` | Sell on credit | ✓ | ✓ |
@@ -173,7 +173,7 @@ tap is dropped. **This bill**: Discount (bill not empty and DISCOUNT, or PRICE_O
 bills (any held; the count on the tile) · Clear bill (bill not empty; red). **Till**: Sales & refunds (REFUND or VOID
 shown) else Receipts · Customers (credit on) · Open shift / Close shift (always) · Shift & cash (CASH_MOVE or
 SHIFT_REPORT) · Open cash drawer (OPEN_DRAWER) · Manager PIN (someone signed in lacks a permission and no help active)
-· Lock / switch user (PIN login on). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Inventory
+· Lock / switch user (PIN login on; with a shift open it asks "Close the shift?" first — D-077). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Inventory
 (MANAGE_STOCK), Reports (REPORTS), Settings (SETTINGS or MANAGE_STAFF or VIEW_AUDIT), Tax rates, Diagnostics
 (SETTINGS). Price check is a screen button, not in the Menu.
 - Discount (`DiscountDialog`): bill / selected line — Amount (> 0, capped) or Percent (1–100); "No discount";
@@ -347,9 +347,21 @@ updated). Audited `PROMOTION_CHANGE`.
   over the till?" (count = `handover` closes theirs and opens yours in one transaction; "Not now" = `SHIFT_CONTINUED`).
 - Open (no permission): float keypad pre-filled with what the last close left (LOCAL meta `shift.left`); a different
   count → "Not what was left" → `FLOAT_DIFFERENCE`. "Count notes & coins" (MYR only, `CashCountDialog`).
-- Cash in / out (reason required) / drop (CASH_MOVE, one-shot), open the drawer; need an open shift.
+- Money in and out of the drawer (CASH_MOVE, one-shot), open the drawer; need an open shift. Shown on Shift & cash
+  under "Money in and out of the drawer", each button with a caption saying what it is for (D-077; the owner found
+  "cash out" and "cash drop" the same): **Add cash** (`CASH_IN`, note "From where?" optional), **Pay from drawer**
+  (`CASH_OUT`, money spent, "What was it paid for?" required), **Take out extra cash** (`DROP`, kept not spent, "Where
+  did it go?" optional). The amount keypad repeats the caption. Shift report: Cash added / Paid from drawer / Extra
+  cash taken out.
 - Close (no permission), three steps: count → leave in the drawer (pre-filled with the float, ≤ count) → confirm with
   note. Without SHIFT_REPORT a blind close ("take out X, leave Y"); with it the report opens and prints if auto-print.
+- The till asks to close by itself (D-077): **Lock / switch user** with a shift open on this till → "Close the shift?"
+  (**Close shift** = the close, then "take out X, leave Y" for everyone — no report screen — then the till locks;
+  **Lock only**; Back = stay). Auto-lock and lock-after-sale do not ask. **Closing time** reminder: store setting
+  `shift.close_at` (Store & receipt → "Remind to close the shift at": No reminder (default) or 12:00–23:30 every half
+  hour): on the selling screen's 15 s check, past that time today with a shift open on this till that was opened
+  before it, someone signed in, the bill empty, no payment and no other dialog → **Close shift** / **Not yet** (asked
+  again 30 min later; `ShiftGuide.closeDue`). The "Yesterday's shift is still open" message points to the setting.
 - Expected cash = float + cash sales + cash refunds (negative) − cash of documents voided during the shift + cash in −
   cash out − drops + credit repaid in cash. Over/short = counted − expected. Report labels: `core/shift/ShiftReport.kt`
   `ShiftText` (screen in app language, paper in receipt language). "Checks" (`core/staff/StaffChecks.kt`): cleared,
@@ -401,7 +413,7 @@ creation, categories, suppliers, deliveries, counts, customer create/edit/delete
 
 Store-wide (`setting`, LWW per key, `data/settings/Settings.kt`, keys in `SettingKeys`): `store.name/address/phone/
 email/brn/sst_no/tin`, `receipt.header/footer/lang/copies(1)/logo(off)/einvoice_qr(off)/einvoice_url`,
-`tax.prices_include(on)`, `currency.cash_step(5)`, `shift.required(off)`, `shift.handover(on)`,
+`tax.prices_include(on)`, `currency.cash_step(5)`, `shift.required(off)`, `shift.handover(on)`, `shift.close_at(-1 = no reminder; minutes after midnight)`,
 `credit.enabled(off)`, `scale.templates(20IIIIIWWWWWC,21IIIIIPPPPPC)`. Store & receipt saves only changed keys,
 audited. Currency is fixed MYR/RM/2 decimals (no UI).
 

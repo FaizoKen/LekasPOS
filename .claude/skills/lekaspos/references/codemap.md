@@ -151,7 +151,7 @@ Streaming CSV in/out and the product CSV format (D-041, D-042).
 | File | Main declarations | Purpose |
 |---|---|---|
 | `C/shift/CashCount.kt` | `object CashCount` | Drawer counted note by note. |
-| `C/shift/ShiftGuide.kt` | `object ShiftGuide` (`enum Ask {NONE, OPEN, NEW_DAY, HANDOVER}`, `ask`), `data class LeftInDrawer` (`encode/decode` "amount\|staffId\|at") | What the till asks about the shift (D-068). |
+| `C/shift/ShiftGuide.kt` | `object ShiftGuide` (`enum Ask {NONE, OPEN, NEW_DAY, HANDOVER}`, `ask`; closing-time reminder `CLOSE_OFF`, `CLOSE_AGAIN_MS`, `closeDue`, D-077), `data class LeftInDrawer` (`encode/decode` "amount\|staffId\|at") | What the till asks about the shift (D-068). |
 | `C/shift/ShiftReport.kt` | `ShiftCash`, `MethodTotal`, `ShiftReport`, `ReportRow`, `ReportSection`, `ShiftText`, `class ShiftReportLayout` | Shift report maths and printable layout (D-038). |
 
 ### 2.18 `core.staff`
@@ -178,7 +178,7 @@ Streaming CSV in/out and the product CSV format (D-041, D-042).
 | File | Main declarations | Purpose |
 |---|---|---|
 | `C/time/ClockCheck.kt` | `object ClockCheck` (`NOT_BEFORE`, `enum Verdict`) | Refuses to date a sale with an obviously wrong clock. |
-| `C/time/DateText.kt` | `object DateText` (`dateTime`, `isoDate`, `time`) | Locale-independent date text. |
+| `C/time/DateText.kt` | `object DateText` (`dateTime`, `isoDate`, `time`, `timeOfDay`) | Locale-independent date text. |
 | `C/time/Days.kt` | `object Days` (`epochDay`, `startOfDay`, `toYmd`, `fromYmd`, `weekStart`, `monthStart`, `DAY_MS`) | Business-day arithmetic without `java.time`. |
 | `C/time/Hlc.kt` | `class Hlc` (`now`, `observe`, `current`, `pack`, `MAX_FUTURE_MS=24h`) | Hybrid logical clock. |
 
@@ -333,7 +333,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/Insets.kt` | `object Insets` (`apply(root, topBar?)`) | Edge-to-edge padding (status/nav bars, cutout, IME). |
 | `A/ui/Ui.kt` | `fun Context.colorOf(id)` | Color lookup working on API 21–22. |
 | `A/ui/common/ScreenActivity.kt` | `abstract class ScreenActivity : Activity, DialogHost` | Base of every back-office screen (see §4.12). |
-| `A/ui/common/DialogHost.kt` | `interface DialogHost`, `class DialogTracker`, `object DialogKeys` (`BURST_GAP_MS=60`, `BURST_IDLE_MS=300`, `pressesFocused`), `fun Dialog.keys(handler)`, `fun Dialog.trackedBy(ctx)`, private `ActivityCallback` | Dialog tracking, scanner-safe keys, idle-lock activity in dialogs. |
+| `A/ui/common/DialogHost.kt` | `interface DialogHost`, `class DialogTracker` (`anyShowing`, `dismissAll`), `object DialogKeys` (`BURST_GAP_MS=60`, `BURST_IDLE_MS=300`, `pressesFocused`), `fun Dialog.keys(handler)`, `fun Dialog.trackedBy(ctx)`, private `ActivityCallback` | Dialog tracking, scanner-safe keys, idle-lock activity in dialogs. |
 | `A/ui/common/Dialogs.kt` | `object Dialogs` (`canShow`, `scrolling`, `message`, `confirm`, `input`, `choose`, `padded`) | AlertDialog helpers that never show on a finishing activity. |
 | `A/ui/common/PadDialog.kt` | `Context.sideways()`, `Context.keyHeightPx(dp)`, `AlertDialog.wide()`, `class PadDialog(ctx, title)` (`info`, `pad`, `positive`, `neutral`, `negative`, `create`, `sidewaysBody`) | Number/PIN pad dialog layout, upright vs sideways (D-063). |
 | `A/ui/common/Keypad.kt` | `class Keypad(ctx, maxDigits, onChange)` (`digits`, `replacing`, `view`, `set`, `preset`, `clear`, `onKey`) | On-screen number pad over `:core DigitEntry`; drops scanner bursts. |
@@ -357,7 +357,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 ### 3.10 UI screens by package (one-line purposes; details in §5)
 | File | Main declarations | Purpose |
 |---|---|---|
-| `A/ui/sell/SellActivity.kt` | `class SellActivity : Activity, LineActions, DialogHost` (1885 lines) | Launcher and selling screen (not a `ScreenActivity`). |
+| `A/ui/sell/SellActivity.kt` | `class SellActivity : Activity, LineActions, DialogHost` (1961 lines; `checkShift`, `lockTill` and `checkClosing` — the till asks to close the shift, D-077) | Launcher and selling screen (not a `ScreenActivity`). |
 | `A/ui/sell/SellAdapters.kt` | `CartRow`, `interface LineActions`, `CartAdapter`, `TileSpec`, `ProductTileAdapter`, `CategoryChipAdapter` | Bill list, tiles, category chips. |
 | `A/ui/sell/SellDialogs.kt` | `AmountDialog` (Kind MONEY/PIECES/WEIGHT/PERCENT), `DiscountDialog`, `showHeldBills`, `showUnknownBarcode`, `weightText`, `TextView.replacing`, `AlertDialog.forwardKeys`, `View.visible` | Selling-screen dialogs; `AmountDialog` is the reusable keypad dialog. |
 | `A/ui/sell/PaymentDialog.kt` | `class PaymentDialog` | Two-step payment (D-064). |
@@ -369,7 +369,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/staff/LockActivity.kt` | `class LockActivity : Activity, DialogHost` | PIN sign-in over the selling screen. |
 | `A/ui/staff/StaffActivities.kt` | `StaffActivity`, `StaffEditActivity`, `RolesActivity`, `RoleEditActivity`, `changeOwnPin`, private `asOwnerIfRefused` | Settings → Staff. Role editor: "Void sales" on shows "Void their own last sale" on and locked (D-072). |
 | `A/ui/staff/StaffUi.kt` | `permLabel` :30, `waitText`, `checkMessage`, `Activity.withApproval` :71, `object ApprovalDialog` (`show`, `help`), `askPin`, `askNewPin`, `showRecoveryCode` | Permission labels, approval dialogs, PIN dialogs. |
-| `A/ui/shift/ShiftActivities.kt` | `cashCountButton`, `openShift` :68, `closeShift` :122, `offerShiftCount` :176, `ShiftActivity`, `ShiftReportActivity`, `ShiftsActivity` | Shift & cash. |
+| `A/ui/shift/ShiftActivities.kt` | `cashCountButton`, `openShift` :68, `closeShift` :123 (`then`: Lock / switch user, D-077), `offerShiftCount` :180, `MoveWords` (label, caption, note prompt, icon per `CashMoveKind`, D-077), `ShiftActivity`, `ShiftReportActivity`, `ShiftsActivity` | Shift & cash. |
 | `A/ui/shift/CashCountDialog.kt` | `class CashCountDialog` | Notes/coins count. |
 | `A/ui/products/ProductListActivity.kt` | `ProductListActivity` | Product list, CSV menu. |
 | `A/ui/products/ProductEditActivity.kt` | `ProductEditActivity` (`newIntent`, `EXTRA_BARCODE`) | Product form (writes DAOs directly in one tx). |
@@ -720,7 +720,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `report/RangePlanTest.kt` | Year/month/day pieces. |
 | `scan/ScanBufferTest.kt` | Scanner vs typing. |
 | `shift/CashCountTest.kt` | Drawer count. |
-| `shift/ShiftGuideTest.kt` | OPEN/NEW_DAY/HANDOVER, `LeftInDrawer`. |
+| `shift/ShiftGuideTest.kt` | OPEN/NEW_DAY/HANDOVER, `LeftInDrawer`, the closing-time reminder (`closeDue`, D-077). |
 | `shift/ShiftReportTest.kt` | Shift report maths/layout. |
 | `staff/StaffChecksTest.kt` | `Checks.of`, ranking (D-067). |
 | `staff/StaffRulesTest.kt` | PIN hash, lockout, `Perm` rules (UNVERIFIED exact coverage). |
@@ -743,7 +743,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `data/customer/PhoneFormsTest.kt` | Phone number forms (+60 vs 0). |
 | `data/db/SchemaSnapshotTest.kt` | **Schema guard**: `<VERSION>.sql` snapshot equals `Schema.STATEMENTS` (writes a missing snapshot then fails); no syntax slips; LWW tables have LWW columns; every table in exactly one sync class; no forbidden SQL (`ON CONFLICT`, `RETURNING`, ` OVER (`, `IIF(`, `FILTER (`, `NULLS FIRST/LAST`, `fts5`, `GENERATED ALWAYS`); snapshots exist for 1..VERSION. Reads `src/androidTest/assets/schemas` relative to `app/`. |
 | `data/sale/ReceiptNumbersTest.kt` | Receipt lookup by partial number. |
-| `data/settings/SettingsModelTest.kt` | Store/device settings defaults, round trip, bad values. |
+| `data/settings/SettingsModelTest.kt` | Store/device settings defaults, round trip, bad values (incl. `shift.close_at`). |
 | `domain/sale/RefundDraftTest.kt` | Refund drafts (rounding mirror, cost). |
 | `domain/sell/CheckoutDraftTest.kt` | `CheckoutService.draft` columns. |
 | `hw/printer/RenderHeightTest.kt` | Image receipt height. |
@@ -906,7 +906,7 @@ All in `C/model/Codes.kt` unless stated. Stored in the DB and in sync files.
 | Enums **not persisted** (safe to reorder, but check): `TextMode` (derived from `dev.printer.chinese`), `Granularity`, `RangePlan.Kind`, `ShiftGuide.Ask`, `Restore.Mode`, `ReportService.Export`, `ActionRefused.Reason`, `PerfScale` (name used by scripts/CI: TINY/QUICK/FULL) | — | UNVERIFIED that none is ever stored by ordinal elsewhere; grep before changing. |
 
 Store setting keys (`SettingKeys`, Settings.kt:20, "never rename a key"): `store.name/address/phone/email/brn/sst_no/tin`, `receipt.header/footer/lang/logo/copies/einvoice_qr/einvoice_url`,
-`tax.prices_include`, `currency.symbol/decimals/cash_step`, `scale.templates`, `shift.required`, `shift.handover`, `credit.enabled`, `owner.recovery`.
+`tax.prices_include`, `currency.symbol/decimals/cash_step`, `scale.templates`, `shift.required`, `shift.handover`, `shift.close_at` (D-077), `credit.enabled`, `owner.recovery`.
 Per-till meta keys: `dev.printer.{address,name,paper,mode,chinese,codepage,cut,feed,auto,native_qr}`, `dev.drawer.{enabled,pin}`, `dev.scanner.{address,name}`,
 `dev.camera.enabled`, `dev.lock.{minutes,after_sale}`, `dev.tiles`, `dev.customer_screen`, `dev.setup_done`, `dev.popular`, `dev.backup_*`, `dev.db_problem`.
 Other LOCAL meta: identity (`device_uuid`, `device_no`, `store_uuid`, `created_at`, `id_reserved`, `hlc_last`, `sync_enabled`, `receipt_prefix`, `doc_seq_<kind>`),

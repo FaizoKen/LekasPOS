@@ -9,6 +9,7 @@ import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.EventOp
 import com.lekaspos.core.money.CurrencySpec
 import com.lekaspos.core.receipt.StoreInfo
+import com.lekaspos.core.shift.ShiftGuide
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Meta
 import com.lekaspos.data.db.args
@@ -39,6 +40,7 @@ object SettingKeys {
     const val SCALE_TEMPLATES = "scale.templates"
     const val SHIFT_REQUIRED = "shift.required"
     const val SHIFT_HANDOVER = "shift.handover"
+    const val SHIFT_CLOSE_AT = "shift.close_at"
     const val CREDIT_ENABLED = "credit.enabled"
 
     /** Hash of the owner's recovery code (D-037); not part of [StoreSettings]. */
@@ -73,6 +75,8 @@ data class StoreSettings(
      * and start their own shift (D-067): each person answers for the cash of their own shift.
      */
     val handoverCount: Boolean = true,
+    /** The closing-time reminder (D-077): minutes after midnight, or ShiftGuide.CLOSE_OFF. */
+    val closeReminder: Int = ShiftGuide.CLOSE_OFF,
     /** Customers and "pay later" credit (D-039). */
     val creditEnabled: Boolean = false,
 ) {
@@ -114,6 +118,7 @@ data class StoreSettings(
         SettingKeys.SCALE_TEMPLATES to scaleTemplates.joinToString(","),
         SettingKeys.SHIFT_REQUIRED to flag(shiftRequired),
         SettingKeys.SHIFT_HANDOVER to flag(handoverCount),
+        SettingKeys.SHIFT_CLOSE_AT to closeReminder.toString(),
         SettingKeys.CREDIT_ENABLED to flag(creditEnabled),
     )
 
@@ -151,6 +156,8 @@ data class StoreSettings(
                     ?: DEFAULT_SCALE_TEMPLATES,
                 shiftRequired = b(SettingKeys.SHIFT_REQUIRED, d.shiftRequired),
                 handoverCount = b(SettingKeys.SHIFT_HANDOVER, d.handoverCount),
+                closeReminder = m[SettingKeys.SHIFT_CLOSE_AT]?.toIntOrNull()?.takeIf { it in 0 until ShiftGuide.MINUTES_PER_DAY }
+                    ?: d.closeReminder,
                 creditEnabled = b(SettingKeys.CREDIT_ENABLED, d.creditEnabled),
             )
         }

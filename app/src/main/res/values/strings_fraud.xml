@@ -47,7 +47,24 @@
     <string name="shift_close_summary">Counted: %1$s\nLeave in the drawer: %2$s\nTake out for the owner: %3$s</string>
     <string name="shift_closed_take">The shift is closed. Take out %1$s for the owner and leave %2$s in the drawer.</string>
     <string name="new_day_title">Yesterday\'s shift is still open</string>
-    <string name="new_day_message">%1$s opened a shift on %2$s and it was not closed. Count the cash in the drawer now: this closes that shift and starts today\'s. Next time, close the shift at the end of the day (Menu → Close shift).</string>
+    <string name="new_day_message">%1$s opened a shift on %2$s and it was not closed. Count the cash in the drawer now: this closes that shift and starts today\'s. Next time, close the shift at the end of the day (Menu → Close shift). The owner can have the till remind you: Menu → Settings → Store &amp; receipt → Remind to close the shift at.</string>
     <string name="audit_float_difference">Shift opened with another amount than was left</string>
     <string name="check_float_diff">Opened with another amount than was left (%1$d)</string>
+    <string name="shift_money_section">Money in and out of the drawer</string>
+    <string name="shift_money_help">Record any cash put in or taken out during the shift, so the count at the close comes out right.</string>
+    <string name="shift_cash_in_help">Put more cash in the drawer, e.g. small change from the owner or the bank.</string>
+    <string name="shift_cash_out_help">Cash spent from the drawer: paying a supplier on delivery, buying ice or plastic bags. Say what it paid for.</string>
+    <string name="shift_drop_help">Too much cash in the drawer? Take some out to the safe or give it to the owner. It is kept, not spent.</string>
+    <string name="shift_cash_in_reason">From where? (optional), e.g. owner, bank</string>
+    <string name="shift_cash_out_reason">What was it paid for? (required)</string>
+    <string name="shift_drop_reason">Where did it go? (optional), e.g. safe, owner</string>
+    <string name="lock_close_title">Close the shift?</string>
+    <string name="lock_close_message">The shift on this till is still open. Going home, or someone else takes over the till? Close it now: count the drawer. Only a short break? Lock only.</string>
+    <string name="lock_only">Lock only</string>
+    <string name="close_time_title">Closing time</string>
+    <string name="close_time_message">It is past %1$s, the shop\'s closing time, and the shift on this till is still open. Close it now: count the drawer.</string>
+    <string name="close_time_later">Not yet</string>
+    <string name="shift_close_at">Remind to close the shift at</string>
+    <string name="shift_close_at_off">No reminder</string>
+    <string name="shift_close_at_help">At this time each till asks to close its shift (count the drawer), if one is still open. \"Not yet\" asks again 30 minutes later.</string>
 </resources>

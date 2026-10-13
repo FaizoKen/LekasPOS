@@ -2,6 +2,7 @@ package com.lekaspos.data.settings
 
 import com.lekaspos.core.escpos.TextMode
 import com.lekaspos.core.money.CurrencySpec
+import com.lekaspos.core.shift.ShiftGuide
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -24,8 +25,18 @@ class SettingsModelTest {
             name = "Kedai Maju", address = "1 Jalan A\nKajang", brn = "2026", sstNo = "W10", tin = "C123", receiptFooter = "Terima kasih",
             receiptLanguage = "ms", printLogo = true, receiptCopies = 2, einvoiceQr = true, einvoiceUrl = "https://x/{receipt}",
             pricesIncludeTax = false, currency = CurrencySpec.MYR.copy(cashStep = 0L), scaleTemplates = listOf("20IIIIIWWWWWC"),
+            closeReminder = 22 * 60,
         )
         assertEquals(s, StoreSettings.from(s.toMap(), defaultLanguage = "en"))
+    }
+
+    @Test
+    fun theClosingReminderIsOffUnlessATimeOfDayIsStored() {
+        assertEquals(ShiftGuide.CLOSE_OFF, StoreSettings.from(emptyMap(), "en").closeReminder)
+        for (bad in listOf("1440", "-5", "x")) {
+            assertEquals(ShiftGuide.CLOSE_OFF, StoreSettings.from(mapOf(SettingKeys.SHIFT_CLOSE_AT to bad), "en").closeReminder)
+        }
+        assertEquals(0, StoreSettings.from(mapOf(SettingKeys.SHIFT_CLOSE_AT to "0"), "en").closeReminder)
     }
 
     @Test
