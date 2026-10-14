@@ -43,7 +43,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
-| — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | test build **v1.19.2** (build 203) — waiting for the owner's phone check |
+| — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
 
 ## Open questions for the user
 
@@ -2290,6 +2290,11 @@ notice what different on menu while select item vs not."
 - [x] Guide pictures `en/ms-menu` from that run: Bill discount and Item discount side by side (EN and BM)
 - [x] **Test build v1.19.2** (2026-10-14): pre-release on 190b3e7, build 203; SHA-256 `5fc1efe1…4766`; certificate
       `0a67abec…d4b9`; `mapping-1.19.2.txt` attached. 1.19.1 stays the latest release
+- [x] The owner asked to release it (2026-10-14, "do it all for me until fully release to public"; not checked on the phone
+      first): smoke baseline (`PREV_APK_URL`) v1.19.2; the guide says "For LekasPOS 1.19.2"; privacy policy unchanged
+- [ ] CI on main after the baseline change
+- [ ] **v1.19.2 the latest release** — the pre-release made latest with public notes
+- [ ] Perf FULL on the released code
 - [ ] The owner's phone check
 
 ### Phone checks for 1.19.2
