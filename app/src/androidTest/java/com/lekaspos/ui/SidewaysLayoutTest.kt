@@ -200,17 +200,26 @@ class SidewaysLayoutTest {
     @Test
     fun changeStockFitsWholeInEachChoice() {
         val milo = StockProduct(1L, "Milo Tin 1.5kg", "pcs", SellMode.UNIT, 1_945L, 24_000L)
-        for (w in phones) {
-            val ctx = phone(w)
-            for ((i, choice) in listOf("Count", "Remove", "Add").withIndex()) {
-                val c = InventoryUi.changeDialog(ctx, milo) {}
-                c.modes[i].performClick()
-                val body = c.pad.sidewaysBody()
-                measure(body, w)
-                assertFits(body, "Change stock ($choice) at ${w}dp")
-                assertButtonsWhole(body, "Change stock ($choice) at ${w}dp")
+        // On the main thread: a Spinner (the reason) needs a Looper on API 21. Failures are carried out of it.
+        val failures = ArrayList<String>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            for (w in phones) {
+                val ctx = phone(w)
+                for ((i, choice) in listOf("Count", "Remove", "Add").withIndex()) {
+                    try {
+                        val c = InventoryUi.changeDialog(ctx, milo) {}
+                        c.modes[i].performClick()
+                        val body = c.pad.sidewaysBody()
+                        measure(body, w)
+                        assertFits(body, "Change stock ($choice) at ${w}dp")
+                        assertButtonsWhole(body, "Change stock ($choice) at ${w}dp")
+                    } catch (e: AssertionError) {
+                        failures.add(e.message ?: choice)
+                    }
+                }
             }
         }
+        assertEquals(emptyList<String>(), failures)
     }
 
     @Test
