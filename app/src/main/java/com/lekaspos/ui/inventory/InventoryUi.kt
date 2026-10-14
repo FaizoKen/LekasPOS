@@ -20,6 +20,7 @@ import com.lekaspos.core.money.MoneyFormat
 import com.lekaspos.data.product.ProductDao
 import com.lekaspos.domain.sell.BarcodeLookup
 import com.lekaspos.domain.sell.Resolution
+import com.lekaspos.ui.common.FitButton
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.PadDialog
 import com.lekaspos.ui.common.keys
@@ -145,43 +146,60 @@ object InventoryUi {
         d.show()
         return d.trackedBy(a)
     }
-
     /**
      * "Change stock" (D-080): **Count** (first) — how many there are now, shelf and storeroom together, and the app
      * takes that number; or **Remove** / **Add** a quantity for a reason (damaged, expired, found…) with a note.
      * A new manager wanted to "just edit the quantity" of a product: Count is that, and it keeps the reason on record.
      */
     fun askChange(a: Activity, p: StockProduct, onOk: (StockChange) -> Unit): AlertDialog {
+        val c = changeDialog(a, p, onOk)
+        val d = c.pad.create()
+        d.keys { e -> if (c.note.hasFocus()) false else c.keypad.onKey(e) }
+        d.show()
+        return d.trackedBy(a)
+    }
+
+    /** The parts of "Change stock" a test measures: the dialog, its three choices, the keypad and the note. */
+    class ChangeDialog(val pad: PadDialog, val modes: List<Button>, val keypad: Keypad, val note: EditText)
+
+    /**
+     * Builds [askChange]'s dialog. Short enough for the keypad's height held sideways (D-063): the app's number is
+     * on the line under the amount (with the difference once a count is typed), the help is one caption.
+     */
+    fun changeDialog(a: Context, p: StockProduct, onOk: (StockChange) -> Unit): ChangeDialog {
         var mode = MODE_COUNT
         var reasons = emptyList<AdjustReason>()
+        val density = a.resources.displayMetrics.density
         // The keypad beside the rest on a phone held sideways (PadDialog, D-063).
         val pd = PadDialog(a, p.name)
-        pd.info(TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { text = a.getString(R.string.inv_app_has, qty(p.stock, p.unit)) })
         val tabs = LinearLayout(a).apply {
             orientation = LinearLayout.HORIZONTAL
             isBaselineAligned = false
         }
-        fun tab(label: Int) = Button(a, null, 0, R.style.Widget_Lekas_Toggle).also {
+        // Three side by side on a 5-inch phone: the label shrinks to one line ("Keluarkan" broke as "Keluark/an").
+        fun tab(label: Int) = FitButton(a, null, 0, R.style.Widget_Lekas_Toggle).also {
             it.text = a.getString(label)
+            val pad = (6 * density).toInt()
+            it.setPadding(pad, it.paddingTop, pad, it.paddingBottom)
             tabs.addView(it, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }
         val count = tab(R.string.inv_count_stock)
         val out = tab(R.string.inv_remove_stock)
         val inn = tab(R.string.inv_add_stock)
-        pd.info(tabs, lp())
-        val help = TextView(a, null, 0, R.style.Text_Lekas_Body)
+        pd.info(tabs)
+        val help = TextView(a, null, 0, R.style.Text_Lekas_Caption)
         pd.info(help, lp())
-        val reason = Spinner(a).apply { minimumHeight = (48 * a.resources.displayMetrics.density).toInt() }
+        val reason = Spinner(a).apply { minimumHeight = (48 * density).toInt() }
         pd.info(reason, lp())
         val display = TextView(a, null, 0, R.style.Text_Lekas_Display).apply {
             gravity = android.view.Gravity.END
             setBackgroundResource(R.drawable.field_bg)
-            val pad = (12 * a.resources.displayMetrics.density).toInt()
+            val pad = (12 * density).toInt()
             setPadding(pad, pad / 2, pad, pad / 2)
         }
         pd.info(display, lp())
-        val diff = TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { gravity = android.view.Gravity.END }
-        pd.info(diff, lp())
+        val status = TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { gravity = android.view.Gravity.END }
+        pd.info(status, lp())
         val note = EditText(a).apply {
             hint = a.getString(R.string.inv_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
@@ -196,14 +214,17 @@ object InventoryUi {
             return if (p.weighed) n else n * 1000L
         }
         fun shown(v: Long) = if (p.weighed) weightText(v) + " " + p.unit else qty(v, p.unit)
+        val appHas = a.getString(R.string.inv_app_has, qty(p.stock, p.unit))
         lateinit var keypad: Keypad
         keypad = Keypad(a, 9) { d ->
             val v = value(d)
             display.text = v?.let { shown(it) } ?: ""
             display.replacing(keypad.replacing)
-            val change = v?.minus(p.stock)
-            diff.text = when {
-                change == null -> ""
+            // A count typed: how far it is from the app. Otherwise (the app's own number shown, or Remove / Add) what the
+            // app has.
+            val change = if (mode == MODE_COUNT && !keypad.replacing) v?.minus(p.stock) else null
+            status.text = when {
+                change == null -> appHas
                 change < 0L -> a.getString(R.string.inv_diff_less, qty(-change, p.unit))
                 change > 0L -> a.getString(R.string.inv_diff_more, qty(change, p.unit))
                 else -> a.getString(R.string.inv_diff_same)
@@ -226,7 +247,6 @@ object InventoryUi {
             val counting = m == MODE_COUNT
             reason.visible(!counting)
             note.visible(!counting)
-            diff.visible(counting)
             if (counting) {
                 // The number the app has: OK keeps it ("checked, it is right"), the first key typed replaces it.
                 keypad.preset(if (p.stock <= 0L) "" else if (p.weighed) p.stock.toString() else (p.stock / 1000L).toString())
@@ -251,10 +271,7 @@ object InventoryUi {
                 onOk(StockChange.Move(r, v, mode == MODE_REMOVE, note.text.toString().trim().ifEmpty { null }))
             }
         }
-        val d = pd.create()
-        d.keys { e -> if (note.hasFocus()) false else keypad.onKey(e) }
-        d.show()
-        return d.trackedBy(a)
+        return ChangeDialog(pd, listOf(count, out, inn), keypad, note)
     }
 
     private const val MODE_COUNT = 0

@@ -11,11 +11,14 @@ import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lekaspos.R
+import com.lekaspos.core.model.SellMode
 import com.lekaspos.ui.common.Keypad
 import com.lekaspos.ui.common.PadDialog
 import com.lekaspos.ui.common.PinPad
 import com.lekaspos.ui.common.keyHeightPx
 import com.lekaspos.ui.common.sideways
+import com.lekaspos.ui.inventory.InventoryUi
+import com.lekaspos.ui.inventory.StockProduct
 import com.lekaspos.ui.sell.PaymentViews
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -191,6 +194,22 @@ class SidewaysLayoutTest {
             measure(approval, w)
             assertFits(approval, "PIN at ${w}dp")
             assertButtonsWhole(approval, "PIN at ${w}dp")
+        }
+    }
+
+    @Test
+    fun changeStockFitsWholeInEachChoice() {
+        val milo = StockProduct(1L, "Milo Tin 1.5kg", "pcs", SellMode.UNIT, 1_945L, 24_000L)
+        for (w in phones) {
+            val ctx = phone(w)
+            for ((i, choice) in listOf("Count", "Remove", "Add").withIndex()) {
+                val c = InventoryUi.changeDialog(ctx, milo) {}
+                c.modes[i].performClick()
+                val body = c.pad.sidewaysBody()
+                measure(body, w)
+                assertFits(body, "Change stock ($choice) at ${w}dp")
+                assertButtonsWhole(body, "Change stock ($choice) at ${w}dp")
+            }
         }
     }
 

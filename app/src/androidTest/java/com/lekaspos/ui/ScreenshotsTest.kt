@@ -137,7 +137,11 @@ class ScreenshotsTest {
         }
         val methods = runBlocking { graph.db().read { PaymentMethodDao.active(it) } }
         // A product with stock: its form (Stock under the price) and Change stock with a count typed (D-080).
-        val milo = runBlocking { graph.db().read { ProductDao.search(it, "Milo", 1, includeInactive = true) }.first().id }
+        // The test shop's Milo (in Minuman): another test may have made one without a category.
+        val milo = runBlocking { graph.db().read { ProductDao.search(it, "Milo", 20, includeInactive = true) } }
+            .let { found -> (found.firstOrNull { it.categoryId != null } ?: found.first()).id }
+        // 24 in the app whatever ran before (the shop is set up only once).
+        runBlocking { graph.db().write(reserveIds = 2L) { tx -> StockDao.insertCount(tx, milo, 24_000L, null, null, null, System.currentTimeMillis()) } }
         val miloStock = runBlocking { InventoryUi.product(graph, milo) } ?: error("no product")
         // The API 21 CI emulator has no external storage: fall back to internal files (CI copies them with run-as).
         val dir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "screens").apply { mkdirs() }
@@ -146,7 +150,14 @@ class ScreenshotsTest {
             for ((name, cls) in screens) shoot(Intent(ctx, cls), File(dir, "$lang-$name.png"))
             val newProduct = Intent(ctx, ProductEditActivity::class.java).putExtra(ProductEditActivity.EXTRA_BARCODE, "9556001234567")
             shoot(newProduct, File(dir, "$lang-product-new.png"))
-            shoot(ProductEditActivity.newIntent(ctx, productId = milo), File(dir, "$lang-product-edit.png"))
+            shoot(ProductEditActivity.newIntent(ctx, productId = milo), File(dir, "$lang-product-edit.png")) { a ->
+                // Scrolled to the Stock section: In stock now, Change stock, Stock history.
+                val form = a.findViewById<android.view.ViewGroup>(R.id.content).getChildAt(0) as android.widget.ScrollView
+                val column = form.getChildAt(0) as android.view.ViewGroup
+                val section = (0 until column.childCount).map { column.getChildAt(it) }
+                    .first { it is android.widget.TextView && it.text.toString() == a.getString(R.string.product_stock_section) }
+                form.scrollTo(0, section.top - (8 * a.resources.displayMetrics.density).toInt())
+            }
             shoot(ProductEditActivity.newIntent(ctx, productId = milo), File(dir, "$lang-change-stock.png")) { a ->
                 val d = InventoryUi.askChange(a, miloStock) {}
                 var t = SystemClock.uptimeMillis()

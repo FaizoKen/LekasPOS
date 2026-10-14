@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.lekaspos.R
 
@@ -110,8 +111,11 @@ class PadDialog(private val a: Context, private val title: CharSequence?) {
     /** The sideways body: title, info and buttons on the left, the pad on the right (tests measure it). */
     internal fun sidewaysBody(): View {
         val left = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
+        // The row is as high as the pad: a left side with more in it (Change stock's reason, amount and note, D-080)
+        // had its buttons cut off. What is above the buttons scrolls on its own; the buttons stay whole at the bottom.
+        val body = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
         if (title != null) {
-            left.addView(
+            body.addView(
                 TextView(a, null, 0, R.style.Text_Lekas_Section).apply {
                     text = title
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, TITLE_SP)
@@ -119,8 +123,8 @@ class PadDialog(private val a: Context, private val title: CharSequence?) {
                 matchWrap().apply { bottomMargin = dp(4) },
             )
         }
-        for ((v, lp) in info) left.addView(v, lp ?: matchWrap())
-        left.addView(View(a), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)) // the buttons at the bottom
+        for ((v, lp) in info) body.addView(v, lp ?: matchWrap())
+        left.addView(ScrollView(a).apply { addView(body) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val bar = LinearLayout(a).apply {
             orientation = LinearLayout.HORIZONTAL
             isBaselineAligned = false

@@ -335,7 +335,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/common/ScreenActivity.kt` | `abstract class ScreenActivity : Activity, DialogHost` | Base of every back-office screen (see §4.12). |
 | `A/ui/common/DialogHost.kt` | `interface DialogHost`, `class DialogTracker` (`anyShowing`, `dismissAll`), `object DialogKeys` (`BURST_GAP_MS=60`, `BURST_IDLE_MS=300`, `pressesFocused`), `fun Dialog.keys(handler)`, `fun Dialog.trackedBy(ctx)`, private `ActivityCallback` | Dialog tracking, scanner-safe keys, idle-lock activity in dialogs. |
 | `A/ui/common/Dialogs.kt` | `object Dialogs` (`canShow`, `scrolling`, `message`, `confirm`, `input`, `choose`, `padded`) | AlertDialog helpers that never show on a finishing activity. |
-| `A/ui/common/PadDialog.kt` | `Context.sideways()`, `Context.keyHeightPx(dp)`, `AlertDialog.wide()`, `class PadDialog(ctx, title)` (`info`, `pad`, `positive`, `neutral`, `negative`, `create`, `sidewaysBody`) | Number/PIN pad dialog layout, upright vs sideways (D-063). |
+| `A/ui/common/PadDialog.kt` | `Context.sideways()`, `Context.keyHeightPx(dp)`, `AlertDialog.wide()`, `class PadDialog(ctx, title)` (`info`, `pad`, `positive`, `neutral`, `negative`, `create`, `sidewaysBody`) | Number/PIN pad dialog layout, upright vs sideways (D-063); sideways, the left side scrolls above its buttons, which stay whole (D-080). |
 | `A/ui/common/Keypad.kt` | `class Keypad(ctx, maxDigits, onChange)` (`digits`, `replacing`, `view`, `set`, `preset`, `clear`, `onKey`) | On-screen number pad over `:core DigitEntry`; drops scanner bursts. |
 | `A/ui/common/PinPad.kt` | `class PinPad` | PIN entry pad. |
 | `A/ui/common/Form.kt` | `class Form(ctx)` (fields, switches, choices, `section`, `row`, `info`, `button(label, primary, icon, danger)`, `group { }` (fields shown/hidden together), `save()/restore()`) | Code-built forms (most back-office forms). |
@@ -381,7 +381,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/catalog/TaxRatesActivity.kt` | `TaxRatesActivity` | Tax rates CRUD. |
 | `A/ui/catalog/PaymentMethodsActivity.kt` | `PaymentMethodsActivity` | Payment methods CRUD. |
 | `A/ui/inventory/InventoryActivity.kt` | `InventoryActivity` (intro card `layout/stock_intro.xml` through a `ConcatAdapter`), `ScreenActivity.adjustProduct` (Change stock) | The Stock screen ("Inventory" before 1.20.0, D-080). |
-| `A/ui/inventory/InventoryUi.kt` | `data class StockProduct`, `object InventoryUi` (`resolve`, `product`, `qty`, `askQty` :110, `askChange` (Count / Remove / Add, D-080), labels), `sealed class StockChange` | Shared stock dialogs (PadDialog examples). |
+| `A/ui/inventory/InventoryUi.kt` | `data class StockProduct`, `object InventoryUi` (`resolve`, `product`, `qty`, `askQty` :110, `askChange` / `changeDialog` (Count / Remove / Add, D-080; `SidewaysLayoutTest` measures it), labels), `sealed class StockChange` | Shared stock dialogs (PadDialog examples). |
 | `A/ui/inventory/ReceiveActivity.kt` | `ReceiveActivity` | Receive a delivery. |
 | `A/ui/inventory/CountActivities.kt` | `CountSessionsActivity`, `CountActivity`, `CountReportActivity` | Stock takes. |
 | `A/ui/inventory/StockActivities.kt` | `StockHistoryActivity`, `LowStockActivity`, `MovementsActivity` | Stock history and lists. |
