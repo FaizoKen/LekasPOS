@@ -2,6 +2,8 @@
 <!-- Fasa 10: skrin juruwang (D-049). -->
 <resources>
     <string name="sell_tool_items">Barang</string>
+    <string name="sell_tool_bill">Bil</string>
+    <string name="sell_held_open">Ditangguh (%1$d)</string>
     <string name="sell_search_hint_short">Cari</string>
     <string name="sell_tool_camera">Kamera</string>
     <string name="tile_stock">Stok %1$s</string>

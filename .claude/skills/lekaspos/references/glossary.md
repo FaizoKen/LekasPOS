@@ -12,9 +12,9 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | The shop (all tills sharing one Google account) | shop / store | kedai | store, `store_uuid` |
 | The sale being rung up | bill | bil | cart, `CartSession`, `cart`/`cart_line` |
 | One row of the bill | line | baris | `CartItem`, `cart_line`, `sale_line` |
-| Put a bill aside | Hold / held bills | Tangguh / Bil ditangguh | `CartSession.hold`, `CartStatus.HELD` |
+| Put a bill aside | Hold / held bills; "Held bills (2)" on an empty bill's Hold button | Tangguh / Bil ditangguh; "Ditangguh (2)" | `CartSession.hold`, `CartStatus.HELD`, `SellActivity.renderHold` |
 | Throw the bill away | Clear bill | Kosongkan bil | `CartSession.clear`, `BILL_CANCEL` |
-| The product tiles | Items (button), catalogue | Barang, katalog | `sell_catalog`, `ProductTileAdapter` |
+| The product tiles | Items (button; reads Bill while the tiles show on a phone), catalogue | Barang (Bil), katalog | `sell_catalog`, `ProductTileAdapter`, `sell_tool_bill` |
 | Best sellers tab | Popular | Laris | `PopularItems` |
 | Open the search box (selling screen) | Search | Cari | `btn_search`, `searchOpen` |
 | Scan with the phone's camera (tool on two panes) | Camera | Kamera | `btn_camera`, `btn_camera_box`, `CameraScanActivity` |

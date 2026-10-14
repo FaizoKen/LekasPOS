@@ -45,6 +45,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
+| — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | test build **v1.20.1** (build 215) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2348,7 +2349,10 @@ quantity on product and how about product in store should same count product in 
       ("For LekasPOS 1.20.0")
 - [x] **v1.20.0 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
       website's Download link serves it (SHA-256 `927a93f4…79c2` checked). Shops on 1.6.1 or later are offered it inside the app
-- [ ] Perf FULL on the released code (run 38559001073)
+- [x] Perf FULL on the released code (run 38559001073, 0b79597): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158
+      sale lines), all 110 query plans ok; API 21 sale commit p95 9.1 ms (150), multi-word search p95 3.1 ms (50), scan to cart
+      p95 0.35 ms (20), report_month 123 ms (1,000), report_year 150 ms (3,000); cold start to a usable till on API 21 about
+      0.42 s, API 29 about 0.79 s, API 36 about 0.47 s
 
 ### Phone checks for 1.20.0
 1. Menu → Manage shop: **Products** and **Stock** side by side (Malay: Produk, Stok). Stock opens with the card on top; it
@@ -2363,3 +2367,37 @@ quantity on product and how about product in store should same count product in 
 6. **+** new product: **How many do you have now?** under the price; type 10, save: In stock 10. With Track stock off: no
    stock recorded.
 7. Weighed product (kg): Change stock → Count takes kg with three decimals.
+
+## 1.20.1 — the selling screen finished: the way back to the bill, held bills where Hold is (D-081)
+
+The owner (2026-10-14): "do the final proper audit for main screen cashier UI UX... and make finishing to make it better
+as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet, EN and BM) and the code.
+
+- [x] Phone upright: over the tiles the **Items** tool reads **Bill** (BM **Bil**) with the cart icon — the way back has a
+      word; Back still works
+- [x] Phone upright: a scan (or a code typed with Enter) that puts an item on the bill shows the bill, the line just scanned
+      selected; tapped tiles keep the tiles
+- [x] Empty bill with bills held: **Hold** reads **Held bills (n)** (BM **Ditangguh (n)**) and opens the held bills
+- [x] Empty bill: no "0 items"; the help lines wrap under their words
+- [x] `ScreenshotsTest`: new picture `sell-held` (a held bill, the empty bill's Held bills (1)); the held bill is deleted after
+- [x] Docs: user guide EN + MS (cheat sheet, the screen, Items, Holding a bill), `features.md`, `glossary.md`, `codemap.md`,
+      D-081. Nothing new stored or sent: privacy unchanged
+- [x] Local: `compileDebugKotlin`, `compileDebugAndroidTestKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
+- [x] CI run 38572000525 (60f4334): all jobs green; its 320dp picture showed "Held bills (1)" shrunk to small print → Hold is
+      as wide as Pay while it reads Held bills (Pay is greyed then)
+- [x] CI run 38575073071 (6001143): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke API 21 + 36).
+      Release APK **1,682,860 bytes** (1.20.0: 1,681,914). Pictures checked: phone Items → **Bill** (EN/BM), the held bill's
+      **Held bills (1)** / **Ditangguh (1)** readable on the phone and the tablet, help lines indented, no "0 items"
+- [x] Guide pictures `en/ms-sell-empty` from that run; `check-site.mjs` OK
+- [x] **Test build v1.20.1** (2026-10-14): pre-release on 6001143, build 215; SHA-256 `a0155e52…0913`; certificate
+      `0a67abec…d4b9`; `mapping-1.20.1.txt` attached. 1.20.0 stays the latest release
+- [ ] The owner's phone check
+
+### Phone checks for 1.20.1
+1. Phone upright: tap **Items** — the tiles show and the button reads **Bill** with a cart. Tap **Bill**: the bill again, the
+   button reads **Items**. Malay: Barang / Bil.
+2. Open **Items**, scan a barcode: the bill shows with that line selected. Tap a tile instead: the tiles stay.
+3. Scan an item, **Hold** it. On the empty bill the button reads **Held bills (1)**; tap it: the held bills open; tap the bill:
+   it is back and the button reads **Hold**. Malay: Ditangguh (1).
+4. Empty bill with nothing held: **Hold** greyed; no "0 items" above the total.
+5. Empty bill on a phone: the help lines that wrap start under the words, not under the bullet.

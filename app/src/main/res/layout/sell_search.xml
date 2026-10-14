@@ -149,12 +149,15 @@
         android:layout_marginStart="4dp"
         android:contentDescription="@string/sell_browse">
 
+        <!-- While the tiles show it reads Bill (the way back), set in SellActivity.showPanels. -->
         <ImageView
+            android:id="@+id/btn_browse_icon"
             style="@style/Widget.Lekas.ToolIcon"
             android:contentDescription="@null"
             android:src="@drawable/ic_grid" />
 
         <TextView
+            android:id="@+id/btn_browse_label"
             style="@style/Text.Lekas.ToolLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

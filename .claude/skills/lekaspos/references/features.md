@@ -101,7 +101,9 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 ## 2. Selling screen (`ui/sell/SellActivity.kt`, `domain/sell/*`)
 
 ### 2.1 Layout
-- Phone upright: one pane (bill ⇄ catalogue via "Items"). Any landscape, or smallest width ≥ 600dp: two panes;
+- Phone upright: one pane (bill ⇄ catalogue via "Items"; over the tiles the tool reads **Bill** with the cart icon, 1.20.1 —
+  a highlighted "Items" did not say the way back; a scan or a code typed with Enter that adds an item shows the bill again,
+  `showBill`). Any landscape, or smallest width ≥ 600dp: two panes;
   bill pane 36 % of width, 320–420dp, ≤ half (`billPaneDp`). One tool row above the bill/tiles (`sell_search.xml`,
   D-078): **Search** button, category chips (scroll sideways, faded edges), **Camera** (a tool with its word, two panes only;
   a phone upright has an icon inside the open box, `btn_camera_box`), Price check, Items (phones). 56dp high, every outline
@@ -124,9 +126,11 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   (`safety_pill_at_risk`, sync off). Without SETTINGS a tap shows `safety_tell_owner`. A shop with no products and
   no sales shows none (`BackupService.FRESH_MS` = 3 days).
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
-  incl. tax/tax"), **Total**, **Hold**, **Pay** (both disabled when empty or frozen). Same for every role (D-064).
+  incl. tax/tax"; kept invisible on an empty bill, 1.20.1), **Total**, **Hold**, **Pay** (both disabled when empty or
+  frozen; on an empty bill with bills held, Hold reads **Held bills (n)** — BM "Ditangguh (n)" — and opens them,
+  `renderHold`, 1.20.1; then as wide as Pay). Same for every role (D-064).
 - Empty bill: the **last sale** first (D-078: on a phone the help text pushed its change below the totals), then the help
-  text. The last sale is that of this app run (`CheckoutService.last`: change again, "Print receipt" until
+  text (its "• " lines wrap under the words, `bulleted`). The last sale is that of this app run (`CheckoutService.last`: change again, "Print receipt" until
   its receipt was printed, then "Print a copy").
 
 ### 2.2 Adding items
@@ -172,7 +176,8 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
   dialog showed the total (`cart.pay_shown`, kept through hold/resume/restart) → `LINE_REMOVE_AFTER_PAY`; Clear bill
   → `BILL_CANCEL` / `BILL_CANCEL_AFTER_PAY` with the item list; deleting a held bill → `BILL_CANCEL` ("held bill: …").
   None needs a PIN (D-063).
-- Hold: optional name; the held list shows name or time, the staff name (PIN login on), total repriced, lines.
+- Hold: optional name; brought back from the held pill, Menu → Held bills, or the Hold button of an empty bill
+  ("Held bills (n)"). The held list shows name or time, the staff name (PIN login on), total repriced, lines.
   Resume holds the current bill in its place. Delete via "Delete a bill…" or long-press.
 
 ### 2.4 Menu (`showMenu`, `ui/common/MenuSheet.kt`, D-074) — hidden unless allowed

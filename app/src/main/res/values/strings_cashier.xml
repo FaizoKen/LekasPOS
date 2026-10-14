@@ -2,6 +2,10 @@
 <!-- Phase 10: the cashier's screens (D-049). -->
 <resources>
     <string name="sell_tool_items">Items</string>
+    <!-- The Items tool while the tiles show on a phone: back to the bill -->
+    <string name="sell_tool_bill">Bill</string>
+    <!-- The Hold button on an empty bill while bills are held: opens them -->
+    <string name="sell_held_open">Held bills (%1$d)</string>
     <string name="sell_search_hint_short">Search</string>
     <string name="sell_tool_camera">Camera</string>
     <!-- A tile's stock, beside its price (only for products whose stock is counted) -->
