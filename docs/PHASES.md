@@ -44,6 +44,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | test build **v1.20.0** (build 211) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2308,3 +2309,50 @@ notice what different on menu while select item vs not."
 3. One item on the bill: **Item discount** goes straight to that item.
 4. **Bill discount** opens the bill discount straight away, whichever line is selected.
 5. A cashier without discount rights sees neither; after **Manager PIN** both appear (Malay: Diskaun bil / Diskaun item).
+
+## 1.20.0 — Products and Stock told apart; Change stock → Count (D-080)
+
+The owner (2026-10-14): "inventory vs product make confuse to newbie cashier or manager... like why not just edit
+quantity on product and how about product in store should same count product in rack?"
+
+- [x] Menu → Manage shop: **Stock** (BM **Stok**) in place of **Inventory**; the Stock screen starts with a card: products
+      are what you sell, stock is how many you have — on the shelves and in the storeroom together — taken off by every sale
+- [x] Product form: a **Stock** section under the price — Track stock, **In stock now** (bold) with **Change stock** and
+      **Stock history**; a new product asks **How many do you have now?**; Low-stock alert at. Track stock off hides the rest
+      and says "Stock is not counted for this product"; its opening stock is no longer recorded (features.md §20)
+- [x] **Change stock** (was Adjust stock): **Count** first — the app's number filled in, "3 fewer than the app has" as you type,
+      saved as a count of that product (`InventoryService.setStock`); **Remove** / **Add** each with only their own reasons. A
+      count lower than the app's stock is in the Activity log as *Stock written off* at cost
+- [x] **Stock changes** shows those counts ("Counted: 7 pcs" and the difference), merged with the movements by keyset
+- [x] Permission label "Receive, change and count stock"; "Adjusted" → "Changed by hand" (BM "Ubah stok", "Diubah manual")
+- [x] Tests: `:core` `changeStockOffersOnlyReasonsOfItsDirection`; instrumented `changeStockCountSetsTheStockAndShowsInStockChanges`
+      (level, sales after the count, audit at cost, merged paging, rebuild, outbox); `hand_counts_first/next` in the plan checks
+- [x] `ScreenshotsTest`: test-shop stock 24 on the first three products; new pictures `product-edit` and `change-stock`
+- [x] Docs: user guide EN + MS (Products, the product form, the Stock chapter — "Products and stock", "Change stock" —, the Menu
+      and permission tables, the new-shop checklist, two troubleshooting questions, glossary), `features.md`, `codemap.md`,
+      `glossary.md`, `architecture.md`, `llms.txt`, D-080. Nothing new stored or sent: privacy unchanged
+- [x] Local: `:core:test`, `compileDebugKotlin`, `compileDebugAndroidTestKotlin`, `lintDebug` (no errors)
+- [x] CI run 38553523570 (fce8a29, build 211): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36). Release APK **1,681,914 bytes** (1.19.2: 1,670,853). On the way: run 208 showed "Remove" broken over two
+      lines and the tablet's sideways dialog cutting off Cancel / Save (`PadDialog`'s left side now scrolls above whole
+      buttons; the three choices shrink to one line, 48dp high; the app's number in the amount's box); run 209 found the
+      new `SidewaysLayoutTest.changeStockFitsWholeInEachChoice` needs the main thread on API 21 (a Spinner)
+- [x] Guide pictures from that run: `en/ms-product-new`, `-product-edit` (scrolled to Stock), `-change-stock`, `-inventory`,
+      `-products`; `check-site.mjs` OK
+- [x] **Test build v1.20.0** (2026-10-14): pre-release on fce8a29, build 211; SHA-256 `927a93f4…79c2`; certificate
+      `0a67abec…d4b9`; `mapping-1.20.0.txt` attached. 1.19.2 stays the latest release
+- [ ] The owner's phone check
+
+### Phone checks for 1.20.0
+1. Menu → Manage shop: **Products** and **Stock** side by side (Malay: Produk, Stok). Stock opens with the card on top; it
+   scrolls away with the list when the phone is held sideways.
+2. Products → tap a product: under the price, **Stock** with **In stock now**, **Change stock** and **Stock history**.
+   Switch **Track stock** off: the rest hides and the note shows; on again: back.
+3. **Change stock**: opens on **Count** with the app's number; type the real number — "n fewer / more than the app has";
+   **Save**: the form shows the new number and a message says so. A lower count is in Settings → Activity log as
+   *Stock written off*.
+4. **Remove**: only Damaged … Other; **Add**: only Found, Correction, Other. Save, the stock changes by that much.
+5. **Stock → Stock changes**: the count shows as "Counted: …" with the difference, the removal as "Written off · Damaged".
+6. **+** new product: **How many do you have now?** under the price; type 10, save: In stock 10. With Track stock off: no
+   stock recorded.
+7. Weighed product (kg): Change stock → Count takes kg with three decimals.

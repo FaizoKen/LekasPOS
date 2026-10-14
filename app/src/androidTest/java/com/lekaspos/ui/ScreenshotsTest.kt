@@ -13,18 +13,22 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.lekaspos.R
 import com.lekaspos.app.AppLanguage
 import com.lekaspos.app.LekasApp
+import com.lekaspos.core.model.MovementKind
 import com.lekaspos.core.model.PaymentKind
 import com.lekaspos.core.model.TileColor
 import com.lekaspos.core.pricing.Settlement
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.data.catalog.PaymentMethodDao
 import com.lekaspos.data.db.Seed
+import com.lekaspos.data.product.ProductDao
 import com.lekaspos.data.product.ProductLook
 import com.lekaspos.data.product.ProductLookDao
+import com.lekaspos.data.stock.StockDao
 import com.lekaspos.domain.sell.Tender
 import com.lekaspos.testing.TestDb
 import com.lekaspos.ui.common.Dialogs
 import com.lekaspos.ui.inventory.InventoryActivity
+import com.lekaspos.ui.inventory.InventoryUi
 import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.products.ProductListActivity
 import com.lekaspos.ui.products.PromotionEditActivity
@@ -102,7 +106,10 @@ class ScreenshotsTest {
                     Triple("Telur Gred A (30 biji)", 1_650L, breakfast),
                 )
                 for ((name, price, category) in items) {
-                    graph.cart.addProduct(TestDb.sellable(db, TestDb.product(db, name, price, categoryId = category)))
+                    val id = TestDb.product(db, name, price, categoryId = category)
+                    // Stock on the shelf and in the storeroom: the product form and Change stock show it (D-080).
+                    db.write(reserveIds = 2L) { tx -> StockDao.insertMovement(tx, id, MovementKind.OPENING, 24_000L, price / 2, null, null, null, System.currentTimeMillis()) }
+                    graph.cart.addProduct(TestDb.sellable(db, id))
                 }
                 // More products for the tiles, with colours and a picture (D-066).
                 val more = listOf(
@@ -129,6 +136,13 @@ class ScreenshotsTest {
             }
         }
         val methods = runBlocking { graph.db().read { PaymentMethodDao.active(it) } }
+        // A product with stock: its form (Stock under the price) and Change stock with a count typed (D-080).
+        // The test shop's Milo (in Minuman): another test may have made one without a category.
+        val milo = runBlocking { graph.db().read { ProductDao.search(it, "Milo", 20, includeInactive = true) } }
+            .let { found -> (found.firstOrNull { it.categoryId != null } ?: found.first()).id }
+        // 24 in the app whatever ran before (the shop is set up only once).
+        runBlocking { graph.db().write(reserveIds = 2L) { tx -> StockDao.insertCount(tx, milo, 24_000L, null, null, null, System.currentTimeMillis()) } }
+        val miloStock = runBlocking { InventoryUi.product(graph, milo) } ?: error("no product")
         // The API 21 CI emulator has no external storage: fall back to internal files (CI copies them with run-as).
         val dir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "screens").apply { mkdirs() }
         for (lang in listOf(AppLanguage.ENGLISH, AppLanguage.MALAY)) {
@@ -136,6 +150,23 @@ class ScreenshotsTest {
             for ((name, cls) in screens) shoot(Intent(ctx, cls), File(dir, "$lang-$name.png"))
             val newProduct = Intent(ctx, ProductEditActivity::class.java).putExtra(ProductEditActivity.EXTRA_BARCODE, "9556001234567")
             shoot(newProduct, File(dir, "$lang-product-new.png"))
+            shoot(ProductEditActivity.newIntent(ctx, productId = milo), File(dir, "$lang-product-edit.png")) { a ->
+                // Scrolled to the Stock section: In stock now, Change stock, Stock history.
+                val form = a.findViewById<android.view.ViewGroup>(R.id.content).getChildAt(0) as android.widget.ScrollView
+                val column = form.getChildAt(0) as android.view.ViewGroup
+                val section = (0 until column.childCount).map { column.getChildAt(it) }
+                    .first { it is android.widget.TextView && it.text.toString() == a.getString(R.string.product_stock_section) }
+                form.scrollTo(0, section.top - (8 * a.resources.displayMetrics.density).toInt())
+            }
+            shoot(ProductEditActivity.newIntent(ctx, productId = milo), File(dir, "$lang-change-stock.png")) { a ->
+                val d = InventoryUi.askChange(a, miloStock) {}
+                var t = SystemClock.uptimeMillis()
+                for (code in listOf(KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_1)) {
+                    t += 300 // a person's typing
+                    d.dispatchKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0))
+                    d.dispatchKeyEvent(KeyEvent(t, t + 50, KeyEvent.ACTION_UP, code, 0))
+                }
+            }
             // The items (on a phone after Items; two panes show them anyway) and the search box open in the chips'
             // place with "mi" typed (D-078).
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-items.png")) {

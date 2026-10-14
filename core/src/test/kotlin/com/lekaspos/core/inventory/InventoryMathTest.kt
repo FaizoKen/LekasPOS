@@ -62,6 +62,22 @@ class InventoryMathTest {
     }
 
     @Test
+    fun changeStockOffersOnlyReasonsOfItsDirection() {
+        val remove = AdjustReason.choices(removing = true)
+        val add = AdjustReason.choices(removing = false)
+        assertEquals(
+            listOf(
+                AdjustReason.DAMAGED, AdjustReason.EXPIRED, AdjustReason.LOST, AdjustReason.THEFT, AdjustReason.OWN_USE,
+                AdjustReason.RETURNED, AdjustReason.CORRECTION, AdjustReason.OTHER,
+            ),
+            remove,
+        )
+        assertEquals(listOf(AdjustReason.FOUND, AdjustReason.CORRECTION, AdjustReason.OTHER), add)
+        for (r in remove) assertEquals(-1_000L, r.delta(1_000L, removing = true))
+        for (r in add) assertEquals(1_000L, r.delta(1_000L, removing = false))
+    }
+
+    @Test
     fun receiveDraftMergesAndKeepsInvoiceAmounts() {
         var (d, k1) = ReceiveDraft().add(1L, productId = 7L, name = "Milo", unit = "pcs", qty = 24_000L, unitCost = 45L)
         assertEquals(1_080L, d.total)

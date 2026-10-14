@@ -19,7 +19,10 @@ import com.lekaspos.data.sync.Outbox
 
 data class LowStockItem(val productId: Long, val name: String, val nameKey: String, val lowStock: Long, val qty: Long, val unit: String)
 
-/** One non-sale stock movement with its product name (the "stock changes" log). */
+/**
+ * One non-sale stock change with its product name (the "stock changes" log): a movement, or a count outside a count
+ * session ([StockDao.KIND_HAND_COUNT], with [counted]).
+ */
 data class MovementRow(
     val id: Long,
     val productId: Long,
@@ -33,6 +36,8 @@ data class MovementRow(
     val staffId: Long?,
     val at: Long,
     val hlc: Long,
+    /** The quantity counted, for a count; null for a movement. */
+    val counted: Long? = null,
 )
 
 /**
@@ -287,13 +292,47 @@ object StockDao {
     private const val MOVES_FIRST = MOVE_SELECT + "ORDER BY m.hlc DESC, m.id DESC LIMIT ?"
     private const val MOVES_NEXT = MOVE_SELECT + "WHERE m.hlc <= ? AND (m.hlc < ? OR m.id < ?) ORDER BY m.hlc DESC, m.id DESC LIMIT ?"
 
-    /** All stock movements, newest first (keyset on the hlc index). */
-    fun movementPage(db: SQLiteDatabase, after: MovementRow?, limit: Int = 50): List<MovementRow> =
-        if (after == null) {
+    // Counts made outside a count session: "Change stock → Count" and a CSV import's stock (D-080). On the session
+    // index: `session_id IS NULL`, then hlc and id in index order.
+    private const val HAND_COUNT_SELECT =
+        "SELECT c.id, c.product_id, p.name, p.unit, c.qty, c.expected, c.note, c.staff_id, c.at, c.hlc " +
+            "FROM stock_count c LEFT JOIN product p ON p.id = c.product_id WHERE c.session_id IS NULL "
+    private const val HAND_COUNTS_FIRST = HAND_COUNT_SELECT + "ORDER BY c.hlc DESC, c.id DESC LIMIT ?"
+    private const val HAND_COUNTS_NEXT =
+        HAND_COUNT_SELECT + "AND c.hlc <= ? AND (c.hlc < ? OR c.id < ?) ORDER BY c.hlc DESC, c.id DESC LIMIT ?"
+
+    /** [MovementRow.kind] of a count outside a session (not a stored [com.lekaspos.core.model.MovementKind]). */
+    const val KIND_HAND_COUNT = 0
+
+    /**
+     * Every stock change made by hand, newest first: the movements and the counts outside a count session (D-080).
+     * Both are read by keyset on their hlc index and merged; ids are unique across the two tables, so (hlc, id)
+     * orders them as one list.
+     */
+    fun movementPage(db: SQLiteDatabase, after: MovementRow?, limit: Int = 50): List<MovementRow> {
+        val moves = if (after == null) {
             db.queryList(MOVES_FIRST, args(limit), ::movementRow)
         } else {
             db.queryList(MOVES_NEXT, args(after.hlc, after.hlc, after.id, limit), ::movementRow)
         }
+        val counts = if (after == null) {
+            db.queryList(HAND_COUNTS_FIRST, args(limit), ::handCountRow)
+        } else {
+            db.queryList(HAND_COUNTS_NEXT, args(after.hlc, after.hlc, after.id, limit), ::handCountRow)
+        }
+        if (counts.isEmpty()) return moves
+        return (moves + counts).sortedWith(compareByDescending<MovementRow> { it.hlc }.thenByDescending { it.id }).take(limit)
+    }
+
+    /** A count as a [MovementRow]: [MovementRow.qty] is the difference it made, [MovementRow.counted] the count. */
+    private fun handCountRow(c: Cursor): MovementRow {
+        val counted = c.getLong(4)
+        return MovementRow(
+            id = c.getLong(0), productId = c.getLong(1), productName = c.stringOrNull(2), unit = c.stringOrNull(3),
+            kind = KIND_HAND_COUNT, qty = counted - (c.longOrNull(5) ?: counted), unitCost = null, refId = null,
+            reason = c.stringOrNull(6), staffId = c.longOrNull(7), at = c.getLong(8), hlc = c.getLong(9), counted = counted,
+        )
+    }
 
     private fun movementRow(c: Cursor) = MovementRow(
         id = c.getLong(0), productId = c.getLong(1), productName = c.stringOrNull(2), unit = c.stringOrNull(3), kind = c.getInt(4),
@@ -348,5 +387,7 @@ object StockDao {
         "stock_sales_after" to SALES_AFTER,
         "movements_first" to MOVES_FIRST,
         "movements_next" to MOVES_NEXT,
+        "hand_counts_first" to HAND_COUNTS_FIRST,
+        "hand_counts_next" to HAND_COUNTS_NEXT,
     )
 }

@@ -1696,6 +1696,37 @@ notice what different on menu while select item vs not."
 Rejected: keeping one tile and naming the selected item on it (still changes with the selection); using the selected line
 without asking (the very confusion: a line is selected after every scan, often not the one meant).
 
+### D-080 — Products and Stock told apart; the stock of a product set by counting it (1.20.0, 2026-10-14)
+The owner (2026-10-14): "inventory vs product make confuse to newbie cashier or manager... like why not just edit
+quantity on product and how about product in store should same count product in rack?"
+- **"Inventory" is now "Stock"** (BM "Inventori" → "Stok") on the Menu and its screen: the Menu reads **Products** (what
+  you sell, its price) beside **Stock** (how many you have). "Inventory" is a back-office word a new manager does not use.
+  The Stock screen starts with a card that says what stock is — on the shelves and in the storeroom together, taken off by
+  every sale — and when to change it.
+- **The product form has a Stock section under the price** (it was a line near the bottom, in "More details"): Track stock,
+  then **In stock now** with **Change stock** and **Stock history** (a new product: **How many do you have now?**), then
+  Low-stock alert at. With Track stock off the rest hides and the form says the stock is not counted; the opening stock
+  of an untracked new product is no longer recorded (it only ever grew: features.md §20 listed it).
+- **Change stock** (was Adjust stock) opens on **Count**: "How many do you have now? Count the shelf and the storeroom
+  together", the app's number filled in (the first key replaces it), and "3 fewer / 2 more than the app has / the same" as
+  you type. Saving records a **count outside a count session** (`InventoryService.setStock` → `StockDao.insertCount`, the
+  path a CSV import's stock already used): a new baseline, so sales of another till that arrive later still count after it
+  and a till without the change understands it (no new event, no schema change). **Remove** and **Add** keep the reasons,
+  each list only with the reasons of its direction (`AdjustReason.choices`).
+- A Count **lower** than the app's stock is written to the Activity log as `STOCK_WRITE_OFF` with its value at cost
+  ("Gula: -2 (counted 7)"), like a removal (D-067: `STOCK_WRITE_OFF` was already "written off or counted down by hand").
+  A count session's counts stay as they were (not audited; their report shows what was missing).
+- **Stock changes** lists those counts too (they were only in each product's Stock history): `StockDao.movementPage`
+  merges the movements and the session-less counts, each read by keyset on its own hlc index (`stock_count_session`
+  covers `session_id IS NULL` in hlc order), "Counted: 7 pcs" with the difference it made.
+- Shelf and storeroom stay **one** stock figure. The guide and the screens say so instead of adding locations.
+Rejected: typing the stock straight into a field of the product form (saved with the product it would be an LWW field —
+two tills would overwrite each other's sales — and it would leave no reason or record); a relative ADJUST movement for
+the difference (wrong when another till's sales have not synced yet; a count is exactly "this is what is here now");
+separate shelf and storeroom quantities (stock locations and transfers: much more to enter for a small shop, and the
+question was what the one number means); merging Products and Stock into one screen (deliveries, counts and suppliers are
+work of their own; the product form now shows the stock instead).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

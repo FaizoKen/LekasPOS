@@ -303,7 +303,7 @@ restore that `Db.open` applies before opening the database (D-044).
   part of a split payment with every method. Taps within 500 ms of a step appearing are ignored (a double
   tap would pay). `PaymentViews` builds the button rows for both layouts (tests measure them).
 - Menu (`MenuSheet`, D-074): one sheet of tiles, an icon over each word, in groups — This bill (Bill discount, Item discount first, for
-  whoever may), Till, Manage shop (the back office, one tap away). Hubs (Settings, Inventory) give each row an icon
+  whoever may), Till, Manage shop (the back office, one tap away). Hubs (Settings, Stock) give each row an icon
   (`RowHolder.set(icon)`), Settings in groups (`RowAdapter(header)`); buttons put an icon before the word with
   `setIconText` (a span: tinted and centred on API 21, unlike compound drawables).
 - Catalogue: "Popular" tab first once the shop has sales (`PopularItems`: ranking from

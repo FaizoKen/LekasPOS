@@ -36,6 +36,26 @@ class Form(private val ctx: Context) {
     /** Text fields, and switches and choices without a change handler, in the order they were added. */
     private val inputs = ArrayList<View>()
 
+    /** Where the next field goes: the column, or the [group] being built. */
+    private var target: LinearLayout = column
+
+    /**
+     * The fields added in [build] go into a group of their own, to be shown or hidden together (the product form's
+     * stock figure and buttons, hidden when stock is not counted — D-080). They are saved and restored as usual.
+     */
+    fun group(build: () -> Unit): View {
+        val g = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        target.addView(g, lp())
+        val outer = target
+        target = g
+        try {
+            build()
+        } finally {
+            target = outer
+        }
+        return g
+    }
+
     private fun dp(v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     /**
@@ -73,12 +93,12 @@ class Form(private val ctx: Context) {
 
     fun section(title: CharSequence): TextView = TextView(ctx, null, 0, R.style.Text_Lekas_Section).also {
         it.text = title
-        column.addView(it, lp().apply { topMargin = dp(20) })
+        target.addView(it, lp().apply { topMargin = dp(20) })
     }
 
     fun info(text: CharSequence): TextView = TextView(ctx, null, 0, R.style.Text_Lekas_Caption).also {
         it.text = text
-        column.addView(it, lp().apply { topMargin = dp(6) })
+        target.addView(it, lp().apply { topMargin = dp(6) })
     }
 
     fun text(
@@ -101,7 +121,7 @@ class Form(private val ctx: Context) {
                 it.setSingleLine(true)
             }
             it.minHeight = dp(48)
-            column.addView(it, lp())
+            target.addView(it, lp())
             inputs.add(it)
         }
     }
@@ -112,7 +132,7 @@ class Form(private val ctx: Context) {
         it.minHeight = dp(48)
         it.textSize = 16f
         if (onChange != null) it.setOnCheckedChangeListener { _, v -> onChange(v) } else inputs.add(it)
-        column.addView(it, lp().apply { topMargin = dp(8) })
+        target.addView(it, lp().apply { topMargin = dp(8) })
     }
 
     fun choice(label: CharSequence, options: List<CharSequence>, selected: Int, onChange: ((Int) -> Unit)? = null): Spinner {
@@ -132,7 +152,7 @@ class Form(private val ctx: Context) {
             } else {
                 inputs.add(it)
             }
-            column.addView(it, lp())
+            target.addView(it, lp())
         }
     }
 
@@ -149,7 +169,7 @@ class Form(private val ctx: Context) {
         val b = Button(ctx, null, 0, style)
         if (icon != 0) b.setIconText(icon, label) else b.text = label
         b.setOnClickListener { onClick() }
-        column.addView(b, lp().apply { topMargin = dp(12) })
+        target.addView(b, lp().apply { topMargin = dp(12) })
         return b
     }
 
@@ -176,20 +196,20 @@ class Form(private val ctx: Context) {
         }
         line.addView(l, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         line.addView(v, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
-        column.addView(line, lp())
+        target.addView(line, lp())
         return line to v
     }
 
     /** Adds any view (e.g. a list of barcodes) to the column. */
     fun add(v: View): View {
-        column.addView(v, lp())
+        target.addView(v, lp())
         return v
     }
 
     private fun label(text: CharSequence): TextView {
         val t = TextView(ctx, null, 0, R.style.Text_Lekas_Label)
         t.text = text
-        column.addView(t, lp().apply { topMargin = dp(12) })
+        target.addView(t, lp().apply { topMargin = dp(12) })
         return t
     }
 

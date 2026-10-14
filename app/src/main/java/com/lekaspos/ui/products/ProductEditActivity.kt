@@ -3,6 +3,7 @@ package com.lekaspos.ui.products
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -42,9 +43,11 @@ import com.lekaspos.ui.common.FieldScan
 import com.lekaspos.ui.common.Form
 import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
+import com.lekaspos.ui.inventory.InventoryUi
 import com.lekaspos.ui.inventory.StockHistoryActivity
 import com.lekaspos.ui.inventory.adjustProduct
 import com.lekaspos.ui.scan.CameraScanActivity
+import com.lekaspos.ui.sell.visible
 
 /**
  * Add or edit a product: name, price, how it is sold, barcodes (including pack/carton
@@ -196,6 +199,35 @@ class ProductEditActivity : ScreenActivity() {
         }
         unit = form.text(getString(R.string.product_unit), p?.unit ?: "pcs", InputType.TYPE_CLASS_TEXT)
 
+        // Stock under the price, in a section of its own (D-080): a new manager looked for "the quantity" on the
+        // product, found a line of text near the bottom, and a separate Inventory screen.
+        form.section(getString(R.string.product_stock_section))
+        form.info(getString(R.string.product_stock_info))
+        trackStock = form.switch(getString(R.string.product_track_stock), p?.trackStock ?: true)
+        val untracked = form.info(getString(R.string.product_untracked))
+        val tracked = form.group {
+            if (p == null) {
+                // Stock is set by whoever may receive, change and count it (as for a CSV import, D-054).
+                if (graph.permissions.allowed(Perm.MANAGE_STOCK)) {
+                    opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
+                }
+            } else {
+                stockInfo = form.valueRow(getString(R.string.product_stock_label), InventoryUi.qty(stock ?: 0L, p.unit))
+                stockInfo.setTypeface(stockInfo.typeface, Typeface.BOLD)
+                form.button(getString(R.string.inv_adjust), icon = R.drawable.ic_adjust) { adjustProduct(p.id) { reloadStock(p.id) } }
+                form.button(getString(R.string.hist_title), icon = R.drawable.ic_history) { startActivity(StockHistoryActivity.intent(this, p.id)) }
+            }
+            lowStock = form.text(
+                getString(R.string.product_low_stock), p?.lowStock?.takeIf { it > 0L }?.let { MoneyFormat.formatQty(it) }, QTY_INPUT,
+            )
+        }
+        fun showStock(counted: Boolean) {
+            tracked.visible(counted)
+            untracked.visible(!counted)
+        }
+        showStock(trackStock.isChecked)
+        trackStock.setOnCheckedChangeListener { _, counted -> showStock(counted) }
+
         // Its colour and picture on the selling screen (D-066).
         form.section(getString(R.string.look_section))
         form.add(look.build(shownLook))
@@ -242,20 +274,6 @@ class ProductEditActivity : ScreenActivity() {
         cost = form.text(getString(R.string.product_cost), p?.let { MoneyFormat.format(it.cost, currency, withSymbol = false) }, MONEY_INPUT)
         sku = form.text(getString(R.string.product_sku), p?.sku, InputType.TYPE_CLASS_TEXT, hint = getString(R.string.product_sku_hint))
         form.info(getString(R.string.product_sku_info))
-        trackStock = form.switch(getString(R.string.product_track_stock), p?.trackStock ?: true)
-        lowStock = form.text(
-            getString(R.string.product_low_stock), p?.lowStock?.takeIf { it > 0L }?.let { MoneyFormat.formatQty(it) }, QTY_INPUT,
-        )
-        stockInfo = form.info(if (stock != null) getString(R.string.product_stock_now, MoneyFormat.formatQty(stock)) else "")
-        if (p == null) {
-            // Stock is set by whoever may receive, adjust and count it (as for a CSV import, D-054).
-            if (graph.permissions.allowed(Perm.MANAGE_STOCK)) {
-                opening = form.text(getString(R.string.product_opening_stock), null, QTY_INPUT, hint = getString(R.string.product_opening_hint))
-            }
-        } else {
-            form.button(getString(R.string.hist_title), icon = R.drawable.ic_history) { startActivity(StockHistoryActivity.intent(this, p.id)) }
-            form.button(getString(R.string.inv_adjust), icon = R.drawable.ic_adjust) { adjustProduct(p.id) { reloadStock(p.id) } }
-        }
         active = form.switch(getString(R.string.product_active), p?.active ?: true)
         form.button(getString(R.string.save), primary = true) { save() }
         if (p == null && intent.getBooleanExtra(EXTRA_SERIES, false)) form.button(getString(R.string.product_save_next)) { save(next = true) }
@@ -269,7 +287,7 @@ class ProductEditActivity : ScreenActivity() {
     private fun reloadStock(id: Long) {
         launchUi {
             val stock = graph.db().read { StockDao.level(it, id) }
-            stockInfo.text = getString(R.string.product_stock_now, MoneyFormat.formatQty(stock))
+            stockInfo.text = InventoryUi.qty(stock, original?.unit)
         }
     }
 
@@ -462,7 +480,7 @@ class ProductEditActivity : ScreenActivity() {
         val c = if (cost.text.isBlank()) 0L else MoneyFormat.parse(cost.text.toString(), currency)
         val low = if (lowStock.text.isBlank()) 0L else MoneyFormat.parseQty(lowStock.text.toString())
         val pluText = plu.text.toString().trim().trimStart('0')
-        val openingText = opening?.text?.toString()?.trim().orEmpty()
+        val openingText = if (trackStock.isChecked) opening?.text?.toString()?.trim().orEmpty() else ""
         val openingQty = if (openingText.isEmpty()) 0L else MoneyFormat.parseQty(openingText)
         when {
             n.isEmpty() -> return fieldError(name, R.string.product_error_name)
@@ -533,7 +551,8 @@ class ProductEditActivity : ScreenActivity() {
                 val id = tx.nextId()
                 val barcodes = wanted.map { Barcode(tx.nextId(), id, it.code, it.kind, it.packQty, it.packPrice) }
                 ProductDao.create(tx, p.copy(id = id), barcodes, now)
-                if (openingQty > 0L && stockAllowed) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
+                // Not for a product whose stock is not counted: its figure would only grow (D-080).
+                if (openingQty > 0L && stockAllowed && p.trackStock) StockDao.insertMovement(tx, id, MovementKind.OPENING, openingQty, p.cost, null, null, staff, now)
                 val imageId = picture?.let { ProductLookDao.addImage(tx, id, it, staff, now) }
                 ProductLookDao.update(tx, id, ProductLook(), wantLook.copy(imageId = imageId ?: wantLook.imageId), now)
                 id

@@ -201,7 +201,10 @@
     <string name="product_sku_info">Not a barcode: a short code you make up yourself, only if you want one. Type it in the search box to find the product. Most shops leave it empty.</string>
     <string name="product_track_stock">Track stock</string>
     <string name="product_low_stock">Low-stock alert at</string>
-    <string name="product_stock_now">In stock now: %1$s</string>
+    <string name="product_stock_section">Stock</string>
+    <string name="product_stock_info">How many you have: on the shelves and in the storeroom together. Each sale takes it off by itself; a delivery adds to it.</string>
+    <string name="product_stock_label">In stock now</string>
+    <string name="product_untracked">Stock is not counted for this product (for services, plastic bags…).</string>
     <string name="product_active">Show in search and catalogue</string>
     <string name="product_saved">Product saved</string>
     <string name="product_save_next">Save and add another</string>
@@ -460,15 +463,16 @@
     <string name="diag_deleted">Test data deleted</string>
     <string name="diag_saved_to">Saved to %1$s</string>
 
-    <!-- Inventory (Phase 3) -->
-    <string name="menu_inventory">Inventory</string>
-    <string name="inv_title">Inventory</string>
+    <!-- Stock (Phase 3; "Inventory" before 1.20.0, D-080) -->
+    <string name="menu_inventory">Stock</string>
+    <string name="inv_title">Stock</string>
+    <string name="inv_intro">Products are what you sell and their prices. Stock is how many of each you have: on the shelves and in the storeroom together. Every sale takes it off by itself. Here you add deliveries, and fix the number when it is not what you have.</string>
     <string name="inv_receive">Receive stock</string>
     <string name="inv_receive_sub">A delivery from a supplier: stock in, cost updated</string>
-    <string name="inv_adjust">Adjust stock</string>
-    <string name="inv_adjust_sub">Damaged, expired, lost, found, correction…</string>
+    <string name="inv_adjust">Change stock</string>
+    <string name="inv_adjust_sub">Type how many you counted, or take off damaged, expired or lost items</string>
     <string name="inv_count">Stock count</string>
-    <string name="inv_count_sub">Count shelves and see what is missing</string>
+    <string name="inv_count_sub">Count many products in a row: a shelf, a category or the whole shop</string>
     <string name="inv_low_stock">Low stock</string>
     <string name="inv_low_stock_sub">Products at or below their alert level</string>
     <string name="inv_suppliers">Suppliers</string>
@@ -476,13 +480,22 @@
     <string name="inv_purchases">Deliveries</string>
     <string name="inv_purchases_sub">Everything received, newest first</string>
     <string name="inv_movements">Stock changes</string>
-    <string name="inv_movements_sub">Deliveries, adjustments and opening stock</string>
+    <string name="inv_movements_sub">Deliveries, changes by hand and opening stock</string>
     <string name="inv_stock_now">In stock: %1$s</string>
     <string name="inv_pick_title">Choose a product</string>
     <string name="inv_pick_hint">Search or scan a product</string>
-    <string name="inv_adjusted">Stock of %1$s adjusted</string>
+    <string name="inv_adjusted">Stock of %1$s changed</string>
+    <string name="inv_stock_set">%1$s: %2$s in stock now</string>
     <string name="inv_remove_stock">Remove</string>
     <string name="inv_add_stock">Add</string>
+    <string name="inv_count_stock">Count</string>
+    <string name="inv_app_has">The app has: %1$s</string>
+    <string name="inv_count_help">How many do you have now? Count the shelf and the storeroom together.</string>
+    <string name="inv_remove_help">How many to take off, and why?</string>
+    <string name="inv_add_help">How many to add, and why?</string>
+    <string name="inv_diff_less">%1$s fewer than the app has</string>
+    <string name="inv_diff_more">%1$s more than the app has</string>
+    <string name="inv_diff_same">The same as the app has</string>
     <string name="inv_note_hint">Note (optional)</string>
     <string name="inv_add_item">Add item</string>
     <string name="inv_receive_save">Save delivery</string>
@@ -540,7 +553,8 @@
     <string name="inv_low_empty">Nothing is running low. Set a low-stock level on products to get alerts.</string>
     <string name="inv_movements_empty">No stock changes yet.</string>
     <string name="move_receive">Received</string>
-    <string name="move_adjust">Adjusted</string>
+    <string name="move_adjust">Changed by hand</string>
+    <string name="move_counted">Counted: %1$s</string>
     <string name="move_waste">Written off</string>
     <string name="move_return">Returned to supplier</string>
     <string name="move_transfer_in">Transfer in</string>
@@ -562,8 +576,8 @@
     <string name="hist_count">Counted</string>
     <string name="hist_after">then %1$s</string>
     <string name="hist_empty">No stock history yet.</string>
-    <string name="product_opening_stock">Opening stock</string>
-    <string name="product_opening_hint">How many are on the shelf now</string>
+    <string name="product_opening_stock">How many do you have now?</string>
+    <string name="product_opening_hint">On the shelves and in the storeroom together</string>
     <string name="result_low_stock">Running low: %1$s</string>
     <!-- Bug hunt 2 (2026-10) -->
     <string name="share_no_memory">Not enough memory to share this receipt as a picture. Share it as a PDF instead.</string>
