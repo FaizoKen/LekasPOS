@@ -45,7 +45,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
-| — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | test build **v1.20.1** (build 215) — waiting for the owner's phone check |
+| — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 
 ## Open questions for the user
 
@@ -2394,9 +2394,12 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
 - [ ] The owner's phone check
 - [x] The owner asked to release it (2026-10-14, "yup do it"): `cashier-finish` merged into `main`; smoke baseline
       (`PREV_APK_URL`) v1.20.1; the guide says "For LekasPOS 1.20.1"; privacy policy unchanged
-- [ ] CI on main
-- [ ] **v1.20.1 the latest release**
-- [ ] Perf FULL on the released code
+- [x] CI on main bb6a0bf (run 38578834318): all jobs green, release smoke upgrading from 1.20.1. Pages published the guide
+      ("For LekasPOS 1.20.1" live)
+- [x] **v1.20.1 is the latest release** (the owner, 2026-10-14: "do it for me until fully publish to public release") — the
+      pre-release made latest with public notes (What's new in English and Malay); the website's Download link serves it
+      (SHA-256 `a0155e52…0913` checked). Shops on 1.6.1 or later are offered it inside the app
+- [ ] Perf FULL on the released code (run 38581523167)
 
 ### Phone checks for 1.20.1
 1. Phone upright: tap **Items** — the tiles show and the button reads **Bill** with a cart. Tap **Bill**: the bill again, the
