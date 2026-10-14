@@ -2399,7 +2399,10 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
 - [x] **v1.20.1 is the latest release** (the owner, 2026-10-14: "do it for me until fully publish to public release") — the
       pre-release made latest with public notes (What's new in English and Malay); the website's Download link serves it
       (SHA-256 `a0155e52…0913` checked). Shops on 1.6.1 or later are offered it inside the app
-- [ ] Perf FULL on the released code (run 38581523167)
+- [x] Perf FULL on the released code (run 38581523167, bb6a0bf): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158
+      sale lines), all 110 query plans ok; API 21 sale commit p95 16.5 ms (150), multi-word search p95 5.1 ms (50), scan to
+      cart p95 0.62 ms (20), report_month 161 ms (1,000), report_year 235 ms (3,000); cold start to a usable till on API 21
+      about 0.65 s, API 29 about 0.76 s, API 36 about 0.5 s
 
 ### Phone checks for 1.20.1
 1. Phone upright: tap **Items** — the tiles show and the button reads **Bill** with a cart. Tap **Bill**: the bill again, the
