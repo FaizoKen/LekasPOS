@@ -1727,6 +1727,25 @@ separate shelf and storeroom quantities (stock locations and transfers: much mor
 question was what the one number means); merging Products and Stock into one screen (deliveries, counts and suppliers are
 work of their own; the product form now shows the stock instead).
 
+### D-081 — The selling screen's way back to the bill, and held bills where Hold is (1.20.1, 2026-10-14)
+The owner (2026-10-14): "do the final proper audit for main screen cashier UI UX... and make finishing to make it better
+as much as you can". The audit (the CI pictures of 1.20.0 on a 320dp phone and a tablet, EN and BM, and the code) found
+the screen sound; what still cost a cashier a moment:
+- **A phone over the tiles had no word for the way back.** "Items" only turned a shade darker. Over the tiles the tool now
+  reads **Bill** (BM **Bil**) with the cart icon; Back still works.
+- **A scan over the tiles showed nowhere** but in the total (a tile in view got its badge at most). A scan — or a code typed
+  with Enter — that puts an item on the bill now shows the bill on a phone, the line just scanned selected. Tiles tapped
+  keep the tiles (the cashier is picking several).
+- **A held bill was found only in the top bar's pill** (on a small phone, on a line of its own under the store name) or
+  in the Menu. On an empty bill the Hold button, disabled there before, now reads **Held bills (n)** (BM **Ditangguh
+  (n)**, shorter: the button is narrow) and opens the list: the bill is found where it was put away.
+- Small: "0 items" no longer shows on an empty bill (kept in place, so the first scan moves nothing); the empty bill's help
+  lines wrap under their words, not under the bullet.
+Rejected: an Undo after Remove (a removal is on record, D-067 — an undone one would be counted against the cashier in the
+Staff check, or need a record of its own; a wrong removal is one scan to fix); moving Price check off the phone's tool row
+to give the chips more room (the owner put it there, D-078, and checked it); the amount on the Pay button (the total is
+in big figures right above it).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

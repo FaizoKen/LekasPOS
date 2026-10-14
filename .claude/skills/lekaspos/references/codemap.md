@@ -803,7 +803,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `ui/IdleLockTest.kt` | UI | Idle lock after screen off/on. |
 | `ui/LineControlsTest.kt` | UI | Line buttons fit. |
 | `ui/ScreensSmokeTest.kt` | **open every screen** | Explicit lists of Activity classes in `secondaryScreensOpen` (:96), `stockScreensOpenWithTheirData`, `staffShiftAndCustomerScreensOpen`, `reportAndImportScreensOpen`, plus lock screen and selling-screen checks; a new screen must be added to one of these lists. |
-| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact), also the open Menu (`<lang>-menu.png`), a product with stock (`<lang>-product-edit.png`) and Change stock → Count (`<lang>-change-stock.png`, D-080). |
+| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact), also the open Menu (`<lang>-menu.png`), a held bill on the empty bill (`<lang>-sell-held.png`, 1.20.1), a product with stock (`<lang>-product-edit.png`) and Change stock → Count (`<lang>-change-stock.png`, D-080). |
 | `ui/SidewaysLayoutTest.kt` | UI | Payment, `PadDialog` (`sidewaysBody()`), PIN dialog fit a 336dp-high sideways phone. |
 | `ui/TopBarLayoutTest.kt` | UI | Top bar pills never cut off. |
 | `ui/common/SharedFilesTest.kt` | files | Shared-file cleanup rules. |

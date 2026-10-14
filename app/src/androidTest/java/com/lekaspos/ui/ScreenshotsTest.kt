@@ -212,6 +212,18 @@ class ScreenshotsTest {
             AppLanguage.set(ctx, lang)
             shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-empty.png"))
         }
+        // A bill held: on the empty bill Hold reads "Held bills (1)". Thrown away after, for the tests that follow.
+        runBlocking {
+            val db = graph.db()
+            val id = db.read { ProductDao.search(it, "Teh Boh", 1) }.first().id
+            graph.cart.addProduct(TestDb.sellable(db, id))
+            graph.cart.hold("Aminah")
+        }
+        for (lang in listOf(AppLanguage.ENGLISH, AppLanguage.MALAY)) {
+            AppLanguage.set(ctx, lang)
+            shoot(Intent(ctx, SellActivity::class.java), File(dir, "$lang-sell-held.png"))
+        }
+        runBlocking { for (bill in graph.cart.heldBills()) graph.cart.deleteHeld(bill.id) }
     }
 
     /** The launcher icon as this Android draws it (API 21: the legacy vector; 26+: adaptive + mask). */

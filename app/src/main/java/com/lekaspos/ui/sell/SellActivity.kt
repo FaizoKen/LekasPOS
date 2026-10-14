@@ -11,7 +11,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.Editable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.LeadingMarginSpan
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -20,6 +23,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -174,6 +178,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
     /** The search box is open in the category chips' place (Search tapped, or something typed). */
     private var searchOpen = false
     private var browseButton: View? = null
+    private var browseIcon: ImageView? = null
+    private var browseLabel: TextView? = null
     private lateinit var cartPanel: View
     private lateinit var cartList: RecyclerView
     private lateinit var cartEmpty: View
@@ -256,6 +262,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         searchBox = findViewById(R.id.search_box)
         searchButton = findViewById(R.id.btn_search)
         browseButton = findViewById(R.id.btn_browse)
+        browseIcon = findViewById(R.id.btn_browse_icon)
+        browseLabel = findViewById(R.id.btn_browse_label)
         cartPanel = findViewById(R.id.cart_panel)
         cartList = findViewById(R.id.cart_list)
         cartEmpty = findViewById(R.id.cart_empty)
@@ -338,7 +346,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
         browseButton?.setOnClickListener { toggleCatalog() }
         priceCheckButton = findViewById(R.id.btn_price_check)
         priceCheckButton.setOnClickListener { showPriceCheck() }
-        findViewById<TextView>(R.id.cart_empty_help).setText(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)
+        findViewById<TextView>(R.id.cart_empty_help).let { it.text = bulleted(it, getString(if (twoPane) R.string.sell_empty_help_wide else R.string.sell_empty_help)) }
         if (!twoPane) search.setHint(R.string.sell_search_hint_short) // room for the tools beside it
         lastSalePrint.setOnClickListener { printLastSale() }
         payButton.setOnClickListener { openPayment() }
@@ -625,8 +633,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
         cartList.visible(!empty)
         payButton.isEnabled = !empty && st.canEdit
         totalView.text = money(st.priced.total)
-        holdButton.isEnabled = !empty && st.canEdit
+        renderHold(empty, st)
         summary.text = summaryText(st)
+        // "0 items" says nothing on an empty bill; kept in place, so the first scan does not move the buttons.
+        summary.visibility = if (empty) View.INVISIBLE else View.VISIBLE
         heldPill.text = resources.getQuantityString(R.plurals.held_pill, st.heldCount, st.heldCount)
         heldPill.visible(st.heldCount > 0)
         val onBill = HashMap<Long, Long>()
@@ -637,6 +647,25 @@ class SellActivity : Activity(), LineActions, DialogHost {
         val credit = graph.settings.store.value.creditEnabled && (st.customerId != null || allowed(Perm.CREDIT_SALE))
         customerChip.visible(credit)
         if (credit) customerChip.text = st.customerName?.let { getString(R.string.sell_customer, it) } ?: getString(R.string.sell_customer_none)
+    }
+
+    /** What the Hold button says now (0: Hold), so it is only set again when it changes. */
+    private var holdShows = -1
+
+    /**
+     * Hold parks the bill. On an empty bill with bills held it is **Held bills (n)** instead: the parked bill is
+     * found where it was put away, not only in the top bar's pill (on a small phone on a line of its own).
+     */
+    private fun renderHold(empty: Boolean, st: CartSession.State) {
+        val held = if (empty) st.heldCount else 0
+        holdButton.isEnabled = st.canEdit && (!empty || held > 0)
+        if (held == holdShows) return
+        holdShows = held
+        if (held > 0) {
+            holdButton.setIconText(R.drawable.ic_held, getString(R.string.sell_held_open, held))
+        } else {
+            holdButton.setIconText(R.drawable.ic_pause, getString(R.string.sell_hold))
+        }
     }
 
     private fun renderStaff(s: StaffSession.State) {
@@ -980,7 +1009,13 @@ class SellActivity : Activity(), LineActions, DialogHost {
             val catalog = catalogOpen || searching
             catalogPanel.visible(catalog)
             cartPanel.visible(!catalog)
-            browseButton?.isSelected = catalog
+            // Over the tiles the tool reads Bill, the way back: a highlighted "Items" did not say how to get there.
+            if (browseLabel?.tag != catalog) {
+                browseLabel?.tag = catalog
+                browseIcon?.setImageResource(if (catalog) R.drawable.ic_cart else R.drawable.ic_grid)
+                browseLabel?.setText(if (catalog) R.string.sell_tool_bill else R.string.sell_tool_items)
+                browseButton?.contentDescription = getString(if (catalog) R.string.sell_tool_bill else R.string.sell_browse)
+            }
         }
         // The search box takes the chips' place in the row while open (the owner, 2026-10-13).
         searchBox.visible(searchOpen)
@@ -995,6 +1030,29 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun toggleCatalog() {
         catalogOpen = !catalogOpen
         if (!catalogOpen && searchOpen) clearSearch() else showPanels()
+    }
+
+    /**
+     * A phone showing the tiles: a scan brings the bill back, with the line just scanned selected in view. Over
+     * the tiles a scanned item showed nowhere but in the total (a tile in view got its badge at most).
+     */
+    private fun showBill() {
+        if (twoPane || !catalogOpen) return
+        catalogOpen = false
+        showPanels()
+    }
+
+    /** [text]'s "• " lines with the lines they wrap onto indented under the words, not under the bullet. */
+    private fun bulleted(view: TextView, text: String): CharSequence {
+        val s = SpannableString(text)
+        val indent = view.paint.measureText(BULLET).toInt()
+        var start = 0
+        while (start < s.length) {
+            val end = text.indexOf('\n', start).let { if (it < 0) s.length else it + 1 }
+            if (text.startsWith(BULLET, start)) s.setSpan(LeadingMarginSpan.Standard(0, indent), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            start = end
+        }
+        return s
     }
 
     /** True when back should close the catalogue/search instead of leaving the app. */
@@ -1129,13 +1187,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
         }
         scope.launch {
             when (val r = graph.cart.scan(code)) {
-                is CartSession.ScanResult.Added -> beeper?.ok()
+                is CartSession.ScanResult.Added -> {
+                    beeper?.ok()
+                    showBill()
+                }
                 is CartSession.ScanResult.NeedsWeight -> {
                     beeper?.ok()
+                    showBill()
                     askWeight(r.product, r.code)
                 }
                 is CartSession.ScanResult.NeedsPrice -> {
                     beeper?.ok()
+                    showBill()
                     askPrice(r.product, r.code, r.packQty)
                 }
                 is CartSession.ScanResult.NotFound -> {
@@ -1338,15 +1401,18 @@ class SellActivity : Activity(), LineActions, DialogHost {
                     is CartSession.ScanResult.Added -> {
                         beeper?.ok()
                         clearSearch()
+                        showBill()
                         return@launch
                     }
                     is CartSession.ScanResult.NeedsWeight -> {
                         clearSearch()
+                        showBill()
                         askWeight(r.product, r.code)
                         return@launch
                     }
                     is CartSession.ScanResult.NeedsPrice -> {
                         clearSearch()
+                        showBill()
                         askPrice(r.product, r.code, r.packQty)
                         return@launch
                     }
@@ -1644,6 +1710,7 @@ class SellActivity : Activity(), LineActions, DialogHost {
 
     private fun hold() {
         val st = graph.cart.state.value
+        if (st.canEdit && st.cart.isEmpty && st.heldCount > 0) return showHeld() // the button says "Held bills (n)"
         if (!st.canEdit || st.cart.isEmpty || !firstTap()) return
         Dialogs.input(this, getString(R.string.held_hold_title), getString(R.string.held_label_hint)) { label ->
             billJob { graph.cart.hold(label) } // a failed write keeps the bill on the screen and says so
@@ -2016,5 +2083,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
         private const val SYNC_STALE_MS = 24L * 60L * 60L * 1000L
         private const val BILL_MIN_DP = 320
         private const val BILL_MAX_DP = 420
+
+        /** How the empty bill's help lines start ([bulleted]). */
+        private const val BULLET = "• "
     }
 }
