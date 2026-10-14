@@ -1584,21 +1584,41 @@ class SellActivity : Activity(), LineActions, DialogHost {
     override fun remove(item: CartItem) = graph.cart.remove(item.key)
 
     /**
-     * Menu → Discount (D-064: not a button on the screen, so the owner's screen is the cashier's): the whole
-     * bill, or the selected line's discount or price. Only one of them possible: it opens at once.
+     * Menu → Item discount (D-079; in the Menu, not on the screen: D-064). Which item is always asked, the
+     * selected line already ticked, so the tile does the same whether a line was tapped or not: the one
+     * "Discount" tile changed its meaning with the selection and the owner could not tell. One item: no question.
      */
-    private fun discount() {
+    private fun itemDiscount() {
         val st = graph.cart.state.value
         if (!st.canEdit || st.cart.isEmpty) return
-        val line = st.cart.item(selectedKey)
-        val choices = ArrayList<Pair<String, () -> Unit>>(3)
-        if (allowed(Perm.DISCOUNT)) choices += getString(R.string.discount_bill) to { billDiscount() }
-        if (line != null && allowed(Perm.DISCOUNT)) choices += getString(R.string.discount_line, line.name) to { lineDiscount(line) }
-        if (line != null && allowed(Perm.PRICE_OVERRIDE)) choices += getString(R.string.discount_price, line.name) to { linePrice(line) }
+        val items = st.cart.items
+        if (items.size == 1) return itemDiscountOf(items[0].key)
+        val labels = items.mapIndexed { i, it ->
+            val pl = st.priced.lines.getOrNull(i)
+            val amount = if (pl != null) pl.gross - pl.lineDiscount else 0L
+            getString(R.string.discount_which_row, it.name, MoneyFormat.format(amount, currency))
+        }
+        Dialogs.choose(this, getString(R.string.discount_which), labels, items.indexOfFirst { it.key == selectedKey }) {
+            itemDiscountOf(items[it].key)
+        }
+    }
+
+    /** The item's discount or its price; only one of them allowed: it opens at once. */
+    private fun itemDiscountOf(key: Long) {
+        val st = graph.cart.state.value
+        val line = st.cart.item(key) ?: return // taken off the bill meanwhile
+        if (!st.canEdit) return
+        if (selectedKey != key) {
+            selectedKey = key // the bill shows which line it is
+            render(st)
+        }
+        val choices = ArrayList<Pair<String, () -> Unit>>(2)
+        if (allowed(Perm.DISCOUNT)) choices += getString(R.string.discount_line, line.name) to { lineDiscount(line) }
+        if (allowed(Perm.PRICE_OVERRIDE)) choices += getString(R.string.discount_price, line.name) to { linePrice(line) }
         when (choices.size) {
             0 -> notAllowed()
             1 -> choices[0].second()
-            else -> Dialogs.choose(this, getString(R.string.sell_discount), choices.map { it.first }) { choices[it].second() }
+            else -> Dialogs.choose(this, line.name, choices.map { it.first }) { choices[it].second() }
         }
     }
 
@@ -1684,9 +1704,12 @@ class SellActivity : Activity(), LineActions, DialogHost {
     private fun showMenu(anchor: View) {
         val m = MenuSheet(this)
         val st = graph.cart.state.value
-        val line = st.cart.item(selectedKey)
         m.group(R.string.menu_group_bill)
-        if (!st.cart.isEmpty && (allowed(Perm.DISCOUNT) || (line != null && allowed(Perm.PRICE_OVERRIDE)))) m.item(R.string.sell_discount, R.drawable.ic_percent)
+        // Two tiles that always mean the same (D-079), not one that changed with the selected line.
+        if (!st.cart.isEmpty && allowed(Perm.DISCOUNT)) m.item(R.string.menu_discount_bill, R.drawable.ic_percent)
+        if (!st.cart.isEmpty && (allowed(Perm.DISCOUNT) || allowed(Perm.PRICE_OVERRIDE))) {
+            m.item(R.string.menu_discount_item, R.drawable.ic_discount_item)
+        }
         if (st.heldCount > 0) m.item(R.string.held_title, R.drawable.ic_held, badge = st.heldCount.toString())
         if (!st.cart.isEmpty) m.item(R.string.menu_cancel_bill, R.drawable.ic_clear_bill, danger = true)
         m.group(R.string.menu_group_till)
@@ -1723,7 +1746,8 @@ class SellActivity : Activity(), LineActions, DialogHost {
             shieldTaps() // the second tap of a double tap does not land on a tile under the sheet
             when (id) {
                 R.string.held_title -> showHeld()
-                R.string.sell_discount -> discount()
+                R.string.menu_discount_bill -> billDiscount()
+                R.string.menu_discount_item -> itemDiscount()
                 R.string.menu_manager_help -> ApprovalDialog.help(this, graph, scope, 0L, getString(R.string.help_why)) {}
                 R.string.menu_products -> startActivity(Intent(this, ProductListActivity::class.java))
                 R.string.menu_inventory -> startActivity(Intent(this, InventoryActivity::class.java))

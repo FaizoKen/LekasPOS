@@ -179,14 +179,17 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 
 A sheet of tiles (icon over the word) under the Menu button, 3 a row on a phone up to 5 on a tablet, in groups; empty
 groups are left out. A hardware key a scanner sends closes it and the scan goes on the bill; the second tap of a double
-tap is dropped. **This bill**: Discount (bill not empty and DISCOUNT, or PRICE_OVERRIDE with a selected line) · Held
+tap is dropped. **This bill**: Bill discount (bill not empty and DISCOUNT) · Item discount (bill not empty and DISCOUNT or
+PRICE_OVERRIDE; D-079) · Held
 bills (any held; the count on the tile) · Clear bill (bill not empty; red). **Till**: Sales & refunds (REFUND or VOID
 shown) else Receipts · Customers (credit on) · Open shift / Close shift (always) · Shift & cash (CASH_MOVE or
 SHIFT_REPORT) · Open cash drawer (OPEN_DRAWER) · Manager PIN (someone signed in lacks a permission and no help active)
 · Lock / switch user (PIN login on; with a shift open it asks "Close the shift?" first — D-077). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Inventory
 (MANAGE_STOCK), Reports (REPORTS), Settings (SETTINGS or MANAGE_STAFF or VIEW_AUDIT), Tax rates, Diagnostics
 (SETTINGS). Price check is a screen button, not in the Menu.
-- Discount (`DiscountDialog`): bill / selected line — Amount (> 0, capped) or Percent (1–100); "No discount";
+- Discount (`DiscountDialog`): Bill discount, or Item discount — "Which item?" lists the bill's lines (name · amount) with
+  the selected one ticked, skipped when the bill has one line; the picked line becomes the selected one; then "Discount
+  on …" or "Change the price of …" (only one allowed: it opens at once; D-079) — Amount (> 0, capped) or Percent (1–100); "No discount";
   line price change (0.00 allowed). Audited `BILL_DISCOUNT`, `LINE_DISCOUNT`, `PRICE_OVERRIDE`. A discounted or
   re-priced line leaves promotions. An emptied bill drops its bill discount.
 

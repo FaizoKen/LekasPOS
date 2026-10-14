@@ -295,14 +295,14 @@ restore that `Db.open` applies before opening the database (D-044).
 - Totals bar: summary, a big TOTAL, then Hold / PAY. The empty bill explains how to
   start and shows the last sale of this session (`CheckoutService.last`: change again, a copy).
 - **One selling screen for everyone** (D-064): the owner sees the cashier's screen. Discounts and a line's
-  price are Menu → Discount (bill, the selected line's discount or price); no permission-only button sits
+  price are Menu → Bill discount and Menu → Item discount (asks which line, D-079); no permission-only button sits
   on the selling screen itself.
 - Payment (`PaymentDialog`, D-064), two steps: (1) how the customer pays — "Total to pay", Cash (the amount
   due and up to four notes, one tap pays; "Other amount"), other ways to pay (each pays the rest), "Split
   payment"; (2) only when asked for, the keypad: the cash given with the live change and "Done", or one
   part of a split payment with every method. Taps within 500 ms of a step appearing are ignored (a double
   tap would pay). `PaymentViews` builds the button rows for both layouts (tests measure them).
-- Menu (`MenuSheet`, D-074): one sheet of tiles, an icon over each word, in groups — This bill (Discount first, for
+- Menu (`MenuSheet`, D-074): one sheet of tiles, an icon over each word, in groups — This bill (Bill discount, Item discount first, for
   whoever may), Till, Manage shop (the back office, one tap away). Hubs (Settings, Inventory) give each row an icon
   (`RowHolder.set(icon)`), Settings in groups (`RowAdapter(header)`); buttons put an icon before the word with
   `setIconText` (a span: tinted and centred on API 21, unlike compound drawables).

@@ -43,6 +43,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.17.3**: the product form says what a barcode is and that the SKU is not one ("Your own code (SKU)") — the owner found the two read as the same thing | **released** 2026-10-13 (v1.17.3, build 187) — the owner asked to release it ("do it all for me") and checked it on the phone: "all good"; offered in the app to shops on 1.6.1+ |
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
+| — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | on the working tree — not committed yet; then a test build and the owner's phone check |
 
 ## Open questions for the user
 
@@ -2269,3 +2270,29 @@ after click search all category will be disappear and search bar will be fill th
    "Stok 5" / "Habis").
 8. Finish a cash sale with change on a phone: on the empty bill the last sale and its change show at the top without
    scrolling; the help text is below it.
+
+## 1.19.2 — Bill discount and Item discount, two Menu tiles (D-079)
+
+The owner (2026-10-14): "separate part/button discount all product and specific product on menu.. because user cant
+notice what different on menu while select item vs not."
+
+- [x] Menu → This bill: **Bill discount** (DISCOUNT) and **Item discount** (DISCOUNT or PRICE_OVERRIDE; new icon
+      `ic_discount_item`, a tag with %) in place of the one **Discount** tile that changed with the selected line
+- [x] Item discount asks **Which item?** (each line with its amount, the selected one ticked; not asked with one line); the
+      picked line becomes the selected one; then Discount on … / Change the price of …
+- [x] Strings EN + BM (`menu_discount_bill`, `menu_discount_item`, `discount_which`, `discount_which_row`; `sell_discount`
+      and `discount_bill` removed)
+- [x] Docs: user guide EN + MS (cheat sheet, Discounts and price changes, the Menu table, troubleshooting), `features.md`,
+      `architecture.md`, `glossary.md`, `codemap.md`, D-079. Nothing new stored or sent: privacy unchanged
+- [x] Local: `compileDebugKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
+- [ ] Commit, CI green; release APK size
+- [ ] Guide pictures `en/ms-menu` refreshed from that run (they show the old Discount tile)
+- [ ] Test build v1.19.2; the owner's phone check
+
+### Phone checks for 1.19.2
+1. Scan two items, open the Menu: **Bill discount** and **Item discount** side by side under This bill.
+2. **Item discount**: "Which item?" lists both lines with their amounts, the last scanned one ticked; pick the other one —
+   the bill highlights it, then Discount on … / Change the price of ….
+3. One item on the bill: **Item discount** goes straight to that item.
+4. **Bill discount** opens the bill discount straight away, whichever line is selected.
+5. A cashier without discount rights sees neither; after **Manager PIN** both appear (Malay: Diskaun bil / Diskaun item).

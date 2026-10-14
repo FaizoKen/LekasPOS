@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menu → Item discount (D-079): a price tag with a percent sign; the plain tag is Price check's. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3,3H11L21,13L13,21L3,11Z"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M7,5.5a1.5,1.5 0 1,1 0,3a1.5,1.5 0 1,1 0,-3z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10,8.8a1.2,1.2 0 1,1 0,2.4a1.2,1.2 0 1,1 0,-2.4zM14,12.8a1.2,1.2 0 1,1 0,2.4a1.2,1.2 0 1,1 0,-2.4z" />
+    <path
+        android:pathData="M10,14L14,10"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+</vector>

@@ -33,7 +33,6 @@
     <string name="sell_camera">Imbas dengan kamera</string>
     <string name="sell_menu">Menu</string>
     <string name="sell_hold">Tangguh</string>
-    <string name="sell_discount">Diskaun</string>
     <string name="sell_pay_empty">Bayar</string>
     <plurals name="sell_items">
         <item quantity="other">%d item</item>
@@ -95,8 +94,11 @@
     <string name="line_plus">+1</string>
     <string name="line_qty">Kuantiti</string>
     <string name="line_weight">Berat</string>
-    <!-- Menu → Diskaun (D-064) -->
-    <string name="discount_bill">Diskaun untuk seluruh bil</string>
+    <!-- Menu → Diskaun bil / Diskaun item (D-064, D-079) -->
+    <string name="menu_discount_bill">Diskaun bil</string>
+    <string name="menu_discount_item">Diskaun item</string>
+    <string name="discount_which">Item yang mana?</string>
+    <string name="discount_which_row">%1$s  ·  %2$s</string>
     <string name="discount_line">Diskaun untuk %1$s</string>
     <string name="discount_price">Tukar harga %1$s</string>
     <string name="price_title">Harga</string>

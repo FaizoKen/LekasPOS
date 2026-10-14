@@ -1683,6 +1683,19 @@ after click search all category will be disappear and search bar will be fill th
 Rejected: hiding Price check or Items behind the Menu to give the chips more room on a phone (they are used all day; the
 chips scroll); a second row for the chips on phones only (the row the owner asked to remove).
 
+### D-079 — Two discount tiles in the Menu: Bill discount and Item discount (1.19.2, 2026-10-14)
+The owner (2026-10-14): "separate part/button discount all product and specific product on menu.. because user cant
+notice what different on menu while select item vs not."
+- One **Discount** tile (D-064) opened the bill discount at once when no line was selected, and a three-way choice when one
+  was — and a line is selected after every scan, so the same tile did different things and nobody could tell why.
+- Now **This bill** has **Bill discount** (DISCOUNT; the % icon) and **Item discount** (DISCOUNT or PRICE_OVERRIDE; a tag
+  with %, not Price check's plain tag). Each always does the same thing.
+- Item discount asks **Which item?** — every bill line with its amount, the selected line already ticked — so the cashier
+  sees which item gets the discount. One line on the bill: not asked. The picked line becomes the selected one. Then
+  "Discount on …" / "Change the price of …", or straight to the one the person may do.
+Rejected: keeping one tile and naming the selected item on it (still changes with the selection); using the selected line
+without asking (the very confusion: a line is selected after every scan, often not the one meant).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

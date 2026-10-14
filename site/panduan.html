@@ -165,7 +165,7 @@ peranan</a>.</p>
 <tr><td>Pelanggan memulangkan barang</td><td><b>Menu → Jualan &amp; bayaran balik</b> → cari jualan itu (taip nombor resit) → <b>Bayaran balik / pulangan</b> → pilih barangnya, taip <b>Sebab</b> → <b>Bayar balik</b>. Pulangkan wangnya — <a href="#refund">butiran</a>.</td></tr>
 <tr><td>Salah kaedah bayaran atau salah barang, baru dibayar</td><td><b>Menu → Jualan &amp; bayaran balik</b> → jualan paling atas → <b>Batalkan</b> → taip sebabnya. Hanya jualan terakhir anda sendiri, dalam 5 minit; kemudian jual semula dengan betul — <a href="#void">butiran</a>.</td></tr>
 <tr><td>Semak harga tanpa menjual</td><td><b>Semak harga</b> → imbas atau taip.</td></tr>
-<tr><td>Diskaun atau harga baharu</td><td>Minta bantuan pengurus: <b>Menu → PIN pengurus</b>, kemudian <b>Menu → Diskaun</b>.</td></tr>
+<tr><td>Diskaun atau harga baharu</td><td>Minta bantuan pengurus: <b>Menu → PIN pengurus</b>, kemudian <b>Menu → Diskaun bil</b> atau <b>Diskaun item</b>.</td></tr>
 <tr><td>Tinggalkan kaunter</td><td>Ketik nama anda di bahagian atas → <b>Kunci / tukar pengguna</b> (atau <b>Menu → Kunci / tukar pengguna</b>). Jika syif anda dibuka, kaunter bertanya <b>Tutup syif?</b>: <b>Tutup syif</b> apabila anda balik atau orang lain ambil alih, <b>Kunci sahaja</b> untuk rehat sekejap.</td></tr>
 <tr><td>Akhir hari</td><td><b>Menu → Tutup syif</b> (atau <b>Tutup syif</b> apabila kaunter mengingatkan anda pada waktu tutup kedai) → kira semua wang tunai → nyatakan berapa yang ditinggalkan dalam laci → keluarkan selebihnya untuk pemilik.</td></tr>
 </table></div>
@@ -287,17 +287,18 @@ sedang ada di skrin akan ditangguh sebagai gantinya.</li>
 dimulakan semula.</p>
 
 <h3 id="discount">Diskaun dan perubahan harga</h3>
-<p><b>Menu → Diskaun</b> (dipaparkan kepada mereka yang dibenarkan memberi diskaun atau menukar harga):</p>
+<p>Dua butang dalam Menu, dipaparkan kepada mereka yang dibenarkan memberi diskaun atau menukar harga:</p>
 <ul>
-<li><b>Diskaun untuk seluruh bil</b> — sama ada <b>Amaun</b> atau <b>Peratus</b>.</li>
-<li><b>Diskaun untuk</b> <i>barang yang dipilih</i> — ketik baris itu dahulu.</li>
-<li><b>Tukar harga</b> <i>barang yang dipilih</i>.</li>
+<li><b>Menu → Diskaun bil</b> — diskaun untuk seluruh bil: sama ada <b>Amaun</b> atau <b>Peratus</b>.</li>
+<li><b>Menu → Diskaun item</b> — satu barang: kaunter bertanya <b>Item yang mana?</b> (baris yang anda ketik sudah
+ditanda; jika hanya satu barang dalam bil, ia tidak bertanya), kemudian <b>Diskaun untuk</b> <i>barang itu</i> atau
+<b>Tukar harga</b> <i>barang itu</i>.</li>
 <li><b>Tiada diskaun</b> membuang diskaun.</li>
 </ul>
-<p>Juruwang tanpa kebenaran ini tidak melihat <b>Diskaun</b>. Pengurus boleh membantu: <b>Menu → PIN
-pengurus</b> → pengurus menaip PIN mereka → <b>Diskaun</b> muncul untuk bil ini (sehingga bil dibayar, ditangguh
-atau dikosongkan, atau selama 5 minit). Diskaun dan perubahan harga dicatat dalam Log aktiviti bersama nama orang
-yang meluluskannya. Barang yang diberi diskaun atau harga secara manual tidak lagi termasuk dalam
+<p>Juruwang tanpa kebenaran ini tidak melihatnya. Pengurus boleh membantu: <b>Menu → PIN
+pengurus</b> → pengurus menaip PIN mereka → <b>Diskaun bil</b> dan <b>Diskaun item</b> muncul untuk bil ini (sehingga
+bil dibayar, ditangguh atau dikosongkan, atau selama 5 minit). Diskaun dan perubahan harga dicatat dalam Log aktiviti
+bersama nama orang yang meluluskannya. Barang yang diberi diskaun atau harga secara manual tidak lagi termasuk dalam
 <a href="#promotions">promosi</a>.</p>
 
 <h3 id="customer-on-bill">Pelanggan pada bil</h3>
@@ -319,7 +320,8 @@ tiga kumpulan: <b>Bil ini</b>, <b>Kaunter</b> dan <b>Urus kedai</b>. Imbasan sem
 <div class="table-wrap"><table>
 <tr><th>Pilihan menu</th><th>Kegunaannya</th></tr>
 <tr><th colspan="2">Bil ini</th></tr>
-<tr><td><b>Diskaun</b></td><td>Diskaun dan perubahan harga pada bil ini.</td></tr>
+<tr><td><b>Diskaun bil</b></td><td>Diskaun untuk seluruh bil.</td></tr>
+<tr><td><b>Diskaun item</b></td><td>Diskaun atau harga baharu untuk satu barang dalam bil: kaunter bertanya yang mana.</td></tr>
 <tr><td><b>Bil ditangguh</b></td><td>Bil yang sedang ditangguh. Butangnya menunjukkan bilangannya.</td></tr>
 <tr><td><b>Kosongkan bil</b></td><td>Buang bil yang ada di skrin.</td></tr>
 <tr><th colspan="2">Kaunter</th></tr>
@@ -1560,7 +1562,7 @@ selepas setiap kod (lihat manualnya). Pengimbas bersiri (SPP) mesti dipilih di s
 <dt>Papan kekunci pada skrin hilang.</dt>
 <dd>Pengimbas mod papan kekunci sedang disambung. Hidupkan <i>Gunakan papan kekunci pada skrin</i> dalam tetapan papan kekunci Android (aplikasi
 menawarkan <b>Tetapan papan kekunci</b>).</dd>
-<dt>Saya tidak jumpa Diskaun atau Buka laci wang dalam Menu, atau Bayaran balik / Batalkan pada resit.</dt>
+<dt>Saya tidak jumpa Diskaun bil, Diskaun item atau Buka laci wang dalam Menu, atau Bayaran balik / Batalkan pada resit.</dt>
 <dd>Peranan anda tidak membenarkannya, jadi ia disembunyikan. Minta pengurus mengetik <b>Menu → PIN pengurus</b> dan menaip
 PIN mereka: butang itu muncul (bayaran balik, pembatalan dan laci meminta PIN pengurus sekali lagi). Atau pengurus log
 masuk melalui <b>Kunci / tukar pengguna</b>.</dd>

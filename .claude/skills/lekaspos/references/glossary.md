@@ -33,7 +33,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | A cashier undoing the sale just made | Void their own last sale (within 5 minutes) | Batalkan jualan terakhir sendiri (dalam 5 minit) | `Perm.VOID_LAST`, `VoidLast` |
 | Automatic deal | Promotion; Special price; Buy X get Y free | Promosi; Harga istimewa; Beli X percuma Y | `promotion`, `PromoKind` |
 | A deal's further prices ("2 for RM3, 3 for RM4") | More prices; Add another price | Harga lain; Tambah harga lain | `promotion_price`, `PriceTier`, `morePrices` |
-| Discount typed by staff | Discount (bill / item) | Diskaun (bil / item) | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT` |
+| Discount typed by staff (D-079: two Menu tiles) | Bill discount / Item discount; Which item? | Diskaun bil / Diskaun item; Item yang mana? | `Discount`, `BILL_DISCOUNT`, `LINE_DISCOUNT`, `menu_discount_bill`, `menu_discount_item` |
 | Price changed on the bill | price changed | harga diubah | `PRICE_OVERRIDE` |
 | Customer-facing second display | Customer screen (second screen) | Skrin pelanggan (skrin kedua) | `CustomerDisplay`, `dev.customer_screen` |
 | Where the scan beeps play (D-076) | Beep sound: This till's speaker / Customer screen, when connected / Off | Bunyi bip: Pembesar suara kaunter ini / Skrin pelanggan, jika disambung / Mati | `Beeper`, `dev.beep`, `DeviceSettings.BEEP_*` |

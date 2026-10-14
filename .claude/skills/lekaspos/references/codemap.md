@@ -357,7 +357,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 ### 3.10 UI screens by package (one-line purposes; details in §5)
 | File | Main declarations | Purpose |
 |---|---|---|
-| `A/ui/sell/SellActivity.kt` | `class SellActivity : Activity, LineActions, DialogHost` (1961 lines; `checkShift`, `lockTill` and `checkClosing` — the till asks to close the shift, D-077) | Launcher and selling screen (not a `ScreenActivity`). |
+| `A/ui/sell/SellActivity.kt` | `class SellActivity : Activity, LineActions, DialogHost` (2020 lines; `itemDiscount` asks which line, D-079; `checkShift`, `lockTill` and `checkClosing` — the till asks to close the shift, D-077) | Launcher and selling screen (not a `ScreenActivity`). |
 | `A/ui/sell/SellAdapters.kt` | `CartRow`, `interface LineActions`, `CartAdapter`, `TileSpec`, `ProductTileAdapter`, `CategoryChipAdapter` | Bill list, tiles, category chips. |
 | `A/ui/sell/SellDialogs.kt` | `AmountDialog` (Kind MONEY/PIECES/WEIGHT/PERCENT), `DiscountDialog`, `showHeldBills`, `showUnknownBarcode`, `weightText`, `TextView.replacing`, `AlertDialog.forwardKeys`, `View.visible` | Selling-screen dialogs; `AmountDialog` is the reusable keypad dialog. |
 | `A/ui/sell/PaymentDialog.kt` | `class PaymentDialog` | Two-step payment (D-064). |

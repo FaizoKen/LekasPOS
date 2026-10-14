@@ -159,7 +159,7 @@ shop can work like that. Once PINs are set, each person signs in and sees only t
 <tr><td>Customer brings an item back</td><td><b>Menu → Sales &amp; refunds</b> → find the sale (type the receipt number) → <b>Refund / return</b> → choose the items, type the <b>Reason</b> → <b>Refund</b>. Give the money back — <a href="#refund">details</a>.</td></tr>
 <tr><td>Wrong payment method or wrong items, just paid</td><td><b>Menu → Sales &amp; refunds</b> → the top sale → <b>Void</b> → type why. Only your own last sale, within 5 minutes; then sell it again the right way — <a href="#void">details</a>.</td></tr>
 <tr><td>Check a price without selling</td><td><b>Price check</b> → scan or type.</td></tr>
-<tr><td>A discount or a new price</td><td>Ask a manager: <b>Menu → Manager PIN</b>, then <b>Menu → Discount</b>.</td></tr>
+<tr><td>A discount or a new price</td><td>Ask a manager: <b>Menu → Manager PIN</b>, then <b>Menu → Bill discount</b> or <b>Item discount</b>.</td></tr>
 <tr><td>Leave the till</td><td>Tap your name at the top → <b>Lock / switch user</b> (or <b>Menu → Lock / switch user</b>). If your shift is open, the till asks <b>Close the shift?</b>: <b>Close shift</b> when you go home or someone else takes over, <b>Lock only</b> for a short break.</td></tr>
 <tr><td>End of the day</td><td><b>Menu → Close shift</b> (or <b>Close shift</b> when the till reminds you at closing time) → count all the cash → say how much stays in the drawer → take the rest out for the owner.</td></tr>
 </table></div>
@@ -275,17 +275,18 @@ the screen is held in its place.</li>
 <p>Held bills stay on this till (they are not shared with other tills) and survive a restart.</p>
 
 <h3 id="discount">Discounts and price changes</h3>
-<p><b>Menu → Discount</b> (shown to those allowed to give discounts or change prices):</p>
+<p>Two buttons in the Menu, shown to those allowed to give discounts or change prices:</p>
 <ul>
-<li><b>Discount on the whole bill</b> — an <b>Amount</b> or a <b>Percent</b>.</li>
-<li><b>Discount on</b> <i>the selected item</i> — tap the line first.</li>
-<li><b>Change the price of</b> <i>the selected item</i>.</li>
+<li><b>Menu → Bill discount</b> — a discount on the whole bill: an <b>Amount</b> or a <b>Percent</b>.</li>
+<li><b>Menu → Item discount</b> — one item: the till asks <b>Which item?</b> (the line you tapped is already ticked;
+with one item on the bill it does not ask), then <b>Discount on</b> <i>the item</i> or <b>Change the price of</b>
+<i>the item</i>.</li>
 <li><b>No discount</b> removes a discount.</li>
 </ul>
-<p>A cashier without these permissions does not see <b>Discount</b>. A manager can help: <b>Menu → Manager
-PIN</b> → the manager types their PIN → <b>Discount</b> appears for this bill (until it is paid, held or cleared,
-or for 5 minutes). Discounts and price changes are in the Activity log with who approved them. An item with a
-hand-made discount or price no longer takes part in <a href="#promotions">promotions</a>.</p>
+<p>A cashier without these permissions does not see them. A manager can help: <b>Menu → Manager
+PIN</b> → the manager types their PIN → <b>Bill discount</b> and <b>Item discount</b> appear for this bill (until it
+is paid, held or cleared, or for 5 minutes). Discounts and price changes are in the Activity log with who approved
+them. An item with a hand-made discount or price no longer takes part in <a href="#promotions">promotions</a>.</p>
 
 <h3 id="customer-on-bill">A customer on the bill</h3>
 <p>When <b>Customers and credit</b> is switched on (Settings → Store &amp; receipt), the totals show
@@ -306,7 +307,8 @@ recorded in the Activity log.</p>
 <div class="table-wrap"><table>
 <tr><th>Menu entry</th><th>What it is</th></tr>
 <tr><th colspan="2">This bill</th></tr>
-<tr><td><b>Discount</b></td><td>Discounts and price changes on this bill.</td></tr>
+<tr><td><b>Bill discount</b></td><td>A discount on the whole bill.</td></tr>
+<tr><td><b>Item discount</b></td><td>A discount or a new price for one item on the bill: the till asks which.</td></tr>
 <tr><td><b>Held bills</b></td><td>Bills on hold. The button shows how many.</td></tr>
 <tr><td><b>Clear bill</b></td><td>Throw away the bill on the screen.</td></tr>
 <tr><th colspan="2">Till</th></tr>
@@ -1525,7 +1527,7 @@ after each code (see its manual). A serial (SPP) scanner must be chosen there; a
 <dt>The on-screen keyboard disappeared.</dt>
 <dd>A keyboard-mode scanner is connected. Turn on <i>Use on-screen keyboard</i> in Android's keyboard settings (the app
 offers <b>Keyboard settings</b>).</dd>
-<dt>I cannot find Discount or Open cash drawer in the Menu, or Refund / Void on a receipt.</dt>
+<dt>I cannot find Bill discount, Item discount or Open cash drawer in the Menu, or Refund / Void on a receipt.</dt>
 <dd>Your role does not allow it, so it is hidden. Ask a manager to tap <b>Menu → Manager PIN</b> and type their PIN: the
 buttons appear (refunds, voids and the drawer ask for the manager's PIN again). Or the manager signs in with
 <b>Lock / switch user</b>.</dd>

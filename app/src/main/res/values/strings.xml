@@ -35,7 +35,6 @@
     <string name="sell_camera">Scan with camera</string>
     <string name="sell_menu">Menu</string>
     <string name="sell_hold">Hold</string>
-    <string name="sell_discount">Discount</string>
     <string name="sell_pay_empty">Pay</string>
     <plurals name="sell_items">
         <item quantity="one">%d item</item>
@@ -99,8 +98,11 @@
     <string name="line_plus">+1</string>
     <string name="line_qty">Quantity</string>
     <string name="line_weight">Weight</string>
-    <!-- Menu → Discount (D-064) -->
-    <string name="discount_bill">Discount on the whole bill</string>
+    <!-- Menu → Bill discount / Item discount (D-064, D-079) -->
+    <string name="menu_discount_bill">Bill discount</string>
+    <string name="menu_discount_item">Item discount</string>
+    <string name="discount_which">Which item?</string>
+    <string name="discount_which_row">%1$s  ·  %2$s</string>
     <string name="discount_line">Discount on %1$s</string>
     <string name="discount_price">Change the price of %1$s</string>
     <string name="price_title">Price</string>
