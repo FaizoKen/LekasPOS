@@ -181,6 +181,8 @@ object InventoryUi {
             it.text = a.getString(label)
             val pad = (6 * density).toInt()
             it.setPadding(pad, it.paddingTop, pad, it.paddingBottom)
+            it.minHeight = (48 * density).toInt() // 48dp, not 56: the dialog fits beside a sideways keypad
+            it.minimumHeight = it.minHeight
             tabs.addView(it, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }
         val count = tab(R.string.inv_count_stock)
@@ -191,15 +193,25 @@ object InventoryUi {
         pd.info(help, lp())
         val reason = Spinner(a).apply { minimumHeight = (48 * density).toInt() }
         pd.info(reason, lp())
-        val display = TextView(a, null, 0, R.style.Text_Lekas_Display).apply {
-            gravity = android.view.Gravity.END
+        // The amount with, on its left, what the app has (or how far a count is from it): one box, so everything shows
+        // beside the keypad of a tablet held sideways — a line of its own under the amount fell out of sight there.
+        val amount = LinearLayout(a).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.field_bg)
             val pad = (12 * density).toInt()
             setPadding(pad, pad / 2, pad, pad / 2)
         }
-        pd.info(display, lp())
-        val status = TextView(a, null, 0, R.style.Text_Lekas_Caption).apply { gravity = android.view.Gravity.END }
-        pd.info(status, lp())
+        val status = TextView(a, null, 0, R.style.Text_Lekas_Caption)
+        val display = TextView(a, null, 0, R.style.Text_Lekas_Display).apply { gravity = android.view.Gravity.END }
+        amount.addView(status, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        amount.addView(
+            display,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = (8 * density).toInt()
+            },
+        )
+        pd.info(amount, lp())
         val note = EditText(a).apply {
             hint = a.getString(R.string.inv_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
