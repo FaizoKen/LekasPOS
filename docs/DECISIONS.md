@@ -1738,7 +1738,8 @@ the screen sound; what still cost a cashier a moment:
   keep the tiles (the cashier is picking several).
 - **A held bill was found only in the top bar's pill** (on a small phone, on a line of its own under the store name) or
   in the Menu. On an empty bill the Hold button, disabled there before, now reads **Held bills (n)** (BM **Ditangguh
-  (n)**, shorter: the button is narrow) and opens the list: the bill is found where it was put away.
+  (n)**) and opens the list: the bill is found where it was put away. It is then as wide as Pay (greyed on an empty bill):
+  in its usual share the words shrank to small print on a 320dp phone (the first CI picture).
 - Small: "0 items" no longer shows on an empty bill (kept in place, so the first scan moves nothing); the empty bill's help
   lines wrap under their words, not under the bullet.
 Rejected: an Undo after Remove (a removal is on record, D-067 — an undone one would be counted against the cashier in the

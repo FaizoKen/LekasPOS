@@ -128,7 +128,7 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
 - Totals bar: customer chip (credit on and (customer set or CREDIT_SALE shown)), summary ("n items · discount ·
   incl. tax/tax"; kept invisible on an empty bill, 1.20.1), **Total**, **Hold**, **Pay** (both disabled when empty or
   frozen; on an empty bill with bills held, Hold reads **Held bills (n)** — BM "Ditangguh (n)" — and opens them,
-  `renderHold`, 1.20.1). Same for every role (D-064).
+  `renderHold`, 1.20.1; then as wide as Pay). Same for every role (D-064).
 - Empty bill: the **last sale** first (D-078: on a phone the help text pushed its change below the totals), then the help
   text (its "• " lines wrap under the words, `bulleted`). The last sale is that of this app run (`CheckoutService.last`: change again, "Print receipt" until
   its receipt was printed, then "Print a copy").

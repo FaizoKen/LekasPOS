@@ -661,6 +661,11 @@ class SellActivity : Activity(), LineActions, DialogHost {
         holdButton.isEnabled = st.canEdit && (!empty || held > 0)
         if (held == holdShows) return
         holdShows = held
+        // Its longer words get half the row (Pay is greyed then): in its usual third it shrank to small print on a phone.
+        (holdButton.layoutParams as? LinearLayout.LayoutParams)?.let {
+            it.weight = if (held > 0) HOLD_WEIGHT_HELD else HOLD_WEIGHT
+            holdButton.layoutParams = it
+        }
         if (held > 0) {
             holdButton.setIconText(R.drawable.ic_held, getString(R.string.sell_held_open, held))
         } else {
@@ -2083,6 +2088,10 @@ class SellActivity : Activity(), LineActions, DialogHost {
         private const val SYNC_STALE_MS = 24L * 60L * 60L * 1000L
         private const val BILL_MIN_DP = 320
         private const val BILL_MAX_DP = 420
+
+        /** Hold's share of its row beside Pay (1.6, sell_totals.xml); as wide as Pay while it reads "Held bills (n)". */
+        private const val HOLD_WEIGHT = 1f
+        private const val HOLD_WEIGHT_HELD = 1.6f
 
         /** How the empty bill's help lines start ([bulleted]). */
         private const val BULLET = "• "
