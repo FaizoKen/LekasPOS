@@ -54,9 +54,10 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Picture and colour of a tile | picture, colour | gambar, warna | `product_image`, `product_look`, `TileColor` |
 | What a piece costs the shop | Cost price | Harga kos | `product.cost` (moving average) |
 | Goods arriving | Receive stock / Delivery | Terima stok / Penghantaran | `purchase`, `MovementKind.RECEIVE` |
-| Stock changed by hand | Adjust stock; Written off | Laras stok; Dihapus kira | `MovementKind.ADJUST/WASTE`, `STOCK_WRITE_OFF` |
+| How many of a product the shop has (shelf and storeroom together, one figure; never "Inventory" — renamed in 1.20.0, D-080) | Stock; In stock now | Stok; Stok sekarang | `stock_level`, `menu_inventory`, `inv_title`, `product_stock_label` |
+| Stock set or changed by hand | Change stock (Count / Remove / Add); Changed by hand; Written off (never "Adjust stock") | Ubah stok (Kira / Keluarkan / Tambah); Diubah manual; Dihapus kira (never "Laras stok") | `InventoryUi.askChange`, `MovementKind.ADJUST/WASTE`, `stock_count` (no session), `STOCK_WRITE_OFF` |
 | Counting shelves | Stock count; Count report; Finish count | Kiraan stok; Laporan kiraan; Tamatkan kiraan | `count_session`, `stock_count` |
-| Stock at the start | Opening stock | Stok permulaan | `MovementKind.OPENING` |
+| Stock at the start | How many do you have now? (product form); Opening stock (history, CSV) | Berapa banyak yang ada sekarang?; Stok permulaan | `MovementKind.OPENING`, `product_opening_stock` |
 | Alert level | Low-stock alert at; Low stock; Running low | Amaran stok rendah pada; Stok rendah; Hampir habis | `product.low_stock` |
 | Who you buy from | Supplier | Pembekal | `supplier` |
 

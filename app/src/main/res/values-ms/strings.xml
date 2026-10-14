@@ -196,7 +196,10 @@
     <string name="product_sku_info">Bukan kod bar: kod pendek yang anda reka sendiri, hanya jika mahu. Taip dalam kotak carian untuk mencari produk itu. Kebanyakan kedai membiarkannya kosong.</string>
     <string name="product_track_stock">Jejak stok</string>
     <string name="product_low_stock">Amaran stok rendah pada</string>
-    <string name="product_stock_now">Stok sekarang: %1$s</string>
+    <string name="product_stock_section">Stok</string>
+    <string name="product_stock_info">Berapa banyak yang ada: di rak dan di stor sekali. Setiap jualan menolaknya sendiri; penghantaran menambahnya.</string>
+    <string name="product_stock_label">Stok sekarang</string>
+    <string name="product_untracked">Stok produk ini tidak dikira (untuk perkhidmatan, beg plastik…).</string>
     <string name="product_active">Papar dalam carian dan katalog</string>
     <string name="product_saved">Produk disimpan</string>
     <string name="product_save_next">Simpan dan tambah lagi</string>
@@ -452,15 +455,16 @@
     <string name="diag_deleted">Data ujian dipadam</string>
     <string name="diag_saved_to">Disimpan di %1$s</string>
 
-    <!-- Inventori (Fasa 3) -->
-    <string name="menu_inventory">Inventori</string>
-    <string name="inv_title">Inventori</string>
+    <!-- Stok (Fasa 3; "Inventori" sebelum 1.20.0, D-080) -->
+    <string name="menu_inventory">Stok</string>
+    <string name="inv_title">Stok</string>
+    <string name="inv_intro">Produk ialah barang yang anda jual dan harganya. Stok ialah berapa banyak setiap satu yang ada: di rak dan di stor sekali. Setiap jualan menolaknya sendiri. Di sini anda merekod penghantaran, dan membetulkan nombornya jika tidak sama dengan yang ada.</string>
     <string name="inv_receive">Terima stok</string>
     <string name="inv_receive_sub">Penghantaran daripada pembekal: stok masuk, kos dikemas kini</string>
-    <string name="inv_adjust">Laras stok</string>
-    <string name="inv_adjust_sub">Rosak, luput, hilang, dijumpai, pembetulan…</string>
+    <string name="inv_adjust">Ubah stok</string>
+    <string name="inv_adjust_sub">Taip jumlah yang dikira, atau keluarkan barang rosak, luput atau hilang</string>
     <string name="inv_count">Kiraan stok</string>
-    <string name="inv_count_sub">Kira rak dan lihat apa yang hilang</string>
+    <string name="inv_count_sub">Kira banyak produk berturut-turut: satu rak, satu kategori atau seluruh kedai</string>
     <string name="inv_low_stock">Stok rendah</string>
     <string name="inv_low_stock_sub">Produk pada atau di bawah paras amaran</string>
     <string name="inv_suppliers">Pembekal</string>
@@ -468,13 +472,22 @@
     <string name="inv_purchases">Penghantaran</string>
     <string name="inv_purchases_sub">Semua yang diterima, terbaru dahulu</string>
     <string name="inv_movements">Perubahan stok</string>
-    <string name="inv_movements_sub">Penghantaran, pelarasan dan stok permulaan</string>
+    <string name="inv_movements_sub">Penghantaran, perubahan manual dan stok permulaan</string>
     <string name="inv_stock_now">Stok: %1$s</string>
     <string name="inv_pick_title">Pilih produk</string>
     <string name="inv_pick_hint">Cari atau imbas produk</string>
-    <string name="inv_adjusted">Stok %1$s dilaraskan</string>
+    <string name="inv_adjusted">Stok %1$s diubah</string>
+    <string name="inv_stock_set">%1$s: stok kini %2$s</string>
     <string name="inv_remove_stock">Keluarkan</string>
     <string name="inv_add_stock">Tambah</string>
+    <string name="inv_count_stock">Kira</string>
+    <string name="inv_app_has">Dalam aplikasi: %1$s</string>
+    <string name="inv_count_help">Berapa banyak yang ada sekarang? Kira di rak dan di stor sekali.</string>
+    <string name="inv_remove_help">Berapa banyak dikeluarkan, dan kenapa?</string>
+    <string name="inv_add_help">Berapa banyak ditambah, dan kenapa?</string>
+    <string name="inv_diff_less">Kurang %1$s daripada dalam aplikasi</string>
+    <string name="inv_diff_more">Lebih %1$s daripada dalam aplikasi</string>
+    <string name="inv_diff_same">Sama seperti dalam aplikasi</string>
     <string name="inv_note_hint">Nota (pilihan)</string>
     <string name="inv_add_item">Tambah item</string>
     <string name="inv_receive_save">Simpan penghantaran</string>
@@ -530,7 +543,8 @@
     <string name="inv_low_empty">Tiada stok yang rendah. Tetapkan paras stok rendah pada produk untuk mendapat amaran.</string>
     <string name="inv_movements_empty">Belum ada perubahan stok.</string>
     <string name="move_receive">Diterima</string>
-    <string name="move_adjust">Dilaraskan</string>
+    <string name="move_adjust">Diubah manual</string>
+    <string name="move_counted">Dikira: %1$s</string>
     <string name="move_waste">Dihapus kira</string>
     <string name="move_return">Dipulangkan kepada pembekal</string>
     <string name="move_transfer_in">Pindahan masuk</string>
@@ -552,8 +566,8 @@
     <string name="hist_count">Dikira</string>
     <string name="hist_after">kemudian %1$s</string>
     <string name="hist_empty">Belum ada sejarah stok.</string>
-    <string name="product_opening_stock">Stok permulaan</string>
-    <string name="product_opening_hint">Berapa banyak di rak sekarang</string>
+    <string name="product_opening_stock">Berapa banyak yang ada sekarang?</string>
+    <string name="product_opening_hint">Di rak dan di stor sekali</string>
     <string name="result_low_stock">Hampir habis: %1$s</string>
     <!-- Bug hunt 2 (2026-10) -->
     <string name="share_no_memory">Memori tidak mencukupi untuk berkongsi resit ini sebagai gambar. Kongsi sebagai PDF.</string>

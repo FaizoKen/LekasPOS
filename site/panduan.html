@@ -39,7 +39,7 @@ yang anda lihat dalam aplikasi.</p>
 <li><a href="#promotions">Promosi</a>
 <ol><li><a href="#promotion-new">Membuat promosi</a></li><li><a href="#promotion-prices">Beberapa harga (2 untuk RM3, 3 untuk RM4)</a></li><li><a href="#promotion-rules">Perkara yang perlu diketahui</a></li></ol></li>
 <li><a href="#stock">Stok</a>
-<ol><li><a href="#how-stock">Bagaimana aplikasi mengetahui stok anda</a></li><li><a href="#receive">Terima stok (penghantaran)</a></li><li><a href="#adjust">Laras stok</a></li><li><a href="#count">Kiraan stok (stock take)</a></li><li><a href="#low-stock">Stok rendah</a></li><li><a href="#suppliers">Pembekal dan penghantaran</a></li><li><a href="#stock-history">Sejarah stok dan perubahan stok</a></li></ol></li>
+<ol><li><a href="#how-stock">Produk dan stok: bagaimana aplikasi tahu berapa banyak yang ada</a></li><li><a href="#receive">Terima stok (penghantaran)</a></li><li><a href="#adjust">Ubah stok (kira satu produk, atau keluarkan / tambah)</a></li><li><a href="#count">Kiraan stok (stock take)</a></li><li><a href="#low-stock">Stok rendah</a></li><li><a href="#suppliers">Pembekal dan penghantaran</a></li><li><a href="#stock-history">Sejarah stok dan perubahan stok</a></li></ol></li>
 <li><a href="#staff">Kakitangan, PIN dan peranan</a>
 <ol><li><a href="#pin-login">Menghidupkan log masuk PIN</a></li><li><a href="#sign-in">Log masuk dan mengunci kaunter</a></li><li><a href="#forgot-pin">Lupa PIN</a></li><li><a href="#roles">Peranan dan kebenaran</a></li><li><a href="#manager-pin">Apabila juruwang memerlukan pengurus</a></li></ol></li>
 <li><a href="#shifts">Syif dan wang tunai</a>
@@ -124,7 +124,8 @@ logo) — <a href="#settings-store">butiran</a>.</li>
 <b>Pencetak &amp; laci wang</b> → <b>Pilih pencetak yang telah dipasangkan</b> → <b>Cetak halaman ujian</b>
 (<a href="#printer">butiran</a>).</li>
 <li><b>Produk</b>: imbas setiap produk di kaunter dan tambahkannya, atau masukkan dalam <b>Produk</b>, atau import
-hamparan (<a href="#products">butiran</a>). Tambah kategori, warna dan gambar supaya senarai barang mudah
+hamparan (<a href="#products">butiran</a>). Taip <b>Berapa banyak yang ada sekarang?</b> bagi setiap satu (di rak dan di
+stor sekali) jika anda mahu aplikasi mengira stok (<a href="#how-stock">butiran</a>). Tambah kategori, warna dan gambar supaya senarai barang mudah
 digunakan.</li>
 <li><b>Kaedah bayaran</b> yang anda terima, seperti DuitNow atau Touch ’n Go (<a href="#payment-methods">butiran</a>).</li>
 <li><b>Kakitangan</b>: tetapkan PIN pemilik dahulu dan <b>catat kod pemulihan</b>, kemudian tambah juruwang anda
@@ -333,7 +334,7 @@ tiga kumpulan: <b>Bil ini</b>, <b>Kaunter</b> dan <b>Urus kedai</b>. Imbasan sem
 <tr><td><b>PIN pengurus</b></td><td>Pengurus membantu dengan bil ini.</td></tr>
 <tr><td><b>Kunci / tukar pengguna</b></td><td>Kunci kaunter (apabila PIN digunakan). Jika syif dibuka, ia bertanya dahulu sama ada mahu menutupnya.</td></tr>
 <tr><th colspan="2">Urus kedai</th></tr>
-<tr><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Inventori</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b></td><td>Urusan belakang kedai, untuk sesiapa yang dibenarkan.</td></tr>
+<tr><td><b>Produk</b>, <b>Kategori</b>, <b>Promosi</b>, <b>Stok</b>, <b>Laporan</b>, <b>Tetapan</b>, <b>Kadar cukai</b>, <b>Diagnostik</b></td><td>Urusan belakang kedai, untuk sesiapa yang dibenarkan. <b>Produk</b> ialah barang yang anda jual dan harganya; <b>Stok</b> ialah berapa banyak yang ada (dipanggil <b>Inventori</b> sebelum 1.20.0).</td></tr>
 </table></div>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
@@ -528,10 +529,14 @@ terminal atau aplikasi bank anda).</li>
 <h2 id="products">7. Produk</h2>
 <p>Semua yang dijual di kaunter ialah <b>produk</b>. Buka senarainya dengan <b>Menu → Urus kedai → Produk</b>
 (memerlukan kebenaran <i>Sunting produk dan kategori</i>).</p>
+<p>Borang sesuatu produk juga menunjukkan <b>stoknya</b> — berapa banyak yang ada — dengan butang <b>Ubah stok</b> betul-betul
+di bawah harga. Skrin <b>Stok</b> adalah untuk kerja stok yang lain: penghantaran, mengira banyak produk, stok rendah dan
+pembekal. Lihat <a href="#how-stock">Produk dan stok</a>.</p>
 
 <div class="shots">
-<figure><img src="img/ms-products.png" alt="Senarai Produk" width="240" loading="lazy"><figcaption>Produk: setiap satu dengan gambar atau warnanya dan kategorinya. Cari mengikut nama, SKU atau kod bar, atau imbas.</figcaption></figure>
-<figure><img src="img/ms-product-new.png" alt="Borang Produk baru" width="240" loading="lazy"><figcaption>Produk baharu: nama, harga, cara ia dijual, gambar dan warna.</figcaption></figure>
+<figure><img src="img/ms-products.png" alt="Senarai Produk" width="240" loading="lazy"><figcaption>Produk: setiap satu dengan gambar atau warnanya, kategorinya dan stoknya. Cari mengikut nama, SKU atau kod bar, atau imbas.</figcaption></figure>
+<figure><img src="img/ms-product-new.png" alt="Borang Produk baru" width="240" loading="lazy"><figcaption>Produk baharu: nama, harga, cara ia dijual, dan berapa banyak yang ada sekarang.</figcaption></figure>
+<figure><img src="img/ms-product-edit.png" alt="Borang produk dengan stoknya dan butang Ubah stok" width="240" loading="lazy"><figcaption>Produk sedia ada: <b>Stok sekarang</b>, <b>Ubah stok</b> dan <b>Sejarah stok</b> di bawah harga.</figcaption></figure>
 </div>
 
 <h3 id="product-list">Senarai produk</h3>
@@ -565,6 +570,13 @@ sekilogram), atau <b>Harga dimasukkan di kaunter</b> (juruwang menaip harga seti
 <i>kuih</i> atau barang longgar yang berlainan harga). Lihat <a href="#sold-by">Cara produk dijual</a>.</dd>
 <dt>Unit (pcs, kg, pek…)</dt><dd>Dipaparkan selepas kuantiti dan harga, contohnya <i>RM8.00/kg</i>. Memilih
 <b>Berat</b> menukar <i>pcs</i> kepada <i>kg</i> dengan sendirinya.</dd>
+<dt>Stok</dt><dd>Berapa banyak yang ada: di rak dan di stor sekali.
+<b>Jejak stok</b> (hidup secara lalai; matikan untuk barang yang anda tidak kira, seperti perkhidmatan atau beg plastik —
+borang lalu menyatakan <i>“Stok produk ini tidak dikira”</i> dan menyembunyikan yang lain).
+Produk baharu bertanya <b>Berapa banyak yang ada sekarang?</b> (kakitangan yang boleh mengurus stok; biarkan kosong jika
+tiada). Produk sedia ada menunjukkan <b>Stok sekarang</b> dengan <b>Ubah stok</b> (taip jumlah yang dikira, atau
+keluarkan / tambah — lihat <a href="#adjust">Ubah stok</a>) dan <b>Sejarah stok</b>.
+<b>Amaran stok rendah pada</b> memberi amaran apabila stok turun ke paras ini (kosong atau 0 = tiada amaran).</dd>
 <dt>Di skrin jualan</dt><dd><b>Gambar</b> (<b>Ambil foto</b>, <b>Pilih gambar</b>, <b>Buang
 gambar</b>) dan <b>Warna</b> untuk petak produk itu. Lihat <a href="#pictures">Gambar dan warna</a>.</dd>
 <dt>Kod bar</dt><dd>Nombor di bawah jalur hitam pada barang atau kartonnya, dicetak oleh pengeluar.
@@ -581,18 +593,14 @@ ada beberapa kod bar. Anda juga boleh terus mengimbas dengan pengimbas kod bar s
 nilai stok, dan dikemas kini dengan sendirinya apabila anda menerima penghantaran),
 <b>Kod sendiri (SKU)</b> (pilihan dan <b>bukan kod bar</b>: kod pendek yang anda reka sendiri, seperti
 <i>A12</i>, contohnya untuk barang tanpa kod bar. Menaipnya dalam kotak carian menjumpai produk itu. Kebanyakan kedai
-membiarkannya kosong),
-<b>Jejak stok</b> (hidup secara lalai; matikan untuk barang yang anda tidak kira, seperti perkhidmatan atau beg plastik),
-<b>Amaran stok rendah pada</b> (memberi amaran apabila stok turun ke paras ini; kosong atau 0 = tiada amaran),
-<b>Stok permulaan</b> (produk baharu sahaja: berapa banyak yang ada di rak sekarang).</dd>
+membiarkannya kosong).</dd>
 <dt>Papar dalam carian dan katalog</dt><dd>Matikan untuk <b>menyembunyikan</b> produk daripada petak, carian dan
 carian nama dalam semak harga. Kod bar produk yang tersembunyi <b>masih boleh diimbas dan dijual</b>; produk itu kekal dalam senarai
 produk dengan tanda <b>TERSEMBUNYI</b>. Gunakan ini untuk produk yang hanya dijual dengan mengimbas, atau yang disimpan
 untuk kemudian. Untuk menghentikan sesuatu produk daripada dijual langsung, padamkannya: jualan lepasnya kekal dalam
 laporan.</dd>
 </dl>
-<p>Bagi produk sedia ada, borang juga menunjukkan <b>Stok sekarang</b>, <b>Sejarah stok</b> dan <b>Laras
-stok</b>, serta butang <b>Padam</b>. Memadam akan bertanya dahulu (<i>“Jualan lalu kekal dengan barisnya.”</i>); selepas
+<p>Produk sedia ada juga mempunyai butang <b>Padam</b>. Memadam akan bertanya dahulu (<i>“Jualan lalu kekal dengan barisnya.”</i>); selepas
 itu kod barnya tidak lagi boleh diimbas. Jika sandaran Google Drive dihidupkan, produk itu hilang dari setiap kaunter.</p>
 <p>Apabila kod bar yang anda tambah sudah digunakan oleh produk lain, aplikasi bertanya <i>“Kod bar sudah digunakan…
 Simpan juga?”</i>. Jika anda tetap menyimpannya, imbasan akan memilih produk yang kod barnya ditambah terakhir.</p>
@@ -808,12 +816,27 @@ yang ada harga lain.</li>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="stock">9. Stok</h2>
-<p><b>Menu → Urus kedai → Inventori</b>, untuk kakitangan yang mempunyai kebenaran <i>Terima, laras dan kira stok</i>
-(pemilik dan pengurus secara lalai).</p>
-<figure class="wide"><img src="img/ms-inventory.png" alt="Skrin Inventori" width="240" loading="lazy"><figcaption>Inventori: semua tentang stok di satu tempat.</figcaption></figure>
+<p><b>Menu → Urus kedai → Stok</b> (dipanggil <b>Inventori</b> sebelum 1.20.0), untuk kakitangan yang mempunyai
+kebenaran <i>Terima, ubah dan kira stok</i> (pemilik dan pengurus secara lalai).</p>
+<div class="shots">
+<figure><img src="img/ms-inventory.png" alt="Skrin Stok" width="240" loading="lazy"><figcaption>Stok: apa itu stok, kemudian semua tentangnya di satu tempat.</figcaption></figure>
+<figure><img src="img/ms-change-stock.png" alt="Ubah stok: Kira, 21 ditaip sedangkan aplikasi ada 24" width="240" loading="lazy"><figcaption><b>Ubah stok</b> → <b>Kira</b>: 21 dikira, aplikasi ada 24 — <i>“Kurang 3 daripada dalam aplikasi”</i>.</figcaption></figure>
+</div>
 
-<h3 id="how-stock">Bagaimana aplikasi mengetahui stok anda</h3>
-<p>Stok sesuatu produk = <b>kiraan terakhir</b> + penghantaran dan pelarasan sejak itu − jualan sejak itu +
+<h3 id="how-stock">Produk dan stok: bagaimana aplikasi tahu berapa banyak yang ada</h3>
+<ul>
+<li><b>Produk</b> ialah barang yang anda jual dan harganya (<b>Produk</b>). <b>Stoknya</b> ialah berapa banyak barang itu
+yang ada (<b>Stok</b>, dan dalam borang produk di bawah harga). Satu produk, satu angka stok.</li>
+<li><b>Stok bermaksud semua yang ada di kedai</b>: di rak dan di stor sekali. Aplikasi tidak menyimpan angka berasingan
+untuk rak dan stor, jadi memindahkan barang dari stor ke rak tidak mengubah apa-apa dalam aplikasi. Apabila mengira,
+kira kedua-dua tempat dan taip jumlahnya.</li>
+<li><b>Anda tidak perlu menaip stok selepas setiap jualan.</b> Aplikasi mengiranya sendiri: setiap jualan menolaknya,
+bayaran balik yang dikembalikan ke rak menambahnya, dan <a href="#receive">penghantaran</a> menambah apa yang masuk.</li>
+<li>Apabila angka dalam aplikasi tidak sama dengan yang ada (barang pecah, hilang, atau tidak pernah dimasukkan), kira
+dan taip angka sebenar: <b>Ubah stok</b> → <b>Kira</b> pada produk itu, atau <a href="#count">kiraan stok</a> untuk banyak
+produk. Selepas itu aplikasi mengira dari angka anda.</li>
+</ul>
+<p>Di sebaliknya: stok sesuatu produk = <b>kiraan terakhir</b> + penghantaran dan perubahan sejak itu − jualan sejak itu +
 bayaran balik yang dikembalikan ke rak. Jualan yang dibatalkan tidak dikira. Stok boleh menjadi kurang daripada sifar
 (jualan tidak pernah disekat); kiraan stok membetulkannya.</p>
 <p>Jualan tidak pernah mengubah stok produk dengan <b>Jejak stok</b> dimatikan, dan produk itu tidak mendapat amaran stok
@@ -821,7 +844,7 @@ rendah. Jangan terima atau kira stok produk sebegini: angka stoknya hanya akan t
 
 <h3 id="receive">Terima stok (penghantaran)</h3>
 <ol>
-<li><b>Inventori → Terima stok</b>.</li>
+<li><b>Stok → Terima stok</b>.</li>
 <li>Ketik butang pembekal untuk memilih <b>Pembekal</b> (atau <b>Pembekal baru</b>), dan taip
 <b>No. invois / DO</b> jika mahu (anda boleh mengimbas kod bar pada DO ke dalamnya).</li>
 <li>Imbas setiap produk: <b>setiap imbasan menambah satu unit</b> (<b>kod bar karton</b> menambah semua unitnya). Atau
@@ -837,25 +860,34 @@ bergerak). Jika tiada stok, belum ada kos, atau produk itu tidak menjejak stok, 
 penghantaran itu.</p></div>
 <div class="tip"><p>Penghantaran yang separuh dimasukkan tetap disimpan walaupun telefon berdering, aplikasi tertutup
 atau telefon dimulakan semula: buka <b>Terima stok</b> sekali lagi untuk meneruskan. <b>×</b> (Buang) membuangnya.
-Penghantaran yang sudah disimpan tidak boleh disunting atau dipadam; gunakan <a href="#adjust">Laras stok</a> untuk membetulkan kesilapan.</p></div>
+Penghantaran yang sudah disimpan tidak boleh disunting atau dipadam; gunakan <a href="#adjust">Ubah stok</a> untuk membetulkan kesilapan.</p></div>
 
-<h3 id="adjust">Laras stok</h3>
-<p>Untuk stok yang keluar atau masuk tanpa jualan atau penghantaran: <b>Inventori → Laras stok</b> → pilih
-produk (atau <b>Laras stok</b> dalam borang produk).</p>
+<h3 id="adjust">Ubah stok (kira satu produk, atau keluarkan / tambah)</h3>
+<p>Untuk menetapkan stok satu produk secara manual: buka produk itu (<b>Produk</b> → ketik produk) dan ketik <b>Ubah
+stok</b> di bawah <b>Stok sekarang</b>. Atau <b>Stok → Ubah stok</b> → pilih atau imbas produk. (Dipanggil <b>Laras
+stok</b> sebelum 1.20.0.) Tetingkap itu menunjukkan <i>“Dalam aplikasi: …”</i> dan tiga pilihan:</p>
 <ul>
-<li>Pilih sebab: <b>Rosak</b>, <b>Luput</b>, <b>Hilang</b>, <b>Kecurian</b>, <b>Kegunaan sendiri</b>,
-<b>Dipulangkan kepada pembekal</b> (semua ini sentiasa mengurangkan stok), <b>Dijumpai</b> (sentiasa menambah), atau <b>Pembetulan</b> /
-<b>Lain-lain</b> (pilih <b>Keluarkan</b> atau <b>Tambah</b>).</li>
-<li>Taip kuantiti, nota (pilihan), dan <b>Simpan</b>.</li>
-<li>Setiap pengurangan dicatat dalam <a href="#activity-log">Log aktiviti</a> sebagai <i>Stok dihapus kira</i> bersama
-nilainya pada harga kos, supaya pemilik nampak stok yang dikeluarkan secara manual.</li>
+<li><b>Kira</b> (yang pertama): <i>“Berapa banyak yang ada sekarang? Kira di rak dan di stor sekali.”</i> Angka dalam
+aplikasi sudah diisi; taip angka yang anda kira (kekunci pertama menggantikannya) dan ketik <b>Simpan</b>. Semasa anda
+menaip, ia menunjukkan bezanya dengan aplikasi — <i>“Kurang 3 daripada dalam aplikasi”</i>, <i>“Lebih 2…”</i> atau
+<i>“Sama…”</i>. Angka anda menjadi stok; jualan selepasnya terus dikira dari situ. Menaip 0 bermaksud tiada lagi.</li>
+<li><b>Keluarkan</b>: berapa banyak dikeluarkan, dan kenapa — <b>Rosak</b>, <b>Luput</b>, <b>Hilang</b>, <b>Kecurian</b>,
+<b>Kegunaan sendiri</b>, <b>Dipulangkan kepada pembekal</b>, <b>Pembetulan</b> atau <b>Lain-lain</b> — dengan nota (pilihan).</li>
+<li><b>Tambah</b>: berapa banyak ditambah, dan kenapa — <b>Dijumpai</b>, <b>Pembetulan</b> atau <b>Lain-lain</b> — dengan nota
+(pilihan).</li>
 </ul>
+<div class="tip"><p>Gunakan <b>Kira</b> apabila anda tahu berapa banyak yang ada (biasanya bagi pengurus baharu: rak ada 21,
+aplikasi kata 24). Gunakan <b>Keluarkan</b> apabila anda tahu apa yang berlaku kepada sebahagiannya (3 pecah) — sebabnya
+kekal dalam rekod.</p></div>
+<p>Stok yang dikeluarkan secara manual — <b>Keluarkan</b>, atau <b>Kira</b> yang lebih rendah daripada dalam aplikasi —
+dicatat dalam <a href="#activity-log">Log aktiviti</a> sebagai <i>Stok dihapus kira</i> bersama nilainya pada harga kos,
+supaya pemilik nampak. Setiap perubahan ditunjukkan dalam <b>Perubahan stok</b> dan dalam <b>Sejarah stok</b> produk itu.</p>
 
 <h3 id="count">Kiraan stok (stock take)</h3>
 <ol>
-<li><b>Inventori → Kiraan stok → +</b>. Beri nama (tarikh hari ini sudah diisi) dan pilih <b>Semua
+<li><b>Stok → Kiraan stok → +</b>. Beri nama (tarikh hari ini sudah diisi) dan pilih <b>Semua
 produk</b> atau satu kategori. Ketik <b>Mula</b>.</li>
-<li>Imbas atau ketik produk, taip <b>jumlah</b> yang ada di rak, dan ketik OK. OK tanpa menaip apa-apa merekodkan 0.</li>
+<li>Imbas atau ketik produk, taip <b>jumlah</b> yang ada (di rak dan di stor sekali), dan ketik OK. OK tanpa menaip apa-apa merekodkan 0.</li>
 <li>Mengira produk sekali lagi <b>menggantikan</b> kiraannya — jumlahkan dahulu produk yang disimpan di dua tempat.
 Produk yang tidak anda kira kekal dengan stoknya.</li>
 <li>Setiap kiraan berkuat kuasa <b>serta-merta</b>, jadi anda boleh terus menjual semasa mengira. Beberapa orang boleh
@@ -867,23 +899,23 @@ stok sudah pun ditetapkan.</li>
 </ol>
 
 <h3 id="low-stock">Stok rendah</h3>
-<p><b>Inventori → Stok rendah</b> menyenaraikan produk yang berada pada atau di bawah paras <b>Amaran stok rendah</b>
+<p><b>Stok → Stok rendah</b> menyenaraikan produk yang berada pada atau di bawah paras <b>Amaran stok rendah</b>
 (tetapkan dalam borang produk). Selepas jualan, kakitangan yang dibenarkan mengurus stok juga melihat
 <i>“Hampir habis: …”</i> pada hasil jualan.</p>
 
 <h3 id="suppliers">Pembekal dan penghantaran</h3>
 <ul>
-<li><b>Inventori → Pembekal</b>: nama, orang untuk dihubungi, telefon, e-mel, alamat dan nota. Ketik untuk menyunting,
+<li><b>Stok → Pembekal</b>: nama, orang untuk dihubungi, telefon, e-mel, alamat dan nota. Ketik untuk menyunting,
 tekan lama untuk memadam (rekod penghantaran lalu kekal). <b>Penghantaran</b> dalam pembekal menunjukkan apa yang
 datang daripadanya.</li>
-<li><b>Inventori → Penghantaran</b>: semua yang diterima, yang terbaru dahulu; ketik satu untuk melihat baris dan jumlahnya.</li>
+<li><b>Stok → Penghantaran</b>: semua yang diterima, yang terbaru dahulu; ketik satu untuk melihat baris dan jumlahnya.</li>
 </ul>
 
 <h3 id="stock-history">Sejarah stok dan perubahan stok</h3>
 <ul>
 <li><b>Sejarah stok</b> (dari borang produk, atau ketik produk dalam Stok rendah): setiap jualan, bayaran balik,
-penghantaran, pelarasan dan kiraan bagi satu produk, dengan baki stok selepas setiap satu. Ketik jualan untuk membuka resitnya.</li>
-<li><b>Inventori → Perubahan stok</b>: setiap penghantaran, pelarasan, hapus kira dan stok permulaan bagi semua produk.</li>
+penghantaran, perubahan dan kiraan bagi satu produk, dengan baki stok selepas setiap satu. Ketik jualan untuk membuka resitnya.</li>
+<li><b>Stok → Perubahan stok</b>: setiap penghantaran, perubahan manual, hapus kira, stok permulaan dan kiraan satu produk (<b>Ubah stok → Kira</b>, import CSV) bagi semua produk — kiraan menunjukkan <i>Dikira: …</i> dan berapa banyak ia mengubah stok. Kiraan dalam <a href="#count">kiraan stok</a> ada dalam <b>Laporan kiraan</b>nya.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
@@ -947,7 +979,7 @@ pemulihan baharu</b> membuat kod baharu (kod lama tidak lagi berfungsi).</li>
 <tr><td>Jual secara kredit</td><td>Bayar dengan kredit pelanggan dalam had</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Melebihi had kredit, laraskan baki</td><td>Jualan melebihi had, had kredit, pelarasan baki</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Sunting produk dan kategori</td><td>Produk, kategori, promosi, CSV, perubahan harga dalam Semak harga</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Terima, laras dan kira stok</td><td>Inventori</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Terima, ubah dan kira stok</td><td>Stok, dan <b>Ubah stok</b> pada produk</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Lihat laporan jualan, untung dan nilai stok</td><td>Laporan dan eksport</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Lihat log aktiviti</td><td>Log aktiviti, Semakan staf</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Ubah tetapan</td><td>Semua tetapan, kadar cukai, kaedah bayaran, sandaran, kemas kini, diagnostik</td><td>✓</td><td></td><td></td></tr>
@@ -975,7 +1007,7 @@ serta kredit, sehingga bil dibayar, ditangguh atau dikosongkan (atau selepas 5 m
 untuk menamatkan bantuan itu. Tugas lain pengurus turut dipaparkan (Buka laci wang, butang <b>Batalkan</b> pada
 resit, Urus kedai), tetapi setiap satu meminta PIN pengurus sekali lagi. Selain cara ini, juruwang melihat
 <b>Batalkan</b> hanya pada jualan yang baru dibuatnya.</li>
-<li><b>Skrin pengurusan</b> (Produk, Inventori, Laporan…): PIN pengurus diminta sekali dan kekal sah sehingga skrin itu ditutup.</li>
+<li><b>Skrin pengurusan</b> (Produk, Stok, Laporan…): PIN pengurus diminta sekali dan kekal sah sehingga skrin itu ditutup.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
@@ -1484,7 +1516,7 @@ di skrin jualan.</li>
 <li>Semasa pengimbas mod papan kekunci disambung, Android mungkin menyembunyikan papan kekunci pada skrin. Aplikasi kemudian memaparkan <b>Tiada
 papan kekunci?</b> → <b>Tetapan papan kekunci</b>: hidupkan <i>Gunakan papan kekunci pada skrin</i> (atau <i>Tunjukkan papan kekunci maya</i>).</li>
 <li>Pengimbasan berfungsi di skrin jualan, semak harga, senarai produk dan borang produk (untuk menambah kod bar), Terima
-stok, kiraan stok, dan setiap kali anda memilih produk (Laras stok, produk sesuatu promosi).</li>
+stok, kiraan stok, dan setiap kali anda memilih produk (Ubah stok, produk sesuatu promosi).</li>
 <li>Menyambung atau memutuskan sambungan pengimbas tidak pernah menetapkan semula skrin atau bil.</li>
 </ul>
 
@@ -1629,6 +1661,14 @@ buka skrinnya: status menyatakan apa yang tidak kena (tiada internet, perlu log 
 
 <h3 id="ts-other">Soalan lain</h3>
 <dl>
+<dt>Produk atau Stok — yang mana satu perlu dibuka?</dt>
+<dd><b>Produk</b> untuk menambah produk atau menukar nama, harga, kod bar atau gambarnya. <b>Stok</b> untuk berapa banyak
+yang ada: penghantaran, mengira, stok rendah. Stok satu produk juga ada dalam borangnya, di bawah harga, dengan <b>Ubah
+stok</b>. Lihat <a href="#how-stock">Produk dan stok</a>.</dd>
+<dt>Stok dalam aplikasi tidak sama dengan yang ada di rak.</dt>
+<dd>Kira produk itu di rak <b>dan</b> di stor, bukanya dan ketik <b>Ubah stok</b> → <b>Kira</b>, taip jumlahnya dan
+<b>Simpan</b>. Stok dalam aplikasi meliputi kedua-dua tempat sekali. Jika ia terus tidak tepat, pastikan penghantaran
+diterima dalam aplikasi (<b>Stok → Terima stok</b>) dan setiap jualan melalui kaunter.</dd>
 <dt>Adakah data saya dihantar kepada pembangun?</dt>
 <dd>Tidak. Data kedai kekal dalam telefon dan, jika anda menghidupkan Sandaran Google Drive atau laporan jualan harian, dalam
 Google Drive anda sendiri. Laporan ralat (hanya jika anda membenarkannya) mengandungi butiran teknikal sahaja. Lihat
@@ -1684,7 +1724,7 @@ itu.</dd>
 <tr><td>Kod pemulihan</td><td>Recovery code</td><td>Cara pemilik masuk semula selepas terlupa PIN.</td></tr>
 <tr><td>Log aktiviti</td><td>Activity log</td><td>Rekod tindakan sensitif.</td></tr>
 <tr><td>Terima stok / penghantaran</td><td>Receive stock / delivery</td><td>Barang yang tiba daripada pembekal.</td></tr>
-<tr><td>Laras stok / dihapus kira</td><td>Adjust stock / written off</td><td>Stok yang diubah secara manual (rosak, tamat tempoh…).</td></tr>
+<tr><td>Ubah stok / dihapus kira</td><td>Change stock / written off</td><td>Stok yang ditetapkan atau diubah secara manual (dikira, rosak, tamat tempoh…).</td></tr>
 <tr><td>Kiraan stok</td><td>Stock count</td><td>Mengira barang yang ada di rak.</td></tr>
 <tr><td>Harga kos</td><td>Cost price</td><td>Kos satu unit atau satu kg kepada anda.</td></tr>
 <tr><td>Untung kasar</td><td>Gross profit</td><td>Jualan bersih tolak kos barang yang dijual.</td></tr>

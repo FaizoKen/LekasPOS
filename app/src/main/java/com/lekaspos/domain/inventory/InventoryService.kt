@@ -84,6 +84,29 @@ class InventoryService(private val graph: AppGraph) {
         }
     }
 
+    /**
+     * "Change stock → Count" (D-080): the [qty] someone counted of one product becomes its stock, recorded as a
+     * count outside any count session (a new baseline, like a count, so it stays right when sales of other tills
+     * arrive later). A count lower than the app's stock is on record like a write-off, with its value at cost: it
+     * takes goods off by hand just the same.
+     */
+    suspend fun setStock(productId: Long, qty: Long) {
+        allowed()
+        require(qty >= 0L) { "a count cannot be negative" }
+        val staff = graph.staff.staffId
+        graph.db().write(reserveIds = 4L) { tx ->
+            val now = System.currentTimeMillis()
+            val before = StockDao.level(tx.db, productId)
+            StockDao.insertCount(tx, productId, qty, null, staff, null, now)
+            if (qty < before) {
+                val p = ProductDao.get(tx.db, productId)
+                val value = Rounding.mulDivHalfUp(p?.cost ?: 0L, before - qty, 1000L)
+                val detail = "${p?.name ?: "#$productId"}: -${MoneyFormat.formatQty(before - qty)} (counted ${MoneyFormat.formatQty(qty)})"
+                AuditDao.log(tx, AuditAction.STOCK_WRITE_OFF, staff, now, Entity.PRODUCT, productId, value, detail.take(300))
+            }
+        }
+    }
+
     suspend fun startCount(name: String, categoryId: Long?): Long {
         allowed()
         val staff = graph.staff.staffId

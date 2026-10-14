@@ -251,7 +251,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 | `A/data/shift/ShiftDao.kt` | `Shift`, `DocSum`, `MethodSum`, `CreditSum`, `ShiftTotals`, `CashMove`, `object ShiftDao` (`current`, `get`, `page`, `open`, `close`, `totals`, `insertMove`, `moves`, `overShortByOpener`, `HOT_QUERIES`) | LWW `shift`, EVENT `cash_movement` (`Entity.CASH_MOVE`). |
 | `A/data/staff/StaffDao.kt` | `Role` (`effective`, `isOwner`), `Staff` (`perms`, `canSignIn`), `object StaffDao`, `object RoleDao` | LWW `staff`, `role`. |
 | `A/data/stock/CountSessionDao.kt` | `CountSession`, `CountRow`, `CountSummary`, `object CountSessionDao` (`list`, `get`, `create`, `finish`, `counts`, `summary`, `countedQty`, `HOT_QUERIES`) | LWW `count_session` + its `stock_count` rows. |
-| `A/data/stock/StockDao.kt` | `LowStockItem`, `MovementRow`, `object StockDao` (`applyDelta`, `level`, `stampAfterCounts`, `stampAfterEverything`, `levelBefore`, `countImported`, `rebuild`, `lowStock*`, `lowAmong`, `insertMovement`, `insertMovementRowIfNew` (internal), `movementPage`, `insertCount`, `HOT_QUERIES`) | EVENT `stock_movement`/`stock_count`, DERIVED `stock_level`. |
+| `A/data/stock/StockDao.kt` | `LowStockItem`, `MovementRow`, `object StockDao` (`applyDelta`, `level`, `stampAfterCounts`, `stampAfterEverything`, `levelBefore`, `countImported`, `rebuild`, `lowStock*`, `lowAmong`, `insertMovement`, `insertMovementRowIfNew` (internal), `movementPage` (movements + session-less counts, `KIND_HAND_COUNT`, D-080), `insertCount`, `HOT_QUERIES`) | EVENT `stock_movement`/`stock_count`, DERIVED `stock_level`. |
 | `A/data/stock/StockHistoryDao.kt` | `HistoryEntry` (`Type`), `object StockHistoryDao` (`page`) | One product's merged stock history. |
 | `A/data/supplier/SupplierDao.kt` | `Supplier`, `object SupplierDao` | LWW `supplier`. |
 | `A/data/sync/Outbox.kt` | `object Outbox` (`append` :14, `json`, `writeRow`) | Appends one sync event + flags `tx.outboxQueued()`. |
@@ -271,7 +271,7 @@ must also update memory run in `withContext(NonCancellable)`.
 | `A/domain/StaffSession.kt` | `class StaffSession`, `class Approval`, `data class Actor`, `class PermissionGate` | Who is signed in, idle lock, PIN checks; permission resolution (see §4.5, §4.6). |
 | `A/domain/backup/BackupService.kt` | `class BackupService` (`Entry`, `Protection`, `backupNow`, `backupIfDue`, `setFolder`, `copyToFolderNow`, `refreshProtection`, `list`, `export`, `header`, `stageRestore`, `cancelRestore`, `restartIntoRestore`, `restart`, `delete`, `Postponed`) | Backups and restores (see §4.10). |
 | `A/domain/customer/CustomerService.kt` | `class CustomerService` (`page`, `get`, `save`, `delete`, `receivePayment`, `adjust`, `statement`, `debtors`) | Customers & credit (D-039). |
-| `A/domain/inventory/InventoryService.kt` | `class InventoryService` (`receive`, `adjust`, `startCount`, `count`, `finishCount`, `loadDraft`, `saveDraft`) | Stock work (MANAGE_STOCK, audited write-offs). |
+| `A/domain/inventory/InventoryService.kt` | `class InventoryService` (`receive`, `adjust`, `setStock` (Change stock → Count, D-080), `startCount`, `count`, `finishCount`, `loadDraft`, `saveDraft`) | Stock work (MANAGE_STOCK, audited write-offs). |
 | `A/domain/print/ReceiptBuilder.kt` | `object ReceiptBuilder` (`build`, `layout`, `needsImage`) | `ReceiptDoc` from the stored sale. |
 | `A/domain/products/ProductCsvService.kt` | `class ProductCsvService` (`export`, `template`, `preview`, `startImport`, `import`, `state`, `mayImportStock`) | Product CSV export/import (D-042). |
 | `A/domain/promo/PromotionService.kt` | `class PromotionService` (`version`, `load`, `all`, `active`, `forProduct`, `save`, `delete`) | Promotions kept in memory. |
@@ -338,7 +338,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/common/PadDialog.kt` | `Context.sideways()`, `Context.keyHeightPx(dp)`, `AlertDialog.wide()`, `class PadDialog(ctx, title)` (`info`, `pad`, `positive`, `neutral`, `negative`, `create`, `sidewaysBody`) | Number/PIN pad dialog layout, upright vs sideways (D-063). |
 | `A/ui/common/Keypad.kt` | `class Keypad(ctx, maxDigits, onChange)` (`digits`, `replacing`, `view`, `set`, `preset`, `clear`, `onKey`) | On-screen number pad over `:core DigitEntry`; drops scanner bursts. |
 | `A/ui/common/PinPad.kt` | `class PinPad` | PIN entry pad. |
-| `A/ui/common/Form.kt` | `class Form(ctx)` (fields, switches, choices, `section`, `row`, `info`, `button(label, primary, icon, danger)`, `save()/restore()`) | Code-built forms (most back-office forms). |
+| `A/ui/common/Form.kt` | `class Form(ctx)` (fields, switches, choices, `section`, `row`, `info`, `button(label, primary, icon, danger)`, `group { }` (fields shown/hidden together), `save()/restore()`) | Code-built forms (most back-office forms). |
 | `A/ui/common/Rows.kt` | `class RowHolder` (`set(…, icon)`, `thumb(initials, argb)`, `thumbPicture`), `class SectionHolder`, `class RowAdapter<T>` (`submit`, `append`, `items`, `header`), `RecyclerView.onNearEnd` | Standard list rows (`R.layout.item_row`: optional icon or product square), group headings (`item_section.xml`), keyset paging trigger. |
 | `A/ui/common/MenuSheet.kt` | `class MenuSheet(activity)` (`group`, `item(id, icon, badge, danger)`, `show(anchor, onKey, onPick)`) | The selling screen's Menu: tiles in groups under the Menu button (D-074). |
 | `A/ui/common/IconLabel.kt` | `fun TextView.setIconText(icon, label)`, `fun iconLabel(ctx, icon, label)`, private `IconSpan` | An icon before a button's word, tinted and sized with the text (D-074). |
@@ -380,8 +380,8 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/catalog/CategoriesActivity.kt` | `CategoriesActivity` | Categories CRUD. |
 | `A/ui/catalog/TaxRatesActivity.kt` | `TaxRatesActivity` | Tax rates CRUD. |
 | `A/ui/catalog/PaymentMethodsActivity.kt` | `PaymentMethodsActivity` | Payment methods CRUD. |
-| `A/ui/inventory/InventoryActivity.kt` | `InventoryActivity`, `ScreenActivity.adjustProduct` | Inventory hub. |
-| `A/ui/inventory/InventoryUi.kt` | `data class StockProduct`, `object InventoryUi` (`resolve`, `product`, `qty`, `askQty` :110, `askAdjust`, labels) | Shared stock dialogs (PadDialog examples). |
+| `A/ui/inventory/InventoryActivity.kt` | `InventoryActivity` (intro card `layout/stock_intro.xml` through a `ConcatAdapter`), `ScreenActivity.adjustProduct` (Change stock) | The Stock screen ("Inventory" before 1.20.0, D-080). |
+| `A/ui/inventory/InventoryUi.kt` | `data class StockProduct`, `object InventoryUi` (`resolve`, `product`, `qty`, `askQty` :110, `askChange` (Count / Remove / Add, D-080), labels), `sealed class StockChange` | Shared stock dialogs (PadDialog examples). |
 | `A/ui/inventory/ReceiveActivity.kt` | `ReceiveActivity` | Receive a delivery. |
 | `A/ui/inventory/CountActivities.kt` | `CountSessionsActivity`, `CountActivity`, `CountReportActivity` | Stock takes. |
 | `A/ui/inventory/StockActivities.kt` | `StockHistoryActivity`, `LowStockActivity`, `MovementsActivity` | Stock history and lists. |
@@ -591,7 +591,7 @@ Menu = selling screen's Menu (`SellActivity.showMenu` → `ui/common/MenuSheet.k
 | `ui.sell.SellActivity` (sell/SellActivity.kt) | K, `singleTop`, exported LAUNCHER | Selling screen/home | launcher; `goHome()` of every screen | per control: `shown()`/`allowed()`; payment, discounts via approvals | cart, checkout, staff, permissions, shifts, sales, printer, sppScanner, popular, priceCheck, customers, sync, autoSync, backups, updates, dailyReport, pictures; ProductDao, CategoryDao, PaymentMethodDao, SaleDao |
 | `ui.staff.LockActivity` (staff/LockActivity.kt) | K | PIN sign-in, Back leaves app | SellActivity when `state.locked` | — | staff, staffAdmin, settings |
 | `ui.products.ProductListActivity` | B | Products (paged, search, scan) | Menu › Products | actions: MANAGE_PRODUCTS (add, CSV import/export) | productCsv, ProductDao |
-| `ui.products.ProductEditActivity` | B | Add/edit product, barcodes, look, stock | ProductList (+/tap/scan), ProductPick & Receive (new product), SellActivity (unknown barcode → add), Reports | save/delete `requireAccess(MANAGE_PRODUCTS)`; stock fields need MANAGE_STOCK | ProductDao, ProductLookDao, StockDao, CategoryDao, TaxRateDao, AuditDao (direct tx at :526) |
+| `ui.products.ProductEditActivity` | B | Add/edit product, barcodes, look, stock | ProductList (+/tap/scan), ProductPick & Receive (new product), SellActivity (unknown barcode → add), Reports | save/delete `requireAccess(MANAGE_PRODUCTS)`; the Stock section under the price (D-080): opening stock needs MANAGE_STOCK, Change stock `requireAccess(MANAGE_STOCK)` | ProductDao, ProductLookDao, StockDao, CategoryDao, TaxRateDao, AuditDao (direct tx at :526) |
 | `ui.products.ProductImportActivity` | B | CSV import preview/run | ProductList overflow → Import | guard MANAGE_PRODUCTS | productCsv |
 | `ui.products.PromotionsActivity` | B | Promotion list | Menu › Promotions | actions MANAGE_PRODUCTS | promotions |
 | `ui.products.PromotionEditActivity` | B | Add/edit promotion | PromotionsActivity | guard MANAGE_PRODUCTS | promotions, ProductDao (pick via ProductPick) |
@@ -609,18 +609,18 @@ Menu = selling screen's Menu (`SellActivity.showMenu` → `ui/common/MenuSheet.k
 | `ui.settings.BackupActivity` | B | Backups, folder, restore | Settings; "Data problem"/"Not backed up" pills; Setup | guard SETTINGS | backups |
 | `ui.settings.SyncActivity` | B | Google Drive backup (sync) | Settings; sign-in/stale pills; Setup | guard SETTINGS | sync, autoSync, backups, SyncDao |
 | `ui.settings.SetupActivity` | B | First-run welcome | SellActivity when `settings.needsSetup()` | none | settings, Seed (direct) |
-| `ui.inventory.InventoryActivity` | B | Inventory hub | Menu › Inventory (MANAGE_STOCK) | entries: Receive/Adjust/Count `requireAccess(MANAGE_STOCK)` | inventory, StockDao |
-| `ui.inventory.ReceiveActivity` | B | Receive a delivery (draft) | Inventory → Receive stock | guard MANAGE_STOCK | inventory, SupplierDao |
-| `ui.inventory.ProductPickActivity` | B | Pick a product (result `EXTRA_PRODUCT_ID`) | Inventory → Adjust, Receive, PromotionEdit | none (caller checks) | ProductDao |
-| `ui.inventory.SuppliersActivity` | B | Suppliers | Inventory → Suppliers | actions `requireAccess(MANAGE_STOCK)` | SupplierDao (direct) |
-| `ui.inventory.PurchasesActivity` | B | Deliveries | Inventory → Deliveries; Suppliers | none | PurchaseDao, SupplierDao |
+| `ui.inventory.InventoryActivity` | B | The Stock screen | Menu › Stock (MANAGE_STOCK) | entries: Receive/Change stock/Count `requireAccess(MANAGE_STOCK)` | inventory, StockDao |
+| `ui.inventory.ReceiveActivity` | B | Receive a delivery (draft) | Stock → Receive stock | guard MANAGE_STOCK | inventory, SupplierDao |
+| `ui.inventory.ProductPickActivity` | B | Pick a product (result `EXTRA_PRODUCT_ID`) | Stock → Change stock, Receive, PromotionEdit | none (caller checks) | ProductDao |
+| `ui.inventory.SuppliersActivity` | B | Suppliers | Stock → Suppliers | actions `requireAccess(MANAGE_STOCK)` | SupplierDao (direct) |
+| `ui.inventory.PurchasesActivity` | B | Deliveries | Stock → Deliveries; Suppliers | none | PurchaseDao, SupplierDao |
 | `ui.inventory.PurchaseDetailActivity` | B | One delivery | PurchasesActivity | none | PurchaseDao (`get`, `lines`) |
-| `ui.inventory.CountSessionsActivity` | B | Stock counts list | Inventory → Stock count | guard MANAGE_STOCK | inventory, CountSessionDao |
+| `ui.inventory.CountSessionsActivity` | B | Stock counts list | Stock → Stock count | guard MANAGE_STOCK | inventory, CountSessionDao |
 | `ui.inventory.CountActivity` | B | Count one session (scan/search) | CountSessionsActivity | guard MANAGE_STOCK | inventory, CountSessionDao, ProductDao, StockDao, CategoryDao |
 | `ui.inventory.CountReportActivity` | B | A count's variance report | CountSessionsActivity | none | CountSessionDao |
-| `ui.inventory.StockHistoryActivity` | B | One product's stock history | ProductEdit, CountReportActivity rows (CountActivities.kt:340), LowStockActivity rows (StockActivities.kt:149), MovementsActivity rows (:204) | none; top-bar "Adjust" → `adjustProduct` = `requireAccess(MANAGE_STOCK)` (StockActivities.kt:81) | StockHistoryDao, StockDao, inventory |
-| `ui.inventory.LowStockActivity` | B | Low-stock list (tap → stock history) | Inventory → Low stock | none | StockDao |
-| `ui.inventory.MovementsActivity` | B | Stock-change log | Inventory → Stock changes | none | StockDao |
+| `ui.inventory.StockHistoryActivity` | B | One product's stock history | ProductEdit, CountReportActivity rows (CountActivities.kt:340), LowStockActivity rows (StockActivities.kt:149), MovementsActivity rows (:204) | none; top-bar "Change stock" → `adjustProduct` = `requireAccess(MANAGE_STOCK)` (StockActivities.kt:81) | StockHistoryDao, StockDao, inventory |
+| `ui.inventory.LowStockActivity` | B | Low-stock list (tap → stock history) | Stock → Low stock | none | StockDao |
+| `ui.inventory.MovementsActivity` | B | Stock-change log (movements + counts of one product) | Stock → Stock changes | none | StockDao |
 | `ui.staff.StaffActivity` | B | Staff list | Settings → Staff; Setup | guard MANAGE_STAFF | staffAdmin, staff |
 | `ui.staff.StaffEditActivity` | B | Add/edit staff, PIN | StaffActivity | guard MANAGE_STAFF | staffAdmin |
 | `ui.staff.RolesActivity` | B | Roles | StaffActivity menu → Roles | guard MANAGE_STAFF | staffAdmin |
@@ -645,7 +645,7 @@ WorkManager's `InitializationProvider` initializer removed (`tools:node="remove"
 ## 6. Navigation summary
 - **Menu** (`SellActivity.showMenu`, a `MenuSheet` of tiles in groups This bill / Till / Manage shop, D-074): Discount (DISCOUNT, or PRICE_OVERRIDE with a line selected) · Clear bill · Held bills · Sales & refunds / Receipts ·
   Customers (credit enabled) · Open shift / Close shift (`openShift`/`closeShift`) · Shift & cash · Open cash drawer (OPEN_DRAWER) · Lock / switch user (login on) ·
-  Manager PIN (lacks a perm, no help yet) · **Manage shop** (a group of the sheet) Products, Categories, Promotions (MANAGE_PRODUCTS) · Inventory (MANAGE_STOCK) · Reports (REPORTS) ·
+  Manager PIN (lacks a perm, no help yet) · **Manage shop** (a group of the sheet) Products, Categories, Promotions (MANAGE_PRODUCTS) · Stock (MANAGE_STOCK) · Reports (REPORTS) ·
   Settings (SETTINGS|MANAGE_STAFF|VIEW_AUDIT) · Tax rates, Diagnostics (SETTINGS). The permission tests use SellActivity's private
   `allowed(perm) = graph.permissions.shown(perm)` (SellActivity.kt:633): role **or** a manager's help on the till.
 - **Settings hub** rows (`SettingsActivity.onCreate`, in groups, D-074): *This till* App language · Item size · Printer & cash drawer · Barcode scanner & camera ·
@@ -803,7 +803,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `ui/IdleLockTest.kt` | UI | Idle lock after screen off/on. |
 | `ui/LineControlsTest.kt` | UI | Line buttons fit. |
 | `ui/ScreensSmokeTest.kt` | **open every screen** | Explicit lists of Activity classes in `secondaryScreensOpen` (:96), `stockScreensOpenWithTheirData`, `staffShiftAndCustomerScreensOpen`, `reportAndImportScreensOpen`, plus lock screen and selling-screen checks; a new screen must be added to one of these lists. |
-| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact), also the open Menu (`<lang>-menu.png`). |
+| `ui/ScreenshotsTest.kt` | **screenshots** | Main screens in EN + MS to external `files/screens/` (CI artifact), also the open Menu (`<lang>-menu.png`), a product with stock (`<lang>-product-edit.png`) and Change stock → Count (`<lang>-change-stock.png`, D-080). |
 | `ui/SidewaysLayoutTest.kt` | UI | Payment, `PadDialog` (`sidewaysBody()`), PIN dialog fit a 336dp-high sideways phone. |
 | `ui/TopBarLayoutTest.kt` | UI | Top bar pills never cut off. |
 | `ui/common/SharedFilesTest.kt` | files | Shared-file cleanup rules. |
@@ -866,7 +866,7 @@ same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g
 `values/` + `values-ms/`: `strings.xml` (496/495 entries), `strings_{a11y,cashier,display,fraud,hw,look,promo,reports,safety,staff,sync,update}.xml` (same files in both
 languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Button.Bar(.Main) (dialog buttons, set by `Theme.Lekas.Dialog`, D-076),Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
 `colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only; `status_strip`, `cart_side` with the top bar, D-076);
-`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`,
+`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `stock_intro.xml` (the Stock screen's first row), `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`,
 `item_section.xml`, `item_menu_tile.xml` (MenuSheet), `top_action.xml`, selling-screen layouts; `drawable/ic_*.xml` icons (Material icons, Apache 2.0; new ones made
 with explicit path separators and no `evenOdd` fill, which API 21 lacks), `Theme.Lekas.Menu` (the Menu sheet); `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.
 

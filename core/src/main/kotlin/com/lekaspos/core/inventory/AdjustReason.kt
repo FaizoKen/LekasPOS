@@ -39,6 +39,12 @@ enum class AdjustReason(val code: String, val kind: Int, val direction: Int) {
     }
 
     companion object {
+        /**
+         * The reasons offered under Remove ([removing]) or Add on "Change stock" (D-080): a reason that always takes
+         * stock off is never offered under Add, and the other way round.
+         */
+        fun choices(removing: Boolean): List<AdjustReason> = values().filter { it.direction != if (removing) IN else OUT }
+
         /** Reason and note from a stored text; unknown codes (newer app) keep the whole text as note. */
         fun decode(text: String?): Pair<AdjustReason?, String?> {
             if (text.isNullOrEmpty()) return null to null

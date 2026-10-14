@@ -35,7 +35,7 @@
 <li><a href="#promotions">Promotions</a>
 <ol><li><a href="#promotion-new">Making a promotion</a></li><li><a href="#promotion-prices">Several prices (2 for RM3, 3 for RM4)</a></li><li><a href="#promotion-rules">Good to know</a></li></ol></li>
 <li><a href="#stock">Stock</a>
-<ol><li><a href="#how-stock">How the app knows your stock</a></li><li><a href="#receive">Receive stock (a delivery)</a></li><li><a href="#adjust">Adjust stock</a></li><li><a href="#count">Stock count (stock take)</a></li><li><a href="#low-stock">Low stock</a></li><li><a href="#suppliers">Suppliers and deliveries</a></li><li><a href="#stock-history">Stock history and stock changes</a></li></ol></li>
+<ol><li><a href="#how-stock">Products and stock: how the app knows how many you have</a></li><li><a href="#receive">Receive stock (a delivery)</a></li><li><a href="#adjust">Change stock (count one product, or remove / add)</a></li><li><a href="#count">Stock count (stock take)</a></li><li><a href="#low-stock">Low stock</a></li><li><a href="#suppliers">Suppliers and deliveries</a></li><li><a href="#stock-history">Stock history and stock changes</a></li></ol></li>
 <li><a href="#staff">Staff, PINs and roles</a>
 <ol><li><a href="#pin-login">Turning on PIN login</a></li><li><a href="#sign-in">Signing in and locking</a></li><li><a href="#forgot-pin">Forgotten PIN</a></li><li><a href="#roles">Roles and permissions</a></li><li><a href="#manager-pin">When a cashier needs a manager</a></li></ol></li>
 <li><a href="#shifts">Shifts and cash</a>
@@ -120,7 +120,8 @@ text, logo) — <a href="#settings-store">details</a>.</li>
 <b>Printer &amp; cash drawer</b> → <b>Choose a paired printer</b> → <b>Print a test page</b>
 (<a href="#printer">details</a>).</li>
 <li><b>Products</b>: scan each product at the till and add it, or enter them in <b>Products</b>, or import a
-spreadsheet (<a href="#products">details</a>). Add categories, colours and pictures to make the item list easy
+spreadsheet (<a href="#products">details</a>). Type <b>How many do you have now?</b> for each (shelf and storeroom
+together) if you want the app to count stock (<a href="#how-stock">details</a>). Add categories, colours and pictures to make the item list easy
 to use.</li>
 <li><b>Payment methods</b> you accept, such as DuitNow or Touch ’n Go (<a href="#payment-methods">details</a>).</li>
 <li><b>Staff</b>: give the owner a PIN first and <b>write down the recovery code</b>, then add your cashiers
@@ -320,7 +321,7 @@ recorded in the Activity log.</p>
 <tr><td><b>Manager PIN</b></td><td>A manager helps with this bill.</td></tr>
 <tr><td><b>Lock / switch user</b></td><td>Lock the till (when PINs are on). With a shift open, it first asks whether to close it.</td></tr>
 <tr><th colspan="2">Manage shop</th></tr>
-<tr><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Inventory</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b></td><td>The back office, for whoever may use it.</td></tr>
+<tr><td><b>Products</b>, <b>Categories</b>, <b>Promotions</b>, <b>Stock</b>, <b>Reports</b>, <b>Settings</b>, <b>Tax rates</b>, <b>Diagnostics</b></td><td>The back office, for whoever may use it. <b>Products</b> is what you sell and its price; <b>Stock</b> is how many you have (called <b>Inventory</b> before 1.20.0).</td></tr>
 </table></div>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
@@ -510,10 +511,14 @@ e-wallet on your terminal or bank app).</li>
 <h2 id="products">7. Products</h2>
 <p>Everything the till sells is a <b>product</b>. Open the list with <b>Menu → Manage shop → Products</b>
 (needs the permission <i>Edit products and categories</i>).</p>
+<p>A product's form also shows its <b>stock</b> — how many you have — with a <b>Change stock</b> button right under the
+price. The <b>Stock</b> screen is for the rest of the stock work: deliveries, counting many products, low stock and
+suppliers. See <a href="#how-stock">Products and stock</a>.</p>
 
 <div class="shots">
-<figure><img src="img/en-products.png" alt="The Products list" width="240" loading="lazy"><figcaption>Products: each with its picture or colour and its category. Search by name, SKU or barcode, or scan.</figcaption></figure>
-<figure><img src="img/en-product-new.png" alt="The New product form" width="240" loading="lazy"><figcaption>A new product: name, price, how it is sold, picture and colour.</figcaption></figure>
+<figure><img src="img/en-products.png" alt="The Products list" width="240" loading="lazy"><figcaption>Products: each with its picture or colour, its category and how many are in stock. Search by name, SKU or barcode, or scan.</figcaption></figure>
+<figure><img src="img/en-product-new.png" alt="The New product form" width="240" loading="lazy"><figcaption>A new product: name, price, how it is sold, and how many you have now.</figcaption></figure>
+<figure><img src="img/en-product-edit.png" alt="A product's form with its stock and the Change stock button" width="240" loading="lazy"><figcaption>An existing product: <b>In stock now</b>, <b>Change stock</b> and <b>Stock history</b> under the price.</figcaption></figure>
 </div>
 
 <h3 id="product-list">The product list</h3>
@@ -546,6 +551,13 @@ per kg), or <b>Price entered at the till</b> (the cashier types the price each t
 <i>kuih</i> or loose items of different prices). See <a href="#sold-by">How products are sold</a>.</dd>
 <dt>Unit (pcs, kg, pack…)</dt><dd>Shown after quantities and prices, for example <i>RM8.00/kg</i>. Choosing
 <b>Weight</b> changes <i>pcs</i> to <i>kg</i> by itself.</dd>
+<dt>Stock</dt><dd>How many you have: on the shelves and in the storeroom together.
+<b>Track stock</b> (on by default; off for things you do not count, such as services or plastic bags — the form then
+says <i>“Stock is not counted for this product”</i> and hides the rest).
+A new product asks <b>How many do you have now?</b> (staff who may manage stock; leave it empty for none).
+An existing product shows <b>In stock now</b> with <b>Change stock</b> (type how many you counted, or remove / add —
+see <a href="#adjust">Change stock</a>) and <b>Stock history</b>.
+<b>Low-stock alert at</b> warns when stock falls to this level (empty or 0 = no alert).</dd>
 <dt>On the selling screen</dt><dd>A <b>picture</b> (<b>Take photo</b>, <b>Choose picture</b>, <b>Remove
 picture</b>) and a <b>Colour</b> for the product's tile. See <a href="#pictures">Pictures and colours</a>.</dd>
 <dt>Barcodes</dt><dd>The numbers under the black stripes on the item or its carton, printed by the maker.
@@ -562,17 +574,13 @@ several barcodes. You can also simply scan with a barcode scanner while the form
 updated by itself when you receive deliveries),
 <b>Your own code (SKU)</b> (optional and <b>not a barcode</b>: a short code you make up yourself, such as
 <i>A12</i>, for example for an item without a barcode. Typing it in the search box finds the product. Most shops leave
-it empty),
-<b>Track stock</b> (on by default; off for things you do not count, such as services or plastic bags),
-<b>Low-stock alert at</b> (warns when stock falls to this level; empty or 0 = no alert),
-<b>Opening stock</b> (new products only: how many are on the shelf now).</dd>
+it empty).</dd>
 <dt>Show in search and catalogue</dt><dd>Turn off to <b>hide</b> a product from the tiles, the search and the
 price check's name search. A hidden product's barcode <b>still scans and sells</b>; it stays in the product
 list with the tag <b>HIDDEN</b>. Use this for products sold only by scanning, or kept for later. To stop a product
 being sold at all, delete it: its past sales stay in the reports.</dd>
 </dl>
-<p>For an existing product the form also shows <b>In stock now</b>, <b>Stock history</b> and <b>Adjust
-stock</b>, and a <b>Delete</b> button. Deleting asks first (<i>“Past sales keep their lines.”</i>); the
+<p>An existing product also has a <b>Delete</b> button. Deleting asks first (<i>“Past sales keep their lines.”</i>); the
 barcode then no longer scans. With Google Drive backup on, the product disappears on every till.</p>
 <p>When a barcode you add is already used by another product, the app asks <i>“Barcode already used…
 Save anyway?”</i>. If you save anyway, a scan picks the product whose barcode was added last.</p>
@@ -785,12 +793,27 @@ price, and tills older than 1.15.0 use only the first price of a promotion with 
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="stock">9. Stock</h2>
-<p><b>Menu → Manage shop → Inventory</b>, for staff with the permission <i>Receive, adjust and count stock</i>
-(owner and manager by default).</p>
-<figure class="wide"><img src="img/en-inventory.png" alt="The Inventory screen" width="240" loading="lazy"><figcaption>Inventory: everything about stock in one place.</figcaption></figure>
+<p><b>Menu → Manage shop → Stock</b> (called <b>Inventory</b> before 1.20.0), for staff with the permission
+<i>Receive, change and count stock</i> (owner and manager by default).</p>
+<div class="shots">
+<figure><img src="img/en-inventory.png" alt="The Stock screen" width="240" loading="lazy"><figcaption>Stock: what it is, then everything about it in one place.</figcaption></figure>
+<figure><img src="img/en-change-stock.png" alt="Change stock: Count, with 21 typed while the app has 24" width="240" loading="lazy"><figcaption><b>Change stock</b> → <b>Count</b>: 21 counted, the app had 24 — <i>“3 fewer than the app has”</i>.</figcaption></figure>
+</div>
 
-<h3 id="how-stock">How the app knows your stock</h3>
-<p>Stock of a product = the <b>last count</b> + deliveries and adjustments since then − sales since then +
+<h3 id="how-stock">Products and stock: how the app knows how many you have</h3>
+<ul>
+<li>A <b>product</b> is what you sell and its price (<b>Products</b>). Its <b>stock</b> is how many of it you have
+(<b>Stock</b>, and on the product's form under the price). One product, one stock figure.</li>
+<li><b>Stock means everything in the shop</b>: on the shelves and in the storeroom together. The app does not keep a
+separate number for the shelf and the storeroom, so moving goods from the storeroom to the shelf changes nothing in
+the app. When you count, count both places and type the total.</li>
+<li><b>You do not type the stock after every sale.</b> The app keeps it by itself: every sale takes it off, a
+refund put back on the shelf adds it, and a <a href="#receive">delivery</a> adds what came in.</li>
+<li>When the app's number is not what you have (something broke, went missing, or was never entered), count it and
+type the real number: <b>Change stock</b> → <b>Count</b> on the product, or a <a href="#count">stock count</a> for
+many products. From then on the app counts from your number.</li>
+</ul>
+<p>Behind it: stock of a product = the <b>last count</b> + deliveries and changes since then − sales since then +
 refunds put back on the shelf. Voided sales do not count. Stock can go below zero (selling is never blocked); a
 count puts it right.</p>
 <p>Sales never change the stock of a product with <b>Track stock</b> off, and it gets no low-stock alert. Do not
@@ -798,7 +821,7 @@ receive or count such products: their stock figure would only grow.</p>
 
 <h3 id="receive">Receive stock (a delivery)</h3>
 <ol>
-<li><b>Inventory → Receive stock</b>.</li>
+<li><b>Stock → Receive stock</b>.</li>
 <li>Tap the supplier button to choose the <b>Supplier</b> (or <b>New supplier</b>), and type the
 <b>Invoice / DO no.</b> if you like (you can scan the DO's barcode into it).</li>
 <li>Scan each product: <b>each scan adds one piece</b> (a <b>carton barcode</b> adds all its pieces). Or tap
@@ -814,25 +837,32 @@ average). If there was no stock, no cost yet, or the product does not track stoc
 delivery's cost.</p></div>
 <div class="tip"><p>A half-entered delivery is kept even if the phone rings, the app closes or the phone
 restarts: open <b>Receive stock</b> again to continue. <b>×</b> (Discard) throws it away. A saved delivery
-cannot be edited or deleted; use <a href="#adjust">Adjust stock</a> for mistakes.</p></div>
+cannot be edited or deleted; use <a href="#adjust">Change stock</a> for mistakes.</p></div>
 
-<h3 id="adjust">Adjust stock</h3>
-<p>For stock that leaves or arrives without a sale or a delivery: <b>Inventory → Adjust stock</b> → pick the
-product (or <b>Adjust stock</b> in the product form).</p>
+<h3 id="adjust">Change stock (count one product, or remove / add)</h3>
+<p>To set the stock of one product by hand: open the product (<b>Products</b> → tap it) and tap <b>Change stock</b>
+under <b>In stock now</b>. Or <b>Stock → Change stock</b> → pick or scan the product. (Called <b>Adjust stock</b>
+before 1.20.0.) The window shows <i>“The app has: …”</i> and three choices:</p>
 <ul>
-<li>Choose a reason: <b>Damaged</b>, <b>Expired</b>, <b>Lost</b>, <b>Theft</b>, <b>Own use</b>,
-<b>Returned to supplier</b> (these always remove), <b>Found</b> (always adds), or <b>Correction</b> /
-<b>Other</b> (choose <b>Remove</b> or <b>Add</b>).</li>
-<li>Type the quantity, an optional note, and <b>Save</b>.</li>
-<li>Every removal is written to the <a href="#activity-log">Activity log</a> as <i>Stock written off</i> with its
-value at cost, so the owner sees stock taken off by hand.</li>
+<li><b>Count</b> (the first): <i>“How many do you have now? Count the shelf and the storeroom together.”</i> The app's
+number is already filled in; type the number you counted (the first key replaces it) and tap <b>Save</b>. As you
+type, it says how far that is from the app — <i>“3 fewer than the app has”</i>, <i>“2 more…”</i> or <i>“The same…”</i>.
+Your number becomes the stock; sales after it keep counting from there. Typing 0 means none left.</li>
+<li><b>Remove</b>: how many to take off, and why — <b>Damaged</b>, <b>Expired</b>, <b>Lost</b>, <b>Theft</b>,
+<b>Own use</b>, <b>Returned to supplier</b>, <b>Correction</b> or <b>Other</b> — with an optional note.</li>
+<li><b>Add</b>: how many to add, and why — <b>Found</b>, <b>Correction</b> or <b>Other</b> — with an optional note.</li>
 </ul>
+<div class="tip"><p>Use <b>Count</b> when you know how many there are (the usual case for a new manager: the shelf says 21,
+the app says 24). Use <b>Remove</b> when you know what happened to some (3 broke) — the reason stays on record.</p></div>
+<p>Stock taken off by hand — a <b>Remove</b>, or a <b>Count</b> lower than the app had — is written to the
+<a href="#activity-log">Activity log</a> as <i>Stock written off</i> with its value at cost, so the owner sees it.
+Every change shows in <b>Stock changes</b> and in the product's <b>Stock history</b>.</p>
 
 <h3 id="count">Stock count (stock take)</h3>
 <ol>
-<li><b>Inventory → Stock count → +</b>. Give it a name (today's date is filled in) and choose <b>All
+<li><b>Stock → Stock count → +</b>. Give it a name (today's date is filled in) and choose <b>All
 products</b> or one category. Tap <b>Start</b>.</li>
-<li>Scan or tap a product, type the <b>total</b> on the shelf, and tap OK. OK with nothing typed records 0.</li>
+<li>Scan or tap a product, type the <b>total</b> you have (shelf and storeroom together), and tap OK. OK with nothing typed records 0.</li>
 <li>Counting a product again <b>replaces</b> its count — add up a product kept in two places first. Products you do
 not count keep their stock.</li>
 <li>Each count applies <b>at once</b>, so you can keep selling while counting. Several people can count at
@@ -844,22 +874,22 @@ stock was already set.</li>
 </ol>
 
 <h3 id="low-stock">Low stock</h3>
-<p><b>Inventory → Low stock</b> lists products at or below their <b>Low-stock alert</b> level (set it in the
+<p><b>Stock → Low stock</b> lists products at or below their <b>Low-stock alert</b> level (set it in the
 product form). After a sale, staff who may manage stock also see <i>“Running low: …”</i> on the sale's
 result.</p>
 
 <h3 id="suppliers">Suppliers and deliveries</h3>
 <ul>
-<li><b>Inventory → Suppliers</b>: name, contact person, phone, e-mail, address and a note. Tap to edit, hold
+<li><b>Stock → Suppliers</b>: name, contact person, phone, e-mail, address and a note. Tap to edit, hold
 to delete (past deliveries keep their records). <b>Deliveries</b> in a supplier shows what came from them.</li>
-<li><b>Inventory → Deliveries</b>: everything received, newest first; tap one for its lines and total.</li>
+<li><b>Stock → Deliveries</b>: everything received, newest first; tap one for its lines and total.</li>
 </ul>
 
 <h3 id="stock-history">Stock history and stock changes</h3>
 <ul>
 <li><b>Stock history</b> (from the product form, or tap a product in Low stock): every sale, refund,
-delivery, adjustment and count of one product, with the stock after each. Tap a sale to open its receipt.</li>
-<li><b>Inventory → Stock changes</b>: every delivery, adjustment, write-off and opening stock of all products.</li>
+delivery, change and count of one product, with the stock after each. Tap a sale to open its receipt.</li>
+<li><b>Stock → Stock changes</b>: every delivery, change by hand, write-off, opening stock and count of one product (<b>Change stock → Count</b>, a CSV import) of all products — a count shows <i>Counted: …</i> and how much it changed the stock. The counts of a <a href="#count">stock count</a> are in its <b>Count report</b>.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
@@ -922,7 +952,7 @@ your own role with <b>+</b> (for example “Senior cashier”).</p>
 <tr><td>Sell on credit</td><td>Pay with customer credit within the limit</td><td>✓</td><td>✓</td><td>✓</td></tr>
 <tr><td>Go over credit limits, adjust balances</td><td>Over-limit sales, credit limits, balance adjustments</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Edit products and categories</td><td>Products, categories, promotions, CSV, price check price changes</td><td>✓</td><td>✓</td><td></td></tr>
-<tr><td>Receive, adjust and count stock</td><td>Inventory</td><td>✓</td><td>✓</td><td></td></tr>
+<tr><td>Receive, change and count stock</td><td>Stock, and <b>Change stock</b> on a product</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>See sales reports, profit and stock value</td><td>Reports and exports</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>See the activity log</td><td>Activity log, Staff check</td><td>✓</td><td>✓</td><td></td></tr>
 <tr><td>Change settings</td><td>All settings, tax rates, payment methods, backup, updates, diagnostics</td><td>✓</td><td></td><td></td></tr>
@@ -950,7 +980,7 @@ and handle customers and credit, until the bill is paid, held or cleared (or 5 m
 <b>Manager: name ✕</b> — tap it to end the help. The manager's other jobs appear too (Open cash drawer, the
 <b>Void</b> button on a receipt, Manage shop), but each asks for the manager's PIN again. Otherwise cashiers see
 <b>Void</b> only on the sale they have just made.</li>
-<li><b>A back-office screen</b> (Products, Inventory, Reports…): the manager's PIN is asked once and holds until
+<li><b>A back-office screen</b> (Products, Stock, Reports…): the manager's PIN is asked once and holds until
 that screen is closed.</li>
 </ul>
 <p class="top"><a href="#contents">↑ Contents</a></p>
@@ -1449,7 +1479,7 @@ on the selling screen.</li>
 <li>While a keyboard-mode scanner is connected, Android may hide the on-screen keyboard. The app then shows <b>No
 keyboard?</b> → <b>Keyboard settings</b>: turn on <i>Use on-screen keyboard</i> (or <i>Show virtual keyboard</i>).</li>
 <li>Scanning works on the selling screen, the price check, the product list and the product form (adds the
-barcode), Receive stock, stock counts, and whenever you pick a product (Adjust stock, a promotion's products).</li>
+barcode), Receive stock, stock counts, and whenever you pick a product (Change stock, a promotion's products).</li>
 <li>Connecting or disconnecting a scanner never resets the screen or the bill.</li>
 </ul>
 
@@ -1594,6 +1624,14 @@ open its screen: the status says what is wrong (no internet, sign in, Drive full
 
 <h3 id="ts-other">Other questions</h3>
 <dl>
+<dt>Products or Stock — which one do I open?</dt>
+<dd><b>Products</b> to add a product or change its name, price, barcode or picture. <b>Stock</b> for how many you have:
+deliveries, counting, low stock. The stock of one product is also on its form, under the price, with <b>Change
+stock</b>. See <a href="#how-stock">Products and stock</a>.</dd>
+<dt>The app's stock is not what is on the shelf.</dt>
+<dd>Count that product on the shelf <b>and</b> in the storeroom, open it and tap <b>Change stock</b> → <b>Count</b>, type
+the total and <b>Save</b>. The app's stock covers both places together. If it keeps going wrong, check that deliveries are
+received in the app (<b>Stock → Receive stock</b>) and that every sale goes through the till.</dd>
 <dt>Is my data sent to the developer?</dt>
 <dd>No. Shop data stays on the phone and, if you turn on Google Drive backup or the daily sales report, in your own
 Google Drive. Error reports (only if you allow them) hold technical details only. See the
@@ -1647,7 +1685,7 @@ phone</a>. Without it, save a backup file on the old phone after the last sale a
 <tr><td>Recovery code</td><td>Kod pemulihan</td><td>The owner's way back in after a forgotten PIN.</td></tr>
 <tr><td>Activity log</td><td>Log aktiviti</td><td>The record of sensitive actions.</td></tr>
 <tr><td>Receive stock / delivery</td><td>Terima stok / penghantaran</td><td>Goods arriving from a supplier.</td></tr>
-<tr><td>Adjust stock / written off</td><td>Laras stok / dihapus kira</td><td>Stock changed by hand (damaged, expired…).</td></tr>
+<tr><td>Change stock / written off</td><td>Ubah stok / dihapus kira</td><td>Stock set or changed by hand (counted, damaged, expired…).</td></tr>
 <tr><td>Stock count</td><td>Kiraan stok</td><td>Counting what is on the shelves.</td></tr>
 <tr><td>Cost price</td><td>Harga kos</td><td>What one piece or kg costs you.</td></tr>
 <tr><td>Gross profit</td><td>Untung kasar</td><td>Net sales minus the cost of the goods sold.</td></tr>

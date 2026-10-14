@@ -185,7 +185,10 @@ class LowStockActivity : ScreenActivity() {
     }
 }
 
-/** Every stock change that is not a sale (deliveries, adjustments, opening stock), newest first. */
+/**
+ * Every stock change that is not a sale, newest first: deliveries, changes by hand, opening stock, and the counts made
+ * outside a count session ("Change stock → Count", a CSV import; D-080).
+ */
 class MovementsActivity : ScreenActivity() {
 
     private lateinit var empty: TextView
@@ -197,12 +200,18 @@ class MovementsActivity : ScreenActivity() {
         bind = { h, m ->
             h.set(
                 title = m.productName ?: "?",
-                subtitle = listOf(DateText.dateTime(m.at, tz), InventoryUi.movementText(this, m.kind, m.reason)).joinToString(" · "),
+                subtitle = listOf(DateText.dateTime(m.at, tz), what(m)).joinToString(" · "),
                 value = InventoryUi.signedQty(m.qty, m.unit),
             )
         },
         onClick = { startActivity(StockHistoryActivity.intent(this, it.productId)) },
     )
+
+    /** "Received", "Written off · Damaged: box crushed", or for a count "Counted: 10 pcs" (and its note). */
+    private fun what(m: MovementRow): String {
+        val counted = m.counted ?: return InventoryUi.movementText(this, m.kind, m.reason)
+        return listOfNotNull(getString(R.string.move_counted, InventoryUi.qty(counted, m.unit)), m.reason).joinToString(": ")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

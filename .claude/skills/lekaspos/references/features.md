@@ -73,7 +73,7 @@ Bit values and the defaults: `Codes.kt` (`DEFAULT_MANAGER`, `DEFAULT_CASHIER`); 
    used once; the action's audit entry carries `approved_by`. Used for discounts, price change, drawer, cash moves,
    credit sale/over-limit, copies, void, refund, customers, repayments, credit limit, App updates…
 2. **Screen-kept** `requireAccess(perm)` / `guard(perm)`: the screen keeps the approval until it closes (survives
-   rotation); recorded as `APPROVAL`. Products, Inventory screens, Reports, Activity log, Staff, Settings screens.
+   rotation); recorded as `APPROVAL`. Products, Stock screens, Reports, Activity log, Staff, Settings screens.
    `guard` asks on open and closes the screen on cancel. Not loaded yet ≠ owner: `perms` is 0 until loaded (D-054).
 3. **Manager's help at the till** (Menu → Manager PIN, `PermissionGate.startHelp`): lends `Perm.TILL_HELP`
    (DISCOUNT, PRICE_OVERRIDE, CUSTOMERS, CREDIT_SALE that the manager holds) plus the permission it was started
@@ -184,7 +184,7 @@ PRICE_OVERRIDE; D-079) · Held
 bills (any held; the count on the tile) · Clear bill (bill not empty; red). **Till**: Sales & refunds (REFUND or VOID
 shown) else Receipts · Customers (credit on) · Open shift / Close shift (always) · Shift & cash (CASH_MOVE or
 SHIFT_REPORT) · Open cash drawer (OPEN_DRAWER) · Manager PIN (someone signed in lacks a permission and no help active)
-· Lock / switch user (PIN login on; with a shift open it asks "Close the shift?" first — D-077). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Inventory
+· Lock / switch user (PIN login on; with a shift open it asks "Close the shift?" first — D-077). **Manage shop**: Products, Categories, Promotions (MANAGE_PRODUCTS), Stock (`menu_inventory`, D-080)
 (MANAGE_STOCK), Reports (REPORTS), Settings (SETTINGS or MANAGE_STAFF or VIEW_AUDIT), Tax rates, Diagnostics
 (SETTINGS). Price check is a screen button, not in the Menu.
 - Discount (`DiscountDialog`): Bill discount, or Item discount — "Which item?" lists the bill's lines (name · amount) with
@@ -283,12 +283,15 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
   initials on the product's (or its category's) colour, "category · Stock: n", the price (`/unit` for weighed) and
   HIDDEN for hidden products (D-074). Search by name, SKU or barcode; an unknown barcode offers "Add product".
 - Product form (`ui/products/ProductEditActivity.kt`): Name*, Selling price* (empty allowed only for open price →
-  0), Sold by (piece default / weight / open price; unit pcs↔kg follows), Unit, look (picture 240×240 JPEG q80 centre
+  0), Sold by (piece default / weight / open price; unit pcs↔kg follows), Unit, **Stock** section (D-080: Track stock (on);
+  tracked → existing: **In stock now**, **Change stock**, **Stock history**; new: "How many do you have now?" (MANAGE_STOCK,
+  recorded as OPENING only when tracked); Low-stock alert (0 = none); untracked → `product_untracked` and the rest hidden
+  — `Form.group`), look (picture 240×240 JPEG q80 centre
   crop, ≤ 40 MB source; 12 colours or none — `product_look`, `product_image`, D-066), barcodes (several, canonical
   `Gtin.canonical`; a caption says what a barcode is), pack barcodes (2–100,000 pieces, optional price), Scale PLU
   (one, leading zeros dropped), category, tax, cost, "Your own code (SKU)" (optional free text; its caption says it is
-  not a barcode — the two read as the same thing before, 2026-10-13), Track stock (on), Low-stock alert (0 = none), Opening stock (new products,
-  MANAGE_STOCK), Show in search and catalogue (on). Save and Delete need MANAGE_PRODUCTS. "Save and add another" only
+  not a barcode — the two read as the same thing before, 2026-10-13), Show in search and catalogue (on). Save and Delete need
+  MANAGE_PRODUCTS. "Save and add another" only
   in series mode (from Products +), keeps category and tax.
 - Edits write only the fields changed on the screen (another till's concurrent change survives). Duplicate barcode
   → confirm; the barcode created last wins on scans. Audited `PRODUCT_PRICE_CHANGE` for price, sold-by, tax, cost,
@@ -328,8 +331,12 @@ updated). Audited `PROMOTION_CHANGE`.
   switch (recorded as a stock count). Headers matched loosely, English or Malay aliases (`ProductCsv.kt`). One
   `PRODUCT_IMPORT` audit entry. Cannot set pack barcodes, scale PLU, pictures, colours.
 
-## 9. Inventory (`ui/inventory/*`, `domain/inventory/InventoryService.kt`)
+## 9. Stock — "Inventory" before 1.20.0 (`ui/inventory/*`, `domain/inventory/InventoryService.kt`, D-080)
 
+- Menu → Manage shop → **Stock** (`menu_inventory`, MANAGE_STOCK). The screen starts with a card (`stock_intro`,
+  `inv_intro`): products are what you sell, stock is how many you have — shelf and storeroom together, one figure (no
+  locations) — every sale takes it off, change it when it is not what you have. Then Receive stock, Change stock, Stock
+  count, Low stock (count badge), Suppliers, Deliveries, Stock changes.
 - **Stock** = latest count + movements after it − sales after it + restocked refunds (voids excluded), ordered by
   HLC; never blocks a sale (negative allowed). Untracked products: no stock figure, no alert. D-008.
 - **Receive**: supplier, Invoice/DO ref, lines (a plain scan adds 1 piece without asking; a carton barcode adds its
@@ -338,15 +345,22 @@ updated). Audited `PROMOTION_CHANGE`.
   transaction writes purchase + lines + RECEIVE movements + **moving-average cost** (`core/inventory/CostMath.kt`:
   (onHand × oldCost + amount) ÷ (onHand + qty); on hand ≤ 0, old cost 0 or untracked → amount ÷ qty). Not editable
   afterwards. Cost change not audited. D-033, D-036.
-- **Adjust**: reasons Damaged, Expired (→ "Written off"), Lost, Theft, Own use (→ Adjusted), Returned to supplier
-  (always out), Found (always in), Correction, Other (either way); note optional. Every removal audited
-  `STOCK_WRITE_OFF` with value at cost (D-067).
+- **Change stock** (was "Adjust stock"; `adjustProduct` → `InventoryUi.askChange`, from the product form, Stock →
+  Change stock (picker) and Stock history's top bar; MANAGE_STOCK): "The app has: n", three toggles —
+  - **Count** (default): "How many do you have now? Count the shelf and the storeroom together." Keypad preset to the
+    app's stock (first key replaces; empty when ≤ 0), 0 allowed, "n fewer / n more than the app has / the same" live.
+    Saved by `InventoryService.setStock` as a `stock_count` with no session (a baseline, like a CSV import's stock).
+    Lower than the app's level → audited `STOCK_WRITE_OFF`, value at cost, detail "name: -2 (counted 7)".
+  - **Remove** / **Add**: quantity > 0, reason (`AdjustReason.choices`: Remove = Damaged, Expired (→ "Written off"), Lost,
+    Theft, Own use (→ "Changed by hand"), Returned to supplier, Correction, Other; Add = Found, Correction, Other), note
+    optional. Every removal audited `STOCK_WRITE_OFF` with value at cost (D-067).
 - **Counts** (D-035): sessions (all or one category, several open, sync); each entry applies at once (OK on an empty
   pad = 0); scans outside the scope still count; report = expected vs counted, found/missing/net at count-time cost;
   "Finish count" only closes it. Not audited.
 - Low stock: shown, tracked, level > 0, stock ≤ level. Suppliers: name*, contact, phone, e-mail, address, note
   (long-press delete). Deliveries: read-only. Stock history per product (all kinds, level after each) and Stock
-  changes (non-sale movements).
+  changes (non-sale movements and session-less counts — "Counted: n" with the difference — merged by (hlc, id),
+  `StockDao.movementPage`).
 
 ## 10. Shifts and cash (`domain/shift/ShiftService.kt`, `core/shift/*`, D-038, D-067, D-068)
 
@@ -514,6 +528,8 @@ notifications. Google scopes: `drive.appdata` (sync), `drive.file` (daily report
 
 ## 20. Known gaps and inconsistencies (found while writing the user guide, 2026-10-08)
 
+Fixed in 1.20.0 (D-080): the product form recorded opening stock even with Track stock off (the CSV import did not).
+
 Fixed in 1.16.0 (D-074): `error_needs_shift` pointed to "Shift & cash" (now Menu → Open shift),
 `error_credit_off` to "Settings → Store", the last sale's button said "Print a copy" for the original receipt, `backup_help`
 promised a backup before every upgrade.
@@ -536,4 +552,3 @@ Small things a future change could fix (none loses data):
   "Batalkan" means both void and the cleared-bill audit label ("Bil dibatalkan"); payment methods are "Cara bayaran"
   in Reports but "Kaedah bayaran" in Settings.
 - `shift_float_hint` is unused. Part payments are lost if Android kills the process mid-payment (the bill survives).
-- The product form records opening stock even with Track stock off (the CSV import does not).

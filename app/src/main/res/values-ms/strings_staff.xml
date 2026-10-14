@@ -82,7 +82,7 @@
     <string name="perm_credit_sale">Jual secara kredit</string>
     <string name="perm_credit_limit">Melebihi had kredit, laraskan baki</string>
     <string name="perm_products">Sunting produk dan kategori</string>
-    <string name="perm_stock">Terima, laras dan kira stok</string>
+    <string name="perm_stock">Terima, ubah dan kira stok</string>
     <string name="perm_audit">Lihat log aktiviti</string>
     <string name="perm_settings">Ubah tetapan</string>
     <string name="perm_staff">Urus kakitangan dan peranan</string>

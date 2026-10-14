@@ -84,7 +84,7 @@
     <string name="perm_credit_sale">Sell on credit</string>
     <string name="perm_credit_limit">Go over credit limits, adjust balances</string>
     <string name="perm_products">Edit products and categories</string>
-    <string name="perm_stock">Receive, adjust and count stock</string>
+    <string name="perm_stock">Receive, change and count stock</string>
     <string name="perm_audit">See the activity log</string>
     <string name="perm_settings">Change settings</string>
     <string name="perm_staff">Manage staff and roles</string>

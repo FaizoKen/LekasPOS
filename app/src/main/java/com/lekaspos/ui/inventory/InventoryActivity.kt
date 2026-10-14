@@ -2,6 +2,9 @@ package com.lekaspos.ui.inventory
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lekaspos.R
@@ -12,7 +15,11 @@ import com.lekaspos.ui.common.ScreenActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** Inventory hub: receive, adjust, count, low stock, suppliers, deliveries, stock changes. */
+/**
+ * The Stock screen ("Inventory" before 1.20.0): receive, change, count, low stock, suppliers, deliveries, stock changes.
+ * It starts with what stock is, next to Products (D-080): a new manager asked why stock is not just a number on the
+ * product, and whether the shelf and the storeroom are counted together.
+ */
 class InventoryActivity : ScreenActivity() {
 
     private class Entry(val title: Int, val subtitle: Int, val icon: Int, val open: () -> Unit)
@@ -47,7 +54,7 @@ class InventoryActivity : ScreenActivity() {
         adapter.submit(entries)
         val list = v.findViewById<RecyclerView>(R.id.list)
         list.layoutManager = LinearLayoutManager(this)
-        list.adapter = adapter
+        list.adapter = ConcatAdapter(IntroAdapter(), adapter)
     }
 
     override fun onStarted(scope: CoroutineScope) {
@@ -68,21 +75,37 @@ class InventoryActivity : ScreenActivity() {
     companion object {
         private const val REQ_ADJUST = 41
 
-        /** Opens the adjustment dialog for [productId] and saves it (shared by several screens). */
+        /** Opens "Change stock" for [productId] and saves it (shared by several screens). */
         fun adjust(a: ScreenActivity, productId: Long, done: () -> Unit = {}) = a.adjustProduct(productId, done)
     }
 }
 
-/** Adjust-stock flow usable from any screen. */
+/** "Change stock" of one product, usable from any screen (D-080): count it, or remove / add for a reason. */
 fun ScreenActivity.adjustProduct(productId: Long, done: () -> Unit = {}) = requireAccess(Perm.MANAGE_STOCK) {
     launchUi {
         val p = InventoryUi.product(graph, productId) ?: return@launchUi
-        InventoryUi.askAdjust(this@adjustProduct, p) { reason, qty, removing, note ->
+        InventoryUi.askChange(this@adjustProduct, p) { change ->
             launchUi {
-                graph.inventory.adjust(p.id, reason, qty, removing, note)
-                toast(getString(R.string.inv_adjusted, p.name))
+                when (change) {
+                    is StockChange.Count -> {
+                        graph.inventory.setStock(p.id, change.qty)
+                        toast(getString(R.string.inv_stock_set, p.name, InventoryUi.qty(change.qty, p.unit)))
+                    }
+                    is StockChange.Move -> {
+                        graph.inventory.adjust(p.id, change.reason, change.qty, change.removing, change.note)
+                        toast(getString(R.string.inv_adjusted, p.name))
+                    }
+                }
                 done()
             }
         }
     }
+}
+
+/** The first row of the Stock screen: what stock is (`stock_intro`). */
+private class IntroAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    override fun getItemCount() = 1
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+        object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.stock_intro, parent, false)) {}
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = Unit
 }

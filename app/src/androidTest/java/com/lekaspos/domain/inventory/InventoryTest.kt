@@ -4,9 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.inventory.AdjustReason
 import com.lekaspos.core.inventory.ReceiveDraft
+import com.lekaspos.core.model.AuditAction
 import com.lekaspos.core.model.CountSessionStatus
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.model.MovementKind
+import com.lekaspos.data.audit.AuditDao
 import com.lekaspos.data.db.DerivedRebuild
 import com.lekaspos.data.db.queryList
 import com.lekaspos.data.product.ProductDao
@@ -15,6 +17,7 @@ import com.lekaspos.data.sale.SaleDao
 import com.lekaspos.data.stock.CountSessionDao
 import com.lekaspos.data.stock.CountSummary
 import com.lekaspos.data.stock.HistoryEntry
+import com.lekaspos.data.stock.MovementRow
 import com.lekaspos.data.stock.StockDao
 import com.lekaspos.data.stock.StockHistoryDao
 import com.lekaspos.data.supplier.Supplier
@@ -241,6 +244,53 @@ class InventoryTest {
         assertEquals(13_000L, level(p))
         val kinds = db.readBlocking { r -> r.queryList("SELECT entity FROM outbox") { it.getInt(0) } }
         assertTrue(kinds.contains(Entity.STOCK_MOVE) && kinds.contains(Entity.STOCK_COUNT) && kinds.contains(Entity.COUNT_SESSION))
+    }
+
+    @Test
+    fun changeStockCountSetsTheStockAndShowsInStockChanges() = runBlocking {
+        val db = graph.db()
+        db.syncEnabled = true
+        val p = TestDb.product(db, "Gula", 300L, cost = 250L)
+        db.writeBlocking { tx -> StockDao.insertMovement(tx, p, MovementKind.OPENING, 10_000L, 250L, null, null, null, 1L) }
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 1_000L)), tz) }
+
+        // The shelf and the storeroom hold 7, the app has 9: the count becomes the stock.
+        graph.inventory.setStock(p, 7_000L)
+        assertEquals(7_000L, level(p))
+        db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 1_000L)), tz) }
+        assertEquals(6_000L, level(p)) // sales after the count still count
+
+        // Counted down by hand is on record like a write-off, at cost; a count up is not.
+        val entry = db.readBlocking { AuditDao.byAction(it, AuditAction.STOCK_WRITE_OFF, null) }.single()
+        assertEquals(500L, entry.amount)
+        assertEquals("Gula: -2 (counted 7)", entry.detail)
+        graph.inventory.setStock(p, 8_000L)
+        assertEquals(8_000L, level(p))
+        assertEquals(1, db.readBlocking { AuditDao.byAction(it, AuditAction.STOCK_WRITE_OFF, null) }.size)
+        assertFailsWith<IllegalArgumentException> { graph.inventory.setStock(p, -1_000L) }
+
+        // Stock changes: the counts (outside a session) and the movements in one list, newest first, paged.
+        graph.inventory.adjust(p, AdjustReason.EXPIRED, 1_000L, removing = true, note = null)
+        val session = graph.inventory.startCount("Rak B", null)
+        graph.inventory.count(session, p, 6_000L) // a session's count stays in its count report
+        val all = ArrayList<MovementRow>()
+        var after: MovementRow? = null
+        while (true) {
+            val page = db.readBlocking { StockDao.movementPage(it, after, 1) }
+            all.addAll(page)
+            if (page.isEmpty()) break
+            after = page.last()
+        }
+        assertEquals(listOf(MovementKind.WASTE, StockDao.KIND_HAND_COUNT, StockDao.KIND_HAND_COUNT, MovementKind.OPENING), all.map { it.kind })
+        assertEquals(listOf(-1_000L, 2_000L, -2_000L, 10_000L), all.map { it.qty })
+        assertEquals(listOf(null, 8_000L, 7_000L, null), all.map { it.counted })
+        assertEquals(all, db.readBlocking { StockDao.movementPage(it, null, 10) })
+
+        // Cached level equals a rebuild from events; the counts sync.
+        db.writeBlocking { tx -> DerivedRebuild.stockLevels(tx) }
+        assertEquals(6_000L, level(p))
+        val kinds = db.readBlocking { r -> r.queryList("SELECT entity FROM outbox") { it.getInt(0) } }
+        assertEquals(3, kinds.count { it == Entity.STOCK_COUNT })
     }
 
     @Test
