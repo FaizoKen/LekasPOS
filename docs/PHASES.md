@@ -2295,7 +2295,10 @@ notice what different on menu while select item vs not."
 - [x] CI on main 9f755bb (run 38536291714): all jobs green, release smoke upgrading from 1.19.2
 - [x] **v1.19.2 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
       website's Download link serves it (SHA-256 `5fc1efe1…4766` checked). Shops on 1.6.1 or later are offered it inside the app
-- [ ] Perf FULL on the released code (run 38538387069, 9f755bb)
+- [x] Perf FULL on the released code (run 38538387069, 9f755bb): **PASS** on API 21, 29 and 36 (50,600 products, 1,003,158 sale
+      lines), all 108 query plans ok; API 21 sale commit p95 9.3 ms (150), multi-word search p95 2.2 ms (50), scan to cart
+      p95 0.43 ms (20), report_month 105 ms (1,000), report_year 137 ms (3,000); cold start to a usable till on API 21 about
+      0.73 s, API 29 about 0.83 s, API 36 about 0.43 s
 - [ ] The owner's phone check
 
 ### Phone checks for 1.19.2
