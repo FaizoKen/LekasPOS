@@ -45,7 +45,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
-| — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | in progress on branch `cashier-finish` |
+| — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | test build **v1.20.1** (build 215) — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2389,7 +2389,8 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
       Release APK **1,682,860 bytes** (1.20.0: 1,681,914). Pictures checked: phone Items → **Bill** (EN/BM), the held bill's
       **Held bills (1)** / **Ditangguh (1)** readable on the phone and the tablet, help lines indented, no "0 items"
 - [x] Guide pictures `en/ms-sell-empty` from that run; `check-site.mjs` OK
-- [ ] Test build v1.20.1
+- [x] **Test build v1.20.1** (2026-10-14): pre-release on 6001143, build 215; SHA-256 `a0155e52…0913`; certificate
+      `0a67abec…d4b9`; `mapping-1.20.1.txt` attached. 1.20.0 stays the latest release
 - [ ] The owner's phone check
 
 ### Phone checks for 1.20.1
