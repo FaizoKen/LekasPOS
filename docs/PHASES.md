@@ -44,7 +44,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.18.0**: the till asks to close the shift — Lock / switch user asks "Close the shift?", an optional closing-time reminder; the drawer's money moves renamed to what they are: Add cash, Pay from drawer, Take out extra cash (D-077) | **released** 2026-10-13 (v1.18.0, build 190) — tested by the owner: "ok all good now" |
 | — | **1.19.0 / 1.19.1**: the category chips in the top row beside a **Search** button; Search opens the box in their place (D-078); 1.19.1: the row on a light band, the selling screen audited — the row as high as the top bar, Camera with its word, the search box the whole row on a phone, "5 left" beside the tile price, the last sale first on an empty bill | **released** 2026-10-14 (v1.19.1, build 197) — the owner asked to publish it ("ok publish when CI done"); offered in the app to shops on 1.6.1+; tested by the owner: "i was check and all good" |
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
-| — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | test build **v1.20.0** (build 211) — waiting for the owner's phone check |
+| — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
 
 ## Open questions for the user
 
@@ -2341,7 +2341,10 @@ quantity on product and how about product in store should same count product in 
       `-products`; `check-site.mjs` OK
 - [x] **Test build v1.20.0** (2026-10-14): pre-release on fce8a29, build 211; SHA-256 `927a93f4…79c2`; certificate
       `0a67abec…d4b9`; `mapping-1.20.0.txt` attached. 1.19.2 stays the latest release
-- [ ] The owner's phone check
+- [x] The owner's phone check (2026-10-14): "all good"
+- [x] The owner asked to release it (2026-10-14, "all good , now publish to public release"): `stock-plain` merged into
+      `main`; smoke baseline (`PREV_APK_URL`) v1.20.0; the guide says "For LekasPOS 1.20.0"; privacy policy unchanged
+- [ ] CI on main; v1.20.0 made the latest release; perf FULL on the released code
 
 ### Phone checks for 1.20.0
 1. Menu → Manage shop: **Products** and **Stock** side by side (Malay: Produk, Stok). Stock opens with the card on top; it
