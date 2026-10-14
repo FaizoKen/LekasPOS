@@ -2392,6 +2392,11 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
 - [x] **Test build v1.20.1** (2026-10-14): pre-release on 6001143, build 215; SHA-256 `a0155e52…0913`; certificate
       `0a67abec…d4b9`; `mapping-1.20.1.txt` attached. 1.20.0 stays the latest release
 - [ ] The owner's phone check
+- [x] The owner asked to release it (2026-10-14, "yup do it"): `cashier-finish` merged into `main`; smoke baseline
+      (`PREV_APK_URL`) v1.20.1; the guide says "For LekasPOS 1.20.1"; privacy policy unchanged
+- [ ] CI on main
+- [ ] **v1.20.1 the latest release**
+- [ ] Perf FULL on the released code
 
 ### Phone checks for 1.20.1
 1. Phone upright: tap **Items** — the tiles show and the button reads **Bill** with a cart. Tap **Bill**: the bill again, the
