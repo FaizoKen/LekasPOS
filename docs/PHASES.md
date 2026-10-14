@@ -2383,7 +2383,12 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
 - [x] Docs: user guide EN + MS (cheat sheet, the screen, Items, Holding a bill), `features.md`, `glossary.md`, `codemap.md`,
       D-081. Nothing new stored or sent: privacy unchanged
 - [x] Local: `compileDebugKotlin`, `compileDebugAndroidTestKotlin`, `lintDebug` (no errors), `check-site.mjs` OK
-- [ ] CI run on the branch; release APK size; pictures checked
+- [x] CI run 38572000525 (60f4334): all jobs green; its 320dp picture showed "Held bills (1)" shrunk to small print → Hold is
+      as wide as Pay while it reads Held bills (Pay is greyed then)
+- [x] CI run 38575073071 (6001143): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke API 21 + 36).
+      Release APK **1,682,860 bytes** (1.20.0: 1,681,914). Pictures checked: phone Items → **Bill** (EN/BM), the held bill's
+      **Held bills (1)** / **Ditangguh (1)** readable on the phone and the tablet, help lines indented, no "0 items"
+- [x] Guide pictures `en/ms-sell-empty` from that run; `check-site.mjs` OK
 - [ ] Test build v1.20.1
 - [ ] The owner's phone check
 
