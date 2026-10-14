@@ -2344,7 +2344,11 @@ quantity on product and how about product in store should same count product in 
 - [x] The owner's phone check (2026-10-14): "all good"
 - [x] The owner asked to release it (2026-10-14, "all good , now publish to public release"): `stock-plain` merged into
       `main`; smoke baseline (`PREV_APK_URL`) v1.20.0; the guide says "For LekasPOS 1.20.0"; privacy policy unchanged
-- [ ] CI on main; v1.20.0 made the latest release; perf FULL on the released code
+- [x] CI on main 0b79597 (run 38557265193): all jobs green, release smoke upgrading from 1.20.0. Pages published the guide
+      ("For LekasPOS 1.20.0")
+- [x] **v1.20.0 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
+      website's Download link serves it (SHA-256 `927a93f4…79c2` checked). Shops on 1.6.1 or later are offered it inside the app
+- [ ] Perf FULL on the released code (run 38559001073)
 
 ### Phone checks for 1.20.0
 1. Menu → Manage shop: **Products** and **Stock** side by side (Malay: Produk, Stok). Stock opens with the card on top; it
