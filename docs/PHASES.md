@@ -2292,9 +2292,10 @@ notice what different on menu while select item vs not."
       `0a67abec…d4b9`; `mapping-1.19.2.txt` attached. 1.19.1 stays the latest release
 - [x] The owner asked to release it (2026-10-14, "do it all for me until fully release to public"; not checked on the phone
       first): smoke baseline (`PREV_APK_URL`) v1.19.2; the guide says "For LekasPOS 1.19.2"; privacy policy unchanged
-- [ ] CI on main after the baseline change
-- [ ] **v1.19.2 the latest release** — the pre-release made latest with public notes
-- [ ] Perf FULL on the released code
+- [x] CI on main 9f755bb (run 38536291714): all jobs green, release smoke upgrading from 1.19.2
+- [x] **v1.19.2 is the latest release** — the pre-release made latest with public notes (What's new in English and Malay); the
+      website's Download link serves it (SHA-256 `5fc1efe1…4766` checked). Shops on 1.6.1 or later are offered it inside the app
+- [ ] Perf FULL on the released code (run 38538387069, 9f755bb)
 - [ ] The owner's phone check
 
 ### Phone checks for 1.19.2
