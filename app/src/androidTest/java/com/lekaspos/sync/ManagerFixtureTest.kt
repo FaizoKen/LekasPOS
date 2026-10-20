@@ -124,7 +124,10 @@ class ManagerFixtureTest {
         val line = assertNotNull(a.sales.refundInfo(s1.saleId)).lines.first().id
         a.sales.refund(s1.saleId, mapOf(line to 1_000L), true, "spilt", cash)
         a.shifts.moveCash(CashMoveKind.CASH_OUT, 500L, "ice")
-        a.inventory.receive(ReceiveDraft(refNo = "DO-7", lines = listOf(ReceiveLine(1L, roti, "Roti Gardenia", "pcs", 24_000L, 280L, 6_720L)), token = 1L))
+        // As the Receive screen does: the draft is kept while it is entered, then received (InventoryTest).
+        val delivery = ReceiveDraft(refNo = "DO-7", lines = listOf(ReceiveLine(1L, roti, "Roti Gardenia", "pcs", 24_000L, 280L, 6_720L)), token = 1L)
+        a.inventory.saveDraft(delivery)
+        a.inventory.receive(delivery)
         a.inventory.adjust(milo, AdjustReason.DAMAGED, 1_000L, true, "box crushed")
         val session = a.inventory.startCount("Shelf", null)
         a.inventory.count(session, roti, 40_000L)
