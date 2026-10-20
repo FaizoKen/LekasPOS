@@ -244,6 +244,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    transaction as the event that changes it **and** add the set-based rebuild to `DerivedRebuild` (`all()` :125) — `DerivedConsistencyTest` and
    `SyncMergeTest.assertConverged` compare them.
 8. **Query plans**: a table that grows → add to `QueryPlans.LARGE_TABLES` (QueryPlans.kt:29); register its hot SQL (recipe 10).
+9a. **Manager web page** (D-082): `node scripts/manager/build-schema.mjs` (writes `site/manager/js/schema.js` from the new snapshot) — `node --test scripts/manager/*.test.mjs` fails until then. A new column a report or list should show → `site/manager/js/reports.js` too; a new derived table the page reads → `js/derived.js`.
 9. **Docs**: `references/database.md` §6 table catalog + §9 history line; `docs/DECISIONS.md` entry; sync class in the skill if new; `PHASES.md`.
 10. A migration runs behind an automatic "upgrade" backup (`Db.backupBeforeUpgrade`, keeps 3) — nothing to do, but a migration that can fail on real data
     blocks the app at start: keep it simple and set-based.
@@ -283,6 +284,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    `content()` already compares every `Schema.LWW_TABLES + EVENT_TABLES` table; **new `sum_*` columns must be added to its hard-coded `sums` map** (:134-144).
    Use synced write paths in tests (`ProductDao.create`, `TestDb.product`), never `ProductDao.insert` (no outbox). Also `AT/data/LwwWriteTest.kt` style test
    for local field versions + outbox rows, and `SaleDaoTest.outboxIsWrittenOnlyWhileSyncIsEnabled` style check.
+8a. **Manager web page** (D-082): the same apply rule in `site/manager/js/importer.js` (`Entity`, `LWW_TABLES` or the `switch` of `apply`, a `Touched` mark when derived data follows) and `js/derived.js`; until then the page keeps the new kind in `sync_deferred` and says so. `ManagerFixtureTest` + `fixture.test.mjs` (CI) prove the page and the tills agree — add the new data to the fixture shop.
 9. **Docs**: sync.md §4 table (event, payload, apply rule) + LWW entity list; database.md §6; DECISIONS entry.
 
 ---
@@ -297,6 +299,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    if `amount` is money, to `MONEY_ACTIONS` (:156).
 4. If it should count in the staff check / shift report "Checks": extend `C/staff/StaffChecks.kt` (`Checks` field, `of()` branch, `ACTIONS`), the shift report /
    staff-check rendering, and the daily CSV columns (`ReportService.dailyCsv`) if wanted. JVM test in `CT/staff/StaffChecksTest.kt`.
+4a. Manager web page (D-082): the label in `site/manager/js/app.js` `ACTIONS` (and `MONEY_ACTIONS`/`WARN_ACTIONS`), the string name in `scripts/manager/build-strings.mjs` `NAMES` (then run it), and a `checksOf` branch in `js/reports.js` if step 4 applies.
 5. Tests: assert the entry exists in the domain test (e.g. `AuditDao.recent`/`exists`), like `SaleActionsTest.copiesAndDrawerOpensAreQueuedAndAudited`.
 
 ---
@@ -345,6 +348,8 @@ A new CSV export:
    (`export_receipts_month`, PerfSuite.kt:317).
 
 ---
+
+Manager web page (D-082): the same figure or export in `site/manager/js/reports.js` (`report`/`exportCsv`) and `js/app.js` (`reportBody`), with its string in `build-strings.mjs` `NAMES`; `fixture.test.mjs` compares the page's reports and CSVs with the tills'.
 
 ## 10. Add a perf scenario / query plan check
 

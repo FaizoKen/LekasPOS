@@ -12,12 +12,12 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="privasi.html" hreflang="ms">Bahasa Melayu</a></p>
 <h1>LekasPOS privacy policy</h1>
-<p class="updated">Last updated: 8 October 2026</p>
+<p class="updated">Last updated: 20 October 2026</p>
 
 <p>LekasPOS is a free, open-source point-of-sale app for small shops
 (<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
 what happens to the information you put into it. In short: <strong>your data stays on your
-phone, and — only if you turn on sync — in your own Google Drive. The developer never receives
+phone, and — only if you turn on sync — in your own Google Drive (and in a web browser where you open the shop with LekasPOS Manager). The developer never receives
 any of it.</strong> If you allow error reports, the developer receives technical details about
 problems in the app, never your shop's data.</p>
 
@@ -76,6 +76,17 @@ anyone you share it with. The app asks Google only for the files it makes itself
 <code>drive.file</code> permission): it cannot see or change your other Drive files. It keeps the
 account's e-mail address on the phone to show it and to connect again. Google's
 <a href="https://policies.google.com/privacy">privacy policy</a> applies.</li>
+<li><strong>LekasPOS Manager, the web page (optional).</strong> On a computer you can open the shop in a web browser at
+<a href="manager/">faizoken.github.io/LekasPOS/manager</a>. There are two ways in. You can sign in with the shop's Google
+account: the page then asks Google for the same hidden app data folder as the tills (the <code>drive.appdata</code>
+permission) and only reads the shop's sync files from it — it never changes or deletes anything there. Or you can open a
+backup file, which is read in the browser and not uploaded. Either way the shop's data travels only between Google and your
+browser (over HTTPS), and the browser keeps a copy of it on that computer (in its private site storage) so the next visit
+reads only what is new. The developer receives nothing: the page has no account with us, no analytics and no advertising;
+GitHub, which hosts the page, sees the browser's internet address as for any website. The sign-in lasts about an hour and is
+kept in the page's memory only; the Google account's e-mail address is kept with the copy to show which shop it is. Anyone who
+can use that browser can see the shop there, profit too: on a shared computer use <em>Forget this shop on this computer</em>
+when you are done.</li>
 <li><strong>Daily copy to a folder (optional).</strong> If you pick a folder (for example on an SD
 card or USB drive), the app writes one backup file a day there and keeps the last 7. It stays on
 that card or drive; nothing is sent anywhere.</li>
@@ -143,6 +154,8 @@ Google Drive. Delete them there like any other file.</li>
 <li>Backup files copied to a folder you picked (SD card, USB drive) are not deleted with the app;
 delete them in a file manager.</li>
 <li>Backup and CSV files you saved elsewhere are yours to delete.</li>
+<li>The copy in a web browser (LekasPOS Manager): tap <em>Forget this shop on this computer</em> at the bottom of the page,
+or clear that browser's data for faizoken.github.io.</li>
 <li>To have error reports deleted, contact the developer (below) with the phone model and roughly
 when the problem happened (reports do not say who you are).</li>
 </ul>

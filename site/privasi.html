@@ -12,12 +12,12 @@
 <main>
 <p class="lang"><a href="privacy.html" hreflang="en">English</a> · <strong>Bahasa Melayu</strong></p>
 <h1>Dasar privasi LekasPOS</h1>
-<p class="updated">Kemas kini terakhir: 8 Oktober 2026</p>
+<p class="updated">Kemas kini terakhir: 20 Oktober 2026</p>
 
 <p>LekasPOS ialah aplikasi jualan (POS) percuma dan sumber terbuka untuk kedai kecil
 (<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
 apa yang berlaku kepada maklumat yang anda masukkan. Ringkasnya: <strong>data anda kekal dalam
-telefon anda, dan — hanya jika anda menghidupkan segerak — dalam Google Drive anda sendiri.
+telefon anda, dan — hanya jika anda menghidupkan segerak — dalam Google Drive anda sendiri (dan dalam pelayar web tempat anda membuka kedai dengan Pengurus LekasPOS).
 Pembangun tidak pernah menerima sebarang data ini.</strong> Jika anda membenarkan laporan ralat,
 pembangun menerima butiran teknikal tentang masalah dalam aplikasi, bukan data kedai anda.</p>
 
@@ -81,6 +81,17 @@ fail yang dibuatnya sendiri daripada Google (kebenaran <code>drive.file</code>):
 melihat atau mengubah fail Drive anda yang lain. Ia menyimpan alamat e-mel akaun itu dalam telefon
 untuk menunjukkannya dan untuk menyambung semula. <a href="https://policies.google.com/privacy?hl=ms">Dasar
 privasi Google</a> terpakai.</li>
+<li><strong>Pengurus LekasPOS, halaman web (pilihan).</strong> Pada komputer anda boleh membuka kedai dalam pelayar web di
+<a href="manager/">faizoken.github.io/LekasPOS/manager</a>. Ada dua cara. Anda boleh log masuk dengan akaun Google kedai:
+halaman itu meminta Google akses kepada folder data aplikasi tersembunyi yang sama seperti kaunter (kebenaran
+<code>drive.appdata</code>) dan hanya membaca fail segerak kedai daripadanya — ia tidak mengubah atau memadam apa-apa di situ.
+Atau anda boleh membuka fail sandaran, yang dibaca dalam pelayar dan tidak dimuat naik. Kedua-duanya, data kedai bergerak
+hanya antara Google dan pelayar anda (melalui HTTPS), dan pelayar menyimpan salinannya dalam komputer itu (dalam storan
+peribadi laman) supaya lawatan seterusnya hanya membaca yang baharu. Pembangun tidak menerima apa-apa: halaman itu tiada akaun
+dengan kami, tiada analitik dan tiada iklan; GitHub, yang menempatkan halaman itu, melihat alamat internet pelayar seperti
+mana-mana laman web. Log masuk kekal kira-kira sejam dan hanya disimpan dalam memori halaman; alamat e-mel akaun Google disimpan
+bersama salinan untuk menunjukkan kedai yang mana. Sesiapa yang boleh menggunakan pelayar itu boleh melihat kedai di situ,
+termasuk untung: pada komputer yang dikongsi, gunakan <em>Lupakan kedai ini di komputer ini</em> apabila selesai.</li>
 <li><strong>Salinan harian ke folder (pilihan).</strong> Jika anda memilih folder (contohnya dalam
 kad SD atau pemacu USB), aplikasi menulis satu fail sandaran sehari di situ dan menyimpan 7 yang
 terakhir. Ia kekal dalam kad atau pemacu itu; tiada apa-apa dihantar ke mana-mana.</li>
@@ -153,6 +164,8 @@ Drive anda. Padamkannya di situ seperti fail lain.</li>
 <li>Fail sandaran yang disalin ke folder yang anda pilih (kad SD, pemacu USB) tidak dipadam bersama
 aplikasi; padamkannya dengan pengurus fail.</li>
 <li>Fail sandaran dan CSV yang anda simpan di tempat lain boleh anda padam sendiri.</li>
+<li>Salinan dalam pelayar web (Pengurus LekasPOS): ketik <em>Lupakan kedai ini di komputer ini</em> di bawah halaman itu,
+atau padam data pelayar itu untuk faizoken.github.io.</li>
 <li>Untuk memadam laporan ralat, hubungi pembangun (di bawah) dengan model telefon dan anggaran bila
 masalah itu berlaku (laporan tidak menyatakan siapa anda).</li>
 </ul>

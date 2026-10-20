@@ -97,6 +97,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Damaged database | Data problem | Masalah data | `Protection.State.DAMAGED`, `KeepDamagedDatabase` |
 | Restore modes | Restore this till / Replace the old phone / Add as a new till | Pulihkan kaunter ini / Ganti telefon lama / Tambah sebagai kaunter baharu | `Restore.Mode.REPLACE/NEW_DEVICE` |
 | Daily CSV to the owner's Drive | Daily sales report to Google Drive | Laporan jualan harian ke Google Drive | `DailyReportUpload` |
+| The shop in a web browser (D-082; never "dashboard", "portal" or "admin") | LekasPOS Manager; Open my shop with Google Drive; Open a backup file; Update; Forget this shop on this computer | Pengurus LekasPOS; Buka kedai saya dengan Google Drive; Buka fail sandaran; Kemas kini; Lupakan kedai ini di komputer ini | `site/manager/`, `Store.sync`, `readBackup` |
 | Printer and drawer | Printer & cash drawer; Printer offline | Pencetak & laci wang; Pencetak luar talian | `PrinterService`, `dev.printer.*` |
 | Scanner kinds | keyboard-mode scanner; Serial (SPP) Bluetooth scanner | pengimbas mod papan kekunci; Pengimbas Bluetooth bersiri (SPP) | `ScanBuffer`, `SppScanner` |
 | New version | App updates; Update x.y.z; What's new | Kemas kini aplikasi; Kemas kini x.y.z; Apa yang baharu | `AppUpdates`, `UpdateWorker` |

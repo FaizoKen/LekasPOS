@@ -35,6 +35,9 @@ cashiers, with screenshots.
   USB drive, backup files to share or restore, and Google Drive backup — which also keeps the
   shop's tills in step and restores a lost phone in full. No Google account is required; the
   selling screen shows "Not backed up" when the data exists only on that phone.
+- **On a computer:** [LekasPOS Manager](https://faizoken.github.io/LekasPOS/manager/), a read-only web page with the
+  shop's reports, sales, products, stock, shifts and activity log — read from the shop's own Google Drive backup or a
+  backup file in the browser, with no server (D-082).
 - English and Bahasa Melayu (switchable in the app); Android 5.0 and newer, phones and tablets.
 
 ## Documentation map
@@ -47,6 +50,7 @@ For people using the app:
 | [`site/index.html`](site/index.html) | Download, install and update steps |
 | [`site/privacy.html`](site/privacy.html) / [`privasi.html`](site/privasi.html) | Privacy policy |
 | [`site/llms.txt`](site/llms.txt) | A short description of the app for AI assistants that help users |
+| [`site/manager/`](site/manager/) | LekasPOS Manager, the shop in a web browser (published at [faizoken.github.io/LekasPOS/manager/](https://faizoken.github.io/LekasPOS/manager/)); its code is mapped in `codemap.md` §9.5a |
 
 For people (and AI agents) working on the code:
 
@@ -83,9 +87,10 @@ builds. Performance runs: Actions → Performance → Run workflow. See [`docs/B
 ```
 core/     pure Kotlin business rules (money, tax, pricing, barcodes, IDs, HLC, sync rules) + JVM tests
 app/      Android app: SQLite data layer, UI, hardware, sync, perf suite + instrumented tests
-scripts/  toolchain setup, emulator profiles, performance runs, cold-start measurement, website check
+scripts/  toolchain setup, emulator profiles, performance runs, cold-start measurement, website check,
+          manager web page tools and tests (scripts/manager/)
 docs/     phases, build/release, decisions
-site/     website: home, user guide (EN + MS) with screenshots, privacy policy (GitHub Pages)
+site/     website: home, user guide (EN + MS) with screenshots, privacy policy, LekasPOS Manager (GitHub Pages)
 relay/    Cloudflare Worker that files error reports (D-057)
 ```
 
@@ -123,6 +128,11 @@ store's Google Drive); the optional daily sales report (D-065) asks separately f
    Android clients have no client secret; nothing needs to be embedded in the app.
 5. All devices of one store sign in with the **same Google account** (the store account), because
    the app-data folder is private per account.
+6. **LekasPOS Manager** (the web page, D-082): **Credentials → Create credentials → OAuth client ID → Web
+   application**, name "LekasPOS Manager", **Authorized JavaScript origins** `https://faizoken.github.io` (and
+   `http://localhost:8000` to try it with `node scripts/manager/serve.mjs`), no redirect URIs. Put its client ID in
+   `site/manager/js/config.js` (`GOOGLE_CLIENT_ID`; not a secret). Same project as the Android clients: Drive's app
+   folder belongs to the project, so the page sees the tills' folder with the same `drive.appdata` scope.
 
 Done for this repository (2026-09-30): project **LekasPOS** (ID `lekaspos`), Drive API enabled,
 consent screen External with the `drive.appdata` scope only, home page and privacy policy on the
