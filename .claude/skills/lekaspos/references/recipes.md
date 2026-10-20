@@ -14,7 +14,7 @@ on the laptop.
 ## 0. Change something users see — keep the user guide true
 
 The user guide is the shops' manual: `site/guide.html` (English) and `site/panduan.html` (Bahasa Melayu), published
-with the website by `pages.yml` (https://lekas.faizo.net/guide.html). Both are plain HTML (no build step)
+with the website by `pages.yml` (https://lekaspos.faizo.net/guide.html). Both are plain HTML (no build step)
 styled by `site/style.css` (`body.guide`). `site/llms.txt` summarises them for AI assistants.
 
 When a change alters what an owner, manager or cashier sees or does — a label, a step, a default, who may do it, a

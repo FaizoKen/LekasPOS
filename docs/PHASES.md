@@ -2445,17 +2445,19 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
       (292 tests each). The fixture (17 files) compared on both: the web page's copy equals both tills' databases in every
       synced table, stock, counts, balances and day totals, and in its reports, CSVs, receipts, products, shifts, stock
       changes, deliveries, activity log and customer statements (21/21 web tests, none skipped). No APK change
-- [x] The website at **https://lekas.faizo.net/** (the owner asked, 2026-10-20): Cloudflare DNS `CNAME lekas →
-      faizoken.github.io` (DNS only), GitHub Pages custom domain, certificate approved, HTTPS enforced; old addresses 301 to it.
+- [x] The website at **https://lekaspos.faizo.net/** (the owner asked for lekas.faizo.net, then chose lekaspos.faizo.net the
+      same day): Cloudflare DNS `CNAME lekaspos → faizoken.github.io` (DNS only), GitHub Pages custom domain, certificate
+      approved, HTTPS enforced; old addresses 301 to it, and lekas.faizo.net by a Cloudflare redirect rule (proxied record).
       Docs and guide use the new address; the app's own links follow with its next release
 - [x] Google Cloud → Clients → Web application "LekasPOS Manager (web page)" (the owner said "yes do it all for me",
-      2026-10-20), origins `https://lekas.faizo.net` and `http://localhost:8000`; Google added `faizo.net` to the authorized
-      domains; its client ID in `site/manager/js/config.js`
-- [ ] The owner tries it with the shop's Google account and a backup file, then says whether to publish (merge to main
-      deploys the website)
+      2026-10-20), origins `https://lekaspos.faizo.net`, `https://lekas.faizo.net` and `http://localhost:8000`; Google added
+      `faizo.net` to the authorized domains; its client ID in `site/manager/js/config.js`
+- [x] Merged to main (053a57c) and published; the owner signed in with the tills' Google account on the live page: the
+      shop's real files read (this month 18 sales, RM144.50; the report's days, payment methods, cashiers and best sellers
+      each add up to it)
 
 ### Checks for the owner
-1. On a laptop, open https://lekas.faizo.net/manager/ (or `node scripts/manager/serve.mjs`, then
+1. On a laptop, open https://lekaspos.faizo.net/manager/ (or `node scripts/manager/serve.mjs`, then
    http://localhost:8000/manager/). **Open my shop with Google Drive**, sign in with the shop's account: the shop's name
    shows, Home shows today's sales as the till's Reports → Today shows them.
 2. Make a sale on a till, wait 15 seconds, tap **Update**: Today goes up by the sale.
