@@ -2439,7 +2439,12 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
 - [x] Docs: user guide EN + MS (Reports → On a computer: LekasPOS Manager, pictures `en/ms-manager.png`), home page,
       privacy policy EN + MS (20 October 2026), `PLAY.md`, README (Google Cloud step 6), `llms.txt`, `features.md` §21,
       `codemap.md` §9.5a, `glossary.md`, D-082; `check-site.mjs` checks the manager page too; `pages.yml` runs its tests
-- [ ] CI on the branch: build, instrumented API 21 + 36 with the fixture comparison
+- [x] CI run 39411221402 (e763c59): everything green but `ManagerFixtureTest` — it received a delivery without keeping its
+      draft first (the Receive screen keeps it; `receive` refuses otherwise). Fixed in the test
+- [x] CI run 39413132154 (8638f95): all jobs green — build, lint, tablet, release smoke API 21 + 36, instrumented API 21 + 36
+      (292 tests each). The fixture (17 files) compared on both: the web page's copy equals both tills' databases in every
+      synced table, stock, counts, balances and day totals, and in its reports, CSVs, receipts, products, shifts, stock
+      changes, deliveries, activity log and customer statements (21/21 web tests, none skipped). No APK change
 - [ ] **The owner:** Google Cloud → Credentials → OAuth client ID → Web application, origin `https://faizoken.github.io`
       (+ `http://localhost:8000`), then its client ID in `site/manager/js/config.js`
 - [ ] The owner tries it with the shop's Google account and a backup file, then says whether to publish (merge to main
