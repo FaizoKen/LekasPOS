@@ -109,7 +109,7 @@ class ReleasesTest {
         - **Reports open many times faster on big stores**, most of all on Android 7–10 tablets.
         - **The Popular tab shows at once**, also right after the app is opened;
           its ranking is refreshed in the background.
-        - **Search**: two words (e.g. "milo susu") are faster; see [the website](https://faizoken.github.io/LekasPOS/#download).
+        - **Search**: two words (e.g. "milo susu") are faster; see [the website](https://lekaspos.faizo.net/#download).
 
         Coming from an older version? See what changed in [1.5.0](https://github.com/FaizoKen/LekasPOS/releases/tag/v1.5.0).
 

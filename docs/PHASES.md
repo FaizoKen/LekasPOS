@@ -47,6 +47,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
 | — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
+| — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | test build in CI |
 
 ## Open questions for the user
 
@@ -2450,8 +2451,8 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
       approved, HTTPS enforced; old addresses 301 to it, and lekas.faizo.net by a Cloudflare redirect rule (proxied record).
       Docs and guide use the new address; the app's own links follow with its next release
 - [x] Google Cloud → Clients → Web application "LekasPOS Manager (web page)" (the owner said "yes do it all for me",
-      2026-10-20), origins `https://lekaspos.faizo.net`, `https://lekas.faizo.net` and `http://localhost:8000`; Google added
-      `faizo.net` to the authorized domains; its client ID in `site/manager/js/config.js`
+      2026-10-20), origins `https://lekaspos.faizo.net` and `http://localhost:8000` (lekas.faizo.net removed once it redirected); Google
+      added `faizo.net` to the authorized domains; its client ID in `site/manager/js/config.js`
 - [x] Merged to main (053a57c) and published; the owner signed in with the tills' Google account on the live page: the
       shop's real files read (this month 18 sales, RM144.50; the report's days, payment methods, cashiers and best sellers
       each add up to it)
@@ -2467,3 +2468,20 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
    shop as of that backup.
 6. **Bahasa Melayu** at the top: every word in Malay. On a phone: the tabs scroll sideways, receipts open full screen.
 7. **Forget this shop on this computer**: the welcome screen again.
+
+## 1.20.2 — the app's links on lekaspos.faizo.net (D-082)
+
+The owner (2026-10-20): "make it everything fully use lekaspos.faizo.net". The old addresses redirected; now nothing uses them.
+
+- [x] The app's links: Settings → User guide (`guide_url`, EN and MS), the privacy policy (`privacy_url`, EN and MS), the
+      website (`SettingsActivity.WEBSITE_URL`) and App updates' download page (`UpdateUi.WEBSITE_URL`) on
+      https://lekaspos.faizo.net/; `versionName` 1.20.2; the guide says "For LekasPOS 1.20.2"
+- [x] Google consent screen: home page and privacy policy on lekaspos.faizo.net; the web client no longer allows
+      lekas.faizo.net (it redirects, the page never runs there); the repository's website link set
+- [ ] CI on main: build, lint, instrumented API 21 + 36, tablet, release smoke (upgrade from 1.20.1); APK size
+- [ ] Test build v1.20.2 (pre-release) with `mapping-1.20.2.txt`
+
+### Phone checks for 1.20.2
+1. Settings → User guide: the guide opens on lekaspos.faizo.net (Malay: the panduan).
+2. Settings → About → Privacy policy: lekaspos.faizo.net/privacy.html.
+3. Settings → App updates → the website link: lekaspos.faizo.net, on Download.

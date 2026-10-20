@@ -304,7 +304,7 @@ class SettingsActivity : ScreenActivity() {
     }
 
     private companion object {
-        const val WEBSITE_URL = "https://faizoken.github.io/LekasPOS/"
+        const val WEBSITE_URL = "https://lekaspos.faizo.net/"
 
         /** Older Android and some makers: "Wireless display" (Miracast) settings. */
         const val WIFI_DISPLAY_SETTINGS = "android.settings.WIFI_DISPLAY_SETTINGS"

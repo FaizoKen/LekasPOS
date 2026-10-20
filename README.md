@@ -146,9 +146,9 @@ The website moved to **https://lekaspos.faizo.net/** on 2026-10-20 (D-082): GitH
 `CNAME lekaspos → faizoken.github.io` in the faizo.net zone on Cloudflare, HTTPS enforced (the first address of that day,
 lekas.faizo.net, stays as a proxied record with the Cloudflare redirect rule "Redirect lekas.faizo.net to lekaspos.faizo.net",
 301 with path and query). Every old
-`faizoken.github.io/LekasPOS/…` address redirects there (301), so links in released apps and on the consent screen keep
-working; the app's own links (`guide_url`, `privacy_url`, `WEBSITE_URL`) can move with its next release. The same day
-the web client "LekasPOS Manager (web page)" was made (origins `https://lekaspos.faizo.net`, `https://lekas.faizo.net`, `http://localhost:8000`;
+`faizoken.github.io/LekasPOS/…` address redirects there (301), so links in older apps keep working. From 1.20.2 the app's own
+links (`guide_url`, `privacy_url`, `WEBSITE_URL`) and the consent screen's home page and privacy policy use the new address. The same day
+the web client "LekasPOS Manager (web page)" was made (origins `https://lekaspos.faizo.net` and `http://localhost:8000`;
 `faizo.net` added to the authorized domains by Google) and its ID put in `site/manager/js/config.js`.
 
 ## License
