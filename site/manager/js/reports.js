@@ -503,7 +503,8 @@ export function customers(db, { search = '' } = {}) {
 /** One customer with their statement, newest first, each entry with the balance after it (CustomerService.statement). */
 export function customer(db, customerId) {
   const cid = id(customerId);
-  const c = first(db, 'SELECT c.*, COALESCE(b.balance, 0) AS balance FROM customer c LEFT JOIN customer_balance b ON b.customer_id = c.id WHERE c.id = ?', [cid]);
+  const c = first(db, 'SELECT c.id, c.name, c.phone, c.email, c.address, c.tin, c.note, c.credit_limit, c.deleted, COALESCE(b.balance, 0) AS balance ' +
+    'FROM customer c LEFT JOIN customer_balance b ON b.customer_id = c.id WHERE c.id = ?', [cid]);
   if (!c) return null;
   let balance = 0;
   const entries = all(db, 'SELECT e.id, e.kind, e.amount, e.note, e.at, e.sale_id, s.receipt_no, m.name AS method FROM credit_entry e ' +

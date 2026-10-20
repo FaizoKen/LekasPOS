@@ -91,6 +91,12 @@ test('the web page holds the tills\' data and gives their reports (files made by
     low: R.lowStockCount(db),
     sales: R.sales(db, { limit: 500 }),
     customers: R.customers(db).map((c) => R.customer(db, c.id)),
+    receipts: R.sales(db, { limit: 500 }).map((s) => R.sale(db, s.id)),
+    products: R.productList(db, { limit: 500 }).map((x) => R.product(db, x.id)),
+    shifts: R.shifts(db, { limit: 100 }).map((s) => R.shiftReport(db, s.id)),
+    movements: R.movements(db, { limit: 500 }),
+    deliveries: R.purchases(db).map((x) => R.purchase(db, x.id)),
+    audit: R.audit(db, { limit: 500 }),
   });
   const webViews = json(views(web));
 
