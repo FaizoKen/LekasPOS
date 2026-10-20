@@ -47,7 +47,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
 | — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
-| — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | test build in CI |
+| — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 
 ## Open questions for the user
 
@@ -2478,8 +2478,16 @@ The owner (2026-10-20): "make it everything fully use lekaspos.faizo.net". The o
       https://lekaspos.faizo.net/; `versionName` 1.20.2; the guide says "For LekasPOS 1.20.2"
 - [x] Google consent screen: home page and privacy policy on lekaspos.faizo.net; the web client no longer allows
       lekas.faizo.net (it redirects, the page never runs there); the repository's website link set
-- [ ] CI on main: build, lint, instrumented API 21 + 36, tablet, release smoke (upgrade from 1.20.1); APK size
-- [ ] Test build v1.20.2 (pre-release) with `mapping-1.20.2.txt`
+- [x] CI on main 9a4c1dc (run 39450765649): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36 upgrading from 1.20.1). Release APK **1,682,832 bytes** (1.20.1: 1,682,860). Pages published the guide
+      ("For LekasPOS 1.20.2" live on lekaspos.faizo.net; lekas.faizo.net and faizoken.github.io/LekasPOS redirect there)
+- [x] **Test build v1.20.2** (2026-10-20): pre-release on 9a4c1dc, build 223; SHA-256 `10562350…f098`; certificate
+      `0a67abec…d4b9`; `mapping-1.20.2.txt` attached; its resources hold only lekaspos.faizo.net links
+- [x] **v1.20.2 is the latest release** (the owner, 2026-10-20: "make it everything fully use lekaspos.faizo.net") —
+      public notes (What's new in English and Malay); the website's Download link serves it (SHA-256 checked). Shops on
+      1.6.1 or later are offered it inside the app. Smoke baseline (`PREV_APK_URL`) v1.20.2
+- [x] Perf not run again: only link text changed, no code path; 1.20.1's FULL run (38581523167) stands
+- [ ] The owner's phone check
 
 ### Phone checks for 1.20.2
 1. Settings → User guide: the guide opens on lekaspos.faizo.net (Malay: the panduan).

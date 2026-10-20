@@ -149,7 +149,8 @@ lekas.faizo.net, stays as a proxied record with the Cloudflare redirect rule "Re
 `faizoken.github.io/LekasPOS/…` address redirects there (301), so links in older apps keep working. From 1.20.2 the app's own
 links (`guide_url`, `privacy_url`, `WEBSITE_URL`) and the consent screen's home page and privacy policy use the new address. The same day
 the web client "LekasPOS Manager (web page)" was made (origins `https://lekaspos.faizo.net` and `http://localhost:8000`;
-`faizo.net` added to the authorized domains by Google) and its ID put in `site/manager/js/config.js`.
+`faizo.net` added to the authorized domains by Google) and its ID put in `site/manager/js/config.js`. `faizo.net` is now
+the consent screen's only authorized domain (`faizoken.github.io` removed).
 
 ## License
 

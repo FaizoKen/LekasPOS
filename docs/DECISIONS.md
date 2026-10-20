@@ -1794,7 +1794,8 @@ statements; for shops with credit) and the Activity log — in English and Bahas
   client's origin is `https://lekaspos.faizo.net` (its domain becomes an authorized domain of the consent screen). The owner then
   asked for everything to use the new address: the app's own links (User guide, privacy policy, website and download) in
   1.20.2, the consent screen's home page and privacy links, the repository's website link; the web client no longer allows
-  lekas.faizo.net (it redirects, so the page never runs there).
+  lekas.faizo.net (it redirects, so the page never runs there); `faizo.net` is the consent screen's only authorized domain
+  (`faizoken.github.io` removed).
 - **Privacy.** Nothing reaches the developer: the browser talks to Google Drive and holds the copy itself. Anyone with the
   shop's Google account or a backup file can see everything (as on a till with the owner's PIN): the page and guide say so, and
   *Forget this shop on this computer* removes it from a shared computer.
