@@ -7,7 +7,7 @@
 
 Facts an assistant should get right when helping a LekasPOS user:
 
-- Install from https://faizoken.github.io/LekasPOS/#download (an APK; it is not on Google Play yet). After that the app
+- Install from https://lekas.faizo.net/#download (an APK; it is not on Google Play yet). After that the app
   updates itself from its GitHub releases: an "Update" button appears on the selling screen for the owner.
 - Selling never needs internet. Internet is used only for Google Drive backup, the optional daily sales report to
   Google Drive, update checks and (only with the shop's consent) error reports with no shop data.
@@ -32,22 +32,22 @@ Facts an assistant should get right when helping a LekasPOS user:
   Settings, Tax rates, Diagnostics. Shifts: Menu → Open shift / Close shift. Past sales, refunds, voids:
   Menu → Sales & refunds. Products = what is sold and its price; Stock = how many the shop has (shelf and storeroom
   together), changed on a product with Change stock → Count (from 1.20.0).
-- On a computer: LekasPOS Manager (https://faizoken.github.io/LekasPOS/manager/) shows the shop's reports, sales,
+- On a computer: LekasPOS Manager (https://lekas.faizo.net/manager/) shows the shop's reports, sales,
   products, stock, shifts and activity log in a web browser — read only, no server, nothing to install. Sign in with the
   shop's Google account (the one used for Google Drive backup on the tills) or open a .lekasbak backup file.
 
 ## User guide
 
-- [User guide (English)](https://faizoken.github.io/LekasPOS/guide.html): every feature step by step — getting
+- [User guide (English)](https://lekas.faizo.net/guide.html): every feature step by step — getting
   started, quick guide for cashiers, selling, payment, receipts and printer, refunds and voids, products, promotions,
   stock, staff and PINs, shifts and cash, customers and credit, reports, activity log, backup and Google Drive,
   several tills, settings, hardware, updates, troubleshooting, glossary.
-- [Panduan pengguna (Bahasa Melayu)](https://faizoken.github.io/LekasPOS/panduan.html): the same guide in Malay.
+- [Panduan pengguna (Bahasa Melayu)](https://lekas.faizo.net/panduan.html): the same guide in Malay.
 
 ## Install, privacy, help
 
-- [Download and install](https://faizoken.github.io/LekasPOS/#download)
-- [Privacy policy](https://faizoken.github.io/LekasPOS/privacy.html) · [Dasar privasi](https://faizoken.github.io/LekasPOS/privasi.html)
+- [Download and install](https://lekas.faizo.net/#download)
+- [Privacy policy](https://lekas.faizo.net/privacy.html) · [Dasar privasi](https://lekas.faizo.net/privasi.html)
 - [Report a problem](https://github.com/FaizoKen/LekasPOS/issues)
 - [Release notes](https://github.com/FaizoKen/LekasPOS/releases)
 

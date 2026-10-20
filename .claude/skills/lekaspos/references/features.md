@@ -560,7 +560,7 @@ Small things a future change could fix (none loses data):
 
 ## 21. LekasPOS Manager — the shop in a web browser (`site/manager/`, D-082)
 
-A read-only web page on the website (https://faizoken.github.io/LekasPOS/manager/), not part of the APK. No server: the
+A read-only web page on the website (https://lekas.faizo.net/manager/), not part of the APK. No server: the
 browser reads the shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer.
 - **Ways in** (welcome screen): *Open my shop with Google Drive* — Google sign-in in the browser (GIS token client,
   `drive.appdata`, web OAuth client in `js/config.js`; empty = the button says it is not set up) reads the tills' sync folder

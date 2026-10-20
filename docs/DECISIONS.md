@@ -1786,6 +1786,10 @@ statements; for shops with credit) and the Activity log — in English and Bahas
   + 643 KB JavaScript, loaded by the web page only (the APK is unchanged). Vendored in `site/manager/vendor/sqlite/` with its
   hashes: no CDN at run time (works if a CDN is down or blocked; the files cannot change under the shops). Needed because the
   page runs the app's SQL unchanged — the reason the numbers are the till's — and keeps a year of sales queryable.
+- **The website's own address** (the owner, 2026-10-20: "use my domain lekas.faizo.net"): the whole site moved to
+  https://lekas.faizo.net/ — GitHub Pages custom domain, a DNS-only CNAME to `faizoken.github.io` on Cloudflare, HTTPS
+  enforced. Old `faizoken.github.io/LekasPOS/…` addresses redirect (301), so released apps' links keep working. The web
+  OAuth client's origin is `https://lekas.faizo.net` (its domain becomes an authorized domain of the consent screen).
 - **Privacy.** Nothing reaches the developer: the browser talks to Google Drive and holds the copy itself. Anyone with the
   shop's Google account or a backup file can see everything (as on a till with the owner's PIN): the page and guide say so, and
   *Forget this shop on this computer* removes it from a shared computer.
