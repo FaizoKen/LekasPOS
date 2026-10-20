@@ -56,6 +56,21 @@ lww(T1, 3, RAVI, t0, { name: 'Ravi', role_id: 3n, active: 1n, created_at: BigInt
 lww(T1, 3, MEI, t0, { name: 'Mei Ling', role_id: 2n, active: 1n, created_at: BigInt(t0) });
 const SUPPLIER = nextId(T1);
 lww(T1, 8, SUPPLIER, t0, { name: 'Borong Sentosa Sdn Bhd', name_key: 'borong sentosa sdn bhd', phone: '03-5511 2233', created_at: BigInt(t0) });
+// Customers who buy on credit and pay back (credit entries without their sales: enough for the Customers tab)
+setting('credit.enabled', 'true');
+for (const [name, phone, limit, entries] of [
+  ['Siti Aminah', '012-345 6789', 30000n, [[1, 4520], [1, 1890], [2, 5000], [1, 2350]]],
+  ['Ah Kow', '016-778 2211', 0n, [[1, 12900], [2, 6000]]],
+  ['Pak Rahman', '019-220 4455', 20000n, [[1, 2200], [2, 2200]]],
+]) {
+  const cid = nextId(T1);
+  lww(T1, 9, cid, t0, { name, name_key: name.toLowerCase(), phone, credit_limit: limit, created_at: BigInt(t0) });
+  entries.forEach(([kind, amount], i) => {
+    const at = t0 + (i + 1) * 5 * DAY_MS;
+    const h = hlcAt(at);
+    emit(T1, { e: 26, h, p: { id: nextId(T1), customer_id: cid, kind: BigInt(kind), amount: BigInt(amount), sale_id: null, method_id: kind === 2 ? 1n : 4n, staff_id: 1n, note: null, at: BigInt(at), hlc: h, shift_id: null } });
+  });
+}
 
 const CATS = ['Minuman', 'Roti & Kek', 'Makanan Kering', 'Susu & Telur', 'Barang Rumah', 'Snek'];
 const catIds = CATS.map((name, i) => {

@@ -175,6 +175,8 @@ const METHODS = {
   audit: (a) => R.audit(db, a),
   staffNames: () => R.staffNames(db),
   roles: () => R.roles(db),
+  customers: (a) => R.customers(db, a),
+  customer: ({ id }) => R.customer(db, id),
   exportCsv: ({ what, p, decimals }) => R.exportCsv(db, what, period(p), decimals),
 };
 

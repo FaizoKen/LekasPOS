@@ -2423,14 +2423,15 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
 - [x] `site/manager/`: welcome (Google Drive or a backup file), Home, Reports (the app's periods, lines, best sellers,
       categories, stock on hand, not sold, staff check, the four CSV exports), Sales & refunds (receipts), Products (stock
       history), Stock (low stock, stock changes, deliveries, stock value), Shift & cash (shift reports with expected cash),
-      Activity log; English and Bahasa Melayu; phone and laptop; light and dark
+      Customers (who owes what, statements; shops with credit), Activity log; English and Bahasa Melayu; phone and laptop;
+      light and dark
 - [x] Data: the app's tables (generated `schema.js`) in SQLite WebAssembly (vendored 3.53.4, OPFS storage); events applied
       with Importer's rules; derived tables with DerivedRebuild/StockDao/creditOnce SQL; reports with ReportDao's queries;
       64-bit ids kept exact; backup files with their WAL folded in
 - [x] Sign-in: Google Identity Services token client, `drive.appdata` (the tills' scope), token in memory only
-- [x] Tests (`node --test scripts/manager/*.test.mjs`, 19 locally): :core cases (periods, buckets, margins, money), JSON,
+- [x] Tests (`node --test scripts/manager/*.test.mjs`, 20 locally): :core cases (periods, buckets, margins, money), JSON,
       a two-till synthetic shop end to end (out of order, read twice), WAL from real SQLite, ZIP, Drive client on a fake
-      fetch, strings equal to `values/`/`values-ms/`, both languages complete
+      fetch, strings equal to `values/`/`values-ms/`, both languages complete, customer balances and statements
 - [x] `ManagerFixtureTest` (instrumented) makes a two-till shop with the app's real flows; `fixture.test.mjs` (CI, after the
       instrumented tests on API 21 and 36) requires the web page's copy, reports and CSVs to equal both tills'
 - [x] Tried in Chrome (headless, localhost) on a made-up shop (`demo-shop.mjs`, 3,900 sales): every screen, both languages,

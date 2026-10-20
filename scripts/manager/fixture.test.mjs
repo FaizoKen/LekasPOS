@@ -90,6 +90,7 @@ test('the web page holds the tills\' data and gives their reports (files made by
     csv: ['summary', 'daily', 'products', 'receipts'].map((w) => R.exportCsv(db, w, p, 2).text),
     low: R.lowStockCount(db),
     sales: R.sales(db, { limit: 500 }),
+    customers: R.customers(db).map((c) => R.customer(db, c.id)),
   });
   const webViews = json(views(web));
 

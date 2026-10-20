@@ -224,14 +224,18 @@ async function forget() {
 
 // ------------------------------------------------------------------------------------------- shell
 
-const NAV = [
-  ['home', 'nav_home'], ['reports', 'menu_reports'], ['sales', 'menu_sales'], ['products', 'products_title'],
-  ['stock', 'inv_title'], ['shifts', 'menu_shift'], ['activity', 'settings_audit'],
-];
+/** The tabs; Customers only for a shop that has them or sells on credit. */
+function navItems() {
+  const nav = [['home', 'nav_home'], ['reports', 'menu_reports'], ['sales', 'menu_sales'], ['products', 'products_title'],
+    ['stock', 'inv_title'], ['shifts', 'menu_shift']];
+  if (S.status?.settings?.['credit.enabled'] === 'true' || S.status?.counts?.customers > 0) nav.push(['customers', 'customers_title']);
+  nav.push(['activity', 'settings_audit']);
+  return nav;
+}
 
 function route() {
   const [view, ...rest] = location.hash.slice(1).split('/');
-  return { view: NAV.some(([v]) => v === view) ? view : 'home', id: rest.join('/') || null };
+  return { view: navItems().some(([v]) => v === view) ? view : 'home', id: rest.join('/') || null };
 }
 
 function langButton() {
@@ -258,7 +262,7 @@ function render() {
   const r = route();
   const view = h('main', { id: 'view', class: 'view' });
   root.replaceChildren(...[header(), nav(r.view), banner(), view, footer()].filter(Boolean));
-  const views = { home, reports, sales, products, stock, shifts, activity };
+  const views = { home, reports, sales, products, stock, shifts, customers: customersView, activity };
   views[r.view](view, r.id);
 }
 
@@ -297,7 +301,7 @@ function renderStatusLine() {
 
 function nav(current) {
   return h('nav', { class: 'tabs', 'aria-label': t('app_title') },
-    NAV.map(([v, key]) => h('a', { href: `#${v}`, class: v === current ? 'active' : null, 'aria-current': v === current ? 'page' : null }, t(key))));
+    navItems().map(([v, key]) => h('a', { href: `#${v}`, class: v === current ? 'active' : null, 'aria-current': v === current ? 'page' : null }, t(key))));
 }
 
 function banner() {
@@ -973,6 +977,54 @@ function shiftChecks(c) {
   if (c.continued > 0) rows.push(row(t('st_continued'), String(c.continued)));
   if (c.floatDiffs.count > 0) rows.push(row(`${t('st_float_diff')} (${c.floatDiffs.count})`, signed(c.floatDiffs.amount)));
   return rows.length ? [h('h3', { text: t('st_checks_section') }), rows] : null;
+}
+
+// ------------------------------------------------------------------------------------------- customers and credit
+
+let customerSearch = '';
+
+function customersView(view, id) {
+  const search = h('input', { type: 'search', placeholder: t('customer_search_hint'), value: customerSearch, 'aria-label': t('customer_search_hint') });
+  const box = h('div');
+  view.append(h('form', { class: 'toolbar', onsubmit: (e) => { e.preventDefault(); customerSearch = search.value; render(); } },
+    search, h('button', { class: 'btn', type: 'submit' }, t('search'))), box);
+  fill(box, () => rpc('customers', { search: customerSearch }), (list) => {
+    if (list.length === 0) return h('p', { class: 'muted', text: customerSearch ? t('customers_none_found') : t('nothing_found') });
+    const owing = list.filter((c) => c.balance > 0);
+    return [
+      h('p', { class: 'period', text: t('customers_owing', owing.length, money(owing.reduce((a, c) => a + c.balance, 0))) }),
+      table([t('customer'), { label: t('credit_limit'), num: true }, { label: t('owes'), num: true }],
+        list.map((c) => linkRow(`#customers/${c.id}`, [
+          td([h('div', null, c.name, c.deleted ? [' ', tag(t('customer_removed_tag'), 'muted')] : null), c.phone ? h('div', { class: 'small muted', text: c.phone }) : null]),
+          td(c.credit_limit > 0 ? money(c.credit_limit) : '–', { num: true }),
+          td(c.balance !== 0 ? t('customer_owes', money(c.balance)) : '–', { num: true, class: c.credit_limit > 0 && c.balance > c.credit_limit ? 'num low' : null }),
+        ]))),
+    ];
+  });
+  if (id) showCustomer(id);
+}
+
+function showCustomer(id) {
+  const box = h('div');
+  openModal(t('customer'), box, '#customers');
+  const mine = gen;
+  rpc('customer', { id }).then((c) => {
+    if (mine !== gen || !c) return;
+    modal?.querySelector('h2')?.replaceChildren(c.name);
+    const what = (e) => t(e.kind === 2 ? 'credit_payment' : e.kind === 3 ? 'credit_adjust' : e.amount < 0 ? 'credit_reversal' : 'credit_charge');
+    put(box,
+      h('div', { class: 'facts' },
+        row(t('customer_owes', money(c.balance)), '', { bold: true, warn: c.credit_limit > 0 && c.balance > c.credit_limit }),
+        c.credit_limit > 0 ? row(t('customer_limit_line', money(c.credit_limit), money(Math.max(0, c.credit_limit - c.balance))), '') : null,
+        c.phone ? row(t('phone'), c.phone) : null,
+        c.tin ? row('TIN', c.tin) : null),
+      c.entries.length === 0 ? h('p', { class: 'muted', text: t('credit_empty') }) :
+        table([t('time'), t('what'), { label: t('amount'), num: true }, { label: '', num: true }], c.entries.map((e) => h('tr', null,
+          td(D.dateTimeText(e.at)),
+          td([h('div', { text: what(e) }), (e.receipt_no || e.note || e.method) ? h('div', { class: 'small muted', text: [e.receipt_no, e.method, e.note].filter(Boolean).join(' · ') }) : null]),
+          td(`${e.delta > 0 ? '+' : ''}${money(e.delta)}`, { num: true }),
+          td(t('credit_balance_after', money(e.balanceAfter)), { num: true })))));
+  }).catch((e) => put(box, h('p', { class: 'error', text: errorText(e) })));
 }
 
 // ------------------------------------------------------------------------------------------- activity log

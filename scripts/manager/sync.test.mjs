@@ -239,3 +239,20 @@ test('a damaged file stops the round; a folder without a shop says so', async ()
   await assert.rejects(store.sync(folder), /checksum/);
   assert.equal(db.selectValue('SELECT COUNT(*) FROM sale'), 0);
 });
+
+test('customers: balances from credit entries, a statement with the balance after each entry', async () => {
+  const { folder, db, store } = await synced();
+  const SITI = idOf(A, 70);
+  const credit = (n, kind, amount) => ({ e: 26, h: h(100 + n), p: { id: idOf(A, 71 + n), customer_id: SITI, kind: BigInt(kind), amount: BigInt(amount), sale_id: null, method_id: kind === 2 ? 1n : null, staff_id: 1n, note: null, at: BigInt(T0 + n * 60000), hlc: h(100 + n), shift_id: null } });
+  folder.putSegment(STORE, A, 2, [
+    lww(9, SITI, h(99), A, { name: 'Siti', name_key: 'siti', phone: '012-345 6789', credit_limit: 5000n, created_at: BigInt(T0) }),
+    credit(0, 1, 3000), credit(1, 2, 1000), credit(2, 3, 50),
+  ]);
+  await store.sync(folder, () => {}, T0 + 3 * 86_400_000);
+  assert.equal(db.selectValue('SELECT balance FROM customer_balance WHERE customer_id = ?', [SITI]), 2050);
+  const [c] = R.customers(db);
+  assert.deepEqual([c.name, c.balance, c.credit_limit], ['Siti', 2050, 5000]);
+  const s = R.customer(db, c.id);
+  assert.deepEqual(s.entries.map((e) => [e.delta, e.balanceAfter]), [[50, 2050], [-1000, 2000], [3000, 3000]]);
+  assert.equal(s.entries[1].method, 'Cash');
+});

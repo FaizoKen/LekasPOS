@@ -60,6 +60,7 @@ export function counts(db) {
   return {
     sales: num(db.selectValue('SELECT COUNT(*) FROM sale')),
     products: num(db.selectValue('SELECT COUNT(*) FROM product WHERE deleted = 0')),
+    customers: num(db.selectValue('SELECT COUNT(*) FROM customer')),
     lastSoldAt: db.selectValue('SELECT MAX(sold_at) FROM sale') ?? null,
   };
 }
@@ -481,6 +482,39 @@ export function shiftReport(db, shiftId) {
     checks: checksOf(checkRows),
     moveList: all(db, 'SELECT id, kind, amount, reason, staff_id, at FROM cash_movement WHERE shift_id = ? ORDER BY at, id', [sid]),
   };
+}
+
+// ----------------------------------------------------------------------------------- customers and credit (D-039)
+
+/** Customers, the most owed first; [search] matches name or phone. Removed ones are listed while they owe. */
+export function customers(db, { search = '' } = {}) {
+  const where = ['(c.deleted = 0 OR COALESCE(b.balance, 0) != 0)'];
+  const bind = [];
+  const q = search.trim();
+  if (q) {
+    const pattern = `%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`;
+    where.push("(c.name LIKE ? ESCAPE '\\' OR c.phone LIKE ? ESCAPE '\\')");
+    bind.push(pattern, pattern);
+  }
+  return all(db, 'SELECT c.id, c.name, c.phone, c.credit_limit, c.deleted, COALESCE(b.balance, 0) AS balance FROM customer c ' +
+    `LEFT JOIN customer_balance b ON b.customer_id = c.id WHERE ${where.join(' AND ')} ORDER BY balance DESC, c.name_key, c.id LIMIT 1000`, bind);
+}
+
+/** One customer with their statement, newest first, each entry with the balance after it (CustomerService.statement). */
+export function customer(db, customerId) {
+  const cid = id(customerId);
+  const c = first(db, 'SELECT c.*, COALESCE(b.balance, 0) AS balance FROM customer c LEFT JOIN customer_balance b ON b.customer_id = c.id WHERE c.id = ?', [cid]);
+  if (!c) return null;
+  let balance = 0;
+  const entries = all(db, 'SELECT e.id, e.kind, e.amount, e.note, e.at, e.sale_id, s.receipt_no, m.name AS method FROM credit_entry e ' +
+    'LEFT JOIN sale s ON s.id = e.sale_id LEFT JOIN payment_method m ON m.id = e.method_id WHERE e.customer_id = ? ORDER BY e.hlc, e.id', [cid])
+    .map((e) => {
+      const delta = e.kind === CreditKind.PAYMENT ? -e.amount : e.amount; // CreditMath.delta
+      balance += delta;
+      return { ...e, delta, balanceAfter: balance };
+    });
+  c.entries = entries.reverse();
+  return c;
 }
 
 // ----------------------------------------------------------------------------------- activity log

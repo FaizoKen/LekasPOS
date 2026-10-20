@@ -54,6 +54,8 @@ export const NAMES = [
   'sync_turn_on', 'menu_settings', 'backup_title', 'backup_save_file', 'backup_share',
   'reason_damaged', 'reason_expired', 'reason_lost', 'reason_theft', 'reason_own_use', 'reason_returned', 'reason_found',
   'reason_correction', 'reason_other',
+  'customers_owing', 'customers_none_found', 'customer_search_hint', 'customer_limit_line', 'customer_removed_tag', 'credit_empty',
+  'credit_charge', 'credit_reversal', 'credit_payment', 'credit_adjust', 'credit_balance_after',
 ];
 
 /** The text of an Android string resource as the app shows it. */

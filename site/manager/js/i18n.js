@@ -124,6 +124,10 @@ const WEB = {
     st_credit_repaid: 'Repaid', st_note: 'Note', st_checks_section: 'Checks', st_cleared: 'Bills cleared',
     st_removed: 'Items taken off', st_after_pay: 'After the total was shown', st_drawer_opens: 'Drawer opened, no sale',
     st_copies: 'Receipt copies', st_continued: 'Sold on without a count', st_float_diff: 'Opened with another amount than was left',
+    // Customers
+    credit_limit: 'Credit limit',
+    owes: 'Owes',
+    phone: 'Phone',
     // Activity log
     amount: 'Amount',
     who: 'Who',
@@ -243,6 +247,9 @@ const WEB = {
     st_credit_repaid: 'Bayaran hutang', st_note: 'Catatan', st_checks_section: 'Semakan', st_cleared: 'Bil dikosongkan',
     st_removed: 'Barang dibuang', st_after_pay: 'Selepas jumlah ditunjuk', st_drawer_opens: 'Laci dibuka tanpa jualan',
     st_copies: 'Salinan resit', st_continued: 'Jual tanpa kiraan laci', st_float_diff: 'Dibuka dengan jumlah lain daripada yang ditinggal',
+    credit_limit: 'Had kredit',
+    owes: 'Hutang',
+    phone: 'Telefon',
     amount: 'Jumlah',
     who: 'Siapa',
     what: 'Apa',

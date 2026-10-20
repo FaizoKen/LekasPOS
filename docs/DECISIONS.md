@@ -1753,8 +1753,8 @@ decide properly and do your best". Decided: **a read-only web page**, `site/mana
 (https://faizoken.github.io/LekasPOS/manager/), that shows one shop — Home (today, yesterday, this week, this month, the last
 14 days, what is worth a look, the tills), Reports (the app's periods, lines, best sellers, categories, stock on hand, not sold,
 staff check, the four CSV exports), Sales & refunds (every receipt), Products (with stock history), Stock (low stock, stock
-changes, deliveries, stock value), Shift & cash (each shift's report with the expected cash) and the Activity log — in English
-and Bahasa Melayu.
+changes, deliveries, stock value), Shift & cash (each shift's report with the expected cash), Customers (who owes what, with
+statements; for shops with credit) and the Activity log — in English and Bahasa Melayu.
 - **Where the data comes from.** The sync design already needs no server (D-014, D-045: the shop's Google Drive app folder is
   a dumb mailbox of each till's immutable files). The page is one more reader of that folder: Google Identity Services in the
   browser gives a token for the same scope as the tills, `drive.appdata` (non-sensitive: no verification), through a new OAuth

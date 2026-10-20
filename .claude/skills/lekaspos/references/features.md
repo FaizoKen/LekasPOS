@@ -580,10 +580,12 @@ browser reads the shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worke
   Staff check, the four CSV exports byte-for-byte like the app's), Sales & refunds (search by receipt number, a day;
   receipt with lines, discounts, payments, voids, refunds, original), Products (search name/SKU/barcode; All / Low stock /
   Hidden; product with barcodes, tax, stock and stock history), Stock (low stock, stock changes, deliveries, stock value),
-  Shift & cash (past shifts; the shift report with expected cash and checks, cash movements), Activity log (filter by
-  action; money actions with amounts, approvals as permission names).
+  Shift & cash (past shifts; the shift report with expected cash and checks, cash movements), Customers (only with
+  `credit.enabled` or customers: the most owed first, name/phone search, "Customers · owing: n (total)", limit, removed ones
+  while they owe; a statement with the balance after each entry, labels as the app's), Activity log (filter by action; money
+  actions with amounts, approvals as permission names).
 - Language: Bahasa Melayu / English button (browser language at first; kept in the browser). The app's words come from
   `js/app-strings.js` (generated from `values{,-ms}/`), the page's own from `js/i18n.js`.
 - Footer: the source (Google account, or "a backup file does not change"), *Open a backup file*, *Forget this shop on this
   computer* (asks once; removes the copy from the browser), guide and privacy links.
-- Not in the page: editing anything, customers and credit balances (not shown yet), promotions, settings, staff and roles.
+- Not in the page: editing anything, promotions, settings, staff and roles.
