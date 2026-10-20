@@ -1,13 +1,14 @@
 # Publishes site/ (home page, user guide and privacy policy) to GitHub Pages:
-# https://faizoken.github.io/LekasPOS/ — the privacy link for Google Play and the Google sign-in
-# screen. Plain HTML, no Jekyll; runs only when site/ changes. The pages are checked first
-# (scripts/check-site.mjs: links, pictures, both guide languages alike).
+# https://lekas.faizo.net/ — the privacy link for Google Play and the Google sign-in
+# screen — and the manager web page (site/manager/, D-082). Plain HTML, no Jekyll; runs only when site/ changes.
+# The pages are checked first (scripts/check-site.mjs: links, pictures, both guide languages alike), and the
+# manager web page's tests run (scripts/manager/; the comparison with the app's own files runs in ci.yml).
 name: Pages
 
 on:
   push:
     branches: [main]
-    paths: [site/**, scripts/check-site.mjs, .github/workflows/pages.yml]
+    paths: [site/**, scripts/check-site.mjs, scripts/manager/**, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +30,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check the pages
         run: node scripts/check-site.mjs
+      - name: Test the manager web page
+        run: node --test scripts/manager/*.test.mjs
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

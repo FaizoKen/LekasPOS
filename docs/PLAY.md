@@ -35,7 +35,7 @@ Google sign-in is public. Going on Play then means:
   and credit. Reports for any period, CSV import and export, daily backups, and optional sync
   between the shop's tills through its own Google Drive. English and Bahasa Melayu.
 - **Category:** Business. **Contact:** mail@faizo.net (also the privacy policy's contact).
-- **Privacy policy:** `https://faizoken.github.io/LekasPOS/privacy.html`
+- **Privacy policy:** `https://lekas.faizo.net/privacy.html`
 - **Screenshots:** phone (selling screen, payment, reports, stock) and 10-inch tablet (two-pane
   selling screen), in both languages.
 
@@ -99,6 +99,10 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
   LekasPOS → Options → Delete hidden app data (explained in the privacy policy). The daily report's
   files are ordinary files in the "LekasPOS" folder of the user's Drive, deleted there. Error reports:
   on request (the privacy policy's contact).
+
+The **LekasPOS Manager** web page (D-082, `site/manager/`) is not part of the app: Play's Data safety form covers the
+APK only, and its answers above do not change. The web page reads the shop's own Drive app folder (same scope) or a
+backup file into the user's own browser; nothing reaches the developer. It is described in the privacy policy.
 
 Re-check before submitting: if a later version changes what error reports hold, adds a server, or
 any SDK that sends data, these answers and the privacy policy change first.

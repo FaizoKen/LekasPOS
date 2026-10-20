@@ -46,6 +46,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.19.2**: the Menu's one Discount tile split in two — **Bill discount** and **Item discount**; Item discount asks "Which item?" with the tapped line ticked (D-079) | **released** 2026-10-14 (v1.19.2, build 203) — the owner asked to release it ("do it all for me until fully release to public"); offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **1.20.0**: Products and Stock told apart — "Inventory" renamed **Stock** with a card saying what stock is (shelf and storeroom together); the product form's **Stock** section under the price with **Change stock**; Change stock opens on **Count** (type how many you have, the app records the difference); counts of one product in Stock changes (D-080) | **released** 2026-10-14 (v1.20.0, build 211) — tested by the owner: "all good"; the owner asked to release it; offered in the app to shops on 1.6.1+ |
 | — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 
 ## Open questions for the user
 
@@ -2412,3 +2413,55 @@ as much as you can". Audited from the 1.20.0 CI pictures (320dp phone and tablet
    it is back and the button reads **Hold**. Malay: Ditangguh (1).
 4. Empty bill with nothing held: **Hold** greyed; no "0 items" above the total.
 5. Empty bill on a phone: the help lines that wrap start under the words, not under the bullet.
+
+## LekasPOS Manager — the shop in a web browser, no server (D-082)
+
+The owner (2026-10-20): "can we make web based app for manager without any backend and server?", then "please think and
+decide properly and do your best as much as possible". Decided: a read-only page on the website, reading the tills' own
+sync files from the shop's Google Drive (or a backup file) into the browser. No app change, no APK.
+
+- [x] `site/manager/`: welcome (Google Drive or a backup file), Home, Reports (the app's periods, lines, best sellers,
+      categories, stock on hand, not sold, staff check, the four CSV exports), Sales & refunds (receipts), Products (stock
+      history), Stock (low stock, stock changes, deliveries, stock value), Shift & cash (shift reports with expected cash),
+      Customers (who owes what, statements; shops with credit), Activity log; English and Bahasa Melayu; phone and laptop;
+      light and dark
+- [x] Data: the app's tables (generated `schema.js`) in SQLite WebAssembly (vendored 3.53.4, OPFS storage); events applied
+      with Importer's rules; derived tables with DerivedRebuild/StockDao/creditOnce SQL; reports with ReportDao's queries;
+      64-bit ids kept exact; backup files with their WAL folded in
+- [x] Sign-in: Google Identity Services token client, `drive.appdata` (the tills' scope), token in memory only
+- [x] Tests (`node --test scripts/manager/*.test.mjs`, 20 locally): :core cases (periods, buckets, margins, money), JSON,
+      a two-till synthetic shop end to end (out of order, read twice), WAL from real SQLite, ZIP, Drive client on a fake
+      fetch, strings equal to `values/`/`values-ms/`, both languages complete, customer balances and statements
+- [x] `ManagerFixtureTest` (instrumented) makes a two-till shop with the app's real flows; `fixture.test.mjs` (CI, after the
+      instrumented tests on API 21 and 36) requires the web page's copy, reports and CSVs to equal both tills'
+- [x] Tried in Chrome (headless, localhost) on a made-up shop (`demo-shop.mjs`, 3,900 sales): every screen, both languages,
+      phone and laptop widths; fixed what it showed (stray "null", a sheet left open on another tab, chart labels, a sign)
+- [x] Docs: user guide EN + MS (Reports → On a computer: LekasPOS Manager, pictures `en/ms-manager.png`), home page,
+      privacy policy EN + MS (20 October 2026), `PLAY.md`, README (Google Cloud step 6), `llms.txt`, `features.md` §21,
+      `codemap.md` §9.5a, `glossary.md`, D-082; `check-site.mjs` checks the manager page too; `pages.yml` runs its tests
+- [x] CI run 39411221402 (e763c59): everything green but `ManagerFixtureTest` — it received a delivery without keeping its
+      draft first (the Receive screen keeps it; `receive` refuses otherwise). Fixed in the test
+- [x] CI run 39413132154 (8638f95): all jobs green — build, lint, tablet, release smoke API 21 + 36, instrumented API 21 + 36
+      (292 tests each). The fixture (17 files) compared on both: the web page's copy equals both tills' databases in every
+      synced table, stock, counts, balances and day totals, and in its reports, CSVs, receipts, products, shifts, stock
+      changes, deliveries, activity log and customer statements (21/21 web tests, none skipped). No APK change
+- [x] The website at **https://lekas.faizo.net/** (the owner asked, 2026-10-20): Cloudflare DNS `CNAME lekas →
+      faizoken.github.io` (DNS only), GitHub Pages custom domain, certificate approved, HTTPS enforced; old addresses 301 to it.
+      Docs and guide use the new address; the app's own links follow with its next release
+- [x] Google Cloud → Clients → Web application "LekasPOS Manager (web page)" (the owner said "yes do it all for me",
+      2026-10-20), origins `https://lekas.faizo.net` and `http://localhost:8000`; Google added `faizo.net` to the authorized
+      domains; its client ID in `site/manager/js/config.js`
+- [ ] The owner tries it with the shop's Google account and a backup file, then says whether to publish (merge to main
+      deploys the website)
+
+### Checks for the owner
+1. On a laptop, open https://lekas.faizo.net/manager/ (or `node scripts/manager/serve.mjs`, then
+   http://localhost:8000/manager/). **Open my shop with Google Drive**, sign in with the shop's account: the shop's name
+   shows, Home shows today's sales as the till's Reports → Today shows them.
+2. Make a sale on a till, wait 15 seconds, tap **Update**: Today goes up by the sale.
+3. Reports → This month on the page and on the till: the same Sales, Total, Gross profit, Payment methods and Best sellers.
+4. Sales & refunds: open today's last receipt — the same items and payment as on the till.
+5. **Open a backup file** with a `.lekasbak` saved from the till (Settings → Backup & restore → Save a backup file…): the
+   shop as of that backup.
+6. **Bahasa Melayu** at the top: every word in Malay. On a phone: the tabs scroll sideways, receipts open full screen.
+7. **Forget this shop on this computer**: the welcome screen again.

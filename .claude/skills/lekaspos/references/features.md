@@ -557,3 +557,35 @@ Small things a future change could fix (none loses data):
   "Batalkan" means both void and the cleared-bill audit label ("Bil dibatalkan"); payment methods are "Cara bayaran"
   in Reports but "Kaedah bayaran" in Settings.
 - `shift_float_hint` is unused. Part payments are lost if Android kills the process mid-payment (the bill survives).
+
+## 21. LekasPOS Manager — the shop in a web browser (`site/manager/`, D-082)
+
+A read-only web page on the website (https://lekas.faizo.net/manager/), not part of the APK. No server: the
+browser reads the shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer.
+- **Ways in** (welcome screen): *Open my shop with Google Drive* — Google sign-in in the browser (GIS token client,
+  `drive.appdata`, web OAuth client in `js/config.js`; empty = the button says it is not set up) reads the tills' sync folder
+  (`js/drive.js`: lists and downloads only); *Open a backup file* — a `.lekasbak` read in the browser (`js/backup.js`: ZIP +
+  CRC, WAL folded in, schema ≥ 8 else "update the app, save a new backup"). One shop at a time; another Google account or
+  a store the tills moved to starts the copy again.
+- **Update**: one tap (Google's popup needs it); while the token lasts (~1 h) the page reads new files by itself every
+  5 min and when its tab comes back. A round (`js/store.js` `Store.sync`): store = lowest `store-*.json`; the tills' cards;
+  segments after each till's cursor up to the first gap (whole-folder listing daily, on the first round and on a gap; a till
+  numbered again from 1 is read again; `fullFrom` followed); checksum checked (downloaded twice before "damaged"); events
+  applied per batch of files with the derived tables in the same transaction; events of unknown kinds kept in
+  `sync_deferred` ("n changes from a newer app version wait until this page is updated") and retried on the next round.
+- **Screens** (tabs; detail sheets by address `#sales/<id>` etc.): Home (today/yesterday/this week/this month with change,
+  the last 14 days, worth a look: low stock, drawer without a sale, after-total removals, float differences, cash short;
+  tills with last seen, app version, receipt prefix, open shift), Reports (presets + Choose dates; the app's summary
+  lines, By day/week/month with bars, payment methods, cashiers, categories, best sellers + Show all, stock on hand, Not sold,
+  Staff check, the four CSV exports byte-for-byte like the app's), Sales & refunds (search by receipt number, a day;
+  receipt with lines, discounts, payments, voids, refunds, original), Products (search name/SKU/barcode; All / Low stock /
+  Hidden; product with barcodes, tax, stock and stock history), Stock (low stock, stock changes, deliveries, stock value),
+  Shift & cash (past shifts; the shift report with expected cash and checks, cash movements), Customers (only with
+  `credit.enabled` or customers: the most owed first, name/phone search, "Customers · owing: n (total)", limit, removed ones
+  while they owe; a statement with the balance after each entry, labels as the app's), Activity log (filter by action; money
+  actions with amounts, approvals as permission names).
+- Language: Bahasa Melayu / English button (browser language at first; kept in the browser). The app's words come from
+  `js/app-strings.js` (generated from `values{,-ms}/`), the page's own from `js/i18n.js`.
+- Footer: the source (Google account, or "a backup file does not change"), *Open a backup file*, *Forget this shop on this
+  computer* (asks once; removes the copy from the browser), guide and privacy links.
+- Not in the page: editing anything, promotions, settings, staff and roles.

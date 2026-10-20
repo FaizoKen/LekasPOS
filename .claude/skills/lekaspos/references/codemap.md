@@ -16,7 +16,7 @@ Path abbreviations used throughout:
 | `AT/` | `app/src/androidTest/java/com/lekaspos/` |
 | `RES/` | `app/src/main/res/` |
 
-File counts: `:core` main 50, `:app` main 162, `:core` JVM tests 39, `:app` JVM tests 14, instrumented tests 55 (320 `.kt` files).
+File counts: `:core` main 50, `:app` main 162, `:core` JVM tests 39, `:app` JVM tests 14, instrumented tests 56 (321 `.kt` files).
 Not repeated here (already documented): the rules in `CLAUDE.md`, `.claude/skills/lekaspos/SKILL.md`,
 `references/{architecture,database,money,sync,performance}.md`, `docs/BUILD.md`. This file is the *where is it* map.
 
@@ -795,6 +795,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `perf/PerfSuiteTest.kt` | **perf** | Generates data, runs suite; query plans always enforced; budgets only with `-e assertBudgets true`; `-e perfScale TINY\|QUICK\|FULL`. Excluded from the normal instrumented run. |
 | `perf/QueryPlansTest.kt` | **plan check** | Registered queries pass; checker flags full scans, correlated scans, sorts. |
 | `perf/SoakTest.kt` | perf/leak | 1,000-sale soak heap budget, leaked screens (heap dump). |
+| `sync/ManagerFixtureTest.kt` | manager web page (D-082) | Two tills (real cart, checkout, refund, a credit sale voided on both, price changes, delivery, counts, shift, repayment) sync through a folder; the folder and both tills' `.lekasbak` files are left in `files/manager-fixture` (external app files if any) for `scripts/manager/fixture.test.mjs`. |
 | `sync/SyncMergeTest.kt` | **merge** | 36 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
 | `ui/AppLanguageTest.kt` | UI | Screens follow the chosen language. |
 | `ui/BackOfficeReviewTest.kt` | UI | Back-office fixes (app DB, PIN login off). |
@@ -832,10 +833,10 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 ### 9.2 GitHub Actions (`.github/workflows/`)
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `ci.yml` | push `main`, PRs, manual; concurrency cancels older runs | **build**: release key from secrets → `:core:test :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest -Plekas.ciRun=<run>`; APK < 8,388,608 bytes; artifacts `apks` (14 d), `mapping` (90 d), `build-reports`. **release-smoke** (API 21 1 GB / API 36 2 GB): `scripts/ci/release-smoke.sh` with `PREV_APK_URL` (ci.yml:136, now `…/v1.13.0/LekasPOS-1.13.0.apk`). **tablet** (API 36 `pixel_tablet`, landscape): `scripts/ci/screenshots.sh`. **instrumented** (API 21 + 36): `scripts/ci/instrumented.sh`, artifact `instrumented-api*`. |
+| `ci.yml` | push `main`, PRs, manual; concurrency cancels older runs | **build**: release key from secrets → `:core:test :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest -Plekas.ciRun=<run>`; APK < 8,388,608 bytes; artifacts `apks` (14 d), `mapping` (90 d), `build-reports`. **release-smoke** (API 21 1 GB / API 36 2 GB): `scripts/ci/release-smoke.sh` with `PREV_APK_URL` (ci.yml:136, now `…/v1.13.0/LekasPOS-1.13.0.apk`). **tablet** (API 36 `pixel_tablet`, landscape): `scripts/ci/screenshots.sh`. **instrumented** (API 21 + 36): `scripts/ci/instrumented.sh`, then `node --test scripts/manager/*.test.mjs` with `FIXTURE_DIR=results/manager-fixture-api*` (the manager web page against the app's files, D-082), artifact `instrumented-api*`. |
 | `perf.yml` | manual, input `scale` QUICK/FULL | build APKs → perf on API 21, 29 (SQLite 3.22, the store tablet's Android 10) and 36 via `scripts/ci/perf.sh`; artifacts `perf-<scale>-api*` (30 d). |
 | `relay.yml` | push/PR touching `relay/**`, manual | `node --test` in `relay/`; on `main`: `wrangler@4 deploy` + `secret put REPORTS_TOKEN` (needs `CLOUDFLARE_API_TOKEN`, var `CLOUDFLARE_ACCOUNT_ID`); then POSTs a test report (`x-lekas-test: 1`) expecting 204. |
-| `pages.yml` | push touching `site/**`, manual | Deploys `site/` to GitHub Pages (https://faizoken.github.io/LekasPOS/). |
+| `pages.yml` | push touching `site/**`, `scripts/check-site.mjs`, `scripts/manager/**`, manual | `node scripts/check-site.mjs`, `node --test scripts/manager/*.test.mjs`, then deploys `site/` (with `site/manager/`) to GitHub Pages (https://lekas.faizo.net/). |
 
 ### 9.3 Scripts
 | Script | What |
@@ -844,7 +845,7 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 | `scripts/create-avds.ps1` | Creates `lekas-api21` (1 GB) and `lekas-api36` (2 GB) AVDs. |
 | `scripts/run-perf.ps1` | `-Scale TINY\|QUICK\|FULL [-Serial] [-Apk] [-NoInstall] [-ScreenOff]`: installs release APK, starts Diagnostics with `--es autorun`, waits for `LekasPerf: DONE`, pulls reports to `perf-results/<device>/`. |
 | `scripts/measure-startup.ps1` | `-Runs N`: cold start via `am start -S -W` + "Fully drawn" from logcat. |
-| `scripts/ci/instrumented.sh` | Installs debug + test APKs, runs all instrumented tests except `PerfSuiteTest` (`TEST_TIMEOUT` 30m, per-test 300 s), streams logcat, pulls `files/screens`, analyses `files/leaks/*.hprof` with shark-cli 2.14. |
+| `scripts/ci/instrumented.sh` | Installs debug + test APKs, runs all instrumented tests except `PerfSuiteTest` (`TEST_TIMEOUT` 30m, per-test 300 s), streams logcat, pulls `files/screens` and `files/manager-fixture` (→ `results/manager-fixture-api<N>`), analyses `files/leaks/*.hprof` with shark-cli 2.14. |
 | `scripts/ci/release-smoke.sh` | Installs `PREV_APK_URL` (if set), runs it, installs new release over it, runs 20 s, then `pm clear` and runs fresh; fails on `FATAL EXCEPTION` or dead process. |
 | `scripts/ci/screenshots.sh` | Tablet landscape: `ScreensSmokeTest,ScreenshotsTest`, pulls screenshots. |
 | `scripts/ci/perf.sh` | `[TINY\|QUICK\|FULL]`: PerfSuiteTest (debug), release in-app runner (Diagnostics autorun), cold start ×10 (details beyond the header UNVERIFIED). |
@@ -860,7 +861,37 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 ### 9.5 `site/`
 `guide.html` / `panduan.html` (the user guide, English / Malay — keep both true, `recipes.md` §0), `llms.txt` (summary for AI assistants),
 `index.html` (download button → `releases/latest/download/LekasPOS.apk`, install/update steps EN + MS), `privacy.html` (EN) and `privasi.html` (MS) — must say the
-same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g. `en-pay.png`, `customer-bill.png`). Published by `pages.yml`.
+same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g. `en-pay.png`, `customer-bill.png`, `en-manager.png`), `manager/` (the manager web page, §9.5a). Published by `pages.yml`.
+
+### 9.5a `site/manager/` — LekasPOS Manager, the shop in a web browser (D-082)
+Static files, no build step; ES modules; served by GitHub Pages at `/LekasPOS/manager/`. Read only.
+
+| File | Purpose |
+|---|---|
+| `index.html`, `manager.css` | The page shell (loads `js/app.js`) and its styles (site colours, light/dark, one column on a phone). |
+| `js/app.js` | UI: welcome, header/tabs (`navItems`: Customers only with credit on or customers), Home, Reports, Sales, Products, Stock, Shifts, Customers, Activity log, detail sheets (`#view/<id>`), CSV download. Talks to the worker by `rpc(method, args)`. Shop text only through `textContent`. |
+| `js/worker.js` | Web Worker: SQLite WASM + OPFS (`opfs-sahpool`, file `/shop.db`; memory fallback), `Store`, `DriveFolder`, `readBackup`; the RPC methods (`status`, `sync`, `openBackup`, `forget`, `overview`, report and list queries, `exportCsv`). |
+| `js/store.js` | `Store`: check/create the copy (`WEB_FORMAT`, `MIN_BACKUP_SCHEMA`), `sync(provider)` (one round, SyncEngine's listing/cursor/gap/fullFrom rules), `applySegments` (events + cursors + derived in one transaction, events that fail or are unknown → `sync_deferred`), `retryDeferred`, `adoptBackup`; `SyncError` codes. |
+| `js/importer.js` | Port of `data/sync/Importer.kt` + `SaleDao.applyRemote`/`applyRemoteVoid` (rows only) collecting a `Touched` set; `Entity`, column lists, `fver` codec, version compare. |
+| `js/derived.js` | `applyDerived(db, touched)`: sale status, refunded, `StockDao.rebuild`, every count's `expected` (= `levelBefore`), `creditOnce`, `sum_day*` for the days touched (whole table past 400 days), balances. |
+| `js/reports.js` | Read side: `ReportDao`/`ReportService` queries on `sum_day*` (categories by the product's current category), stock value, slow movers, staff check (`checksOf` = `Checks.of`), sales/receipt, products/product history, movements, deliveries, shifts + `shiftReport` (`ShiftDao.totals` + `ShiftService.build`), customers + `customer` (statement with balance after), audit, `exportCsv` (the app's four CSVs). Ids out as strings. |
+| `js/segment.js` | Segment/manifest/card names and parsing, gunzip (`DecompressionStream`), SHA-256, `readSegment` (header + count checks), `CorruptFile`. |
+| `js/json64.js` | JSON reader keeping 64-bit integers (BigInt), null-prototype objects; `stringify` with BigInts. |
+| `js/backup.js` | `.lekasbak` reader: ZIP directory, deflate-raw, CRC-32, `applyWal` (committed frames, checksums), header bytes 18/19 → rollback journal; `BadBackup` kinds. |
+| `js/drive.js` | `DriveFolder`: Drive v3 `files.list` in `appDataFolder` (paged, `createdTime >`), `alt=media`, `about`; retries busy answers; `SIGN_IN`/`NO_ACCESS`/`OFFLINE`/`BUSY`/`DRIVE`. |
+| `js/auth.js`, `js/config.js` | Google Identity Services token client (`prepare`, `signIn`, `current`, `forget`); `GOOGLE_CLIENT_ID` (web OAuth client, project `lekaspos`) and `DRIVE_SCOPE`. |
+| `js/days.js`, `js/money.js` | Ports of `core/time/Days`, `core/report/Periods` (Period, presets, comparisons, buckets, granularity, margin/change/average/value), `Rounding`, `DateText`; `MoneyFormat` (format, plain, qty), currency from settings. |
+| `js/i18n.js`, `js/app-strings.js` | The page's own words EN/MS (+ ShiftText labels) and `t(key, …args)`; the app's words (generated, do not edit). |
+| `js/schema.js` | The app's DDL of `Schema.VERSION` without `product_fts` (generated, do not edit). |
+| `vendor/sqlite/` | SQLite 3.53.4 WebAssembly (`sqlite3.mjs`, `sqlite3.wasm`) from `@sqlite.org/sqlite-wasm` 3.53.4-build2, unchanged; README with hashes. No FTS4. |
+
+Tools and tests in `scripts/manager/`: `build-schema.mjs` (writes `js/schema.js`), `build-strings.mjs` (writes `js/app-strings.js`, list `NAMES`),
+`serve.mjs` (serves `site/` on localhost:8000), `demo-shop.mjs` (a made-up two-till shop as a `.lekasbak`; `--fixture <dir>`), `helpers.mjs`
+(the page's SQLite in Node, segment writer, `MemoryFolder`, `DiskFolder`, ZIP writer), `fixtures/` (a real SQLite WAL + `mkwal.py`), tests
+`core.test.mjs` (JSON, fver, days/periods/buckets/margins from the core tests, money), `sync.test.mjs` (two synthetic tills end to end, out of
+order, twice), `backup.test.mjs` (WAL, ZIP, old/damaged backups, schema up to date), `web.test.mjs` (Drive client on a fake fetch, strings
+up to date, both languages complete), `fixture.test.mjs` (CI: the app's files → same tables, reports and CSVs as both tills). Run:
+`node --test scripts/manager/*.test.mjs`.
 
 ### 9.6 Resources (`RES/`)
 `values/` + `values-ms/`: `strings.xml` (496/495 entries), `strings_{a11y,cashier,display,fraud,hw,look,promo,reports,safety,staff,sync,update}.xml` (same files in both

@@ -1747,6 +1747,60 @@ Staff check, or need a record of its own; a wrong removal is one scan to fix); m
 to give the chips more room (the owner put it there, D-078, and checked it); the amount on the Pay button (the total is
 in big figures right above it).
 
+### D-082 — LekasPOS Manager: the shop on a computer, read in the browser, no server (2026-10-20)
+The owner (2026-10-20): "can we make web based app for manager without any backend and server?", then "please think and
+decide properly and do your best". Decided: **a read-only web page**, `site/manager/` on the existing GitHub Pages site
+(https://faizoken.github.io/LekasPOS/manager/), that shows one shop — Home (today, yesterday, this week, this month, the last
+14 days, what is worth a look, the tills), Reports (the app's periods, lines, best sellers, categories, stock on hand, not sold,
+staff check, the four CSV exports), Sales & refunds (every receipt), Products (with stock history), Stock (low stock, stock
+changes, deliveries, stock value), Shift & cash (each shift's report with the expected cash), Customers (who owes what, with
+statements; for shops with credit) and the Activity log — in English and Bahasa Melayu.
+- **Where the data comes from.** The sync design already needs no server (D-014, D-045: the shop's Google Drive app folder is
+  a dumb mailbox of each till's immutable files). The page is one more reader of that folder: Google Identity Services in the
+  browser gives a token for the same scope as the tills, `drive.appdata` (non-sensitive: no verification), through a new OAuth
+  client of type *Web application* in the same Google Cloud project — the app folder belongs to the project, so the web client
+  sees the tills' folder. Token in memory only (about an hour; the next one from a tap). The other way in is a `.lekasbak`
+  backup file (D-044), opened in the browser — no Google account at all; a backup's write-ahead log is folded in with its
+  checksums (a backup taken while readers held part of the log stays complete).
+- **Read only.** The page never creates, changes or deletes a file in Drive and has no till number: a browser that wrote
+  would be a till whose storage the browser may clear at any time (a new till each time, cursors and HLC lost) — prices and
+  stock stay changed on the till. Editing from the web can come later as a real till, once this one has run in shops.
+- **The same numbers as the till.** The page keeps its copy in the app's own tables (`schema.js`, generated from the schema
+  snapshot of `Schema.VERSION`) in SQLite compiled to WebAssembly, stored in the browser's private storage (OPFS, the
+  `opfs-sahpool` VFS: works on GitHub Pages without cross-origin-isolation headers; in memory, read again each visit, where a
+  browser has none). Events are applied with the rules of `Importer`/`SaleDao.applyRemote` (insert once by id, LWW per field on
+  (hlc, till), the larger name at the seed tie, events of unknown kinds kept in `sync_deferred`); the derived tables are then
+  worked out for what changed with the SQL of `DerivedRebuild`, `StockDao.rebuild`/`levelBefore` and `SaleDao.creditOnce`
+  (which the tills' incremental paths are tested equal to), and the reports run the queries of `ReportDao`/`ReportService`. Day
+  totals only: a laptop sums a year of `sum_day_product` rows at once, so the month/year/category tables (D-058, built for
+  1 GB phones) are not kept — a product's sales go under its current category as the app's category totals do. 64-bit ids and
+  HLCs are read with a JSON reader that keeps every digit (BigInt). Proven in CI: `ManagerFixtureTest` makes a two-till shop
+  with the app's real cart, checkout, refunds, a sale voided on both tills, price changes on each, a delivery, counts, a shift
+  and credit; `scripts/manager/fixture.test.mjs` reads its folder as from Drive and requires every synced table, the derived
+  tables, the reports and the CSV files to equal both tills' databases (opened from their backup files).
+- **Ports kept honest.** The :core rules the page needs (days, periods and comparisons, buckets, margins and rounding, money
+  and quantity text, CSV escaping, the checks of the staff check, the shift report's cash) are small JavaScript ports tested with
+  the app's own test cases; the app's words come from `values/`/`values-ms/` through a generated file
+  (`scripts/manager/build-strings.mjs`), and a test fails when either generated file is out of date.
+- **New dependency: SQLite WebAssembly** (`@sqlite.org/sqlite-wasm` 3.53.4-build2, public domain/MIT/Apache-2.0): 869 KB wasm
+  + 643 KB JavaScript, loaded by the web page only (the APK is unchanged). Vendored in `site/manager/vendor/sqlite/` with its
+  hashes: no CDN at run time (works if a CDN is down or blocked; the files cannot change under the shops). Needed because the
+  page runs the app's SQL unchanged — the reason the numbers are the till's — and keeps a year of sales queryable.
+- **The website's own address** (the owner, 2026-10-20: "use my domain lekas.faizo.net"): the whole site moved to
+  https://lekas.faizo.net/ — GitHub Pages custom domain, a DNS-only CNAME to `faizoken.github.io` on Cloudflare, HTTPS
+  enforced. Old `faizoken.github.io/LekasPOS/…` addresses redirect (301), so released apps' links keep working. The web
+  OAuth client's origin is `https://lekas.faizo.net` (its domain becomes an authorized domain of the consent screen).
+- **Privacy.** Nothing reaches the developer: the browser talks to Google Drive and holds the copy itself. Anyone with the
+  shop's Google account or a backup file can see everything (as on a till with the owner's PIN): the page and guide say so, and
+  *Forget this shop on this computer* removes it from a shared computer.
+Rejected: a backend or a hosted database (cost, accounts, the shop's data leaving its own Drive — against D-014 and the
+no-backend rule); a till publishing ready-made report files for the web (needs an app release, stale between uploads, and the
+reports would be fixed by the app's version); Kotlin Multiplatform for :core (a large build change for the small part the web
+needs — the importer and the reports are SQL, reused as text); IndexedDB without SQLite (the app's SQL could not be reused, and
+a year of sales is slow to sum); `drive.readonly` for a "read-only" page (a sensitive scope with Google's review; `drive.appdata`
+is the tills' own and sees only the app folder); a service worker for offline use (the data is offline already; the page itself
+is small, a stale cached page would read a newer shop wrongly).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

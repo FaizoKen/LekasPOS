@@ -47,7 +47,7 @@ yang anda lihat dalam aplikasi.</p>
 <li><a href="#customers">Pelanggan dan kredit</a>
 <ol><li><a href="#customer-list">Pelanggan</a></li><li><a href="#credit-sale">Menjual secara kredit</a></li><li><a href="#repayment">Bayaran hutang dan pelarasan</a></li></ol></li>
 <li><a href="#reports">Laporan</a>
-<ol><li><a href="#periods">Tempoh</a></li><li><a href="#figures">Apa yang ditunjukkan dalam laporan</a></li><li><a href="#not-sold">Tidak terjual dalam tempoh ini</a></li><li><a href="#staff-check">Semakan staf</a></li><li><a href="#exports">Eksport (CSV)</a></li><li><a href="#drive-report">Laporan jualan harian ke Google Drive</a></li></ol></li>
+<ol><li><a href="#periods">Tempoh</a></li><li><a href="#figures">Apa yang ditunjukkan dalam laporan</a></li><li><a href="#not-sold">Tidak terjual dalam tempoh ini</a></li><li><a href="#staff-check">Semakan staf</a></li><li><a href="#exports">Eksport (CSV)</a></li><li><a href="#drive-report">Laporan jualan harian ke Google Drive</a></li><li><a href="#manager">Di komputer: Pengurus LekasPOS</a></li></ol></li>
 <li><a href="#activity-log">Log aktiviti</a></li>
 <li><a href="#data">Menjaga keselamatan data anda: sandaran, pemulihan, Google Drive</a>
 <ol><li><a href="#drive-backup">Sandaran Google Drive</a></li><li><a href="#phone-backups">Sandaran dalam telefon</a></li><li><a href="#folder-copy">Salinan harian ke kad SD atau pemacu USB</a></li><li><a href="#backup-files">Fail sandaran</a></li><li><a href="#restore">Memulihkan sandaran</a></li><li><a href="#lost-phone">Telefon hilang atau rosak</a></li><li><a href="#data-problem">Masalah data</a></li><li><a href="#storage">Storan telefon</a></li></ol></li>
@@ -82,7 +82,7 @@ dan TV atau monitor sebagai skrin pelanggan.</li>
 
 <h3 id="install">Pasang dan kemas kini</h3>
 <ol>
-<li>Pada telefon atau tablet, buka <a href="index.html#download">faizoken.github.io/LekasPOS</a> dan ketik
+<li>Pada telefon atau tablet, buka <a href="index.html#download">lekas.faizo.net</a> dan ketik
 <b>Download LekasPOS</b>.</li>
 <li>Buka fail <code>LekasPOS.apk</code> yang dimuat turun. Pada Android 8 dan lebih baharu, benarkan pelayar anda
 <b>memasang aplikasi tidak diketahui</b> jika Android bertanya. Pada Android 5–7, hidupkan dahulu
@@ -1221,6 +1221,36 @@ satu fail sebulan, contohnya <code>2026-10 daily-sales.csv</code>, dengan satu b
 Fail ini boleh dibuka dalam Google Sheets pada mana-mana telefon atau komputer. Hidupkannya <b>pada satu kaunter sahaja</b> (jika Sandaran
 Google Drive dihidupkan, jualan semua kaunter sudah termasuk di dalamnya). Ia memerlukan perkhidmatan Google Play dan internet, dan hanya
 dapat melihat fail yang dibuatnya.</p>
+
+<h3 id="manager">Di komputer: Pengurus LekasPOS</h3>
+<p>Lihat seluruh kedai — laporan, jualan dan bayaran balik, produk, stok, syif dan log aktiviti — pada komputer riba atau
+telefon lain, dalam pelayar web: buka <a href="manager/"><b>lekas.faizo.net/manager</b></a>. Tiada apa-apa untuk
+dipasang dan tiada akaun dengan kami. Dua cara:</p>
+<ul>
+<li><b>Buka kedai saya dengan Google Drive</b> — log masuk dengan akaun Google yang digunakan oleh kaunter untuk sandaran
+Google Drive (di kaunter: <b>Tetapan → Sandaran Google Drive</b>). Halaman ini membaca fail sandaran kedai daripada Google
+Drive itu ke dalam pelayar ini dan menyimpannya dalam komputer, jadi lawatan seterusnya hanya membaca yang baharu: ketik
+<b>Kemas kini</b>. Ia sesegar kaunter — kaunter menghantar jualannya kira-kira 10 saat selepas setiap jualan apabila ada
+internet. Google meminta anda log masuk semula kira-kira sejam sekali.</li>
+<li><b>Buka fail sandaran</b> — fail <code>.lekasbak</code> daripada aplikasi (<b>Tetapan → Sandaran → Simpan fail
+sandaran…</b>). Tidak perlu akaun Google: fail dibaca dalam pelayar dan tidak dimuat naik. Ia menunjukkan kedai seperti
+semasa sandaran dibuat.</li>
+</ul>
+<figure class="wide"><img src="img/ms-manager.png" alt="Pengurus LekasPOS dalam pelayar web: hari ini, semalam, minggu ini dan bulan ini, 14 hari lepas, perkara yang patut disemak dan kaunter" width="640" loading="lazy"><figcaption>Pengurus LekasPOS pada komputer riba.</figcaption></figure>
+<p><b>Utama</b> menunjukkan hari ini, semalam, minggu ini dan bulan ini (ketik satu untuk laporannya), 14 hari lepas,
+perkara yang patut disemak (produk pada amaran stok rendah, laci dibuka tanpa jualan, barang dibuang selepas jumlah
+ditunjuk, tunai kurang) dan setiap kaunter bersama syifnya yang dibuka. Angkanya sama seperti di kaunter: <b>Laporan</b>
+ada tempoh, baris, Paling laris (<b>Papar semua</b> menyenaraikan setiap produk), Stok di tangan, Tidak terjual dalam
+tempoh ini, Semakan staf dan empat eksport CSV yang sama; <b>Jualan &amp; bayaran balik</b> membuka mana-mana resit bersama
+itemnya, bayaran, pembatalan dan bayaran balik; <b>Produk</b> menunjukkan harga, kos dan stok bersama sejarah stok setiap
+produk; <b>Stok</b> menyenaraikan stok rendah, perubahan stok, penghantaran dan nilai stok; <b>Syif &amp; tunai</b> membuka
+laporan setiap syif bersama tunai dijangka; <b>Pelanggan</b> (bagi kedai yang ada pelanggan dan kredit) menyenaraikan siapa
+berhutang berapa, yang terbanyak dahulu, bersama penyata setiap pelanggan; dan <b>Log aktiviti</b> boleh ditapis mengikut tindakan. <b>English</b> /
+<b>Bahasa Melayu</b> di atas menukar bahasa.</p>
+<div class="note"><p>Halaman ini hanya <b>membaca</b>: harga, produk dan stok masih diubah di kaunter. Sesiapa yang boleh log
+masuk ke akaun Google kedai, atau ada fail sandaran, boleh melihat semuanya — termasuk untung — jadi rahsiakan kedua-duanya.
+Pada komputer yang dikongsi, ketik <b>Lupakan kedai ini di komputer ini</b> di bawah apabila selesai: ia membuang kedai
+daripada pelayar itu (tiada apa-apa berubah dalam Google Drive atau di kaunter).</p></div>
 <p class="top"><a href="#contents">↑ Kandungan</a></p>
 
 <h2 id="activity-log">14. Log aktiviti</h2>

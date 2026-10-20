@@ -1,5 +1,5 @@
 // Checks the website before it is published (pages.yml) and after any edit of the user guide:
-// every in-page link has its target, every picture exists, tags are balanced, ids are unique, and the
+// every in-page link has its target, every picture and script exists, tags are balanced, ids are unique, and the
 // English guide (guide.html) and the Malay one (panduan.html) have exactly the same sections.
 // Usage (repo root): node scripts/check-site.mjs
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
@@ -15,8 +15,12 @@ function ids(html) {
   return [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
 }
 
-for (const file of readdirSync(site).filter(f => f.endsWith('.html'))) {
+// The site's pages and the manager web page's (site/manager/, D-082); links and pictures resolve from each page's folder.
+const pages = [...readdirSync(site).filter(f => f.endsWith('.html')),
+  ...readdirSync(join(site, 'manager')).filter(f => f.endsWith('.html')).map(f => `manager/${f}`)];
+for (const file of pages) {
   const html = readFileSync(join(site, file), 'utf8');
+  const base = dirname(join(site, file));
   for (const t of TAGS) {
     const open = (html.match(new RegExp(`<${t}[\\s>]`, 'g')) || []).length;
     const close = (html.match(new RegExp(`</${t}>`, 'g')) || []).length;
@@ -32,10 +36,10 @@ for (const file of readdirSync(site).filter(f => f.endsWith('.html'))) {
     if (!seen.has(target)) problems.push(`${file}: link to #${target}, but no element has that id`);
   }
   for (const [, src] of html.matchAll(/src="([^"]+)"/g)) {
-    if (!/^https?:/.test(src) && !existsSync(join(site, src))) problems.push(`${file}: picture ${src} is missing`);
+    if (!/^https?:/.test(src) && !existsSync(join(base, src))) problems.push(`${file}: picture ${src} is missing`);
   }
   for (const [, href] of html.matchAll(/href="([^"#:]+\.html)(?:#[^"]*)?"/g)) {
-    if (!existsSync(join(site, href))) problems.push(`${file}: link to ${href}, which does not exist`);
+    if (!existsSync(join(base, href))) problems.push(`${file}: link to ${href}, which does not exist`);
   }
 }
 

@@ -46,6 +46,18 @@ if [ ! -d "$shots" ]; then
   done
 fi
 
+# The shop ManagerFixtureTest made (sync folder + both tills' backup files): the manager web page's tests
+# read it after this script (ci.yml, scripts/manager/fixture.test.mjs, D-082). One flat folder.
+fixture="$OUT/manager-fixture-api$api"
+timeout 120 adb pull /sdcard/Android/data/com.lekaspos.app.debug/files/manager-fixture "$fixture" > /dev/null 2>&1 || true
+if [ ! -d "$fixture" ] || [ -z "$(ls -A "$fixture" 2>/dev/null)" ]; then
+  mkdir -p "$fixture"
+  for f in $(timeout 60 adb shell run-as com.lekaspos.app.debug ls files/manager-fixture 2>/dev/null | tr -d '\r'); do
+    timeout 60 adb exec-out run-as com.lekaspos.app.debug cat "files/manager-fixture/$f" > "$fixture/$f"
+  done
+fi
+echo "Manager fixture: $(ls "$fixture" 2>/dev/null | wc -l) files"
+
 # A leak test that failed saved a heap dump (files/leaks, internal): print who holds the leaked
 # objects with LeakCanary's shark-cli (a CI-only diagnostic, never part of the app). The dump
 # itself is large and not kept.

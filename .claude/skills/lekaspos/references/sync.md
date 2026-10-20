@@ -310,6 +310,18 @@ sync screen, `forId(meta sync.provider)` for background work.
 - `DailyReportWorker`: every 3 h while online, plus once soon after a start when a day waits.
   Failures are kept as `SyncEngine.errorCode` and shown in Settings; sign-in needed waits for the owner.
 
+## 12a. A reader outside the app: LekasPOS Manager (D-082)
+
+The web page `site/manager/` reads a store's folder as one more importer, never as a till: Google Drive with a web OAuth
+client of the same Cloud project and the same `drive.appdata` scope (the app folder belongs to the project), lists and
+downloads only, never writes a file, has no device number. Its round follows §6 step 3 (store = the lowest manifest, cursors per
+till, gaps wait, a till numbered again from 1 is read again, `fullFrom` followed, checksum and header checked, whole-folder listing
+daily or on a gap, else files created after the newest seen − 15 min). It applies events with the Importer's rules
+(`site/manager/js/importer.js`) and works the derived tables out with the SQL of `DerivedRebuild`, `StockDao.rebuild`/`levelBefore`
+and `SaleDao.creditOnce` for what each batch touched (`js/derived.js`). **Any change to the file format, an event's payload or an
+apply rule changes the web page in the same change** (recipes.md §6 step 8a); `ManagerFixtureTest` + `scripts/manager/fixture.test.mjs`
+(CI) fail when the page and the tills disagree.
+
 ## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)
 
 N separate databases sharing a `FolderProvider` folder. Scenarios: second till joins with

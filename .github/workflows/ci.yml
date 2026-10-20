@@ -234,6 +234,12 @@ jobs:
           disable-animations: true
           script: bash scripts/ci/instrumented.sh
 
+      # The manager web page (site/manager/, D-082) reads the files the app just made into the tills' data.
+      - name: Manager web page against the app's files
+        run: |
+          node --version
+          FIXTURE_DIR="results/manager-fixture-api${{ matrix.api }}" node --test scripts/manager/*.test.mjs
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v7
