@@ -145,7 +145,9 @@ New settings can take from 5 minutes to a few hours to reach Google's servers.
 The website moved to **https://lekas.faizo.net/** on 2026-10-20 (D-082): GitHub Pages custom domain, a DNS-only
 `CNAME lekas → faizoken.github.io` in the faizo.net zone on Cloudflare, HTTPS enforced. Every old
 `faizoken.github.io/LekasPOS/…` address redirects there (301), so links in released apps and on the consent screen keep
-working; the app's own links (`guide_url`, `privacy_url`, `WEBSITE_URL`) can move with its next release.
+working; the app's own links (`guide_url`, `privacy_url`, `WEBSITE_URL`) can move with its next release. The same day
+the web client "LekasPOS Manager (web page)" was made (origins `https://lekas.faizo.net`, `http://localhost:8000`;
+`faizo.net` added to the authorized domains by Google) and its ID put in `site/manager/js/config.js`.
 
 ## License
 

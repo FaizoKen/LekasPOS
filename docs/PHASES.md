@@ -2448,8 +2448,9 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
 - [x] The website at **https://lekas.faizo.net/** (the owner asked, 2026-10-20): Cloudflare DNS `CNAME lekas →
       faizoken.github.io` (DNS only), GitHub Pages custom domain, certificate approved, HTTPS enforced; old addresses 301 to it.
       Docs and guide use the new address; the app's own links follow with its next release
-- [ ] Google Cloud → Clients → Web application "LekasPOS Manager (web page)", origins `https://lekas.faizo.net` and
-      `http://localhost:8000`, then its client ID in `site/manager/js/config.js`
+- [x] Google Cloud → Clients → Web application "LekasPOS Manager (web page)" (the owner said "yes do it all for me",
+      2026-10-20), origins `https://lekas.faizo.net` and `http://localhost:8000`; Google added `faizo.net` to the authorized
+      domains; its client ID in `site/manager/js/config.js`
 - [ ] The owner tries it with the shop's Google account and a backup file, then says whether to publish (merge to main
       deploys the website)
 
