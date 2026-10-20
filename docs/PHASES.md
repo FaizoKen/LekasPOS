@@ -2454,7 +2454,7 @@ sync files from the shop's Google Drive (or a backup file) into the browser. No 
       deploys the website)
 
 ### Checks for the owner
-1. On a laptop, open https://faizoken.github.io/LekasPOS/manager/ (or `node scripts/manager/serve.mjs`, then
+1. On a laptop, open https://lekas.faizo.net/manager/ (or `node scripts/manager/serve.mjs`, then
    http://localhost:8000/manager/). **Open my shop with Google Drive**, sign in with the shop's account: the shop's name
    shows, Home shows today's sales as the till's Reports → Today shows them.
 2. Make a sale on a till, wait 15 seconds, tap **Update**: Today goes up by the sale.
