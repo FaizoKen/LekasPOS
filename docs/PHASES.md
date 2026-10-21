@@ -48,7 +48,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
-| — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | built 2026-10-21; tests and a browser check pass locally; CI (`ManagerEditsTest`) after the owner's OK to push, then the owner tries it |
+| — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
 
 ## Open questions for the user
 
@@ -2526,7 +2526,12 @@ roles. No app change, no APK: the tills read the page's files like any till's.
 - [x] Docs: user guide EN + MS (On a computer: making changes, who makes the change), privacy policy EN + MS (21 October
       2026), `PLAY.md`, README, `llms.txt`, `features.md` §21, `sync.md` §12a, `recipes.md` (9a, 8a, 4a), `codemap.md` §9.5a,
       `glossary.md`, the skill, CLAUDE.md/AGENTS.md table, D-083
-- [ ] Push → CI (instrumented API 21 + 36 with `ManagerEditsTest` and the second fixture test) — waits for the owner's OK
+- [x] Pushed to main (8febce6, the owner: "commit, push to main and deploy on production"); CI run 39553677878 all green —
+      build, lint, tablet, release smoke API 21 + 36, instrumented API 21 + 36 (293 tests each). On both: `web-edits.mjs` made
+      15 files, `ManagerEditsTest` OK — both tills read them with the app's engine, nothing set aside — and the web tests 41/41
+      (none skipped): both tills then hold exactly the page's data and give its reports
+- [x] Published: Pages run 39553677894 deployed https://lekaspos.faizo.net/manager/ (new files served; the live page opened
+      a real shop's stored copy with no errors and the Sign in button). No APK change
 - [ ] The owner tries it on the live page
 
 ### Checks for the owner
