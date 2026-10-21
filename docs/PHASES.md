@@ -50,7 +50,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
 | — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | test build **v1.20.3** (build 228); the website on lekas.faizo.net since 2026-10-21 — the owner makes v1.20.3 the latest release |
-| — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | built; CI and the test build pending |
+| — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | test build **v1.21.0** (build 232), CI green — waiting for the owner's phone check |
 
 ## Open questions for the user
 
@@ -2602,7 +2602,10 @@ holds at most 500,000 items in a folder).
 - [x] CI on branch `long-use-packs` 537d073 (run 39630464744): all jobs green — build, lint, instrumented API 21 + 36
       (298 tests, 293 before: the five pack scenarios), the web page against the app's files (with A's pack), tablet, release
       smoke API 21 + 36. Release APK **1,695,915 bytes** (1.20.3: 1,682,955)
-- [ ] Test build v1.21.0 (pre-release)
+- [x] CI on main 945c97d (run 39632572604): all jobs green; website deployed (the web page reads packs before any till makes one)
+- [x] **Test build v1.21.0** (2026-10-22): pre-release on 945c97d, build 232, 1,695,899 bytes; SHA-256 `0e0a1dc6…9ef5`;
+      certificate `0a67abec…d4b9`; `mapping-1.21.0.txt` attached
+- [ ] Made the latest release after the owner's phone check (after v1.20.3); then `PREV_APK_URL` v1.21.0
 - [ ] Perf: no hot path changed (sync runs off the selling path); QUICK on CI to confirm
 
 ### Needs real-device testing (1.21.0)
