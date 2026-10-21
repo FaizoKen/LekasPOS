@@ -49,7 +49,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
-| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | code ready 2026-10-21, not pushed — waiting for the owner's Cloudflare and GitHub Pages switch |
+| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | test build **v1.20.3** (build 228) — the owner makes it the latest release and does the Cloudflare, GitHub Pages and Google Cloud switch |
 
 ## Open questions for the user
 
@@ -2562,5 +2562,10 @@ application for business management".
 - [ ] GitHub Pages custom domain lekas.faizo.net, certificate approved, HTTPS enforced
 - [ ] Google Cloud: web client origin `https://lekas.faizo.net`; consent screen app name "Lekas POS", home page and privacy
       on lekas.faizo.net; repository website link
-- [ ] Push, CI green, test build v1.20.3, then release when the owner asks
+- [x] CI on main 0c20d77 (run 39604459162): all jobs green (build, lint, instrumented API 21 + 36, tablet, release smoke
+      API 21 + 36 upgrading from 1.20.2). Release APK **1,682,955 bytes** (1.20.2: 1,682,832), label "Lekas POS"
+- [x] **Test build v1.20.3** (2026-10-21): pre-release on 0c20d77, build 228; SHA-256 `c772affb…43be`; certificate
+      `0a67abec…d4b9`; `mapping-1.20.3.txt` attached
+- [ ] Made the latest release (GitHub → Releases → v1.20.3 → Edit → untick pre-release, tick latest); then `PREV_APK_URL` v1.20.3
+- [x] Perf not run again: only text changed, no code path; 1.20.1's FULL run (38581523167) stands
 - [ ] Screenshots in `site/img/` that show the old name (welcome screen, Settings → About, the manager page) refreshed
