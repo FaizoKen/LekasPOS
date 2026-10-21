@@ -1856,6 +1856,30 @@ before it reached Drive (the copy would show changes the tills never get); saves
 storage); a new event kind or file format for the web (every till already reads till files; a new kind would wait in
 `sync_deferred` on tills not yet updated).
 
+### D-084 — "Lekas POS" on lekas.faizo.net: Lekas, a family of business apps (1.20.3, 2026-10-21)
+The owner (2026-10-21): "fully change to https://lekas.faizo.net and named as Lekas POS because Lekas will be improve/add
+more application for business management". Supersedes D-082's choice of lekaspos.faizo.net (made the day before for being
+the app's own name) — the address is now the brand's, and the app is one of its apps.
+- **The name people see is "Lekas POS"** (two words): the launcher label (`app_name`), every app string, the receipt
+  test page's fallback, the website, the guide, the privacy policy, `llms.txt`, the Play listing draft, and the web page
+  **Lekas POS Manager** / **Pengurus Lekas POS** (a new browser's till name too; names already saved stay).
+- **Kept as they are** (identifiers, not names): the package `com.lekaspos.app`, the code's `com.lekaspos`, the
+  repository `FaizoKen/LekasPOS`, the release assets `LekasPOS.apk` / `LekasPOS-<version>.apk` (the updater and the
+  website's Download link find them by name, D-059), the `.lekasbak` files, the User-Agent, stable audit texts, and the
+  Google Drive folder **LekasPOS** of the daily sales report (D-065: found by name — a new name would start a second
+  folder and leave the shop's months in the old one; the texts that name the folder keep "LekasPOS").
+- **The website is https://lekas.faizo.net/** (GitHub Pages custom domain, DNS-only CNAME on Cloudflare, HTTPS enforced).
+  lekaspos.faizo.net (in 1.20.2's links) becomes the proxied record with the 301 redirect rule, path and query kept; the old
+  `faizoken.github.io/LekasPOS/…` addresses still redirect. Paths stay the same (`/guide.html`, `/manager/`, …), so every
+  link of every released app lands on the same page. The home page names Lekas; a later Lekas app gets a folder of its own.
+- The app's links (`guide_url`, `privacy_url`, `WEBSITE_URL`) move in 1.20.3; the consent screen's home page and privacy
+  links and its app name ("Lekas POS"), the web client's origin (`https://lekas.faizo.net`) and the repository's website
+  link follow.
+Rejected: renaming the package or the repository (a new package is a new app for Android and Play — shops could not
+update); a new Drive folder name (above); moving the POS pages under `/pos/` now (every released app's links would need
+redirect pages, for nothing until a second app exists); keeping lekaspos.faizo.net as the main address (the owner's brand is
+Lekas, not one app).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

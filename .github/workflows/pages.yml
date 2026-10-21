@@ -1,5 +1,5 @@
 # Publishes site/ (home page, user guide and privacy policy) to GitHub Pages:
-# https://lekaspos.faizo.net/ — the privacy link for Google Play and the Google sign-in
+# https://lekas.faizo.net/ — the privacy link for Google Play and the Google sign-in
 # screen — and the manager web page (site/manager/, D-082). Plain HTML, no Jekyll; runs only when site/ changes.
 # The pages are checked first (scripts/check-site.mjs: links, pictures, both guide languages alike), and the
 # manager web page's tests run (scripts/manager/; the comparison with the app's own files runs in ci.yml).

@@ -99,7 +99,7 @@ export async function readBackup(blob) {
   const list = await entries(blob);
   const head = list.get('backup.json');
   const dbEntry = list.get('lekaspos.db');
-  if (!head || !dbEntry) throw new BadBackup('NOT_A_BACKUP', 'not a LekasPOS backup');
+  if (!head || !dbEntry) throw new BadBackup('NOT_A_BACKUP', 'not a Lekas POS backup');
   let header;
   try {
     header = JSON.parse(new TextDecoder().decode(await read(blob, head)));

@@ -837,7 +837,7 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 | `ci.yml` | push `main`, PRs, manual; concurrency cancels older runs | **build**: release key from secrets → `:core:test :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest -Plekas.ciRun=<run>`; APK < 8,388,608 bytes; artifacts `apks` (14 d), `mapping` (90 d), `build-reports`. **release-smoke** (API 21 1 GB / API 36 2 GB): `scripts/ci/release-smoke.sh` with `PREV_APK_URL` (ci.yml:136, now `…/v1.13.0/LekasPOS-1.13.0.apk`). **tablet** (API 36 `pixel_tablet`, landscape): `scripts/ci/screenshots.sh`. **instrumented** (API 21 + 36): `scripts/ci/instrumented.sh`, then `node --test scripts/manager/*.test.mjs` with `FIXTURE_DIR=results/manager-fixture-api*` (the manager web page against the app's files, D-082), artifact `instrumented-api*`. |
 | `perf.yml` | manual, input `scale` QUICK/FULL | build APKs → perf on API 21, 29 (SQLite 3.22, the store tablet's Android 10) and 36 via `scripts/ci/perf.sh`; artifacts `perf-<scale>-api*` (30 d). |
 | `relay.yml` | push/PR touching `relay/**`, manual | `node --test` in `relay/`; on `main`: `wrangler@4 deploy` + `secret put REPORTS_TOKEN` (needs `CLOUDFLARE_API_TOKEN`, var `CLOUDFLARE_ACCOUNT_ID`); then POSTs a test report (`x-lekas-test: 1`) expecting 204. |
-| `pages.yml` | push touching `site/**`, `scripts/check-site.mjs`, `scripts/manager/**`, manual | `node scripts/check-site.mjs`, `node --test scripts/manager/*.test.mjs`, then deploys `site/` (with `site/manager/`) to GitHub Pages (https://lekaspos.faizo.net/). |
+| `pages.yml` | push touching `site/**`, `scripts/check-site.mjs`, `scripts/manager/**`, manual | `node scripts/check-site.mjs`, `node --test scripts/manager/*.test.mjs`, then deploys `site/` (with `site/manager/`) to GitHub Pages (https://lekas.faizo.net/). |
 
 ### 9.3 Scripts
 | Script | What |
@@ -864,8 +864,8 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 `index.html` (download button → `releases/latest/download/LekasPOS.apk`, install/update steps EN + MS), `privacy.html` (EN) and `privasi.html` (MS) — must say the
 same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g. `en-pay.png`, `customer-bill.png`, `en-manager.png`), `manager/` (the manager web page, §9.5a). Published by `pages.yml`.
 
-### 9.5a `site/manager/` — LekasPOS Manager, the shop in a web browser (D-082, D-083)
-Static files, no build step; ES modules; served at https://lekaspos.faizo.net/manager/. Reads the shop; with Google Drive also
+### 9.5a `site/manager/` — Lekas POS Manager, the shop in a web browser (D-082, D-083)
+Static files, no build step; ES modules; served at https://lekas.faizo.net/manager/. Reads the shop; with Google Drive also
 changes products, stock, suppliers and customers as a till of its own (D-083).
 
 | File | Purpose |

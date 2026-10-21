@@ -151,7 +151,7 @@ function driveToken() {
   return now ? Promise.resolve(now) : auth.signIn(S.status?.account);
 }
 
-/** The name of this browser as the tills list it ("LekasPOS Manager (Windows)"). */
+/** The name of this browser as the tills list it ("Lekas POS Manager (Windows)"). */
 function deviceName() {
   const ua = navigator.userAgent;
   const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
@@ -367,7 +367,7 @@ function footer() {
     h('p', null,
       h('a', { href: language() === 'ms' ? '../panduan.html#manager' : '../guide.html#manager' }, t('user_guide')), ' · ',
       h('a', { href: language() === 'ms' ? '../privasi.html' : '../privacy.html' }, t('privacy')), ' · ',
-      h('a', { href: 'https://github.com/FaizoKen/LekasPOS' }, 'LekasPOS')));
+      h('a', { href: 'https://github.com/FaizoKen/LekasPOS' }, 'Lekas POS')));
 }
 
 function forgetButton() {
@@ -387,7 +387,7 @@ function welcome() {
   const ready = auth.configured();
   const guide = language() === 'ms' ? '../panduan.html#manager' : '../guide.html#manager';
   return h('main', { class: 'welcome' },
-    h('div', { class: 'welcome-top' }, h('a', { class: 'brand', href: '../' }, h('img', { src: '../icon.svg', alt: '', width: 40, height: 40 }), h('strong', { text: 'LekasPOS' })), langButton()),
+    h('div', { class: 'welcome-top' }, h('a', { class: 'brand', href: '../' }, h('img', { src: '../icon.svg', alt: '', width: 40, height: 40 }), h('strong', { text: 'Lekas POS' })), langButton()),
     h('h1', { text: t('app_title') }),
     h('p', { class: 'lead', text: t('tagline') }),
     S.error ? h('div', { class: 'banner error', role: 'alert' }, h('span', { text: errorText(S.error) }),

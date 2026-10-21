@@ -10,6 +10,10 @@ Paths: `ui/`, `domain/`, `data/`, `hw/`, `sync/`, `app/` are under `app/src/main
 The user-facing description of the same behaviour is the user guide (`site/guide.html`, `site/panduan.html`);
 keep both true (see `recipes.md` → "Change something users see").
 
+Name and address (D-084, 1.20.3): people read **Lekas POS** (the first app of Lekas, apps for small businesses) and the
+website is https://lekas.faizo.net/ (lekaspos.faizo.net and faizoken.github.io/LekasPOS redirect there, paths kept). The
+code, the package, the repository, the APK asset names and the daily report's Drive folder keep `LekasPOS`.
+
 ---
 
 ## 1. Access: PIN login, roles, permissions, approvals
@@ -558,9 +562,9 @@ Small things a future change could fix (none loses data):
   in Reports but "Kaedah bayaran" in Settings.
 - `shift_float_hint` is unused. Part payments are lost if Android kills the process mid-payment (the bill survives).
 
-## 21. LekasPOS Manager — the shop in a web browser (`site/manager/`, D-082, D-083)
+## 21. Lekas POS Manager — the shop in a web browser (`site/manager/`, D-082, D-083)
 
-A web page on the website (https://lekaspos.faizo.net/manager/), not part of the APK. No server: the browser reads the
+A web page on the website (https://lekas.faizo.net/manager/), not part of the APK. No server: the browser reads the
 shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer. With Google Drive it
 also changes products, stock, suppliers and customers as a till of its own (D-083, below).
 - **Ways in** (welcome screen): *Open my shop with Google Drive* — Google sign-in in the browser (GIS token client,

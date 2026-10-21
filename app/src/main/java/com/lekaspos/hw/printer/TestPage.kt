@@ -13,7 +13,7 @@ object TestPage {
         fun center(s: String, bold: Boolean = false) {
             for (line in TextWidth.wrap(s, cols)) out.add(PrintLine.Text(TextWidth.center(line, cols).trimEnd(), bold))
         }
-        center(storeName.ifBlank { "LekasPOS" }, bold = true)
+        center(storeName.ifBlank { "Lekas POS" }, bold = true)
         center("PRINTER TEST")
         out.add(PrintLine.Text("=".repeat(cols)))
         out.add(PrintLine.Text("Paper ${if (cfg.paper == 58) "58" else "80"} mm, $cols cols, ${cfg.dots} dots"))

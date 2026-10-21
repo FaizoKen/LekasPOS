@@ -27,7 +27,7 @@ const store = new Store(db);
 store.createForDrive();
 await store.sync(folder);
 const currency = currencyOf(R.settings(db));
-const opts = { staffId: STAFF_OWNER, currency, deviceName: 'LekasPOS Manager (CI)' };
+const opts = { staffId: STAFF_OWNER, currency, deviceName: 'Lekas POS Manager (CI)' };
 const commit = async (build) => (await store.commit(folder, build, opts)).result;
 
 const one = (sql, bind) => {

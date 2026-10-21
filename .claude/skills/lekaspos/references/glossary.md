@@ -8,6 +8,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 
 | Idea | English (UI) | Bahasa Melayu (UI) | Code |
 |---|---|---|---|
+| The app (D-084; the brand is **Lekas**, apps for small businesses — never "LekasPOS" in what people read) | Lekas POS | Lekas POS | `app_name`; package `com.lekaspos.app`, repository `LekasPOS`, assets `LekasPOS.apk`, Drive folder "LekasPOS" (identifiers, kept) |
 | A phone/tablet that sells; one install | till | kaunter | device, `device_no`, `meta` identity |
 | The shop (all tills sharing one Google account) | shop / store | kedai | store, `store_uuid` |
 | The sale being rung up | bill | bil | cart, `CartSession`, `cart`/`cart_line` |
@@ -97,7 +98,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Damaged database | Data problem | Masalah data | `Protection.State.DAMAGED`, `KeepDamagedDatabase` |
 | Restore modes | Restore this till / Replace the old phone / Add as a new till | Pulihkan kaunter ini / Ganti telefon lama / Tambah sebagai kaunter baharu | `Restore.Mode.REPLACE/NEW_DEVICE` |
 | Daily CSV to the owner's Drive | Daily sales report to Google Drive | Laporan jualan harian ke Google Drive | `DailyReportUpload` |
-| The shop in a web browser (D-082; never "dashboard", "portal" or "admin") | LekasPOS Manager; Open my shop with Google Drive; Open a backup file; Update; Forget this shop on this computer | Pengurus LekasPOS; Buka kedai saya dengan Google Drive; Buka fail sandaran; Kemas kini; Lupakan kedai ini di komputer ini | `site/manager/`, `Store.sync`, `readBackup` |
+| The shop in a web browser (D-082; never "dashboard", "portal" or "admin") | Lekas POS Manager; Open my shop with Google Drive; Open a backup file; Update; Forget this shop on this computer | Pengurus Lekas POS; Buka kedai saya dengan Google Drive; Buka fail sandaran; Kemas kini; Lupakan kedai ini di komputer ini | `site/manager/`, `Store.sync`, `readBackup` |
 | Making changes on the web page (D-083) | Sign in / Sign out (with the PIN, as on the till); Edit; "Saving to Google Drive…"; Close without saving your changes?; Keep editing; may not do this; Sign in as someone else | Log masuk / Log keluar; Ubah; "Menyimpan ke Google Drive…"; Tutup tanpa menyimpan perubahan anda?; Teruskan mengubah; tidak dibenarkan berbuat ini; Log masuk sebagai orang lain | `site/manager/js/edit.js`, `editing.js` |
 | Printer and drawer | Printer & cash drawer; Printer offline | Pencetak & laci wang; Pencetak luar talian | `PrinterService`, `dev.printer.*` |
 | Scanner kinds | keyboard-mode scanner; Serial (SPP) Bluetooth scanner | pengimbas mod papan kekunci; Pengimbas Bluetooth bersiri (SPP) | `ScanBuffer`, `SppScanner` |

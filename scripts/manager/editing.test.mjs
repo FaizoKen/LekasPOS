@@ -59,7 +59,7 @@ async function shop({ pins }) {
   return { folder, db, store, editing, tick: (ms) => { now += ms; } };
 }
 
-const opts = { currency: MYR, deviceName: 'LekasPOS Manager (test)' };
+const opts = { currency: MYR, deviceName: 'Lekas POS Manager (test)' };
 const log = (db) => db.selectArrays('SELECT action, staff_id, entity_id, detail FROM audit_log ORDER BY hlc, id').map((r) => r.map(String).join('|'));
 
 test('while no one has a PIN, changes are the owner\'s, with every permission', async () => {

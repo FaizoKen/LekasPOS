@@ -67,7 +67,7 @@ async function webOf(folder) {
   return { db, store };
 }
 
-const opts = { staffId: 1n, currency: MYR, deviceName: 'LekasPOS Manager (test)' };
+const opts = { staffId: 1n, currency: MYR, deviceName: 'Lekas POS Manager (test)' };
 const all = (db, sql, bind) => db.selectArrays(sql, bind);
 
 test('a new product from the web page: one file of its own, its card, the same rows for every reader', async () => {
@@ -88,7 +88,7 @@ test('a new product from the web page: one file of its own, its card, the same r
   const me = store.identity();
   assert.ok(me.dev > 0 && me.dev < 2 ** 22 && me.dev !== A);
   const card = parseCard(folder.text(`dev-${STORE}-${me.dev}.json`));
-  assert.equal(card.name, 'LekasPOS Manager (test)');
+  assert.equal(card.name, 'Lekas POS Manager (test)');
   assert.equal(card.app, 'web');
   assert.equal(card.prefix, null);
   assert.equal(card.lastSeq, 1);

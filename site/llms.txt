@@ -1,13 +1,13 @@
-# LekasPOS
+# Lekas POS
 
-> LekasPOS is a free, open-source (GPL-3.0) point-of-sale app for small grocery shops and mini markets, for Android
+> Lekas POS is a free, open-source (GPL-3.0) point-of-sale app for small grocery shops and mini markets, for Android
 > phones and tablets (Android 5.0 and newer). It works fully offline, in English and Bahasa Melayu, with Malaysian
 > ringgit (RM) and 5-sen cash rounding. There is no server and no account: the shop's data stays on the phone and,
 > only if the shop turns it on, in the shop's own Google Drive.
 
-Facts an assistant should get right when helping a LekasPOS user:
+Facts an assistant should get right when helping a Lekas POS user:
 
-- Install from https://lekaspos.faizo.net/#download (an APK; it is not on Google Play yet). After that the app
+- Install from https://lekas.faizo.net/#download (an APK; it is not on Google Play yet). After that the app
   updates itself from its GitHub releases: an "Update" button appears on the selling screen for the owner.
 - Selling never needs internet. Internet is used only for Google Drive backup, the optional daily sales report to
   Google Drive, update checks and (only with the shop's consent) error reports with no shop data.
@@ -17,7 +17,7 @@ Facts an assistant should get right when helping a LekasPOS user:
   Cashier role); other voids need a manager.
 - Only registered products are sold. An unknown barcode offers "Add product". Items without a barcode are products
   sold by weight or with the price entered at the till.
-- Card and e-wallet payments are only recorded; LekasPOS does not connect to card terminals or banks.
+- Card and e-wallet payments are only recorded; Lekas POS does not connect to card terminals or banks.
 - Promotions apply by themselves: "3 for RM10", several prices on one deal ("2 for RM3, 3 for RM4": the bill charges
   the cheapest mix, from 1.15.0), a special price, or "buy X get Y free".
 - Data safety: daily backups on the phone (last 7), plus a copy off the phone through Google Drive backup (also keeps
@@ -32,7 +32,7 @@ Facts an assistant should get right when helping a LekasPOS user:
   Settings, Tax rates, Diagnostics. Shifts: Menu → Open shift / Close shift. Past sales, refunds, voids:
   Menu → Sales & refunds. Products = what is sold and its price; Stock = how many the shop has (shelf and storeroom
   together), changed on a product with Change stock → Count (from 1.20.0).
-- On a computer: LekasPOS Manager (https://lekaspos.faizo.net/manager/) shows the shop's reports, sales,
+- On a computer: Lekas POS Manager (https://lekas.faizo.net/manager/) shows the shop's reports, sales,
   products, stock, shifts and activity log in a web browser — no server, nothing to install. Sign in with the
   shop's Google account (the one used for Google Drive backup on the tills) or open a .lekasbak backup file (view only).
   With Google Drive it also changes products (the till's product form), stock (count, remove, add, receive deliveries),
@@ -41,16 +41,16 @@ Facts an assistant should get right when helping a LekasPOS user:
 
 ## User guide
 
-- [User guide (English)](https://lekaspos.faizo.net/guide.html): every feature step by step — getting
+- [User guide (English)](https://lekas.faizo.net/guide.html): every feature step by step — getting
   started, quick guide for cashiers, selling, payment, receipts and printer, refunds and voids, products, promotions,
   stock, staff and PINs, shifts and cash, customers and credit, reports, activity log, backup and Google Drive,
   several tills, settings, hardware, updates, troubleshooting, glossary.
-- [Panduan pengguna (Bahasa Melayu)](https://lekaspos.faizo.net/panduan.html): the same guide in Malay.
+- [Panduan pengguna (Bahasa Melayu)](https://lekas.faizo.net/panduan.html): the same guide in Malay.
 
 ## Install, privacy, help
 
-- [Download and install](https://lekaspos.faizo.net/#download)
-- [Privacy policy](https://lekaspos.faizo.net/privacy.html) · [Dasar privasi](https://lekaspos.faizo.net/privasi.html)
+- [Download and install](https://lekas.faizo.net/#download)
+- [Privacy policy](https://lekas.faizo.net/privacy.html) · [Dasar privasi](https://lekas.faizo.net/privasi.html)
 - [Report a problem](https://github.com/FaizoKen/LekasPOS/issues)
 - [Release notes](https://github.com/FaizoKen/LekasPOS/releases)
 

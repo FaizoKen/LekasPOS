@@ -18,9 +18,9 @@
     <string name="backup_share">Kongsi fail sandaran</string>
     <string name="backup_restore_file">Pulihkan daripada fail…</string>
     <string name="backup_saved">Fail sandaran disimpan.</string>
-    <string name="backup_not_a_backup">Ini bukan fail sandaran LekasPOS.</string>
+    <string name="backup_not_a_backup">Ini bukan fail sandaran Lekas POS.</string>
     <string name="backup_file_damaged">Fail sandaran ini rosak atau tidak lengkap (contohnya terputus semasa disalin). Cuba salinan lain.</string>
-    <string name="backup_newer_app">Sandaran ini dibuat oleh versi LekasPOS yang lebih baharu. Kemas kini aplikasi dahulu (Tetapan → Kemas kini aplikasi), kemudian pulihkan.</string>
+    <string name="backup_newer_app">Sandaran ini dibuat oleh versi Lekas POS yang lebih baharu. Kemas kini aplikasi dahulu (Tetapan → Kemas kini aplikasi), kemudian pulihkan.</string>
     <string name="backup_restore_title">Pulihkan sandaran</string>
     <string name="backup_restore_what">Sandaran pada %1$s · %2$s · jualan: %3$d · produk: %4$d.</string>
     <string name="backup_other_store">Sandaran ini milik kedai yang berlainan daripada data dalam telefon ini.</string>
@@ -37,7 +37,7 @@
 
     <string name="sync_title">Sandaran Google Drive</string>
     <string name="settings_sync_sub">Sandaran ke Google Drive, pulihkan pada telefon baharu, selaraskan setiap kaunter</string>
-    <string name="sync_help">Setiap jualan dan perubahan disalin ke folder aplikasi tersembunyi dalam Google Drive kedai (ia tidak kelihatan antara fail anda, dan tiada aplikasi lain boleh membacanya). Jika telefon ini hilang atau rosak, pasang LekasPOS pada telefon baharu dan hidupkan ini dengan akaun Google yang sama: semuanya kembali. Kaunter lain di kedai menggunakan salinan yang sama untuk kekal selaras. Jualan tidak pernah menunggunya: kaunter berfungsi tanpa internet dan dikemas kini apabila dalam talian semula.</string>
+    <string name="sync_help">Setiap jualan dan perubahan disalin ke folder aplikasi tersembunyi dalam Google Drive kedai (ia tidak kelihatan antara fail anda, dan tiada aplikasi lain boleh membacanya). Jika telefon ini hilang atau rosak, pasang Lekas POS pada telefon baharu dan hidupkan ini dengan akaun Google yang sama: semuanya kembali. Kaunter lain di kedai menggunakan salinan yang sama untuk kekal selaras. Jualan tidak pernah menunggunya: kaunter berfungsi tanpa internet dan dikemas kini apabila dalam talian semula.</string>
     <string name="sync_help_short">Menyalin ke Google Drive sendiri setiap 30 minit dan sejurus selepas jualan, apabila dalam talian. Telefon baharu atau kaunter lain di kedai mendapat semuanya dengan menghidupkan ini menggunakan akaun Google yang sama.</string>
     <string name="sync_no_play">Sandaran Google Drive memerlukan perkhidmatan Google Play, yang tiada pada telefon ini. Simpan salinan harian dalam kad SD atau pemacu USB sebagai ganti (Tetapan → Sandaran → ⋮).</string>
     <string name="sync_till_name">Nama kaunter ini</string>

@@ -68,13 +68,13 @@
     <string name="price_check_now">Sekarang %1$s. Barang yang sudah dalam bil kekal dengan harganya.</string>
     <string name="price_check_cost">Kos %1$s (margin pada harga sekarang: %2$s).</string>
     <string name="price_check_saved">%1$s kini %2$s</string>
-    <string name="setup_title">Selamat datang ke LekasPOS</string>
+    <string name="setup_title">Selamat datang ke Lekas POS</string>
     <string name="setup_intro">Mari sediakan kedai anda. Semua ini boleh diubah kemudian dalam Tetapan.</string>
     <string name="setup_shop">Kedai anda</string>
     <string name="setup_optional">Pilihan</string>
     <string name="setup_printer">Sediakan pencetak resit</string>
     <string name="setup_staff">Kakitangan dan PIN</string>
-    <string name="setup_join_help">Pernah menggunakan LekasPOS pada telefon yang hilang atau rosak, atau sudah menggunakannya pada kaunter lain di kedai ini? Hidupkan sandaran Google Drive dengan akaun Google yang sama untuk mendapatkan semuanya semula di sini.</string>
+    <string name="setup_join_help">Pernah menggunakan Lekas POS pada telefon yang hilang atau rosak, atau sudah menggunakannya pada kaunter lain di kedai ini? Hidupkan sandaran Google Drive dengan akaun Google yang sama untuk mendapatkan semuanya semula di sini.</string>
     <string name="setup_join">Pulihkan atau sertai kedai saya dari Google Drive</string>
     <string name="setup_start">Mula menjual</string>
     <string name="setup_name_needed">Masukkan nama kedai anda.</string>
@@ -286,10 +286,10 @@
     <string name="settings_language">Bahasa aplikasi</string>
     <string name="language_phone">Bahasa telefon</string>
     <string name="settings_about">Perihal</string>
-    <string name="settings_about_sub">LekasPOS %1$s (binaan %2$d) · GPL-3.0</string>
+    <string name="settings_about_sub">Lekas POS %1$s (binaan %2$d) · GPL-3.0</string>
     <string name="settings_guide">Panduan pengguna</string>
-    <string name="settings_guide_sub">Cara menggunakan LekasPOS, langkah demi langkah (membuka laman web)</string>
-    <string name="about_text">LekasPOS %1$s — aplikasi jualan percuma dan sumber terbuka, berlesen GNU General Public License v3.0: anda boleh menggunakan, mengkaji, berkongsi dan mengubahnya. Data anda kekal dalam telefon ini, dan dalam Google Drive anda sendiri hanya jika anda menghidupkan sandaran Google Drive. Versi baharu: Tetapan → Kemas kini aplikasi, atau Laman web &amp; kemas kini.</string>
+    <string name="settings_guide_sub">Cara menggunakan Lekas POS, langkah demi langkah (membuka laman web)</string>
+    <string name="about_text">Lekas POS %1$s — aplikasi jualan percuma dan sumber terbuka, berlesen GNU General Public License v3.0: anda boleh menggunakan, mengkaji, berkongsi dan mengubahnya. Data anda kekal dalam telefon ini, dan dalam Google Drive anda sendiri hanya jika anda menghidupkan sandaran Google Drive. Versi baharu: Tetapan → Kemas kini aplikasi, atau Laman web &amp; kemas kini.</string>
     <string name="about_notices">Mengandungi perisian sumber terbuka: pustaka AndroidX (Core, RecyclerView, WorkManager, Room), Kotlin dan kotlinx.coroutines, pustaka kod bar ZXing serta ikon Material Google — semuanya di bawah Apache License 2.0 (apache.org/licenses/LICENSE-2.0); Google Play services Auth, di bawah Android Software Development Kit License.</string>
     <string name="about_privacy">Dasar privasi</string>
     <string name="about_website">Laman web &amp; kemas kini</string>
@@ -427,13 +427,13 @@
     <string name="diag_log_empty">Tiada masalah berlaku pada telefon ini lagi: log ralat kosong.</string>
     <!-- Laporan ralat kepada pembangun (D-057) -->
     <string name="error_reports_title">Laporan ralat</string>
-    <string name="privacy_url">https://lekaspos.faizo.net/privasi.html</string>
-    <string name="guide_url">https://lekaspos.faizo.net/panduan.html</string>
+    <string name="privacy_url">https://lekas.faizo.net/privasi.html</string>
+    <string name="guide_url">https://lekas.faizo.net/panduan.html</string>
     <string name="error_reports_ask_title">Bantu baiki masalah?</string>
-    <string name="error_reports_ask_message">Apabila berlaku masalah dalam LekasPOS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun LekasPOS supaya ia dibaiki.\n\nLaporan mengandungi apa yang tidak kena (bersama baris log terakhir aplikasi sebelumnya), bila dan berapa kerap, versi aplikasi, model telefon, versi Android, memori dan storan kosong, saiz data aplikasi, bahasa aplikasi dan satu nombor rawak bagi telefon ini. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau akaun Google anda. Laporan dihantar melalui Cloudflare ke halaman GitHub peribadi (lihat dasar privasi).\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
+    <string name="error_reports_ask_message">Apabila berlaku masalah dalam Lekas POS (aplikasi berhenti, tersekat atau menunjukkan ralat), telefon ini boleh menghantar laporan ralat yang ringkas kepada pembangun Lekas POS supaya ia dibaiki.\n\nLaporan mengandungi apa yang tidak kena (bersama baris log terakhir aplikasi sebelumnya), bila dan berapa kerap, versi aplikasi, model telefon, versi Android, memori dan storan kosong, saiz data aplikasi, bahasa aplikasi dan satu nombor rawak bagi telefon ini. Ia tidak sekali-kali mengandungi jualan, produk, harga, pelanggan, kakitangan, PIN atau akaun Google anda. Laporan dihantar melalui Cloudflare ke halaman GitHub peribadi (lihat dasar privasi).\n\nAnda boleh menukarnya bila-bila masa di Tetapan → Laporan ralat.</string>
     <string name="error_reports_yes">Hantar laporan</string>
     <string name="error_reports_no">Jangan hantar</string>
-    <string name="error_reports_on">Hidup: dihantar kepada pembangun LekasPOS</string>
+    <string name="error_reports_on">Hidup: dihantar kepada pembangun Lekas POS</string>
     <string name="error_reports_off">Mati</string>
     <string name="error_reports_unasked">Belum dipilih</string>
     <string name="diag_send_report">Hantar laporan kepada pembangun</string>

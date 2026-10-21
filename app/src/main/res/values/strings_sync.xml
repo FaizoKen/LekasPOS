@@ -18,9 +18,9 @@
     <string name="backup_share">Share a backup file</string>
     <string name="backup_restore_file">Restore from a file…</string>
     <string name="backup_saved">Backup file saved.</string>
-    <string name="backup_not_a_backup">This is not a LekasPOS backup file.</string>
+    <string name="backup_not_a_backup">This is not a Lekas POS backup file.</string>
     <string name="backup_file_damaged">This backup file is damaged or incomplete (cut short while it was copied, for example). Try another copy of it.</string>
-    <string name="backup_newer_app">This backup was made by a newer version of LekasPOS. Update the app first (Settings → App updates), then restore it.</string>
+    <string name="backup_newer_app">This backup was made by a newer version of Lekas POS. Update the app first (Settings → App updates), then restore it.</string>
     <string name="backup_restore_title">Restore a backup</string>
     <string name="backup_restore_what">Backup of %1$s · %2$s · sales: %3$d · products: %4$d.</string>
     <string name="backup_other_store">This backup belongs to a different store than the data on this phone.</string>
@@ -37,7 +37,7 @@
 
     <string name="sync_title">Google Drive backup</string>
     <string name="settings_sync_sub">Back up to Google Drive, restore on a new phone, keep every till up to date</string>
-    <string name="sync_help">Every sale and change is copied to a hidden app folder in the store\'s Google Drive (it does not appear among your files, and no other app can read it). If this phone is lost or broken, install LekasPOS on a new one and turn this on with the same Google account: everything comes back. Other tills of the store use the same copy to stay the same. Selling never waits for it: a till works offline and catches up when it is online again.</string>
+    <string name="sync_help">Every sale and change is copied to a hidden app folder in the store\'s Google Drive (it does not appear among your files, and no other app can read it). If this phone is lost or broken, install Lekas POS on a new one and turn this on with the same Google account: everything comes back. Other tills of the store use the same copy to stay the same. Selling never waits for it: a till works offline and catches up when it is online again.</string>
     <string name="sync_help_short">Copies to Google Drive by itself every 30 minutes and shortly after sales, whenever online. A new phone or another till of the store gets everything by turning this on with the same Google account.</string>
     <string name="sync_no_play">Google Drive backup needs Google Play services, which this phone does not have. Keep a daily copy on an SD card or USB drive instead (Settings → Backup &amp; restore → ⋮).</string>
     <string name="sync_till_name">Name of this till</string>

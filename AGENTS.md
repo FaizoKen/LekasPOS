@@ -78,7 +78,7 @@ A change is not done until the documents that describe it are right:
 | A word users see added or renamed | `references/glossary.md` |
 | A decision (architecture, data, dependency, behaviour the owner chose) | the matching reference **and** a new entry in `docs/DECISIONS.md` |
 | What the app stores, sends, asks permission for or connects to | `site/privacy.html` **and** `site/privasi.html` (same date), `docs/PLAY.md` |
-| The schema, a sync event or its apply rule, an activity-log action, a report or CSV, or how a product, stock change, delivery, category, supplier or customer is saved | LekasPOS Manager, the web page that reads the same data and changes products, stock, suppliers and customers as a till (`site/manager/`, D-082, D-083; `recipes.md` §5–§9), then `node --test scripts/manager/*.test.mjs` |
+| The schema, a sync event or its apply rule, an activity-log action, a report or CSV, or how a product, stock change, delivery, category, supplier or customer is saved | Lekas POS Manager, the web page that reads the same data and changes products, stock, suppliers and customers as a till (`site/manager/`, D-082, D-083; `recipes.md` §5–§9), then `node --test scripts/manager/*.test.mjs` |
 | A release | the guide's "For LekasPOS x.y.z" line (both languages), `docs/PHASES.md` |
 | Phase/release status | `docs/PHASES.md` |
 | Build, CI, signing, release steps | `docs/BUILD.md` |

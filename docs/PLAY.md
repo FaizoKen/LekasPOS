@@ -24,10 +24,10 @@ Google sign-in is public. Going on Play then means:
 
 ## Store listing (draft)
 
-- **App name:** LekasPOS
+- **App name:** Lekas POS
 - **Short description (EN, ≤ 80):** Offline point of sale for small shops: sell, stock, staff, reports.
 - **Short description (MS, ≤ 80):** POS tanpa internet untuk kedai kecil: jualan, stok, staf, laporan.
-- **Full description (EN):** LekasPOS is a free, open-source point-of-sale app for grocery
+- **Full description (EN):** Lekas POS is a free, open-source point-of-sale app for grocery
   stores and mini markets. It works fully offline and stays fast with tens of thousands of
   products. Scan barcodes (Bluetooth, USB or camera), take cash, card, e-wallet or credit
   payments, print receipts on Bluetooth thermal printers and open the cash drawer. Manage stock,
@@ -35,7 +35,7 @@ Google sign-in is public. Going on Play then means:
   and credit. Reports for any period, CSV import and export, daily backups, and optional sync
   between the shop's tills through its own Google Drive. English and Bahasa Melayu.
 - **Category:** Business. **Contact:** mail@faizo.net (also the privacy policy's contact).
-- **Privacy policy:** `https://lekaspos.faizo.net/privacy.html`
+- **Privacy policy:** `https://lekas.faizo.net/privacy.html`
 - **Screenshots:** phone (selling screen, payment, reports, stock) and 10-inch tablet (two-pane
   selling screen), in both languages.
 
@@ -96,11 +96,11 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
 - **Users can request deletion:** yes — uninstall / clear storage deletes local data; for synced
   data, first turn off sync on every till (Settings → Google Drive backup → Turn off sync — a till
   still syncing publishes everything again), then Drive on the web → Settings → Manage apps →
-  LekasPOS → Options → Delete hidden app data (explained in the privacy policy). The daily report's
+  Lekas POS → Options → Delete hidden app data (explained in the privacy policy). The daily report's
   files are ordinary files in the "LekasPOS" folder of the user's Drive, deleted there. Error reports:
   on request (the privacy policy's contact).
 
-The **LekasPOS Manager** web page (D-082, `site/manager/`) is not part of the app: Play's Data safety form covers the
+The **Lekas POS Manager** web page (D-082, `site/manager/`) is not part of the app: Play's Data safety form covers the
 APK only, and its answers above do not change. The web page reads the shop's own Drive app folder (same scope) or a
 backup file into the user's own browser, and saves the changes made there into that same folder as a till does (D-083);
 nothing reaches the developer. It is described in the privacy policy.

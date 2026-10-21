@@ -310,7 +310,7 @@ sync screen, `forId(meta sync.provider)` for background work.
 - `DailyReportWorker`: every 3 h while online, plus once soon after a start when a day waits.
   Failures are kept as `SyncEngine.errorCode` and shown in Settings; sign-in needed waits for the owner.
 
-## 12a. Outside the app: LekasPOS Manager (D-082, D-083)
+## 12a. Outside the app: Lekas POS Manager (D-082, D-083)
 
 The web page `site/manager/` reads a store's folder as one more importer: Google Drive with a web OAuth client of the same
 Cloud project and the same `drive.appdata` scope (the app folder belongs to the project). Until its first change it lists

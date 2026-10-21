@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 object UpdateUi {
 
     private const val REQ_ALLOW_INSTALLS = 0x5550
-    private const val WEBSITE_URL = "https://lekaspos.faizo.net/#download"
+    private const val WEBSITE_URL = "https://lekas.faizo.net/#download"
     private const val MB = 1024L * 1024L
 
     /** "New version: 1.6.0" with what is new and its size: Update now / Later. */

@@ -1,24 +1,24 @@
-# <img src="site/icon.svg" alt="" width="48" height="48" align="top"> LekasPOS
+# <img src="site/icon.svg" alt="" width="48" height="48" align="top"> Lekas POS
 
 [![CI](https://github.com/FaizoKen/LekasPOS/actions/workflows/ci.yml/badge.svg)](https://github.com/FaizoKen/LekasPOS/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 A lightweight, offline-first point-of-sale app for small grocery stores and mini markets
-(Malaysia first: MYR, English and Bahasa Melayu). Native Android, runs on Android 5.0+ phones
-and tablets with 1–2 GB RAM. No backend: all data lives on the device; the store's own Google
+(Malaysia first: MYR, English and Bahasa Melayu) — the first of **Lekas**, apps for small businesses
+(https://lekas.faizo.net/). Native Android, runs on Android 5.0+ phones and tablets with 1–2 GB RAM. No backend: all data lives on the device; the store's own Google
 Drive (optional) is used only for background sync and backup between the devices of one store.
 The only other connections: a daily update check against this repository's GitHub releases, and
 — only with the shop's consent — error reports, sent through a small Cloudflare Worker relay
 (`relay/`) to a private GitHub repository. No shop data goes to the developer.
 
-**Download:** [lekaspos.faizo.net](https://lekaspos.faizo.net/#download)
+**Download:** [lekas.faizo.net](https://lekas.faizo.net/#download)
 (always the newest version; install and update steps), or the latest
 [release](https://github.com/FaizoKen/LekasPOS/releases/latest).
 Not on Google Play yet. Progress: [`docs/PHASES.md`](docs/PHASES.md). Privacy policy:
-[lekaspos.faizo.net/privacy.html](https://lekaspos.faizo.net/privacy.html).
+[lekas.faizo.net/privacy.html](https://lekas.faizo.net/privacy.html).
 
-**User guide:** [English](https://lekaspos.faizo.net/guide.html) ·
-[Bahasa Melayu](https://lekaspos.faizo.net/panduan.html) — everything the app does, for owners, managers and
+**User guide:** [English](https://lekas.faizo.net/guide.html) ·
+[Bahasa Melayu](https://lekas.faizo.net/panduan.html) — everything the app does, for owners, managers and
 cashiers, with screenshots.
 
 ## Features
@@ -35,7 +35,7 @@ cashiers, with screenshots.
   USB drive, backup files to share or restore, and Google Drive backup — which also keeps the
   shop's tills in step and restores a lost phone in full. No Google account is required; the
   selling screen shows "Not backed up" when the data exists only on that phone.
-- **On a computer:** [LekasPOS Manager](https://lekaspos.faizo.net/manager/), a web page with the shop's reports,
+- **On a computer:** [Lekas POS Manager](https://lekas.faizo.net/manager/), a web page with the shop's reports,
   sales, products, stock, shifts and activity log — read from the shop's own Google Drive backup or a backup file in the
   browser, with no server (D-082) — where products, stock, deliveries, suppliers and customers can be changed too, with
   the shop's PINs, as on a till (D-083).
@@ -47,11 +47,11 @@ For people using the app:
 
 | Document | What it covers |
 |---|---|
-| [User guide](site/guide.html) / [Panduan pengguna](site/panduan.html) | Every feature step by step: selling, payment, receipts, products, stock, staff, shifts, customers, reports, backup, Google Drive, hardware, troubleshooting (published at [lekaspos.faizo.net/guide.html](https://lekaspos.faizo.net/guide.html)) |
+| [User guide](site/guide.html) / [Panduan pengguna](site/panduan.html) | Every feature step by step: selling, payment, receipts, products, stock, staff, shifts, customers, reports, backup, Google Drive, hardware, troubleshooting (published at [lekas.faizo.net/guide.html](https://lekas.faizo.net/guide.html)) |
 | [`site/index.html`](site/index.html) | Download, install and update steps |
 | [`site/privacy.html`](site/privacy.html) / [`privasi.html`](site/privasi.html) | Privacy policy |
 | [`site/llms.txt`](site/llms.txt) | A short description of the app for AI assistants that help users |
-| [`site/manager/`](site/manager/) | LekasPOS Manager, the shop in a web browser (published at [lekaspos.faizo.net/manager/](https://lekaspos.faizo.net/manager/)); its code is mapped in `codemap.md` §9.5a |
+| [`site/manager/`](site/manager/) | Lekas POS Manager, the shop in a web browser (published at [lekas.faizo.net/manager/](https://lekas.faizo.net/manager/)); its code is mapped in `codemap.md` §9.5a |
 
 For people (and AI agents) working on the code:
 
@@ -91,7 +91,7 @@ app/      Android app: SQLite data layer, UI, hardware, sync, perf suite + instr
 scripts/  toolchain setup, emulator profiles, performance runs, cold-start measurement, website check,
           manager web page tools and tests (scripts/manager/)
 docs/     phases, build/release, decisions
-site/     website: home, user guide (EN + MS) with screenshots, privacy policy, LekasPOS Manager (GitHub Pages)
+site/     website: home, user guide (EN + MS) with screenshots, privacy policy, Lekas POS Manager (GitHub Pages)
 relay/    Cloudflare Worker that files error reports (D-057)
 ```
 
@@ -129,8 +129,8 @@ store's Google Drive); the optional daily sales report (D-065) asks separately f
    Android clients have no client secret; nothing needs to be embedded in the app.
 5. All devices of one store sign in with the **same Google account** (the store account), because
    the app-data folder is private per account.
-6. **LekasPOS Manager** (the web page, D-082): **Credentials → Create credentials → OAuth client ID → Web
-   application**, name "LekasPOS Manager", **Authorized JavaScript origins** `https://lekaspos.faizo.net` (and
+6. **Lekas POS Manager** (the web page, D-082): **Credentials → Create credentials → OAuth client ID → Web
+   application**, name "Lekas POS Manager", **Authorized JavaScript origins** `https://lekas.faizo.net` (and
    `http://localhost:8000` to try it with `node scripts/manager/serve.mjs`), no redirect URIs. Put its client ID in
    `site/manager/js/config.js` (`GOOGLE_CLIENT_ID`; not a secret). Same project as the Android clients: Drive's app
    folder belongs to the project, so the page sees the tills' folder with the same `drive.appdata` scope.
@@ -143,15 +143,15 @@ The `drive.file` scope for the daily sales report (1.11.0, D-065) is the owner's
 Platform → Data access → Add or remove scopes → `.../auth/drive.file` → Update → Save.
 New settings can take from 5 minutes to a few hours to reach Google's servers.
 
-The website moved to **https://lekaspos.faizo.net/** on 2026-10-20 (D-082): GitHub Pages custom domain, a DNS-only
-`CNAME lekaspos → faizoken.github.io` in the faizo.net zone on Cloudflare, HTTPS enforced (the first address of that day,
-lekas.faizo.net, stays as a proxied record with the Cloudflare redirect rule "Redirect lekas.faizo.net to lekaspos.faizo.net",
-301 with path and query). Every old
-`faizoken.github.io/LekasPOS/…` address redirects there (301), so links in older apps keep working. From 1.20.2 the app's own
-links (`guide_url`, `privacy_url`, `WEBSITE_URL`) and the consent screen's home page and privacy policy use the new address. The same day
-the web client "LekasPOS Manager (web page)" was made (origins `https://lekaspos.faizo.net` and `http://localhost:8000`;
-`faizo.net` added to the authorized domains by Google) and its ID put in `site/manager/js/config.js`. `faizo.net` is now
-the consent screen's only authorized domain (`faizoken.github.io` removed).
+The website is **https://lekas.faizo.net/** since 2026-10-21 (D-084; the home of Lekas, apps for small businesses, with
+Lekas POS the first): GitHub Pages custom domain, a DNS-only `CNAME lekas → faizoken.github.io` in the faizo.net zone on
+Cloudflare, HTTPS enforced. lekaspos.faizo.net (the address of 2026-10-20, in the links of 1.20.2) stays as a proxied
+record with the Cloudflare redirect rule "Redirect lekaspos.faizo.net to lekas.faizo.net", 301 with path and query; every
+old `faizoken.github.io/LekasPOS/…` address redirects too (301), so links in older apps keep working. From 1.20.3 the
+app's own links (`guide_url`, `privacy_url`, `WEBSITE_URL`) use lekas.faizo.net, as do the consent screen's home page and
+privacy policy. The web client "LekasPOS Manager (web page)" (made 2026-10-20) allows the origins `https://lekas.faizo.net`
+and `http://localhost:8000`; its ID is in `site/manager/js/config.js`. `faizo.net` is the consent screen's only authorized
+domain.
 
 ## License
 
