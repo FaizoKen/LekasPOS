@@ -2599,7 +2599,9 @@ holds at most 500,000 items in a folder).
       locally `:core:test :app:testDebugUnitTest` and `node --test scripts/manager/*.test.mjs` pass
 - [x] Docs: D-085, sync.md §5/§6/§8, features.md §16, codemap, the guide's Google Drive backup section (EN + MS),
       "For Lekas POS 1.21.0"; `versionName` 1.21.0
-- [ ] CI green (instrumented API 21 + 36, release smoke); release APK size recorded
+- [x] CI on branch `long-use-packs` 537d073 (run 39630464744): all jobs green — build, lint, instrumented API 21 + 36
+      (298 tests, 293 before: the five pack scenarios), the web page against the app's files (with A's pack), tablet, release
+      smoke API 21 + 36. Release APK **1,695,915 bytes** (1.20.3: 1,682,955)
 - [ ] Test build v1.21.0 (pre-release)
 - [ ] Perf: no hot path changed (sync runs off the selling path); QUICK on CI to confirm
 
