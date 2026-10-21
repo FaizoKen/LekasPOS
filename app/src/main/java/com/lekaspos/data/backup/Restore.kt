@@ -451,7 +451,8 @@ object Restore {
         }
         db.execSQL("DELETE FROM sync_segment")
         Meta.put(db, Meta.SYNC_ENABLED, "0")
-        for (k in listOf(Meta.SYNC_BACKFILLED, Meta.SYNC_LAST_OK, Meta.SYNC_LAST_ERROR, Meta.SYNC_CLEANED_TO)) Meta.put(db, k, null)
+        val gone = listOf(Meta.SYNC_BACKFILLED, Meta.SYNC_LAST_OK, Meta.SYNC_LAST_ERROR, Meta.SYNC_CLEANED_TO, Meta.SYNC_PACKED_TO, Meta.SYNC_REMOVED_TO)
+        for (k in gone) Meta.put(db, k, null)
     }
 
     fun backupDir(ctx: Context): File = File(ctx.filesDir, "backups")

@@ -8,7 +8,9 @@ import { STATEMENTS, APP_SCHEMA } from './schema.js';
 import { Importer, Touched } from './importer.js';
 import { applyDerived } from './derived.js';
 import { parse } from './json64.js';
-import { readSegment, parseSegmentName, parseStoreName, parseCard, sha256, CorruptFile, writeSegment, jsonText } from './segment.js';
+import {
+  readSegment, readPack, parseSegmentName, parseFileName, planFiles, reach, parseStoreName, parseCard, sha256, CorruptFile, writeSegment, jsonText,
+} from './segment.js';
 import { Clock, DEVICE_BITS } from './rules.js';
 import { Writer } from './writer.js';
 
@@ -214,20 +216,24 @@ export class Store {
       for (const c of cards) {
         const cursor = cursors.get(c.dev) ?? 0;
         if (c.fullFrom <= 1 || cursor >= c.fullFrom - 1) continue;
-        if (!listing.files.some((f) => f.dev === c.dev && f.seq === cursor + 1)) cursors.set(c.dev, c.fullFrom - 1);
+        if (!listing.files.some((f) => f.dev === c.dev && f.from <= cursor + 1 && f.to >= cursor + 1)) cursors.set(c.dev, c.fullFrom - 1);
       }
     }
 
-    // Which files to read: for each till, the ones after its cursor, in order, up to the first gap.
+    // Which files to read: for each till, the ones after its cursor, in order, up to the first gap — a pack where
+    // its segments are gone, or where it holds many of them (D-085). [after]: what the till had read before the file.
     const byDev = new Map();
     for (const f of listing.files) {
-      if (!byDev.has(f.dev)) byDev.set(f.dev, new Map());
-      byDev.get(f.dev).set(f.seq, f);
+      if (!byDev.has(f.dev)) byDev.set(f.dev, []);
+      byDev.get(f.dev).push(f);
     }
     const plan = [];
     for (const [dev, files] of [...byDev].sort((a, b) => a[0] - b[0])) {
-      let s = (cursors.get(dev) ?? 0) + 1;
-      while (files.has(s)) plan.push(files.get(s++));
+      let after = cursors.get(dev) ?? 0;
+      for (const f of planFiles(after, files)) {
+        plan.push({ ...f, after });
+        after = f.to;
+      }
     }
 
     if (this.db.selectValue('SELECT 1 FROM sync_deferred LIMIT 1')) this.retryDeferred();
@@ -254,17 +260,26 @@ export class Store {
       events += r.touched.events;
       deferred += r.deferred;
       for (const e of r.touched.entities) entities.add(e);
-      done += batch.length;
       batch = [];
       batchEvents = 0;
       progress({ phase: 'receive', done, total: plan.length });
     };
-    while (pending.length > 0) {
-      const seg = await pending.shift();
-      if (next < plan.length) pending.push(fetchAt(next++));
+    const add = (seg) => {
       batch.push(seg);
       batchEvents += seg.events.length;
       if (batchEvents >= BATCH_EVENTS || batch.length >= BATCH_FILES) flush();
+    };
+    while (pending.length > 0) {
+      const item = await pending.shift();
+      if (next < plan.length) pending.push(fetchAt(next++));
+      if (item.pack) {
+        // Unpacked only now, a segment at a time (a pack is up to a few thousand of them).
+        const segments = await readPack(item.bytes, item, item.after);
+        for (const { header, events: evs } of segments) add({ dev: item.dev, seq: header.seq, events: evs });
+      } else {
+        add(item);
+      }
+      done++;
     }
     flush();
 
@@ -321,7 +336,7 @@ export class Store {
     for (const [d, s] of this.cursors()) if (d !== me.dev) cursors[String(d)] = BigInt(s);
     const bytes = new TextEncoder().encode(jsonText({
       dev: BigInt(me.dev), uuid: me.uuid, name: me.name, app: 'web', lastSeen: BigInt(now),
-      lastSeq: BigInt(this.meta('web.seg_seq') ?? 0), prefix: null, cursors,
+      lastSeq: BigInt(this.meta('web.seg_seq') ?? 0), prefix: null, cursors, packs: 1n, // it reads packs (D-085)
     }));
     if (me.cardId) {
       try {
@@ -385,31 +400,36 @@ export class Store {
     return { result, events: events.length, seq: next };
   }
 
-  /** The shop's segment files in the folder (created after [since] when given). */
+  /** The shop's segments and packs in the folder (created after [since] when given); a pack counts with its last number. */
   async listSegments(provider, store, since) {
     const files = [];
     const highest = new Map();
     let newest = 0;
     for (const f of await provider.list('seg', since ?? undefined)) {
       if (f.created > newest) newest = f.created;
-      const s = parseSegmentName(f.name);
+      const s = parseFileName(f.name);
       if (!s || s.store !== store) continue;
       files.push({ ...s, file: f });
-      if (s.seq > (highest.get(s.dev) ?? 0)) highest.set(s.dev, s.seq);
+      if (s.to > (highest.get(s.dev) ?? 0)) highest.set(s.dev, s.to);
     }
     return { files, highest, newest };
   }
 
-  /** Downloads and reads one segment; checked against its checksum (once more before calling it damaged). */
+  /**
+   * Downloads one file; checked against its checksum (once more before calling it damaged). A segment is read
+   * at once; a pack is left as bytes, read when its turn comes (several are downloaded ahead).
+   */
   async download(provider, f, store) {
+    const what = f.pack ? `pack ${f.dev}/${f.from}-${f.to}` : `segment ${f.dev}/${f.from}`;
     const expected = f.file.props?.sha256;
     let bytes = await provider.get(f.file);
     if (expected && (await sha256(bytes)) !== expected) {
       bytes = await provider.get(f.file);
-      if ((await sha256(bytes)) !== expected) throw new CorruptFile(`segment ${f.dev}/${f.seq} does not match its checksum`);
+      if ((await sha256(bytes)) !== expected) throw new CorruptFile(`${what} does not match its checksum`);
     }
-    const { events } = await readSegment(bytes, { store, dev: f.dev, seq: f.seq });
-    return { dev: f.dev, seq: f.seq, events };
+    if (f.pack) return { pack: true, store, dev: f.dev, from: f.from, to: f.to, after: f.after, bytes };
+    const { events } = await readSegment(bytes, { store, dev: f.dev, seq: f.from });
+    return { dev: f.dev, seq: f.from, events };
   }
 }
 
@@ -417,16 +437,13 @@ export class Store {
 function hasGap(files, cursors) {
   const byDev = new Map();
   for (const f of files) {
-    if (!byDev.has(f.dev)) byDev.set(f.dev, new Set());
-    byDev.get(f.dev).add(f.seq);
+    if (!byDev.has(f.dev)) byDev.set(f.dev, []);
+    byDev.get(f.dev).push(f);
   }
-  for (const [dev, seqs] of byDev) {
+  for (const [dev, tillFiles] of byDev) {
     const cursor = cursors.get(dev) ?? 0;
-    const after = [...seqs].filter((s) => s > cursor).length;
-    let s = cursor + 1;
-    let run = 0;
-    while (seqs.has(s)) { run++; s++; }
-    if (after > 0 && run < after) return true;
+    const furthest = tillFiles.reduce((m, f) => Math.max(m, f.to), 0);
+    if (furthest > cursor && reach(cursor, tillFiles) < furthest) return true;
   }
   return false;
 }

@@ -1262,4 +1262,162 @@ class SyncMergeTest {
         assertConverged(a, b)
         runBlocking { for (t in listOf(a, b)) assertTrue(t.staff.check(Seed.Ids.STAFF_OWNER, "2468", 0L) is StaffSession.Check.Ok) }
     }
+
+    // ------------------------------------------------------------------ long use (D-085)
+
+    /** Till [t]'s files in the folder: its segments and packs. */
+    private fun filesOf(t: AppGraph): List<SyncNames.TillFile> = runBlocking {
+        val dev = t.db().deviceNo
+        folder.listFiles().orEmpty().mapNotNull { SyncNames.parseFile(it.name) }.filter { it.dev == dev }
+    }
+
+    private fun meta(t: AppGraph, key: String): Long = runBlocking { t.db().read { Meta.getLong(it, key) } ?: 0L }
+
+    /** [n] sales on [t], each sent in a round of its own: a file each. */
+    private fun sellAndSend(t: AppGraph, productId: Long, n: Int) = repeat(n) {
+        sell(t, productId)
+        runBlocking { t.sync.sync(provider) }
+    }
+
+    /** Packs of [size] segments, only the newest segment left as it is. */
+    private fun smallPacks(t: AppGraph, size: Int = 3) {
+        t.sync.packSegments = size
+        t.sync.keepNewest = 1
+    }
+
+    /**
+     * D-085: a till's older segments become packs and leave the folder; the tills that read them go on, a till
+     * joining later reads the packs, and the phone keeps no copy of a packed segment.
+     */
+    @Test
+    fun oldSegmentsBecomePacksAndATillJoiningLaterReadsThem() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        smallPacks(a)
+        val p = product(a, "Milo", 1_890L)
+        sellAndSend(a, p, 8)
+        repeat(3) { syncAll(a, b) } // a pack a round at most
+        val packedTo = meta(a, Meta.SYNC_PACKED_TO)
+        assertTrue(packedTo >= 6, "packed up to $packedTo")
+        assertEquals(packedTo, meta(a, Meta.SYNC_REMOVED_TO)) // B reads packs: nothing waits for it
+        val files = filesOf(a)
+        assertTrue(files.count { it.pack } >= 2)
+        assertTrue(files.none { !it.pack && it.to <= packedTo }, "the packed segments left the folder")
+        // Every number of A's is in the folder once: the packs, then the segments after them.
+        val last = runBlocking { a.db().read { SyncDao.lastUploaded(it) } }
+        assertEquals((1L..last).toList(), files.sortedBy { it.from }.flatMap { (it.from..it.to).toList() })
+        val local = a.sync.outDir.listFiles().orEmpty().mapNotNull { it.name.removePrefix("seg-").removeSuffix(SyncNames.SEGMENT_EXT).toLongOrNull() }
+        assertTrue(local.none { it <= packedTo }, "a packed segment is still on the phone")
+        val c = till()
+        enable(c, "Counter C")
+        syncAll(a, b, c)
+        assertConverged(a, b, c)
+        runBlocking { assertEquals(8L, c.db().read { it.long("SELECT COUNT(*) FROM sale") }) }
+    }
+
+    /** D-085: a till that was offline while another packed its files reads the pack, skipping what it had. */
+    @Test
+    fun aTillThatWasOfflineReadsThePackAndSkipsWhatItHad() {
+        val a = till()
+        enable(a, "Counter A")
+        val b = till()
+        enable(b, "Counter B")
+        val p = product(a, "Milo", 1_890L)
+        sellAndSend(a, p, 2)
+        syncAll(a, b) // B has A's first files
+        val aDev = runBlocking { a.db().deviceNo }
+        val read = runBlocking { b.db().read { SyncDao.cursors(it) }[aDev] } ?: 0L
+        assertTrue(read >= 2L)
+        smallPacks(a, size = 4)
+        sellAndSend(a, p, 6) // B is offline meanwhile
+        repeat(2) { runBlocking { a.sync.sync(provider) } }
+        val next = read + 1L
+        assertTrue(filesOf(a).any { it.pack && it.from < next && it.to >= next }, "B's next file is inside a pack")
+        assertTrue(filesOf(a).none { !it.pack && it.from == next }, "and gone as a segment")
+        syncAll(a, b)
+        assertConverged(a, b)
+        runBlocking {
+            assertEquals(8L, b.db().read { it.long("SELECT COUNT(*) FROM sale") })
+            assertEquals(a.db().read { SyncDao.lastUploaded(it) }, b.db().read { SyncDao.cursors(it) }[aDev])
+        }
+    }
+
+    /** D-085: a till of an older version cannot read packs: the segments it has not read stay in the folder for it. */
+    @Test
+    fun segmentsATillOfAnOlderVersionHasNotReadStayForIt() {
+        val a = till()
+        enable(a, "Counter A")
+        val p = product(a, "Milo", 1_890L)
+        sellAndSend(a, p, 4)
+        val (store, aDev) = runBlocking { a.db().read { Meta.get(it, Meta.STORE_UUID).orEmpty() } to a.db().deviceNo }
+        // The card of a till on 1.20.3 (no "packs"), seen just now, that has read A's files up to [upTo].
+        fun oldCard(upTo: Long) = File(folder, SyncNames.device(store, 4_242)).writeText(
+            """{"dev":4242,"uuid":"old","name":"Old till","app":"1.20.3","lastSeen":${System.currentTimeMillis()},""" +
+                """"lastSeq":0,"prefix":"ZZ-","cursors":{"$aDev":$upTo}}""",
+        )
+        oldCard(2L)
+        smallPacks(a)
+        listWholeFolderNext(a) // the cards are read again
+        repeat(3) { runBlocking { a.sync.sync(provider) } }
+        assertTrue(meta(a, Meta.SYNC_PACKED_TO) >= 3L)
+        assertEquals(2L, meta(a, Meta.SYNC_REMOVED_TO))
+        assertTrue(filesOf(a).any { !it.pack && it.from == 3L }, "the old till's next file is still there")
+        // It has read them (or was updated): the rest leaves too.
+        oldCard(100L)
+        listWholeFolderNext(a)
+        runBlocking { a.sync.sync(provider) }
+        assertEquals(meta(a, Meta.SYNC_PACKED_TO), meta(a, Meta.SYNC_REMOVED_TO))
+    }
+
+    /** D-085: a pack whose upload fails does not fail the round; a later round sends it, once. */
+    @Test
+    fun aPackWhoseUploadFailedIsSentByALaterRound() {
+        val a = till()
+        enable(a, "Counter A")
+        val p = product(a, "Milo", 1_890L)
+        sellAndSend(a, p, 3)
+        smallPacks(a)
+        var refused = 0
+        val noPacks = object : SyncProvider by provider {
+            override suspend fun put(name: String, file: File, props: Map<String, String>, replace: Boolean, fresh: Boolean): RemoteFile {
+                if (name.endsWith(SyncNames.PACK_EXT)) {
+                    refused++
+                    throw java.io.IOException("connection lost")
+                }
+                return provider.put(name, file, props, replace, fresh)
+            }
+        }
+        runBlocking { a.sync.sync(noPacks) } // the round itself succeeds
+        assertEquals(1, refused)
+        assertEquals(0L, meta(a, Meta.SYNC_PACKED_TO))
+        assertTrue(filesOf(a).none { it.pack })
+        runBlocking { a.sync.sync(provider) }
+        assertEquals(3L, meta(a, Meta.SYNC_PACKED_TO))
+        assertEquals(1, filesOf(a).count { it.pack })
+        val b = till()
+        enable(b, "Counter B")
+        syncAll(a, b)
+        assertConverged(a, b)
+    }
+
+    /** D-085: segments an older version deleted from the phone (14 days after upload) are downloaded again for their pack. */
+    @Test
+    fun segmentsNoLongerOnThePhoneAreDownloadedAgainForTheirPack() {
+        val a = till()
+        enable(a, "Counter A")
+        val p = product(a, "Milo", 1_890L)
+        sellAndSend(a, p, 4)
+        a.sync.outDir.listFiles().orEmpty().forEach { it.delete() }
+        smallPacks(a)
+        repeat(2) { runBlocking { a.sync.sync(provider) } }
+        assertTrue(meta(a, Meta.SYNC_PACKED_TO) >= 3L)
+        assertTrue(a.sync.outDir.listFiles().orEmpty().none { it.name.endsWith(".fetch") || it.name.endsWith(".tmp") })
+        val c = till()
+        enable(c, "Counter C")
+        syncAll(a, c)
+        assertConverged(a, c)
+        runBlocking { assertEquals(4L, c.db().read { it.long("SELECT COUNT(*) FROM sale") }) }
+    }
 }

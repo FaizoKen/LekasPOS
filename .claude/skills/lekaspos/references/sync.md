@@ -118,14 +118,18 @@ small key/values (`sha256`, `count`) stored with each file (Drive `appProperties
 | File | Written by | Mutable? |
 |---|---|---|
 | `store-{store}.json` — store manifest | first device | never rewritten |
-| `dev-{store}-{dev}.json` — device card (name, app version, last seen, last seq, receipt prefix, cursors) | that device | rewritten only by its owner |
-| `seg-{store}-{dev}-{seq}.ndjson.gz` — events | that device | immutable |
-| (not built yet) snapshots, archives, blobs (logo) | — | — |
+| `dev-{store}-{dev}.json` — device card (name, app version, last seen, last seq, receipt prefix, cursors, `fullFrom`, `packs`) | that device | rewritten only by its owner |
+| `seg-{store}-{dev}-{seq}.ndjson.gz` — events | that device | immutable; removed by its owner once packed (§8) |
+| `seg-{store}-{dev}-{from}-{to}.pack.gz` — that device's segments from..to (D-085) | that device | immutable |
+| (not built yet) archives, blobs (logo) | — | — |
 
 Segment = gzip NDJSON: header line `{v, store, dev, seq, count, firstHlc, lastHlc}` then one
 event per line `{"e": entity, "o": op, "r": rowId, "h": hlc, "p": payload}`. Integrity: SHA-256
 compared before applying, header checked, count checked; a bad file stops sync with CORRUPT.
-Streaming read/write only (`SegmentCodec`).
+Streaming read/write only (`SegmentCodec`). Pack = gzip: a header line `{v, pack: 1, store, dev, from, to, count}`, then
+each segment's own lines (its header, its events) in order (`SegmentCodec.writePack` / `readBlocks`); checked the same way,
+plus segments following on from `from` to `to`. Its name starts like a segment's (one listing finds both) and ends
+otherwise (a till before D-085 passes it by).
 
 ## 6. One sync round (`SyncEngine.sync`, under a mutex)
 
@@ -137,12 +141,13 @@ Streaming read/write only (`SegmentCodec`).
    characters of payload: pictures, D-066) into
    `files/sync/out/seg-<seq>.ndjson.gz`, records it in `sync_segment`, deletes those rows.
 2. Upload every unsent segment in order (`put` with `replace = false`: an already uploaded name
-   is left alone after a crash); mark uploaded; local copies deleted after 14 days (from
-   `meta sync.cleaned_to` on, never the whole history). Uploads stop at the first failure, so the
-   unsent segments are exactly those after the last uploaded one (a key range, not a scan).
-3. Import: list `seg-{store}-*`; for every other device `d` apply `cursor[d]+1, +2, …` in
-   order (`Cursors.next`), each downloaded to `cacheDir/sync-in`, verified, and applied in
-   ~100 ms chunks (`hlc.observe` inside each chunk; the cursor moves with the last). A gap stops
+   is left alone after a crash); mark uploaded; local copies stay until a pack holds them (§8; before
+   D-085, 14 days), then deleted from `meta sync.cleaned_to` on, never the whole history. Uploads stop at
+   the first failure, so the unsent segments are exactly those after the last uploaded one (a key range, not a scan).
+3. Import: list `seg-{store}-*` (segments and packs); for every other device `d` read the files after
+   `cursor[d]` in order (`Cursors.plan`: the next number's segment, or the pack holding it — §8), each
+   downloaded to `cacheDir/sync-in`, verified, and applied in ~100 ms chunks (`hlc.observe` inside each
+   chunk; the cursor moves after each batch to the last whole segment). A gap stops
    that device until it appears. The listing is filtered while it is read (`list(keep)`): only
    files after a cursor are kept, the rest only counted (D-054), and at most 1,000 files per till
    per round (`Report.more` → AutoSync runs the next round 2 s later, D-055). On a whole-folder
@@ -154,6 +159,7 @@ Streaming read/write only (`SegmentCodec`).
    files jump there; a till in a store other than the lowest-id one moves to it; a receipt prefix
    used by another card is changed by the till with the higher device number.
 4. Publish the device card; reload settings / staff when those entities changed.
+4b. Packs and removing packed segments (§8, D-085); work left → `Report.more`.
 5. `meta sync.last_ok / sync.last_error` (`"sign-in"` when the provider needs the user).
 
 Unknown kinds (v6, D-047): an event whose entity this version does not know is stored in LOCAL
@@ -217,10 +223,29 @@ the creation fills; products are re-indexed for search.
   A restored database loses any triggers and views (the app makes none: a doctored backup could
   bring one), and its activity log records who restored which backup (D-056).
 
-## 8. Not built yet (deferred, D-045)
+## 8. Long use: packs, and the packed segments leave the folder (D-085)
 
-Snapshot bootstrap for very large stores; remote GC of segments every device has read
-(`Cursors.deletable` exists); archive of old sales; Drive Changes API (full listing is used).
+A till uploads a segment after most sales, so a busy till added 300–800 files a day; Google Drive holds at most 500,000
+items in a folder, and the weekly listing and a joining till's downloads grew with every file. Step 4b of every round (§6)
+(`SyncEngine.compact`, after the card; it never fails the round):
+- **Pack** (`core/sync/Packs.next`): once 2,000 of this till's segments after `meta sync.packed_to` (or 4 MB of them) are
+  uploaded and older than its newest 100, they become one pack — one a round. Made from the phone's copies, checked against
+  `sync_segment.sha256`; copies an older version deleted are downloaded again (500 a round; one in neither place stops
+  packing, logged once). Uploaded with `sha256` and `count`; a retry looks first (`meta sync.pack_try`); then
+  `sync.packed_to` = its last number and the phone's copies go.
+- **Remove** (`Packs.removableTo`): this till's segments up to `sync.packed_to` leave the folder, 500 a round, then
+  `meta sync.removed_to`. A card without `"packs": 1` (a till before D-085) seen in the last 30 days holds them back past
+  its cursor for this till; cards are read again when older than an hour. App "web" (Lekas Manager) reads packs.
+- **Read** (`Cursors.plan`): after the cursor, the segment with the next number, or the pack holding that number when the
+  segment is gone or the pack holds 20+ numbers still to read; a pack's segments up to the cursor are read past unparsed.
+  A file removed while it is read (Drive 404) ends that till's reading for the round and lists the whole folder next.
+- Every check on a till's numbers counts a pack from its first to its last (published = highest `to`; first file =
+  lowest `from`; "numbered again"; `fullFrom`; gaps). A republish (D-055) counts what came before as packed.
+- `Restore.newIdentity` and `forgetPublishing` clear `sync.packed_to`, `sync.removed_to`, `sync.pack_try`.
+- Tests make packs small: `SyncEngine.packSegments` / `keepNewest` (internal).
+
+Not built yet: archive of old sales; Drive Changes API (full listing is used); a snapshot to start from (rejected for
+now, D-085: a POS's data is mostly sales; packs give a joining till a few large files).
 
 ## 9. Provider interface (as built)
 

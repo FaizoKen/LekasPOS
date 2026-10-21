@@ -101,6 +101,15 @@ object SyncDao {
         ::segment,
     )
 
+    /**
+     * How many of this till's segments after [afterSeq] up to [upTo] there are, and their bytes (a key range): whether a
+     * pack is due is asked every round (D-085), its segments read only when it is.
+     */
+    fun segmentSpan(db: SQLiteDatabase, afterSeq: Long, upTo: Long): Pair<Long, Long> =
+        db.rawQuery("SELECT COUNT(*), COALESCE(SUM(size), 0) FROM sync_segment WHERE seq > ? AND seq <= ?", args(afterSeq, upTo)).use { c ->
+            if (c.moveToFirst()) c.getLong(0) to c.getLong(1) else 0L to 0L
+        }
+
     /** The newest uploaded segment: read backwards from the newest, it stops at the first uploaded one. */
     fun lastUploaded(db: SQLiteDatabase): Long =
         db.long("SELECT COALESCE((SELECT seq FROM sync_segment WHERE uploaded_at IS NOT NULL ORDER BY seq DESC LIMIT 1), 0)")
@@ -272,6 +281,130 @@ object SegmentCodec {
             w.close() // ends the Deflater; the file is already complete and synced
         }
         return file.length() to hex(digest.digest())
+    }
+
+    /** A pack's first line (D-085): till [dev]'s segments [from]..[to] follow, [count] events in all. */
+    data class PackHeader(val v: Int, val store: String, val dev: Int, val from: Long, val to: Long, val count: Long)
+
+    /**
+     * Writes the pack of [sources] — this till's segment files with their rows, numbers following on — to
+     * [file] (fsynced): a pack header line, then each segment's own lines, its header first, copied as they
+     * are. Each source's header and number of events are checked against its row. Returns (size, sha256 hex).
+     */
+    fun writePack(file: File, store: String, dev: Int, sources: List<Pair<SegmentRow, File>>): Pair<Long, String> {
+        require(sources.isNotEmpty()) { "an empty pack" }
+        val from = sources.first().first.seq
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileOutputStream(file).use { fos ->
+            val gz = GZIPOutputStream(DigestOutputStream(fos.buffered(64 * 1024), digest), 64 * 1024)
+            val w = OutputStreamWriter(gz, Charsets.UTF_8)
+            val head = Outbox.json { j ->
+                j.beginObject()
+                j.name("v").value(1L)
+                j.name("pack").value(1L)
+                j.name("store").value(store)
+                j.name("dev").value(dev.toLong())
+                j.name("from").value(from)
+                j.name("to").value(sources.last().first.seq)
+                j.name("count").value(sources.sumOf { it.first.count.toLong() })
+                j.endObject()
+            }
+            w.write(head)
+            w.write("\n")
+            var expect = from
+            for ((row, src) in sources) {
+                if (row.seq != expect) throw Corrupt("pack: segment ${row.seq} where $expect follows")
+                expect++
+                BufferedReader(InputStreamReader(GZIPInputStream(FileInputStream(src), 64 * 1024), Charsets.UTF_8), 64 * 1024).use { r ->
+                    val first = r.readLine() ?: throw Corrupt("segment ${row.seq} is empty")
+                    val h = header(first)
+                    if (h.store != store || h.dev != dev || h.seq != row.seq || h.count != row.count) {
+                        throw Corrupt("segment ${row.seq} has a wrong header")
+                    }
+                    w.write(first)
+                    w.write("\n")
+                    var n = 0
+                    while (true) {
+                        val line = r.readLine() ?: break
+                        if (line.isEmpty()) continue
+                        w.write(line)
+                        w.write("\n")
+                        n++
+                    }
+                    if (n != h.count) throw Corrupt("segment ${row.seq}: $n events, header says ${h.count}")
+                }
+            }
+            w.flush()
+            gz.finish()
+            gz.flush()
+            fos.flush()
+            fos.fd.sync()
+            w.close() // ends the Deflater; the file is already complete and synced
+        }
+        return file.length() to hex(digest.digest())
+    }
+
+    /**
+     * Reads a segment, or a pack of segments ([pack], D-085), one segment at a time: [checkPack] sees a pack's
+     * first line; [start] sees each segment's header before its events and says whether they are wanted (if
+     * not they are read past, unparsed); [each] gets every wanted event; [end] runs after a wanted segment's
+     * last event. A pack's segments must follow on from its first number to its last, and every count hold.
+     */
+    fun readBlocks(
+        file: File,
+        pack: Boolean,
+        checkPack: (PackHeader) -> Unit,
+        start: (Header) -> Boolean,
+        each: (SyncEvent) -> Unit,
+        end: (Header) -> Unit,
+    ) {
+        BufferedReader(InputStreamReader(GZIPInputStream(FileInputStream(file), 64 * 1024), Charsets.UTF_8), 64 * 1024).use { r ->
+            if (!pack) {
+                val h = header(r.readLine() ?: throw Corrupt("empty segment"))
+                val want = start(h)
+                var n = 0
+                while (true) {
+                    val line = r.readLine() ?: break
+                    if (line.isEmpty()) continue
+                    if (want) each(event(line))
+                    n++
+                }
+                if (n != h.count) throw Corrupt("segment ${h.dev}/${h.seq}: $n events, header says ${h.count}")
+                if (want) end(h)
+                return
+            }
+            val p = packHeader(r.readLine() ?: throw Corrupt("empty pack"))
+            checkPack(p)
+            val what = "pack ${p.dev}/${p.from}-${p.to}"
+            var expect = p.from
+            var total = 0L
+            while (true) {
+                val line = r.readLine() ?: break
+                if (line.isEmpty()) continue
+                if (expect > p.to) throw Corrupt("$what holds more than its segments")
+                val h = header(line)
+                if (h.store != p.store || h.dev != p.dev || h.seq != expect) throw Corrupt("$what: segment ${h.seq} where $expect follows")
+                val want = start(h)
+                var n = 0
+                while (n < h.count) {
+                    val e = r.readLine() ?: throw Corrupt("$what: segment ${h.seq} is cut short")
+                    if (e.isEmpty()) continue
+                    if (want) each(event(e))
+                    n++
+                }
+                total += n
+                if (want) end(h)
+                expect++
+            }
+            if (expect != p.to + 1L || total != p.count) throw Corrupt("$what is incomplete")
+        }
+    }
+
+    private fun packHeader(line: String): PackHeader {
+        val m = parse(line) as? Map<*, *> ?: throw Corrupt("bad pack header")
+        fun l(k: String) = (m[k] as? Long) ?: throw Corrupt("pack header without $k")
+        if (l("pack") != 1L) throw Corrupt("not a pack")
+        return PackHeader(l("v").toInt(), m["store"] as? String ?: throw Corrupt("pack header without store"), l("dev").toInt(), l("from"), l("to"), l("count"))
     }
 
     fun sha256(file: File): String {

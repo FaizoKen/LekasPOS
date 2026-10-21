@@ -6,6 +6,7 @@ import com.lekaspos.BuildConfig
 import com.lekaspos.app.AppGraph
 import com.lekaspos.core.model.Entity
 import com.lekaspos.core.sync.Cursors
+import com.lekaspos.core.sync.Packs
 import com.lekaspos.core.sync.SyncNames
 import com.lekaspos.data.db.Db
 import com.lekaspos.data.db.Meta
@@ -39,7 +40,7 @@ import kotlinx.coroutines.withContext
  * segments and applies each, in order, in one transaction together with its cursor — so an
  * interrupted sync simply resumes, and nothing is applied twice. Selling never waits on this.
  */
-class SyncEngine(private val graph: AppGraph, private val app: Application) {
+class SyncEngine(private val graph: AppGraph, private val app: Application, outName: String = OUT_DIR) {
 
     data class Status(
         val enabled: Boolean = false,
@@ -115,13 +116,18 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
          * goes on from here. 0 = from file 1, as usual.
          */
         val fullFrom: Long = 0L,
+        /**
+         * The till reads packs (D-085): its numbers' segments may leave the folder before it has read them.
+         * The web page (app "web") always does: it is updated with the website.
+         */
+        val packs: Boolean = false,
     )
 
     private val _status = MutableStateFlow(Status())
     val status: StateFlow<Status> = _status
 
     private val mutex = Mutex()
-    private val outDir = File(app.filesDir, "sync/out") // made by [seal]
+    internal val outDir = File(app.filesDir, outName) // made by [seal]; tests delete its files
     private val inDir get() = File(app.cacheDir, "sync-in").apply { mkdirs() }
 
     /**
@@ -239,8 +245,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         // What this till has already published in this folder, against what this database knows of.
         var mine = 0L
         provider.list(SyncNames.segmentPrefix(store)) { f ->
-            val s = SyncNames.parseSegment(f.name)
-            if (s != null && s.store == store && s.dev == db.deviceNo && s.seq > mine) mine = s.seq
+            val s = SyncNames.parseFile(f.name) // a pack counts with its last number
+            if (s != null && s.store == store && s.dev == db.deviceNo && s.to > mine) mine = s.to
             false // only counted
         }
         val published = maxOf(mine, cards.firstOrNull { it.dev == db.deviceNo }?.lastSeq ?: 0L)
@@ -310,7 +316,8 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     /** Forgets what this till published and read: it numbers its files from 1 again, after a backfill. */
     private fun forgetPublishing(tx: Db.Tx) {
         SyncDao.restartPublishing(tx)
-        for (k in listOf(BACKFILLED, UPLOAD_TRY, Meta.SYNC_CLEANED_TO, LIST_SINCE, FULL_LIST_AT, FULL_FROM)) {
+        val keys = listOf(BACKFILLED, UPLOAD_TRY, Meta.SYNC_CLEANED_TO, LIST_SINCE, FULL_LIST_AT, FULL_FROM, Meta.SYNC_PACKED_TO, Meta.SYNC_REMOVED_TO, PACK_TRY)
+        for (k in keys) {
             Meta.put(tx.db, k, null)
         }
     }
@@ -436,6 +443,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             var more = got.more
             val tillCards = got.cards
             if (tillCards != null) { // the whole folder was listed: once a week, and on the first round
+                noteCards(tillCards)
                 if (checkFolder(db, provider, store, got.ownLowest, uploadedBefore)) {
                     more = true // the next round publishes everything again
                 } else {
@@ -445,11 +453,13 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             } else if (SystemClock.elapsedRealtime() - cardsCheckedAt > CARDS_EVERY_MS || cardsCheckedAt == 0L) {
                 // The other tills' cards stay daily (a small listing): a receipt prefix two tills took at
                 // once is noticed within a day, not a week (2026-10 review).
-                checkPrefix(db, cards(provider, store))
+                checkPrefix(db, cards(provider, store).also { noteCards(it) })
                 cardsCheckedAt = SystemClock.elapsedRealtime()
             }
             step(PHASE_FINISH, 0L, 0L)
-            putCard(db, provider, db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() }) // moved by checkFolder?
+            val current = db.read { Meta.get(it, Meta.STORE_UUID).orEmpty() } // moved by checkFolder?
+            putCard(db, provider, current)
+            if (compact(db, provider, current)) more = true
             cleanLocal(db)
             val offset = provider.clockOffset
             val clockOff = offset != null && abs(offset) > CLOCK_WARN_MS
@@ -607,40 +617,59 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         val remote = listing.others
         val byDev = remote.groupBy { it.first.dev }
         val plan = byDev.flatMap { (dev, files) ->
-            val bySeq = files.associate { it.first.seq to it.second }
-            Cursors.next(cursors[dev] ?: 0L, bySeq.keys).map { seq -> Triple(dev, seq, bySeq.getValue(seq)) }
+            val byFile = files.associate { it.first to it.second }
+            Cursors.plan(cursors[dev] ?: 0L, byFile.keys).map { f -> Triple(dev, f, byFile.getValue(f)) }
         }
         var applied = 0
         var events = 0
+        val reached = HashMap(cursors)
         step(PHASE_RECEIVE, 0L, plan.size.toLong())
-        for ((dev, seq, rf) in plan) {
-            val tmp = File(inDir, "seg-$dev-$seq.tmp")
+        // A till whose file was removed from the folder meanwhile (it was packed, D-085): its pack is read
+        // after the next whole listing — this round goes on with the other tills.
+        val gone = HashSet<Int>()
+        for ((dev, f, rf) in plan) {
+            if (dev in gone) continue
+            val what = if (f.pack) "pack $dev/${f.from}-${f.to}" else "segment $dev/${f.from}"
+            val tmp = File(inDir, "seg-$dev-${f.from}-${f.to}.tmp")
             try {
-                provider.get(rf, tmp)
+                try {
+                    provider.get(rf, tmp)
+                } catch (e: java.io.IOException) {
+                    if (!isGone(e)) throw e
+                    Log.w("${what.replaceFirstChar { it.uppercase() }} left the sync folder while it was read: its pack is read next")
+                    gone.add(dev)
+                    continue
+                }
                 val expected = rf.props["sha256"]
                 if (expected != null && SegmentCodec.sha256(tmp) != expected) {
                     // Once more before calling it damaged: a download cut short on a poor connection
                     // stopped every sync with "a file in Google Drive is damaged" (2026-10 review).
-                    Log.w("Segment $dev/$seq does not match its checksum: downloading it again")
+                    Log.w("${what.replaceFirstChar { it.uppercase() }} does not match its checksum: downloading it again")
                     tmp.delete()
                     provider.get(rf, tmp)
                     if (SegmentCodec.sha256(tmp) != expected) {
-                        throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq does not match its checksum")
+                        throw Problem(Problem.Reason.CORRUPT, "$what does not match its checksum")
                     }
                 }
-                events += applySegment(db, tmp, store, dev, seq, changed)
+                events += applyFile(db, tmp, store, f, reached[dev] ?: 0L, changed)
+                reached[dev] = f.to
                 applied++
                 step(PHASE_RECEIVE, applied.toLong(), plan.size.toLong())
             } finally {
                 tmp.delete()
             }
         }
-        rememberListing(db, listing, cursors, plan, since, full, now)
+        rememberListing(db, listing, reached, since, full && gone.isEmpty(), now)
+        if (gone.isNotEmpty()) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, FULL_LIST_AT, null) }
         // Every other till read at least once — not just those in this (short) listing.
         val devices = db.read { SyncDao.cursors(it) }.size
         // "More" only while files are read: a till stuck at a gap must not make rounds run back to back.
-        return Imported(applied, events, devices, tillCards, listing.ownLowest, listing.skipped && applied > 0)
+        return Imported(applied, events, devices, tillCards, listing.ownLowest, (listing.skipped && applied > 0) || gone.isNotEmpty())
     }
+
+    /** The folder no longer holds a file that was listed (Drive: 404; a plain folder: no such file). */
+    private fun isGone(e: java.io.IOException): Boolean =
+        e is java.io.FileNotFoundException || (e is com.lekaspos.sync.drive.DriveProvider.HttpError && e.code == 404)
 
     /**
      * What [import] did. [cards]: the tills' cards, read when the whole folder was listed (else
@@ -663,7 +692,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
      * created at [skippedOldest] (0 = a time unknown: the whole folder is listed next time).
      */
     private class Listing(
-        val others: List<Pair<SyncNames.Segment, RemoteFile>>,
+        val others: List<Pair<SyncNames.TillFile, RemoteFile>>,
         val newest: Long,
         val highest: Map<Int, Long>,
         val ownLowest: Long,
@@ -672,9 +701,9 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     )
 
     /**
-     * [store]'s segments in the sync folder (created after [since], if given). Files already read
-     * (up to [cursors]) are only counted, never kept: the whole folder is listed once a day and
-     * grows by hundreds of files a day. At most [filesPerTill] files of each till are kept for one
+     * [store]'s segments and packs in the sync folder (created after [since], if given). Files already
+     * read (up to [cursors]) are only counted, never kept: the whole folder is listed once a week. At
+     * most [filesPerTill] files of each till are kept for one
      * round (2026-10 review): a till joining a store with a year of history (100,000+ files) would
      * otherwise hold them all in memory; the rest is read by the next rounds.
      */
@@ -684,20 +713,21 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         var skipped = false
         var skippedOldest = Long.MAX_VALUE
         val highest = HashMap<Int, Long>()
-        val others = ArrayList<Pair<SyncNames.Segment, RemoteFile>>()
+        val others = ArrayList<Pair<SyncNames.TillFile, RemoteFile>>()
         val perTill = filesPerTill
         provider.list(SyncNames.segmentPrefix(store), since) { f ->
             if (f.created > newest) newest = f.created
-            val s = SyncNames.parseSegment(f.name)?.takeIf { it.store == store }
+            // Segments and packs (D-085): a pack counts from its first number to its last.
+            val s = SyncNames.parseFile(f.name)?.takeIf { it.store == store }
             if (s != null && s.dev == me) {
-                if (ownLowest == 0L || s.seq < ownLowest) ownLowest = s.seq
+                if (ownLowest == 0L || s.from < ownLowest) ownLowest = s.from
             } else if (s != null) {
-                if (s.seq > (highest[s.dev] ?: 0L)) highest[s.dev] = s.seq
+                if (s.to > (highest[s.dev] ?: 0L)) highest[s.dev] = s.to
                 val cursor = cursors[s.dev] ?: 0L
-                if (s.seq > cursor + perTill) {
+                if (s.from > cursor + perTill) {
                     skipped = true
                     skippedOldest = minOf(skippedOldest, if (f.created > 0L) f.created else 0L)
-                } else if (s.seq > cursor) {
+                } else if (s.to > cursor) {
                     others.add(s to f)
                 }
             }
@@ -707,12 +737,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     }
 
     /** True when a till has files after its cursor that do not follow on from it (one is missing from the listing). */
-    private fun hasGap(remote: List<Pair<SyncNames.Segment, RemoteFile>>, cursors: Map<Int, Long>): Boolean =
+    private fun hasGap(remote: List<Pair<SyncNames.TillFile, RemoteFile>>, cursors: Map<Int, Long>): Boolean =
         remote.groupBy { it.first.dev }.any { (dev, files) ->
             val cursor = cursors[dev] ?: 0L
-            val seqs = files.map { it.first.seq }
-            val after = seqs.count { it > cursor }
-            after > 0 && Cursors.next(cursor, seqs).size < after
+            val tillFiles = files.map { it.first }
+            val furthest = tillFiles.maxOf { it.to }
+            furthest > cursor && Cursors.reach(cursor, tillFiles) < furthest
         }
 
     /**
@@ -723,15 +753,12 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     private suspend fun rememberListing(
         db: Db,
         listing: Listing,
-        cursors: Map<Int, Long>,
-        plan: List<Triple<Int, Long, RemoteFile>>,
+        appliedUpTo: Map<Int, Long>,
         since: Long?,
         full: Boolean,
         now: Long,
     ) {
-        val appliedUpTo = HashMap(cursors)
-        for ((dev, seq, _) in plan) if (seq > (appliedUpTo[dev] ?: 0L)) appliedUpTo[dev] = seq
-        val waiting = listing.others.filter { (s, _) -> s.seq > (appliedUpTo[s.dev] ?: 0L) }
+        val waiting = listing.others.filter { (s, _) -> s.to > (appliedUpTo[s.dev] ?: 0L) }
         val oldestWaiting = waiting.minOfOrNull { it.second.created }
         var next = maxOf(since ?: 0L, listing.newest)
         if (oldestWaiting != null && oldestWaiting > 0L) next = minOf(next, oldestWaiting - 1L)
@@ -792,17 +819,27 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             e is android.database.sqlite.SQLiteConstraintException || e is android.database.sqlite.SQLiteDatatypeMismatchException
 
     /**
-     * Applies one downloaded segment in short transactions (at most [IMPORT_CHUNK] events or about
-     * [IMPORT_TX_MS] ms each), so a sale never waits for a whole segment; the cursor moves only
-     * after the last one. A crash in between re-applies the segment next time, which changes
-     * nothing (imports are idempotent).
+     * Applies one downloaded file of till [f]'s — a segment, or a pack of segments (D-085) — in short
+     * transactions (at most [IMPORT_CHUNK] events or about [IMPORT_TX_MS] ms each), so a sale never waits
+     * for a whole file. The cursor moves after each batch to the last segment whose events are all in, so
+     * a crash re-applies at most a batch, which changes nothing (imports are idempotent); a pack's segments
+     * up to [after] (read before) are skipped unread.
      */
-    private suspend fun applySegment(db: Db, file: File, store: String, dev: Int, seq: Long, changed: MutableSet<Int>): Int =
+    private suspend fun applyFile(db: Db, file: File, store: String, f: SyncNames.TillFile, after: Long, changed: MutableSet<Int>): Int =
         withContext(Dispatchers.IO) {
+            val dev = f.dev
             val batch = ArrayList<SyncEvent>(IMPORT_CHUNK)
             var max = 0L
             var count = 0
             var farAhead = false
+            var complete = after // the last segment whose events are all in [batch] or applied
+            var saved = after // the cursor as stored
+            fun moveCursor() {
+                if (complete <= saved) return
+                val to = complete
+                db.writeBlocking(reserveIds = 0L) { tx -> SyncDao.setCursor(tx, dev, to, max, System.currentTimeMillis()) }
+                saved = to
+            }
             fun applyOne(tx: Db.Tx, importer: Importer, e: SyncEvent) {
                 // Inside the transaction that applies it (2026-10 review): a local edit
                 // committed after it is stamped later, and the clock is stored with it.
@@ -847,17 +884,33 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                     }
                 }
                 batch.clear()
+                moveCursor()
             }
-            SegmentCodec.read(file, { h ->
-                if (h.store != store || h.dev != dev || h.seq != seq) throw Problem(Problem.Reason.CORRUPT, "segment $dev/$seq has a wrong header")
-            }) { e ->
-                batch.add(e)
-                if (e.hlc > max) max = e.hlc
-                count++
-                if (batch.size >= IMPORT_CHUNK) flush()
+            val what = if (f.pack) "pack $dev/${f.from}-${f.to}" else "segment $dev/${f.from}"
+            try {
+                SegmentCodec.readBlocks(
+                    file, f.pack,
+                    checkPack = { p ->
+                        if (p.store != store || p.dev != dev || p.from != f.from || p.to != f.to) throw SegmentCodec.Corrupt("$what has a wrong header")
+                    },
+                    start = { h ->
+                        if (h.store != store || h.dev != dev || (!f.pack && h.seq != f.from)) throw SegmentCodec.Corrupt("$what has a wrong header")
+                        h.seq > after
+                    },
+                    each = { e ->
+                        batch.add(e)
+                        if (e.hlc > max) max = e.hlc
+                        count++
+                        if (batch.size >= IMPORT_CHUNK) flush()
+                    },
+                    end = { h -> complete = h.seq },
+                )
+            } catch (e: SegmentCodec.Corrupt) {
+                throw Problem(Problem.Reason.CORRUPT, e.message ?: what)
             }
             flush()
-            db.writeBlocking(reserveIds = 0L) { tx -> SyncDao.setCursor(tx, dev, seq, max, System.currentTimeMillis()) }
+            complete = maxOf(complete, f.to)
+            moveCursor()
             // Not adopted (that till's own sync status says its clock is wrong); local edits still win.
             if (farAhead) Log.w("Till $dev has a clock far in the future")
             count
@@ -905,6 +958,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             for ((d, s) in cursors) w.name(d.toString()).value(s)
             w.endObject()
             if (from > 0L) w.name("fullFrom").value(from)
+            w.name("packs").value(1L) // this till reads packs (D-085)
             w.endObject()
         }
         cardKey = key
@@ -912,24 +966,222 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     }
 
     /**
-     * Uploaded segments are kept on the phone for [KEEP_LOCAL_MS], then deleted — from where the
-     * last clean-up stopped, so a round never walks the whole history (and uploads go in order).
+     * This till's segments stay on the phone until a pack in the folder holds them (D-085: a pack is made
+     * of them; before, they were deleted 14 days after their upload, and those are downloaded again for
+     * their pack), then they are deleted — from where the last clean-up stopped, so a round never walks
+     * the whole history.
      */
     private suspend fun cleanLocal(db: Db) {
-        val now = System.currentTimeMillis()
-        val cutoff = now - KEEP_LOCAL_MS
-        var done = db.read { Meta.getLong(it, Meta.SYNC_CLEANED_TO) } ?: 0L
-        val start = done
-        while (true) {
-            val batch = db.read { SyncDao.segmentsAfter(it, done, CLEAN_BATCH) }
-            // Sent "in the future" (the clock ran ahead then): old too. It stopped the clean-up at that
-            // file, and every later one stayed on the phone until the date caught up (2026-10 review).
-            val old = batch.takeWhile { s -> s.uploadedAt.let { it != null && (it < cutoff || it > now + CLOCK_AHEAD_MS) } }
-            withContext(Dispatchers.IO) { for (s in old) localSegment(s.seq).delete() }
-            if (old.isNotEmpty()) done = old.last().seq
-            if (old.size < CLEAN_BATCH) break
+        val (start, packedTo) = db.read { (Meta.getLong(it, Meta.SYNC_CLEANED_TO) ?: 0L) to (Meta.getLong(it, Meta.SYNC_PACKED_TO) ?: 0L) }
+        if (packedTo <= start) return
+        var done = start
+        while (done < packedTo) {
+            val batch = db.read { SyncDao.segmentsAfter(it, done, CLEAN_BATCH) }.filter { it.seq <= packedTo }
+            if (batch.isEmpty()) break
+            withContext(Dispatchers.IO) { for (s in batch) localSegment(s.seq).delete() }
+            done = batch.last().seq
         }
-        if (done != start) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.SYNC_CLEANED_TO, done.toString()) }
+        done = maxOf(done, packedTo)
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.SYNC_CLEANED_TO, done.toString()) }
+    }
+
+    // ------------------------------------------------------------------ long use (D-085)
+
+    /** Segments in one pack, and the newest left as they are: tests make them small. */
+    @Volatile
+    internal var packSegments: Int = Packs.MAX_SEGMENTS
+
+    @Volatile
+    internal var keepNewest: Int = Packs.KEEP_NEWEST
+
+    /** The other tills' cards as last read, and when (elapsed time): who may still need this till's segments. */
+    @Volatile
+    private var knownCards: List<DeviceCard>? = null
+    private var knownCardsAt = 0L
+
+    private fun noteCards(cards: List<DeviceCard>) {
+        knownCards = cards
+        knownCardsAt = SystemClock.elapsedRealtime()
+    }
+
+    /** Reasons packing stopped already logged by this process (each once). */
+    private val packNotes = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * Long use (D-085): this till's older segments become packs, and the segments a pack holds leave the
+     * folder, so the folder keeps a few thousand files however many years the shop sells. At most one
+     * pack, [FETCH_PER_ROUND] downloads and [REMOVE_PER_ROUND] removals per round, so a round stays
+     * short; returns true when work is left for the next one (which then follows soon). It never fails
+     * the round: a later round does what is left.
+     */
+    private suspend fun compact(db: Db, provider: SyncProvider, store: String): Boolean {
+        if (db.read { Meta.get(it, BACKFILLED) } != store) return false // publishing again first
+        return try {
+            compactLocked(db, provider, store)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val code = errorCode(e)
+            if (e is java.io.IOException || code in EXPECTED_ERRORS || Storage.isFull(e)) {
+                Log.w("Packing this till's sync files stopped: $code")
+            } else if (packNotes.add("failed")) {
+                Log.e("Packing this till's sync files failed", e)
+            }
+            false
+        }
+    }
+
+    private suspend fun compactLocked(db: Db, provider: SyncProvider, store: String): Boolean {
+        val me = db.deviceNo
+        val (packedBefore, removedTo) = db.read { (Meta.getLong(it, Meta.SYNC_PACKED_TO) ?: 0L) to (Meta.getLong(it, Meta.SYNC_REMOVED_TO) ?: 0L) }
+        val uploadedTo = db.read { SyncDao.lastUploaded(it) }
+        var more = false
+        var own: Map<Long, RemoteFile>? = null
+        // This till's segments in the folder by number: listed once a round, only when needed.
+        suspend fun own(): Map<Long, RemoteFile> = own ?: ownSegments(provider, store, me).also { own = it }
+
+        var packedTo = packedBefore
+        val sources = nextPack(db, packedTo, uploadedTo)
+        if (sources != null) {
+            when (fetchSources(provider, sources, ::own)) {
+                Fetch.READY -> {
+                    putPack(db, provider, store, sources)
+                    packedTo = sources.last().seq
+                    if (nextPack(db, packedTo, uploadedTo) != null) more = true
+                }
+                Fetch.MORE -> more = true
+                Fetch.STUCK -> Unit
+            }
+        }
+        if (packedTo > removedTo && removeSegments(db, provider, store, packedTo, removedTo, ::own)) more = true
+        return more
+    }
+
+    /**
+     * The segments of the pack due after [packedTo] ([Packs.next]), or null. A count of the range comes first: it is
+     * asked every round, and a pack is due only every few days.
+     */
+    private suspend fun nextPack(db: Db, packedTo: Long, uploadedTo: Long): List<SegmentRow>? {
+        val last = minOf(packedTo + packSegments, uploadedTo - keepNewest)
+        if (last <= packedTo) return null
+        val (count, bytes) = db.read { SyncDao.segmentSpan(it, packedTo, last) }
+        if (count < packSegments && bytes < Packs.MAX_BYTES) return null
+        val rows = db.read { SyncDao.segmentsAfter(it, packedTo, packSegments) }
+        val range = Packs.next(packedTo, rows.map { Packs.Sealed(it.seq, it.size) }, uploadedTo, keepNewest, packSegments) ?: return null
+        return rows.filter { it.seq in range }
+    }
+
+    private enum class Fetch { READY, MORE, STUCK }
+
+    /**
+     * Makes sure this phone holds every segment of the next pack, as it was sealed (its checksum): segments
+     * uploaded before D-085 were deleted from the phone 14 days after upload, so they are downloaded again,
+     * [FETCH_PER_ROUND] a round. [STUCK]: one is in neither place, or differs (no pack is made of it).
+     */
+    private suspend fun fetchSources(
+        provider: SyncProvider,
+        sources: List<SegmentRow>,
+        own: suspend () -> Map<Long, RemoteFile>,
+    ): Fetch {
+        val missing = withContext(Dispatchers.IO) {
+            sources.filter { s -> localSegment(s.seq).let { !it.exists() || SegmentCodec.sha256(it) != s.sha256 } }
+        }
+        if (missing.isEmpty()) return Fetch.READY
+        val there = own()
+        withContext(Dispatchers.IO) { outDir.mkdirs() }
+        for ((i, s) in missing.withIndex()) {
+            if (i >= FETCH_PER_ROUND) return Fetch.MORE
+            val rf = there[s.seq]
+            if (rf == null) {
+                if (packNotes.add("missing ${s.seq}")) Log.w("Segment ${s.seq} of this till is neither on this phone nor in the sync folder: no pack")
+                return Fetch.STUCK
+            }
+            val tmp = File(outDir, "seg-${s.seq}.fetch")
+            try {
+                provider.get(rf, tmp)
+                val same = withContext(Dispatchers.IO) { SegmentCodec.sha256(tmp) == s.sha256 }
+                if (!same) {
+                    if (packNotes.add("differs ${s.seq}")) Log.w("Segment ${s.seq} of this till in the sync folder differs from the one sealed: no pack")
+                    return Fetch.STUCK
+                }
+                withContext(Dispatchers.IO) {
+                    val target = localSegment(s.seq)
+                    target.delete()
+                    if (!tmp.renameTo(target)) throw java.io.IOException("cannot keep segment ${s.seq}")
+                }
+            } finally {
+                tmp.delete()
+            }
+        }
+        return Fetch.READY
+    }
+
+    /**
+     * Writes the pack of [sources] and uploads it; once it is in the folder, its segments count as packed.
+     * A retry after a crash looks for the pack first (like a segment's, D-053): one already there was sent
+     * whole by this till before, so it stays.
+     */
+    private suspend fun putPack(db: Db, provider: SyncProvider, store: String, sources: List<SegmentRow>) {
+        val from = sources.first().seq
+        val to = sources.last().seq
+        val file = File(outDir, "pack-$from-$to.tmp")
+        try {
+            val (_, sha) = withContext(Dispatchers.IO) {
+                SegmentCodec.writePack(file, store, db.deviceNo, sources.map { it to localSegment(it.seq) })
+            }
+            val key = "$from-$to"
+            val retry = db.read { Meta.get(it, PACK_TRY) } == key
+            if (!retry) db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, PACK_TRY, key) }
+            val events = sources.sumOf { it.count.toLong() }
+            provider.put(SyncNames.pack(store, db.deviceNo, from, to), file, mapOf("sha256" to sha, "count" to events.toString()), fresh = !retry)
+            db.write(reserveIds = 0L) { tx ->
+                Meta.put(tx.db, Meta.SYNC_PACKED_TO, to.toString())
+                Meta.put(tx.db, PACK_TRY, null)
+            }
+            // The phone's copies go now (also those downloaded again for it, before the clean-up's mark).
+            withContext(Dispatchers.IO) { for (s in sources) localSegment(s.seq).delete() }
+        } finally {
+            withContext(Dispatchers.IO) { file.delete() }
+        }
+    }
+
+    /**
+     * Removes this till's segments that packs hold from the folder, up to what every till that cannot read
+     * packs has read ([Packs.removableTo]; its cards are read again when older than an hour),
+     * [REMOVE_PER_ROUND] a round. Returns true when some are left for the next round.
+     */
+    private suspend fun removeSegments(
+        db: Db,
+        provider: SyncProvider,
+        store: String,
+        packedTo: Long,
+        removedTo: Long,
+        own: suspend () -> Map<Long, RemoteFile>,
+    ): Boolean {
+        val me = db.deviceNo
+        val cards = knownCards?.takeIf { SystemClock.elapsedRealtime() - knownCardsAt < READERS_EVERY_MS }
+            ?: cards(provider, store).also { noteCards(it) }
+        val readers = cards.filter { it.dev != me }.map { Packs.Reader(it.packs, it.lastSeen, it.cursors[me] ?: 0L) }
+        val limit = Packs.removableTo(packedTo, readers, System.currentTimeMillis())
+        if (limit <= removedTo) return false
+        val gone = own().filterKeys { it <= limit }.toSortedMap()
+        for ((n, rf) in gone.values.withIndex()) {
+            if (n >= REMOVE_PER_ROUND) return true
+            provider.delete(rf)
+        }
+        db.write(reserveIds = 0L) { tx -> Meta.put(tx.db, Meta.SYNC_REMOVED_TO, limit.toString()) }
+        return false
+    }
+
+    /** This till's segments in the folder (not its packs), by number. */
+    private suspend fun ownSegments(provider: SyncProvider, store: String, me: Int): Map<Long, RemoteFile> {
+        val out = HashMap<Long, RemoteFile>()
+        provider.list(SyncNames.segmentPrefix(store) + "$me-") { f ->
+            val s = SyncNames.parseFile(f.name)
+            if (s != null && s.store == store && s.dev == me && !s.pack) out[s.from] = f
+            false // collected here instead
+        }
+        return out
     }
 
     /**
@@ -962,21 +1214,25 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
         }
         if (store !in stores) putManifest(provider, db, store)
         // The file readers start from was sent in an earlier round (one sent just now may be listed
-        // late) and the listing lacks it: asked once more before anything is done. Remote clean-up,
-        // once built, must keep that file (or change this check).
+        // late) and the listing lacks it: asked once more before anything is done. A pack holding it
+        // counts as it (D-085: the segment itself may have left the folder).
         val need = db.read { fullFrom(it, db.deviceNo) }.takeIf { it > 0L } ?: 1L
         if (uploadedBefore < need || ownLowest in 1L..need) return false
         var lowest = 0L
         provider.list(SyncNames.segmentPrefix(store) + "${db.deviceNo}-") { f ->
-            val s = SyncNames.parseSegment(f.name)
-            if (s != null && s.store == store && (lowest == 0L || s.seq < lowest)) lowest = s.seq
+            val s = SyncNames.parseFile(f.name) // a pack counts from its first number (D-085)
+            if (s != null && s.store == store && (lowest == 0L || s.from < lowest)) lowest = s.from
             false
         }
         if (lowest in 1L..need) return false
         Log.w("This till's first files are gone from the sync folder: it publishes everything again")
         db.write(reserveIds = 0L) { tx ->
+            val next = SyncDao.nextSegmentSeq(tx.db)
             Meta.put(tx.db, BACKFILLED, null)
-            Meta.put(tx.db, FULL_FROM, "${tx.deviceNo}:${SyncDao.nextSegmentSeq(tx.db)}")
+            Meta.put(tx.db, FULL_FROM, "${tx.deviceNo}:$next")
+            // What came before is published again from there on: it is never packed (its files may be gone),
+            // and what is left of it leaves the folder like packed segments (D-085).
+            if ((Meta.getLong(tx.db, Meta.SYNC_PACKED_TO) ?: 0L) < next - 1L) Meta.put(tx.db, Meta.SYNC_PACKED_TO, (next - 1L).toString())
         }
         return true
     }
@@ -997,7 +1253,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
             if (c.dev == db.deviceNo || c.fullFrom <= 1L) continue
             val cursor = cursors[c.dev] ?: 0L
             if (cursor >= c.fullFrom - 1L) continue
-            val stuck = listing.others.none { (s, _) -> s.dev == c.dev && s.seq == cursor + 1L }
+            val stuck = listing.others.none { (s, _) -> s.dev == c.dev && s.from <= cursor + 1L && s.to >= cursor + 1L }
             if (stuck) moved[c.dev] = c.fullFrom - 1L
         }
         if (moved.isNotEmpty()) {
@@ -1058,14 +1314,28 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
     }
 
     companion object {
+        /** This till's sealed segment files, under the app's files. */
+        const val OUT_DIR = "sync/out"
+
         const val MAX_EVENTS = 2_000
 
         /** Backfill chunks (300 rows each) between two seals of the outbox. */
         private const val SEAL_EVERY_CHUNKS = 10
         const val IMPORT_CHUNK = 200
         const val IMPORT_TX_MS = 100L
-        const val KEEP_LOCAL_MS = 14L * 24L * 60L * 60L * 1000L
         private const val CLEAN_BATCH = 200
+
+        /** This till's segments downloaded again for a pack in one round at most (D-085). */
+        const val FETCH_PER_ROUND = 500
+
+        /** This till's packed segments removed from the folder in one round at most (one request each, D-085). */
+        const val REMOVE_PER_ROUND = 500
+
+        /** The other tills' cards are read again before removing segments when older than this (D-085). */
+        private const val READERS_EVERY_MS = 60L * 60L * 1000L
+
+        /** "from-to" of the pack being uploaded: a retry looks for it in the folder first (D-085). */
+        const val PACK_TRY = "sync.pack_try"
 
         /** A short listing starts this far before the newest file seen (the folder may list new files late). */
         const val LIST_SLACK_MS = 15L * 60L * 1000L
@@ -1077,9 +1347,6 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
          */
         const val FULL_LIST_EVERY_MS = 7L * 24L * 60L * 60L * 1000L
 
-        /** An upload time this far past the phone's clock was stamped while the clock ran ahead. */
-        private const val CLOCK_AHEAD_MS = 24L * 60L * 60L * 1000L
-
         /** An unchanged device card is published at least this often (its "last seen" for the other tills). */
         const val CARD_EVERY_MS = 15L * 60L * 1000L
 
@@ -1090,7 +1357,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
          * Other tills' files read in one round, per till: the rest waits for the next round (2026-10
          * review: a joining till held a year of listings in memory). 5,000 (1,000 before 1.7.1, ~2 MB of
          * listing per till): each round lists the files still to read again, so a till joining a
-         * year-old store listed about 2 GB in 110 rounds; a snapshot to start from is the real fix (sync.md §8).
+         * year-old store listed about 2 GB in 110 rounds. Since D-085 a year is some 150 packs per till instead.
          */
         const val FILES_PER_TILL = 5_000
 
@@ -1182,6 +1449,7 @@ class SyncEngine(private val graph: AppGraph, private val app: Application) {
                 dev, m["uuid"] as? String ?: "", m["name"] as? String ?: "", m["app"] as? String ?: "",
                 m["lastSeen"] as? Long ?: 0L, m["lastSeq"] as? Long ?: 0L, m["prefix"] as? String, cursors,
                 m["fullFrom"] as? Long ?: 0L,
+                m["packs"] == 1L || m["app"] == "web",
             )
         }
 

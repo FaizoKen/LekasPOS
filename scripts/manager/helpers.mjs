@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { gzipSync, deflateRawSync } from 'node:zlib';
+import { gzipSync, gunzipSync, deflateRawSync } from 'node:zlib';
 import { stringify } from '../../site/manager/js/json64.js';
 
 const vendor = new URL('../../site/manager/vendor/sqlite/', import.meta.url);
@@ -58,6 +58,19 @@ export function segment(store, dev, seq, events) {
   return new Uint8Array(gzipSync(Buffer.from(lines.join('\n') + '\n', 'utf8')));
 }
 
+/**
+ * A pack as a till writes it (SegmentCodec.writePack, D-085): a pack header, then each segment's own lines.
+ * [segments]: [{seq, events}], numbers following on.
+ */
+export function pack(store, dev, segments) {
+  const total = segments.reduce((n, s) => n + s.events.length, 0);
+  const from = segments[0].seq;
+  const to = segments[segments.length - 1].seq;
+  const head = stringify({ v: 1n, pack: 1n, store, dev: BigInt(dev), from: BigInt(from), to: BigInt(to), count: BigInt(total) });
+  const body = segments.map((s) => gunzipSync(segment(store, dev, s.seq, s.events)).toString('utf8')).join('');
+  return new Uint8Array(gzipSync(Buffer.from(`${head}\n${body}`, 'utf8')));
+}
+
 export const sha256hex = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 /** A sync folder in memory, read the way DriveProvider lists and downloads. */
@@ -80,6 +93,17 @@ export class MemoryFolder {
   putSegment(store, dev, seq, events) {
     const bytes = segment(store, dev, seq, events);
     this.put(`seg-${store}-${dev}-${String(seq).padStart(8, '0')}.ndjson.gz`, bytes, { sha256: sha256hex(bytes), count: String(events.length) });
+  }
+
+  /** Till [dev]'s segments [segments] ({seq, events}) as one pack, and those segments gone from the folder (D-085). */
+  putPack(store, dev, segments) {
+    const bytes = pack(store, dev, segments);
+    const pad = (n) => String(n).padStart(8, '0');
+    const [from, to] = [segments[0].seq, segments[segments.length - 1].seq];
+    this.put(`seg-${store}-${dev}-${pad(from)}-${pad(to)}.pack.gz`, bytes,
+      { sha256: sha256hex(bytes), count: String(segments.reduce((n, s) => n + s.events.length, 0)) });
+    const gone = new Set(segments.map((s) => `seg-${store}-${dev}-${pad(s.seq)}.ndjson.gz`));
+    this.files = this.files.filter((f) => !gone.has(f.name));
   }
 
   async list(word, since) {

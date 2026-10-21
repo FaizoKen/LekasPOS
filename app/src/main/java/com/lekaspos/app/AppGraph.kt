@@ -117,7 +117,8 @@ class AppGraph(private val app: Application, private val dbName: String = Schema
     val sppScanner: SppScanner by lazy { SppScanner(app, this) }
     val perfRunner: PerfRunner by lazy { PerfRunner(app, appScope) }
     val backups: BackupService by lazy { BackupService(this, app) }
-    val sync: SyncEngine by lazy { SyncEngine(this, app) }
+    // A test's tills share the app's files: each keeps its segment files apart (a phone holds one database).
+    val sync: SyncEngine by lazy { SyncEngine(this, app, if (dbName == Schema.FILE_NAME) SyncEngine.OUT_DIR else "${SyncEngine.OUT_DIR}-$dbName") }
 
     val autoSync: AutoSync by lazy { AutoSync(this, app) }
 

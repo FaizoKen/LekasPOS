@@ -152,6 +152,9 @@ class ManagerFixtureTest {
         b.sales.void(s2.saleId, "test")
         val expected = assertNotNull(a.shifts.report(shiftA.id)).cash.expected
         a.shifts.close(expected - 100L, "short 1.00")
+        // A's older files become a pack and leave the folder (D-085): the web page must read it as the tills do.
+        a.sync.packSegments = 2
+        a.sync.keepNewest = 1
         syncAll(a, b)
 
         val out = File(TestDb.context.getExternalFilesDir(null) ?: TestDb.context.filesDir, "manager-fixture")
@@ -169,6 +172,7 @@ class ManagerFixtureTest {
         temp.deleteRecursively()
         assertTrue(File(out, "till-a.lekasbak").length() > 0L)
         assertTrue(out.listFiles().orEmpty().count { it.name.startsWith("seg-") && it.name.endsWith(".ndjson.gz") } >= 2)
+        assertTrue(out.listFiles().orEmpty().any { it.name.endsWith(".pack.gz") }, "the fixture holds a pack")
         assertEquals(1, out.listFiles().orEmpty().count { it.name.startsWith("store-") })
     }
 }

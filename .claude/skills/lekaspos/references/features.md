@@ -497,6 +497,10 @@ clock wrong (> 10 min), waiting, "Everything is backed up". Syncs all store data
 held bills, print queue, logo picture, prefs. A fresh phone joining takes the shop's staff/PINs (its own PINs
 dropped, `sync_pins_dropped`); a phone with data finding another shop is asked ("Join another shop?"). Prefix clashes
 are fixed automatically; till-number clash → `sync_error_clash`. Turn off: data stays, unsent outbox discarded.
+Long use (D-085, no UI): each till packs its own older sync files — 2,000 at a time, older than its newest 100 — into one
+file and removes them from the Drive folder (500 a round), so the folder keeps a few thousand files over the years
+(Google Drive: at most 500,000 per folder). A till on an older version is waited for (30 days unseen: not); a till
+joining later downloads the packs. The phone keeps its own sync files until they are packed (before: 14 days).
 
 ## 17. Updates, error reports, diagnostics, about
 
@@ -574,7 +578,7 @@ also changes products, stock, suppliers and customers as a till of its own (D-08
   a store the tills moved to starts the copy again.
 - **Update**: one tap (Google's popup needs it); while the token lasts (~1 h) the page reads new files by itself every
   5 min and when its tab comes back. A round (`js/store.js` `Store.sync`): store = lowest `store-*.json`; the tills' cards;
-  segments after each till's cursor up to the first gap (whole-folder listing daily, on the first round and on a gap; a till
+  segments (or the pack holding them, D-085) after each till's cursor up to the first gap (whole-folder listing daily, on the first round and on a gap; a till
   numbered again from 1 is read again; `fullFrom` followed); checksum checked (downloaded twice before "damaged"); events
   applied per batch of files with the derived tables in the same transaction; events of unknown kinds kept in
   `sync_deferred` ("n changes from a newer app version wait until this page is updated") and retried on the next round.

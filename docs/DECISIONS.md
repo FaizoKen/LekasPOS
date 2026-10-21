@@ -1884,6 +1884,45 @@ update); a new Drive folder name (above); moving the POS pages under `/pos/` now
 redirect pages, for nothing until a second app exists); keeping lekaspos.faizo.net as the main address (the owner's brand is
 Lekas, not one app).
 
+### D-085 — Years of selling in the sync folder: packs, and the packed segments leave it (1.21.0, 2026-10-21)
+The owner asked whether Google Drive's limits allow a store to run for years. Space does not stop it (a sale is about a
+kilobyte of compressed events; 15 GB free per account, the owner's own Gmail and Photos the likelier filler; a full Drive
+already says "drive-full" and selling goes on). **The number of files does**: a till uploads a segment after most sales
+(a round 10 s after a change, ≥ 45 s apart, D-053), so a busy till added 300–800 files a day for good — some 100,000–300,000
+a year, every till in one folder. Google Drive holds at most 500,000 items in a folder; the weekly whole-folder listing
+(1,000 a request) and a joining till's downloads (one file each) grew with every file ever sent.
+- **Packs**: each till combines its own older segments into `seg-{store}-{dev}-{from}-{to}.pack.gz` — a pack header line
+  `{v, pack: 1, store, dev, from, to, count}`, then each segment's own lines (its header, its events) copied as they are —
+  once **2,000** segments (or 4 MB of them: pictures) older than its newest **100** are uploaded (`core/sync/Packs.next`).
+  One pack a round; made from the phone's copies, which now stay until packed (they were deleted 14 days after upload:
+  those are downloaded again, 500 a round, checked against their recorded checksum). Uploaded like a segment (checksum and
+  event count with it; a retry after a crash looks first, `meta sync.pack_try`); `meta sync.packed_to`.
+- **The packed segments leave the folder** (`meta sync.removed_to`), 500 deletions a round — principle 3 holds, a till
+  deletes only its own files. A till's card says `"packs": 1` when it reads packs; a till of an older version (no flag)
+  is waited for: segments past its cursor stay until it has read them, or it has not been seen for 30 days
+  (`Packs.removableTo`; once updated it reads the packs). The web page reads packs (it is updated with the website).
+- **Readers** list segments and packs in one listing (the pack's name starts like a segment's; an older till's parser
+  ignores it). `Cursors.plan` reads, after the cursor, the segment with the next number — or the pack holding it when the
+  segment is gone or the pack holds 20+ numbers still to read; a pack's segments up to the cursor are read past unparsed,
+  and the cursor moves after each batch to the last whole segment. A file removed while it is read (Drive 404) ends that
+  till's reading for the round and lists the whole folder next; the round itself succeeds. Packing never fails a round.
+- The checks that read a till's numbers count a pack from its first to its last: "already published" (OLD_COPY), "this
+  till's first files are gone" (republish, D-055 — a republish counts what came before as packed), "a till numbered again",
+  `fullFrom`, gaps.
+- Steady state: per till ≤ ~2,100 segments + a pack per 2,000 (a busy till ~150 packs a year): a few thousand files for a
+  three-till shop after ten years. A till joining an old shop downloads a pack per 2,000 files.
+- Lekas Manager (`site/manager/`) reads packs the same way (`segment.js` `parseFileName`, `planFiles`, `readPack`; a pack
+  unpacked one segment at a time when its turn comes); its card says `packs: 1`. `ManagerFixtureTest` makes the CI fixture
+  with a pack the app wrote.
+Rejected: sealing fewer, larger segments (the other tills would see sales minutes later; packs keep near-real-time);
+a snapshot of the store to start from (D-045's idea: a POS's data is mostly sales, which a snapshot cannot shrink — packs
+give a joining till the same few large files, and a replacement phone is quicker from a backup file); Drive batch requests
+for the deletions (one request per file is as many as their uploads were; not worth a multipart client); keeping Drive file
+ids in `sync_segment` to delete without listing (a schema change for ~2% fewer requests); deleting segments without
+waiting for older tills (they would stop at the gap until updated); an archive of old sales here (it is about the phone's
+database, not a Drive limit; the perf budget is proven at 1,000,000 sale lines — about two years of 300 five-item bills a
+day — and D-045 keeps the archive open).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

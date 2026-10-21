@@ -22,6 +22,12 @@ object Meta {
     /** Local copies of this till's segments up to this number are cleaned up already. */
     const val SYNC_CLEANED_TO = "sync.cleaned_to"
 
+    /** This till's segments up to this number are in packs in the sync folder (D-085). */
+    const val SYNC_PACKED_TO = "sync.packed_to"
+
+    /** This till's segments up to this number are removed from the sync folder (their packs hold them, D-085). */
+    const val SYNC_REMOVED_TO = "sync.removed_to"
+
     /** "1": at the next start this database gets a new till identity (see Restore.renewIfAsked). */
     const val RENEW_IDENTITY = "identity.renew"
 

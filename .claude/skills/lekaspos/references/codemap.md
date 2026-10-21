@@ -165,7 +165,8 @@ Streaming CSV in/out and the product CSV format (D-041, D-042).
 | File | Main declarations | Purpose |
 |---|---|---|
 | `C/sync/Lww.kt` | `data class Version(hlc, dev)`, `class FieldVersions` (`decode/encode/of/with`), `object Lww` (`winningFields`, `stampAbove`) | Per-field LWW decisions; `fver` codec. |
-| `C/sync/SyncNames.kt` | `object SyncNames` (`STORE_PREFIX`, `SEGMENT_EXT=".ndjson.gz"`, file names), `object Cursors` (`next`, `deletable`) | Remote file naming and import cursors. |
+| `C/sync/SyncNames.kt` | `object SyncNames` (`STORE_PREFIX`, `SEGMENT_EXT=".ndjson.gz"`, `PACK_EXT=".pack.gz"`, file names, `TillFile`, `parseFile`), `object Cursors` (`next`, `plan`, `reach`, `PACK_WORTH`) | Remote file naming; which files to read next — segments or packs (D-085). |
+| `C/sync/Packs.kt` | `object Packs` (`next`, `removableTo`, `Sealed`, `Reader`, `MAX_SEGMENTS`, `MAX_BYTES`, `KEEP_NEWEST`, `READER_GONE_MS`) | When a till packs its segments, and which may leave the folder (D-085). |
 
 ### 2.20 `core.text`
 | File | Main declarations | Purpose |
@@ -258,7 +259,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 | `A/data/sync/LwwWriter.kt` | `object LwwWriter` (`insert` :20, `update` :45, `delete` :69) | Local LWW writes with `fver` stamping + outbox. |
 | `A/data/sync/Importer.kt` | `class SyncEvent`, `class Importer(db)` (`knows`, `apply` :46; `LWW_TABLES` :197, `EVENT_ENTITIES` :213, `NOT_FIELDS`, `knownEntities`, `MOVE_COLS`) | Applies other tills' events idempotently. |
 | `A/data/sync/Backfill.kt` | `object Backfill` (`run` :30, `order`) | Publishes all existing rows when sync is turned on. |
-| `A/data/sync/SyncDao.kt` | `OutboxRow`, `SegmentRow`, `object SyncDao` (outbox batches, segments, cursors, `restartPublishing`, `yieldSettings`, `yieldStaff`, `defer`, `deferredPage`, `BATCH_CHARS`), `object SegmentCodec` (`Header`, `Corrupt`, `write`, `read`, `sha256`, `parse`, `writeValue`) | LOCAL sync bookkeeping and the NDJSON.gz segment codec. |
+| `A/data/sync/SyncDao.kt` | `OutboxRow`, `SegmentRow`, `object SyncDao` (outbox batches, segments, cursors, `restartPublishing`, `yieldSettings`, `yieldStaff`, `defer`, `deferredPage`, `BATCH_CHARS`), `object SegmentCodec` (`Header`, `PackHeader`, `Corrupt`, `write`, `writePack`, `read`, `readBlocks`, `sha256`, `parse`, `writeValue`) | LOCAL sync bookkeeping and the NDJSON.gz segment and pack codec. |
 
 ### 3.4 `com.lekaspos.domain` (+ subpackages) — app-scoped services
 Use cases and state holders. Each takes `AppGraph`, reaches the DB via `graph.db()`, checks permissions
@@ -443,7 +444,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `sppScanner` | `SppScanner(app, this)` | serial scanner |
 | `perfRunner` | `PerfRunner(app, appScope)` | in-app perf run |
 | `backups` | `BackupService(this, app)` | backups/restores |
-| `sync` | `SyncEngine(this, app)` | sync |
+| `sync` | `SyncEngine(this, app, outName)` | sync (a test database keeps its segment files apart) |
 | `autoSync` | `AutoSync(this, app)` | in-app sync scheduling |
 | `updates` | `AppUpdates(app)` | self-update |
 | `dailyReport` | `DailyReportUpload(this, app)` | Drive daily report |
@@ -532,12 +533,14 @@ Meta keys: `session.staff`, `session.away_at`, `session.seen_at`, `pin.fails.<id
 (`SHIFT_CONTINUED`), `print(shiftId, approval)`, `page(after)`.
 
 ### 4.9 `SyncEngine` (`A/sync/SyncEngine.kt`)
-`Status` (:44), `Report` (:74), `Problem(reason: NOT_ENABLED/DEVICE_CLASH/CORRUPT/OLD_COPY/OTHER_STORE)` (:85), `DeviceCard` (:103), `status` (:121),
-`recentlyDone(withinMs)` (:132), `refreshStatus()` (:139), `starting()`, `notStarted()`, `enable(provider, deviceName, account, progress, join)` (:190),
-`takePinsNotice()`, `disable()` (:354), `provider()` (:382), `sync(provider, onStart)` (:390), `cards(...)` (:1029).
-After an import `reloadChanged` (:504) reloads settings (`Entity.SETTING`), staff (`ROLE`/`STAFF`), promotions, and calls `catalogChanged()` for
-`CATALOG_ENTITIES` (:1104). Meta keys (companion :1100–1135): `sync.provider`, `sync.account`, `sync.device_name`, `sync.list_since`, `sync.full_list_at`,
-`sync.upload_try`, `sync.full_from`, `sync.deferred_tried`, `sync.clock_off`, `sync.pins_notice`; error codes `sign-in`, `offline`, `corrupt`.
+`Status` (:45), `Report` (:75), `Problem(reason: NOT_ENABLED/DEVICE_CLASH/CORRUPT/OLD_COPY/OTHER_STORE)` (:86), `DeviceCard` (:104; `packs`: reads packs), `status` (:127),
+`recentlyDone(withinMs)` (:138), `refreshStatus()` (:145), `starting()`, `notStarted()`, `enable(provider, deviceName, account, progress, join)` (:196),
+`takePinsNotice()`, `disable()` (:361), `provider()` (:389), `sync(provider, onStart)` (:397), `applyFile` (:828, a segment or a pack), `compact` (:1017,
+packs and removing packed segments, D-085: `fetchSources`, `putPack`, `removeSegments`; tests set `packSegments`, `keepNewest`, `outDir`), `cards(...)` (:1274).
+After an import `reloadChanged` (:514) reloads settings (`Entity.SETTING`), staff (`ROLE`/`STAFF`), promotions, and calls `catalogChanged()` for
+`CATALOG_ENTITIES` (:1360). Meta keys (companion :1305–1390): `sync.provider`, `sync.account`, `sync.device_name`, `sync.list_since`, `sync.full_list_at`,
+`sync.upload_try`, `sync.full_from`, `sync.deferred_tried`, `sync.clock_off`, `sync.pins_notice`, `sync.pack_try` (and `Meta.SYNC_PACKED_TO` /
+`SYNC_REMOVED_TO`: `sync.packed_to`, `sync.removed_to`); error codes `sign-in`, `offline`, `corrupt`. `OUT_DIR` = `sync/out` (a test database's: `sync/out-<db name>`).
 
 ### 4.10 `BackupService` (`A/domain/backup/BackupService.kt`)
 `Entry`, `Protection` (NO_DATA/PROTECTED/AT_RISK/DAMAGED — see sync.md §11), `protection: StateFlow`, `dir`, `backupNow(auto, quietOnly)` (:91),
@@ -726,7 +729,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `staff/StaffRulesTest.kt` | PIN hash, lockout, `Perm` rules (UNVERIFIED exact coverage). |
 | `staff/VoidLastTest.kt` | `VoidLast`: the sale just made vs. late, another's, another till's, after another sale, after the shift (D-072). |
 | `sync/LwwTest.kt` | Field versions, `winningFields`, `stampAbove`. |
-| `sync/SyncNamesTest.kt` | File names, cursors. |
+| `sync/SyncNamesTest.kt` | File and pack names, the reading plan, when to pack, what may leave the folder (D-085). |
 | `text/DigitEntryTest.kt` | Keypad entry and preset. |
 | `text/SearchTextTest.kt` | Normalization, FTS query. |
 | `text/TextWidthTest.kt` | Column widths. |
@@ -795,9 +798,9 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `perf/PerfSuiteTest.kt` | **perf** | Generates data, runs suite; query plans always enforced; budgets only with `-e assertBudgets true`; `-e perfScale TINY\|QUICK\|FULL`. Excluded from the normal instrumented run. |
 | `perf/QueryPlansTest.kt` | **plan check** | Registered queries pass; checker flags full scans, correlated scans, sorts. |
 | `perf/SoakTest.kt` | perf/leak | 1,000-sale soak heap budget, leaked screens (heap dump). |
-| `sync/ManagerFixtureTest.kt` | manager web page (D-082) | Two tills (real cart, checkout, refund, a credit sale voided on both, price changes, delivery, counts, shift, repayment) sync through a folder; the folder and both tills' `.lekasbak` files are left in `files/manager-fixture` (external app files if any) for `scripts/manager/fixture.test.mjs`. |
+| `sync/ManagerFixtureTest.kt` | manager web page (D-082) | Two tills (real cart, checkout, refund, a credit sale voided on both, price changes, delivery, counts, shift, repayment) sync through a folder, till A's older files in a pack (D-085); the folder and both tills' `.lekasbak` files are left in `files/manager-fixture` (external app files if any) for `scripts/manager/fixture.test.mjs`. |
 | `sync/ManagerEditsTest.kt` | manager web page changes (D-083) | Runs after `scripts/manager/web-edits.mjs` put the page's own files in `files/web-edits` (CI only, else skipped): both tills, opened from their backup files as the same tills, sync with `SyncEngine` + `FolderProvider` — every file of the page read, nothing in `sync_deferred`, no error, the new product searchable; their backups after it (`till-a-edited`, `till-b-edited`) go back to `fixture.test.mjs`. |
-| `sync/SyncMergeTest.kt` | **merge** | 36 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
+| `sync/SyncMergeTest.kt` | **merge** | 41 multi-till scenarios over a `FolderProvider` (five on packs, D-085: `oldSegmentsBecomePacksAndATillJoiningLaterReadsThem` …); `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
 | `ui/AppLanguageTest.kt` | UI | Screens follow the chosen language. |
 | `ui/BackOfficeReviewTest.kt` | UI | Back-office fixes (app DB, PIN login off). |
 | `ui/BeeperTest.kt` | UI | Beep sound setting kept; each choice plays without a crash (D-076). |
@@ -878,11 +881,11 @@ changes products, stock, suppliers and customers as a till of its own (D-083).
 | `js/editing.js` | `Editing` (D-083): who changes the shop — the owner while no one has a PIN, else the PIN sign-in (`signIn`: `pinVerify`, `PinLockout` waits, counts in `meta web.pin.*`; `IDLE_MS` 30 min), their role's permissions (`ACTIONS`: perm per change, opening stock + MANAGE_STOCK, a changed limit + CREDIT_LIMIT); `run(provider, action, args)` → `Store.commit` with the waiting `SIGN_IN`/`PIN_LOCKOUT` entries first; `flush`. |
 | `js/writer.js` | `Writer` (D-083): a save as the events a till writes — ports of `LwwWriter` (`lwwInsert`/`lwwUpdate` stamped above the field's version), `AuditDao.log`, `StockDao` (`movement`, `count` with `expected`, stamps after counts/everything), `saveProduct`/`deleteProduct` (ProductEditActivity.persist and its activity-log texts), `saveLook`/`addImage`, `setStock`/`adjustStock`, `receive` (PurchaseDao.commit, moving average), categories, suppliers, customers (`CREDIT_LIMIT_CHANGE`); `readProduct`/`readBarcodes`/`readLook`/`readCategory`/`codeOwners` for the forms; `EditError` codes. |
 | `js/rules.js` | Ports of the :core rules a change needs (D-083): codes (`Entity`, `AuditAction`, `MovementKind`, `BarcodeKind`, `SellMode`, `TILE_COLORS`), `Perm`/`permEffective`, `searchKey` (SearchText), `gtin*` (Gtin), `parseMoney`/`parseQty`/`normalizePhone`, `roundHalfUp`/`lineTotal`/`unitCost`/`movingAverage` (CostMath), `REASONS` (AdjustReason), `pinVerify`/`PinLockout` (PinHash), `Clock`/`stampAbove` (Hlc, Lww), `idOf`, `DEVICE_BITS`. |
-| `js/store.js` | `Store`: check/create the copy (`WEB_FORMAT`, `MIN_BACKUP_SCHEMA`), `sync(provider)` (one round, SyncEngine's listing/cursor/gap/fullFrom rules), `applySegments` (events + cursors + derived in one transaction, events that fail or are unknown → `sync_deferred`), `retryDeferred`, `adoptBackup`; D-083: `identity`/`ensureIdentity` (the page's till number, `meta web.dev`), `putCard`, `commit(provider, build, opts)` (round → Writer → upload → read back); `SyncError` codes. |
+| `js/store.js` | `Store`: check/create the copy (`WEB_FORMAT`, `MIN_BACKUP_SCHEMA`), `sync(provider)` (one round, SyncEngine's listing/cursor/gap/fullFrom rules; packs read when their turn comes, D-085), `applySegments` (events + cursors + derived in one transaction, events that fail or are unknown → `sync_deferred`), `retryDeferred`, `adoptBackup`; D-083: `identity`/`ensureIdentity` (the page's till number, `meta web.dev`), `putCard`, `commit(provider, build, opts)` (round → Writer → upload → read back); `SyncError` codes. |
 | `js/importer.js` | Port of `data/sync/Importer.kt` + `SaleDao.applyRemote`/`applyRemoteVoid` (rows only) collecting a `Touched` set; `Entity`, column lists, `fver` codec, version compare. |
 | `js/derived.js` | `applyDerived(db, touched)`: sale status, refunded, `StockDao.rebuild`, every count's `expected` (= `levelBefore`), `creditOnce`, `sum_day*` for the days touched (whole table past 400 days), balances. |
 | `js/reports.js` | Read side: `ReportDao`/`ReportService` queries on `sum_day*` (categories by the product's current category), stock value, slow movers, staff check (`checksOf` = `Checks.of`), sales/receipt, products/product history, movements, deliveries, shifts + `shiftReport` (`ShiftDao.totals` + `ShiftService.build`), customers + `customer` (statement with balance after), audit, `exportCsv` (the app's four CSVs). Ids out as strings. |
-| `js/segment.js` | Segment/manifest/card names and parsing, gunzip (`DecompressionStream`), SHA-256, `readSegment` (header + count checks), `CorruptFile`; D-083: `gzip`, `segmentName`, `jsonText` (JsonWriter's form), `writeSegment` (SegmentCodec.write). |
+| `js/segment.js` | Segment/manifest/card names and parsing, gunzip (`DecompressionStream`), SHA-256, `readSegment` (header + count checks), `CorruptFile`; D-085: `parseFileName` (segments and packs), `planFiles`/`reach` (Cursors.plan), `readPack` (a segment at a time); D-083: `gzip`, `segmentName`, `jsonText` (JsonWriter's form), `writeSegment` (SegmentCodec.write). |
 | `js/json64.js` | JSON reader keeping 64-bit integers (BigInt), null-prototype objects; `stringify` with BigInts. |
 | `js/backup.js` | `.lekasbak` reader: ZIP directory, deflate-raw, CRC-32, `applyWal` (committed frames, checksums), header bytes 18/19 → rollback journal; `BadBackup` kinds. |
 | `js/drive.js` | `DriveFolder`: Drive v3 `files.list` in `appDataFolder` (paged, `createdTime >`), `alt=media`, `about`; retries busy answers (reads also a dropped connection); D-083: `create` (multipart with `appProperties`; a lost answer → `find` before sending again), `update` (its card), `remove`, `find`; `SIGN_IN`/`NO_ACCESS`/`OFFLINE`/`BUSY`/`DRIVE_FULL`/`DRIVE`. A base address for the local stand-in. |
@@ -894,9 +897,9 @@ changes products, stock, suppliers and customers as a till of its own (D-083).
 
 Tools and tests in `scripts/manager/`: `build-schema.mjs` (writes `js/schema.js`), `build-strings.mjs` (writes `js/app-strings.js`, list `NAMES`),
 `serve.mjs` (serves `site/` on localhost:8000; `--fake-drive <dir>`: a stand-in for Drive's app folder at `/fake-drive`, for `?fake-drive`), `demo-shop.mjs` (a made-up two-till shop as a `.lekasbak`; `--fixture <dir>`; `--pins`: PINs 1111/2222/3333), `web-edits.mjs` (CI, D-083: a manager's day of changes with the page's code in the fixture folder → `web-edits.json`), `helpers.mjs`
-(the page's SQLite in Node, segment writer, `MemoryFolder`, `DiskFolder`, ZIP writer), `fixtures/` (a real SQLite WAL + `mkwal.py`), tests
+(the page's SQLite in Node, segment and pack writers, `MemoryFolder` with `putPack`, `DiskFolder`, ZIP writer), `fixtures/` (a real SQLite WAL + `mkwal.py`), tests
 `core.test.mjs` (JSON, fver, days/periods/buckets/margins from the core tests, money), `sync.test.mjs` (two synthetic tills end to end, out of
-order, twice), `backup.test.mjs` (WAL, ZIP, old/damaged backups, schema up to date), `web.test.mjs` (Drive client on a fake fetch, strings
+order, twice; packs read like their segments, a pack read half-way, the plan, a damaged pack — D-085), `backup.test.mjs` (WAL, ZIP, old/damaged backups, schema up to date), `web.test.mjs` (Drive client on a fake fetch, strings
 up to date, both languages complete, the page's Drive writes), `rules.test.mjs` (the ported :core rules with the app's test cases), `edit.test.mjs`
 (each save: one file, the card, the events and activity-log texts, lost answers and offline), `editing.test.mjs` (owner without PINs, PIN sign-in, waits,
 roles, idle end), `fixture.test.mjs` (CI: the app's files → same tables, reports and CSVs as both tills; then the page's changes → both tills hold

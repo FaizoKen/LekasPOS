@@ -50,6 +50,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
 | — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | test build **v1.20.3** (build 228); the website on lekas.faizo.net since 2026-10-21 — the owner makes v1.20.3 the latest release |
+| — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | built; CI and the test build pending |
 
 ## Open questions for the user
 
@@ -2573,3 +2574,39 @@ application for business management".
 - [ ] Made the latest release (GitHub → Releases → v1.20.3 → Edit → untick pre-release, tick latest); then `PREV_APK_URL` v1.20.3
 - [x] Perf not run again: only text changed, no code path; 1.20.1's FULL run (38581523167) stands
 - [ ] Screenshots in `site/img/` that show the old name (welcome screen, Settings → About, the manager page) refreshed
+
+## 1.21.0 — years of selling in the sync folder: packs (D-085)
+
+The owner (2026-10-21): "this app using google drive for store data. so how about google drive has limit ? and it is ok for
+long running store to handle data ?" — then "do it for me properly until fully complete... i want to make sure this app can
+running very long terms". Space was not the limit; the number of files was (a file per sale or so, for good; Google Drive
+holds at most 500,000 items in a folder).
+
+- [x] Each till packs its own older segments — 2,000 (or 4 MB) older than its newest 100 — into one
+      `seg-{store}-{dev}-{from}-{to}.pack.gz` and removes the packed segments from the folder (500 a round); one pack a
+      round; never fails a round (`core/sync/Packs`, `SyncEngine.compact`, `SegmentCodec.writePack`/`readBlocks`)
+- [x] Readers take the pack where a segment is gone or the pack holds 20+ of the numbers still to read (`Cursors.plan`),
+      skipping what they have; a file removed while it is read lists the whole folder next round
+- [x] A till before 1.21.0 (card without `"packs": 1`) is waited for: segments past its cursor stay until it read them or
+      was not seen for 30 days; the phone keeps its own segments until packed (those deleted before are downloaded again)
+- [x] Every check on a till's numbers counts packs (OLD_COPY, first files gone, numbered again, `fullFrom`, gaps);
+      `Restore.newIdentity` clears the pack marks
+- [x] Lekas Manager reads packs (`segment.js` `parseFileName`/`planFiles`/`readPack`, `store.js`); its card says `packs: 1`
+- [x] Measured (synthetic five-item bills): 714 bytes a sale as its own file, **109 bytes in a pack** (2,000 sales: 0.21 MB)
+- [x] Tests: `SyncNamesTest` (pack names, plan, when to pack, what may leave), five `SyncMergeTest` scenarios (packs and a
+      joining till, an offline till reading a pack half-read, an older till waited for, a failed pack upload, segments no
+      longer on the phone), `ManagerFixtureTest` leaves a pack for `fixture.test.mjs`, three pack tests in `sync.test.mjs`;
+      locally `:core:test :app:testDebugUnitTest` and `node --test scripts/manager/*.test.mjs` pass
+- [x] Docs: D-085, sync.md §5/§6/§8, features.md §16, codemap, the guide's Google Drive backup section (EN + MS),
+      "For Lekas POS 1.21.0"; `versionName` 1.21.0
+- [ ] CI green (instrumented API 21 + 36, release smoke); release APK size recorded
+- [ ] Test build v1.21.0 (pre-release)
+- [ ] Perf: no hot path changed (sync runs off the selling path); QUICK on CI to confirm
+
+### Needs real-device testing (1.21.0)
+
+- Two tills on the shop's Google account, both on 1.21.0: sell as usual for a day — nothing changes for the cashier; the
+  Sync screen stays "Everything is backed up". (A pack appears only after 2,100 files of a till: weeks for most shops.)
+- A till still on 1.20.x next to a 1.21.0 till: both keep receiving each other's sales.
+- A new phone joining a shop that has packs: it receives the whole shop (Settings → Google Drive backup → Turn on sync).
+- Lekas Manager → Update on a shop with packs: the same figures as the tills.

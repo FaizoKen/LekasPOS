@@ -3,8 +3,9 @@
 // The real check against the app's own databases is fixture.test.mjs (files made by the app in CI).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { memoryDb, MemoryFolder, idOf, hlcOf } from './helpers.mjs';
+import { memoryDb, MemoryFolder, idOf, hlcOf, pack } from './helpers.mjs';
 import { Store, SyncError } from '../../site/manager/js/store.js';
+import { planFiles, readPack, parseFileName, CorruptFile } from '../../site/manager/js/segment.js';
 import * as R from '../../site/manager/js/reports.js';
 import * as D from '../../site/manager/js/days.js';
 
@@ -255,4 +256,86 @@ test('customers: balances from credit entries, a statement with the balance afte
   const s = R.customer(db, c.id);
   assert.deepEqual(s.entries.map((e) => [e.delta, e.balanceAfter]), [[50, 2050], [-1000, 2000], [3000, 3000]]);
   assert.equal(s.entries[1].method, 'Cash');
+});
+
+// ------------------------------------------------------------------------------------------------- packs (D-085)
+
+/** A's events in four segments, B's in one; [packed]: A's first three as one pack instead (the segments gone). */
+function folderOf(packed) {
+  const folder = new MemoryFolder();
+  folder.putJson(`store-${STORE}.json`, { store: STORE, createdAt: BigInt(T0), createdBy: BigInt(A) });
+  const a = tillA();
+  const q = Math.ceil(a.length / 4);
+  const parts = [1, 2, 3, 4].map((seq) => ({ seq, events: a.slice((seq - 1) * q, seq * q) }));
+  for (const s of parts) folder.putSegment(STORE, A, s.seq, s.events);
+  if (packed) folder.putPack(STORE, A, parts.slice(0, 3));
+  folder.putSegment(STORE, B, 1, tillB());
+  return { folder, parts };
+}
+
+async function readFolder(folder, now = T0 + 2 * 86_400_000) {
+  const db = await memoryDb();
+  const store = new Store(db);
+  store.createForDrive();
+  const result = await store.sync(folder, () => {}, now);
+  return { db, store, result };
+}
+
+/** The data a page holds (when a row was written left out). */
+const dump = (db) => ['sale', 'sale_line', 'payment', 'sale_void', 'stock_movement', 'stock_count', 'product', 'setting', 'stock_level',
+  'sum_day', 'sum_day_product', 'sum_day_payment', 'sum_day_staff', 'sync_deferred']
+  .map((t) => {
+    const cols = db.selectArrays(`PRAGMA table_info(${t})`).map((r) => r[1]).filter((c) => c !== 'updated_at');
+    return JSON.stringify(db.selectArrays(`SELECT ${cols.join(', ')} FROM ${t} ORDER BY 1, 2`), (_, v) => (typeof v === 'bigint' ? String(v) : v));
+  });
+
+test('packs (D-085): a till\'s older segments in one file are read like the segments themselves', async () => {
+  const plain = await readFolder(folderOf(false).folder);
+  const { folder } = folderOf(true);
+  assert.ok(folder.files.some((f) => f.name === `seg-${STORE}-${A}-00000001-00000003.pack.gz`));
+  assert.ok(!folder.files.some((f) => f.name === `seg-${STORE}-${A}-00000001.ndjson.gz`));
+  const packed = await readFolder(folder);
+  assert.equal(packed.result.files, 3); // the pack, A's segment 4, B's segment 1
+  assert.deepEqual(dump(packed.db), dump(plain.db));
+  assert.equal(packed.store.cursors().get(A), 4);
+  assert.equal(packed.store.cursors().get(B), 1);
+});
+
+test('packs (D-085): a page that read part of a pack skips that part; nothing is applied twice', async () => {
+  const plain = await readFolder(folderOf(false).folder);
+  const { folder, parts } = folderOf(false);
+  // The page read A's first two segments only.
+  const later = folder.files.filter((f) => /-0000000[34]\.ndjson\.gz$/.test(f.name) && f.name.includes(`-${A}-`));
+  folder.files = folder.files.filter((f) => !later.includes(f));
+  const { db, store } = await readFolder(folder);
+  assert.equal(store.cursors().get(A), 2);
+  // Then A sent 3 and 4 and packed 1..3: segment 3 is gone, the pack holds it.
+  folder.putSegment(STORE, A, 3, parts[2].events);
+  folder.putSegment(STORE, A, 4, parts[3].events);
+  folder.putPack(STORE, A, parts.slice(0, 3));
+  const r = await store.sync(folder, () => {}, T0 + 2 * 86_400_000 + 1000);
+  assert.equal(r.files, 2); // the pack (its first two segments read past) and segment 4
+  assert.equal(store.cursors().get(A), 4);
+  assert.deepEqual(dump(db), dump(plain.db));
+});
+
+test('packs (D-085): the plan, pack names and a damaged pack', async () => {
+  const seg = (n) => ({ dev: A, from: n, to: n, pack: false });
+  const pk = (from, to) => ({ dev: A, from, to, pack: true });
+  const both = [...Array.from({ length: 2001 }, (_, i) => seg(i + 1)), pk(1, 2000)];
+  assert.deepEqual(planFiles(0, both).map((f) => [f.from, f.to]), [[1, 2000], [2001, 2001]]); // many: the pack
+  assert.equal(planFiles(1994, both).length, 7); // a few: the segments
+  assert.deepEqual(planFiles(1000, [pk(1, 2000), seg(2001)]).map((f) => f.from), [1, 2001]);
+  assert.deepEqual(planFiles(0, [pk(2, 10)]), []); // 1 missing: wait
+  assert.deepEqual(parseFileName(`seg-${STORE}-${A}-00000001-00002000.pack.gz`), { store: STORE, dev: A, from: 1, to: 2000, pack: true });
+  assert.equal(parseFileName(`seg-${STORE}-${A}-00000009-00000008.pack.gz`), null);
+
+  // Segments that do not follow on, or a count that does not hold.
+  const bad = pack(STORE, A, [{ seq: 1, events: tillA().slice(0, 2) }, { seq: 3, events: tillA().slice(2, 3) }]);
+  const read = async (bytes, to) => [...(await readPack(bytes, { store: STORE, dev: A, from: 1, to }))];
+  await assert.rejects(read(bad, 3), (e) => e instanceof CorruptFile && /where 2 follows/.test(e.message));
+  const good = pack(STORE, A, [{ seq: 1, events: tillA().slice(0, 2) }, { seq: 2, events: tillA().slice(2, 3) }]);
+  assert.equal((await read(good, 2)).length, 2);
+  await assert.rejects(read(good, 3), /wrong header/);
+  assert.equal([...(await readPack(good, { store: STORE, dev: A, from: 1, to: 2 }, 1))].length, 1); // the first read past
 });
