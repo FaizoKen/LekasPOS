@@ -130,7 +130,7 @@ store's Google Drive); the optional daily sales report (D-065) asks separately f
 5. All devices of one store sign in with the **same Google account** (the store account), because
    the app-data folder is private per account.
 6. **Lekas Manager** (the web page, D-082): **Credentials → Create credentials → OAuth client ID → Web
-   application**, name "Lekas Manager", **Authorized JavaScript origins** `https://lekas.faizo.net` (and
+   application**, name "Lekas Manager (web page)", **Authorized JavaScript origins** `https://lekas.faizo.net` (and
    `http://localhost:8000` to try it with `node scripts/manager/serve.mjs`), no redirect URIs. Put its client ID in
    `site/manager/js/config.js` (`GOOGLE_CLIENT_ID`; not a secret). Same project as the Android clients: Drive's app
    folder belongs to the project, so the page sees the tills' folder with the same `drive.appdata` scope.
@@ -149,7 +149,7 @@ Cloudflare, HTTPS enforced. lekaspos.faizo.net (the address of 2026-10-20, in th
 record with the Cloudflare redirect rule "Redirect lekaspos.faizo.net to lekas.faizo.net", 301 with path and query; every
 old `faizoken.github.io/LekasPOS/…` address redirects too (301), so links in older apps keep working. From 1.20.3 the
 app's own links (`guide_url`, `privacy_url`, `WEBSITE_URL`) use lekas.faizo.net, as do the consent screen's home page and
-privacy policy. The web client "LekasPOS Manager (web page)" (made 2026-10-20) allows the origins `https://lekas.faizo.net`
+privacy policy. The web client "Lekas Manager (web page)" (made 2026-10-20, renamed 2026-10-21) allows the origins `https://lekas.faizo.net`
 and `http://localhost:8000`; its ID is in `site/manager/js/config.js`. `faizo.net` is the consent screen's only authorized
 domain.
 
