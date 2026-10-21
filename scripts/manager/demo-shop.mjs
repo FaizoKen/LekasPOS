@@ -54,6 +54,17 @@ const RAVI = nextId(T1);
 const MEI = nextId(T1);
 lww(T1, 3, RAVI, t0, { name: 'Ravi', role_id: 3n, active: 1n, created_at: BigInt(t0) });
 lww(T1, 3, MEI, t0, { name: 'Mei Ling', role_id: 2n, active: 1n, created_at: BigInt(t0) });
+// `--pins`: the staff sign in with PINs (Aisyah 1111, Mei Ling 2222, Ravi 3333), to try signing in on the web page.
+if (process.argv.includes('--pins')) {
+  const { pbkdf2Sync, randomBytes } = await import('node:crypto');
+  const record = (pin) => {
+    const salt = randomBytes(16);
+    return `p2:10000:${salt.toString('hex')}:${pbkdf2Sync(pin, salt, 10000, 32, 'sha256').toString('hex')}`;
+  };
+  lww(T1, 3, 1n, t0, { pin_hash: record('1111') });
+  lww(T1, 3, MEI, t0, { pin_hash: record('2222') });
+  lww(T1, 3, RAVI, t0, { pin_hash: record('3333') });
+}
 const SUPPLIER = nextId(T1);
 lww(T1, 8, SUPPLIER, t0, { name: 'Borong Sentosa Sdn Bhd', name_key: 'borong sentosa sdn bhd', phone: '03-5511 2233', created_at: BigInt(t0) });
 // Customers who buy on credit and pay back (credit entries without their sales: enough for the Customers tab)

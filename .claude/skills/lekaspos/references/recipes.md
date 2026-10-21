@@ -244,7 +244,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    transaction as the event that changes it **and** add the set-based rebuild to `DerivedRebuild` (`all()` :125) — `DerivedConsistencyTest` and
    `SyncMergeTest.assertConverged` compare them.
 8. **Query plans**: a table that grows → add to `QueryPlans.LARGE_TABLES` (QueryPlans.kt:29); register its hot SQL (recipe 10).
-9a. **Manager web page** (D-082): `node scripts/manager/build-schema.mjs` (writes `site/manager/js/schema.js` from the new snapshot) — `node --test scripts/manager/*.test.mjs` fails until then. A new column a report or list should show → `site/manager/js/reports.js` too; a new derived table the page reads → `js/derived.js`.
+9a. **Manager web page** (D-082): `node scripts/manager/build-schema.mjs` (writes `site/manager/js/schema.js` from the new snapshot) — `node --test scripts/manager/*.test.mjs` fails until then. A new column a report or list should show → `site/manager/js/reports.js` too; a new derived table the page reads → `js/derived.js`; a new column of a table the page writes (product, product_barcode, product_look, category, supplier, customer, stock, purchase, audit_log — D-083) → its port in `js/writer.js` (and the form in `js/edit.js` when people should set it there).
 9. **Docs**: `references/database.md` §6 table catalog + §9 history line; `docs/DECISIONS.md` entry; sync class in the skill if new; `PHASES.md`.
 10. A migration runs behind an automatic "upgrade" backup (`Db.backupBeforeUpgrade`, keeps 3) — nothing to do, but a migration that can fail on real data
     blocks the app at start: keep it simple and set-based.
@@ -284,7 +284,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    `content()` already compares every `Schema.LWW_TABLES + EVENT_TABLES` table; **new `sum_*` columns must be added to its hard-coded `sums` map** (:134-144).
    Use synced write paths in tests (`ProductDao.create`, `TestDb.product`), never `ProductDao.insert` (no outbox). Also `AT/data/LwwWriteTest.kt` style test
    for local field versions + outbox rows, and `SaleDaoTest.outboxIsWrittenOnlyWhileSyncIsEnabled` style check.
-8a. **Manager web page** (D-082): the same apply rule in `site/manager/js/importer.js` (`Entity`, `LWW_TABLES` or the `switch` of `apply`, a `Touched` mark when derived data follows) and `js/derived.js`; until then the page keeps the new kind in `sync_deferred` and says so. `ManagerFixtureTest` + `fixture.test.mjs` (CI) prove the page and the tills agree — add the new data to the fixture shop.
+8a. **Manager web page** (D-082): the same apply rule in `site/manager/js/importer.js` (`Entity`, `LWW_TABLES` or the `switch` of `apply`, a `Touched` mark when derived data follows) and `js/derived.js`; until then the page keeps the new kind in `sync_deferred` and says so. `ManagerFixtureTest` + `fixture.test.mjs` (CI) prove the page and the tills agree — add the new data to the fixture shop. A changed payload or stamp of an event the page **writes** (D-083: LWW catalog rows, stock movements and counts, purchases, product images, activity log) changes `js/writer.js` the same way; `web-edits.mjs` + `ManagerEditsTest` (CI) prove the tills read the page's files.
 9. **Docs**: sync.md §4 table (event, payload, apply rule) + LWW entity list; database.md §6; DECISIONS entry.
 
 ---
@@ -299,7 +299,7 @@ via named DDL constants + one `ALTER TABLE cart ADD COLUMN pay_shown …`.
    if `amount` is money, to `MONEY_ACTIONS` (:156).
 4. If it should count in the staff check / shift report "Checks": extend `C/staff/StaffChecks.kt` (`Checks` field, `of()` branch, `ACTIONS`), the shift report /
    staff-check rendering, and the daily CSV columns (`ReportService.dailyCsv`) if wanted. JVM test in `CT/staff/StaffChecksTest.kt`.
-4a. Manager web page (D-082): the label in `site/manager/js/app.js` `ACTIONS` (and `MONEY_ACTIONS`/`WARN_ACTIONS`), the string name in `scripts/manager/build-strings.mjs` `NAMES` (then run it), and a `checksOf` branch in `js/reports.js` if step 4 applies.
+4a. Manager web page (D-082): the label in `site/manager/js/app.js` `ACTIONS` (and `MONEY_ACTIONS`/`WARN_ACTIONS`), the string name in `scripts/manager/build-strings.mjs` `NAMES` (then run it), and a `checksOf` branch in `js/reports.js` if step 4 applies. When the action is one the page can do too (a product, stock, delivery, supplier or customer change — D-083), write the same entry in `js/writer.js` (detail text in English, as the till's) and test it in `edit.test.mjs`.
 5. Tests: assert the entry exists in the domain test (e.g. `AuditDao.recent`/`exists`), like `SaleActionsTest.copiesAndDrawerOpensAreQueuedAndAudited`.
 
 ---

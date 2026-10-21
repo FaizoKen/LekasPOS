@@ -1,13 +1,16 @@
 // The web page's copy of one shop: an SQLite database with the app's own tables (schema.js), filled from
-// the tills' sync files (a sync round, below) or taken whole from a backup file (backup.js). It never
-// writes to the shop's Google Drive: the tills keep the only real copy. Runs in the worker (worker.js)
+// the tills' sync files (a sync round, below) or taken whole from a backup file (backup.js). Since D-083 the
+// page can also change the shop like a till: it takes a till number of its own on its first change and writes
+// each save as one sync file of its own (commit, below) — never a till's file. Runs in the worker (worker.js)
 // and in the Node tests, so nothing here touches the browser's windows or storage.
 
 import { STATEMENTS, APP_SCHEMA } from './schema.js';
 import { Importer, Touched } from './importer.js';
 import { applyDerived } from './derived.js';
 import { parse } from './json64.js';
-import { readSegment, parseSegmentName, parseStoreName, parseCard, sha256, CorruptFile } from './segment.js';
+import { readSegment, parseSegmentName, parseStoreName, parseCard, sha256, CorruptFile, writeSegment, jsonText } from './segment.js';
+import { Clock, DEVICE_BITS } from './rules.js';
+import { Writer } from './writer.js';
 
 /** Bump to make every browser read its shop again from the start (a change in what is stored). */
 export const WEB_FORMAT = 1;
@@ -274,6 +277,112 @@ export class Store {
     });
     progress({ phase: 'done', done, total: plan.length });
     return { store, files: done, events, deferred, entities: [...entities], tills: cards.length };
+  }
+
+  // ------------------------------------------------------------------------------- changing the shop (D-083)
+
+  /** The web page as a till of the shop: {dev, uuid, name, cardId}, or null before its first change. */
+  identity() {
+    const dev = this.meta('web.dev');
+    if (!dev) return null;
+    return { dev: Number(dev), uuid: this.meta('web.uuid'), name: this.meta('web.device_name') || 'LekasPOS Manager', cardId: this.meta('web.card_id') };
+  }
+
+  /**
+   * The page's till number, taken on its first change: random 22 bits no card and no file of the folder uses (sync.md
+   * §2), then its card is published so the tills know it before any of its files.
+   */
+  async ensureIdentity(provider, name) {
+    const known = this.identity();
+    if (known) return known;
+    const cards = JSON.parse(this.meta('web.cards') ?? '[]');
+    const taken = new Set([0, ...cards.map((c) => c.dev), ...this.cursors().keys()]);
+    const range = 2 ** DEVICE_BITS - 1;
+    let dev;
+    do {
+      dev = 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % range);
+    } while (taken.has(dev));
+    this.db.transaction(() => {
+      this.setMeta('web.dev', dev);
+      this.setMeta('web.uuid', crypto.randomUUID());
+      this.setMeta('web.device_name', name || 'LekasPOS Manager');
+      this.setMeta('web.next_seq', 1);
+      this.setMeta('web.seg_seq', 0);
+    });
+    await this.putCard(provider);
+    return this.identity();
+  }
+
+  /** The page's device card `dev-{store}-{dev}.json` (SyncEngine.putCard): app "web", no receipt prefix. */
+  async putCard(provider, now = Date.now()) {
+    const me = this.identity();
+    const store = this.meta('web.store');
+    const cursors = {};
+    for (const [d, s] of this.cursors()) if (d !== me.dev) cursors[String(d)] = BigInt(s);
+    const bytes = new TextEncoder().encode(jsonText({
+      dev: BigInt(me.dev), uuid: me.uuid, name: me.name, app: 'web', lastSeen: BigInt(now),
+      lastSeq: BigInt(this.meta('web.seg_seq') ?? 0), prefix: null, cursors,
+    }));
+    if (me.cardId) {
+      try {
+        await provider.update(me.cardId, bytes);
+        return;
+      } catch (e) {
+        if (e.status !== 404) throw e; // removed meanwhile: made again below
+      }
+    }
+    const name = `dev-${store}-${me.dev}.json`;
+    const copies = await provider.find(name);
+    let id;
+    if (copies.length) {
+      for (const extra of copies.slice(1)) await provider.remove(extra.id); // a create whose answer was lost
+      id = copies[0].id;
+      await provider.update(id, bytes);
+    } else {
+      id = await provider.create(name, bytes);
+    }
+    this.setMeta('web.card_id', id);
+  }
+
+  /**
+   * One change of the shop: the copy is brought up to date, [build] (a Writer → its result) makes the change's events
+   * from it, they go to the folder as this page's next sync file, and the copy then reads that file back and applies
+   * it like any till's. Nothing is applied when the upload fails. [opts]: {staffId, currency, deviceName, progress}.
+   * Returns {result, events, seq}.
+   */
+  async commit(provider, build, opts = {}) {
+    await this.sync(provider, opts.progress);
+    const store = this.meta('web.store');
+    const me = await this.ensureIdentity(provider, opts.deviceName);
+    const clock = new Clock(BigInt(this.meta('web.hlc') ?? 0));
+    const seen = this.db.selectValue('SELECT MAX(last_hlc) FROM sync_cursor');
+    if (seen) clock.observe(BigInt(seen));
+    let seq = BigInt(this.meta('web.next_seq') ?? 1);
+    const writer = new Writer(this.db, { dev: me.dev, clock, nextSeq: () => seq++, staffId: opts.staffId, currency: opts.currency, now: opts.now });
+    const result = build(writer);
+    if (writer.events.length === 0) return { result, events: 0, seq: null };
+    // Ids and the clock are kept before anything leaves: an upload that failed never hands them out twice.
+    this.db.transaction(() => {
+      this.setMeta('web.next_seq', seq);
+      this.setMeta('web.hlc', clock.last);
+    });
+    // After this page's highest file in the folder: one sent before its answer was lost is read, never overwritten.
+    let next = Number(this.meta('web.seg_seq') ?? 0) + 1;
+    for (const f of await provider.list(`seg-${store}-${me.dev}-`)) {
+      const s = parseSegmentName(f.name);
+      if (s && s.store === store && s.dev === me.dev && s.seq >= next) next = s.seq + 1;
+    }
+    const seg = await writeSegment({ store, dev: me.dev, seq: next, events: writer.events });
+    await provider.create(seg.name, seg.bytes, { sha256: seg.sha256, count: String(seg.count) });
+    this.setMeta('web.seg_seq', next);
+    const { events } = await readSegment(seg.bytes, { store, dev: me.dev, seq: next });
+    this.applySegments([{ dev: me.dev, seq: next, events }]);
+    try {
+      await this.putCard(provider);
+    } catch {
+      // The card only says when this page was last here: the next change sends it again.
+    }
+    return { result, events: events.length, seq: next };
   }
 
   /** The shop's segment files in the folder (created after [since] when given). */

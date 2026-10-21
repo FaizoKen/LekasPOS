@@ -3,7 +3,9 @@
 // are read here. The web page's copy, read from the folder as from Google Drive, must hold exactly the tills'
 // data — every synced row, sale status, refunded amounts, stock, count expectations, balances, day totals —
 // and give the same reports and CSV files as each till's own database (opened from its backup file, the
-// web page's other way in). Runs in CI with FIXTURE_DIR set; skipped elsewhere.
+// web page's other way in). The other way round (D-083): the changes the web page made in that folder
+// (web-edits.mjs) and both tills read with the app's own sync (ManagerEditsTest) leave the tills with exactly the
+// web page's data. Runs in CI with FIXTURE_DIR set; skipped elsewhere.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -51,9 +53,36 @@ function content(db) {
 
 const json = (v) => JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x));
 
-function readFolder() {
+/** What the web page shows of a shop: the reports, CSV files and every list and sheet, over the fixture's days. */
+function viewsOf(base) {
+  const [from, to] = base.selectArray('SELECT MIN(day), MAX(day) + 1 FROM sale').map(Number);
+  const p = new D.Period(from - 1, to + 1);
+  return (db) => ({
+    report: R.report(db, p, p.previous(), 100),
+    stock: R.stockValue(db),
+    slow: R.slowMovers(db, p),
+    staff: R.staffCheck(db, p),
+    csv: ['summary', 'daily', 'products', 'receipts'].map((w) => R.exportCsv(db, w, p, 2).text),
+    low: R.lowStockCount(db),
+    sales: R.sales(db, { limit: 500 }),
+    customers: R.customers(db).map((c) => R.customer(db, c.id)),
+    receipts: R.sales(db, { limit: 500 }).map((s) => R.sale(db, s.id)),
+    products: R.productList(db, { limit: 500 }).map((x) => R.product(db, x.id)),
+    shifts: R.shifts(db, { limit: 100 }).map((s) => R.shiftReport(db, s.id)),
+    movements: R.movements(db, { limit: 500 }),
+    deliveries: R.purchases(db).map((x) => R.purchase(db, x.id)),
+    audit: R.audit(db, { limit: 500 }),
+  });
+}
+
+/** The web page's changes (web-edits.mjs), or null: {dev, files}. */
+const webEdits = () => (dir && existsSync(join(dir, 'web-edits.json')) ? JSON.parse(readFileSync(join(dir, 'web-edits.json'), 'utf8')) : null);
+
+/** The folder as the tills left it; [withWeb]: with the web page's own files too. */
+function readFolder(withWeb = false) {
+  const web = new Set(withWeb ? [] : webEdits()?.files ?? []);
   const files = readdirSync(dir)
-    .filter((n) => !n.endsWith('.props') && !n.endsWith('.lekasbak'))
+    .filter((n) => !n.endsWith('.props') && !n.endsWith('.lekasbak') && n !== 'web-edits.json' && !web.has(n))
     .map((name) => {
       const p = join(dir, `${name}.props`);
       const props = {};
@@ -80,26 +109,8 @@ test('the web page holds the tills\' data and gives their reports (files made by
   assert.equal((await store.sync(folder)).files, 0, 'a second round read files again');
   const mine = content(web);
 
-  const [from, to] = web.selectArray('SELECT MIN(day), MAX(day) + 1 FROM sale').map(Number);
-  const p = new D.Period(from - 1, to + 1);
-  const views = (db) => ({
-    report: R.report(db, p, p.previous(), 100),
-    stock: R.stockValue(db),
-    slow: R.slowMovers(db, p),
-    staff: R.staffCheck(db, p),
-    csv: ['summary', 'daily', 'products', 'receipts'].map((w) => R.exportCsv(db, w, p, 2).text),
-    low: R.lowStockCount(db),
-    sales: R.sales(db, { limit: 500 }),
-    customers: R.customers(db).map((c) => R.customer(db, c.id)),
-    receipts: R.sales(db, { limit: 500 }).map((s) => R.sale(db, s.id)),
-    products: R.productList(db, { limit: 500 }).map((x) => R.product(db, x.id)),
-    shifts: R.shifts(db, { limit: 100 }).map((s) => R.shiftReport(db, s.id)),
-    movements: R.movements(db, { limit: 500 }),
-    deliveries: R.purchases(db).map((x) => R.purchase(db, x.id)),
-    audit: R.audit(db, { limit: 500 }),
-  });
+  const views = viewsOf(web);
   const webViews = json(views(web));
-
   for (const name of ['till-a.lekasbak', 'till-b.lekasbak']) {
     const { db: bytes, header } = await readBackup(new Blob([readFileSync(join(dir, name))]));
     assert.equal(header.format >= 1, true);
@@ -119,4 +130,34 @@ test('the web page holds the tills\' data and gives their reports (files made by
   assert.ok(Number(web.selectValue('SELECT SUM(tax) FROM sale')) > 0);
   assert.ok(Number(web.selectValue('SELECT COUNT(*) FROM purchase')) === 1);
   assert.ok(Number(web.selectValue('SELECT COUNT(*) FROM stock_count WHERE session_id IS NOT NULL')) === 1);
+});
+
+test("the tills read the web page's changes and hold exactly its data (D-083)", { skip: webEdits() ? false : 'no web-edits.json: made by web-edits.mjs in CI' }, async () => {
+  const edits = webEdits();
+  const folder = readFolder(true);
+  const mine = folder.files.filter((f) => f.name.startsWith('seg-') && f.name.includes(`-${edits.dev}-`));
+  assert.ok(mine.length >= 10, "the web page's files");
+  const web = await memoryDb();
+  const store = new Store(web);
+  store.createForDrive();
+  const r = await store.sync(folder);
+  assert.equal(r.deferred, 0);
+  const ours = content(web);
+  const views = viewsOf(web);
+  const webViews = json(views(web));
+  for (const name of ['till-a-edited.lekasbak', 'till-b-edited.lekasbak']) {
+    assert.ok(existsSync(join(dir, name)), `${name}: ManagerEditsTest did not run`);
+    const { db: bytes } = await readBackup(new Blob([readFileSync(join(dir, name))]));
+    const till = await dbFromBytes(bytes);
+    assert.equal(till.selectValue('PRAGMA integrity_check'), 'ok');
+    assert.equal(Number(till.selectValue('SELECT COUNT(*) FROM sync_deferred')), 0, `${name}: events set aside`);
+    const theirs = content(till);
+    for (const t of Object.keys(theirs)) assert.deepEqual(ours[t], theirs[t], `${name}: ${t} differs from the web page's`);
+    assert.equal(json(views(till)), webViews, `${name}: the reports differ`);
+  }
+  // What the web page did is there: its product, the delivery, a deleted product, its activity log entries.
+  assert.equal(String(web.selectValue('SELECT price FROM product WHERE id = ?', [BigInt(edits.kopi)])), '270');
+  assert.equal(String(web.selectValue('SELECT deleted FROM product WHERE id = ?', [BigInt(edits.temp)])), '1');
+  assert.ok(Number(web.selectValue("SELECT COUNT(*) FROM purchase WHERE ref_no = 'INV-55'")) === 1);
+  assert.ok(Number(web.selectValue('SELECT COUNT(*) FROM audit_log WHERE (id >> 41) = ?', [edits.dev])) >= 6);
 });

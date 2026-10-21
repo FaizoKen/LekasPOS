@@ -796,6 +796,7 @@ In-app (not WorkManager): `AutoSync` (sync rounds while the app runs), `PrinterS
 | `perf/QueryPlansTest.kt` | **plan check** | Registered queries pass; checker flags full scans, correlated scans, sorts. |
 | `perf/SoakTest.kt` | perf/leak | 1,000-sale soak heap budget, leaked screens (heap dump). |
 | `sync/ManagerFixtureTest.kt` | manager web page (D-082) | Two tills (real cart, checkout, refund, a credit sale voided on both, price changes, delivery, counts, shift, repayment) sync through a folder; the folder and both tills' `.lekasbak` files are left in `files/manager-fixture` (external app files if any) for `scripts/manager/fixture.test.mjs`. |
+| `sync/ManagerEditsTest.kt` | manager web page changes (D-083) | Runs after `scripts/manager/web-edits.mjs` put the page's own files in `files/web-edits` (CI only, else skipped): both tills, opened from their backup files as the same tills, sync with `SyncEngine` + `FolderProvider` — every file of the page read, nothing in `sync_deferred`, no error, the new product searchable; their backups after it (`till-a-edited`, `till-b-edited`) go back to `fixture.test.mjs`. |
 | `sync/SyncMergeTest.kt` | **merge** | 36 multi-till scenarios over a `FolderProvider`; `assertConverged` compares `Schema.LWW_TABLES + EVENT_TABLES` (minus version columns), `stock_level`, `customer_balance` and a hard-coded column list of every `sum_*` table, then checks derived == `DerivedRebuild.all`. |
 | `ui/AppLanguageTest.kt` | UI | Screens follow the chosen language. |
 | `ui/BackOfficeReviewTest.kt` | UI | Back-office fixes (app DB, PIN login off). |
@@ -863,22 +864,28 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 `index.html` (download button → `releases/latest/download/LekasPOS.apk`, install/update steps EN + MS), `privacy.html` (EN) and `privasi.html` (MS) — must say the
 same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g. `en-pay.png`, `customer-bill.png`, `en-manager.png`), `manager/` (the manager web page, §9.5a). Published by `pages.yml`.
 
-### 9.5a `site/manager/` — LekasPOS Manager, the shop in a web browser (D-082)
-Static files, no build step; ES modules; served by GitHub Pages at `/LekasPOS/manager/`. Read only.
+### 9.5a `site/manager/` — LekasPOS Manager, the shop in a web browser (D-082, D-083)
+Static files, no build step; ES modules; served at https://lekaspos.faizo.net/manager/. Reads the shop; with Google Drive also
+changes products, stock, suppliers and customers as a till of its own (D-083).
 
 | File | Purpose |
 |---|---|
 | `index.html`, `manager.css` | The page shell (loads `js/app.js`) and its styles (site colours, light/dark, one column on a phone). |
-| `js/app.js` | UI: welcome, header/tabs (`navItems`: Customers only with credit on or customers), Home, Reports, Sales, Products, Stock, Shifts, Customers, Activity log, detail sheets (`#view/<id>`), CSV download. Talks to the worker by `rpc(method, args)`. Shop text only through `textContent`. |
-| `js/worker.js` | Web Worker: SQLite WASM + OPFS (`opfs-sahpool`, file `/shop.db`; memory fallback), `Store`, `DriveFolder`, `readBackup`; the RPC methods (`status`, `sync`, `openBackup`, `forget`, `overview`, report and list queries, `exportCsv`). |
-| `js/store.js` | `Store`: check/create the copy (`WEB_FORMAT`, `MIN_BACKUP_SCHEMA`), `sync(provider)` (one round, SyncEngine's listing/cursor/gap/fullFrom rules), `applySegments` (events + cursors + derived in one transaction, events that fail or are unknown → `sync_deferred`), `retryDeferred`, `adoptBackup`; `SyncError` codes. |
+| `js/app.js` | UI: welcome, header/tabs (`navItems`: Customers only with credit on or customers), the person signed in (`whoChip`), Home, Reports, Sales, Products, Stock (+ Suppliers tab), Shifts, Customers, Activity log, detail sheets (`#view/<id>`), CSV download; the editing buttons (`editButton`, only with Google Drive) call `edit.js`. Talks to the worker by `rpc(method, args)`. Shop text only through `textContent`. `?fake-drive` on localhost: the stand-in Drive of `serve.mjs`. |
+| `js/edit.js` | The forms over the page (D-083, their own layer `.modal.editor`, kept open while the page updates; *Close without saving?*): `signIn`/`signOut`/`need(perm, then)`, `editProduct` (ProductEditActivity: look + picture `pictureOf` 240 px JPEG, barcodes, packs, PLU, "already used" via `codeOwners`), `changeStock`/`pickAndChangeStock` (Count/Remove/Add), `receiveStock` (ReceiveDraft line maths, new supplier first), `editCategories`, `editSupplier`, `editCustomer`; `send` → worker `edit`; save errors in the shop's words. |
+| `js/ui.js` | DOM helpers shared by `app.js` and `edit.js`: `h`, `put`, `append`, `s` (SVG), `card`, `row`, `table`, `td`, `tag`, `toast`. |
+| `js/worker.js` | Web Worker: SQLite WASM + OPFS (`opfs-sahpool`, file `/shop.db`; memory fallback), `Store`, `Editing`, `DriveFolder`, `readBackup`; the RPC methods (`status`, `sync`, `openBackup`, `forget`, `overview`, report and list queries, `exportCsv`; D-083: `access`, `signIn`, `signOut`, `editLists`, `productForEdit`, `customerForEdit`, `codeOwners`, `edit`, `setDriveBase`). Reads of the folder and saves run one after another (`exclusive`). |
+| `js/editing.js` | `Editing` (D-083): who changes the shop — the owner while no one has a PIN, else the PIN sign-in (`signIn`: `pinVerify`, `PinLockout` waits, counts in `meta web.pin.*`; `IDLE_MS` 30 min), their role's permissions (`ACTIONS`: perm per change, opening stock + MANAGE_STOCK, a changed limit + CREDIT_LIMIT); `run(provider, action, args)` → `Store.commit` with the waiting `SIGN_IN`/`PIN_LOCKOUT` entries first; `flush`. |
+| `js/writer.js` | `Writer` (D-083): a save as the events a till writes — ports of `LwwWriter` (`lwwInsert`/`lwwUpdate` stamped above the field's version), `AuditDao.log`, `StockDao` (`movement`, `count` with `expected`, stamps after counts/everything), `saveProduct`/`deleteProduct` (ProductEditActivity.persist and its activity-log texts), `saveLook`/`addImage`, `setStock`/`adjustStock`, `receive` (PurchaseDao.commit, moving average), categories, suppliers, customers (`CREDIT_LIMIT_CHANGE`); `readProduct`/`readBarcodes`/`readLook`/`readCategory`/`codeOwners` for the forms; `EditError` codes. |
+| `js/rules.js` | Ports of the :core rules a change needs (D-083): codes (`Entity`, `AuditAction`, `MovementKind`, `BarcodeKind`, `SellMode`, `TILE_COLORS`), `Perm`/`permEffective`, `searchKey` (SearchText), `gtin*` (Gtin), `parseMoney`/`parseQty`/`normalizePhone`, `roundHalfUp`/`lineTotal`/`unitCost`/`movingAverage` (CostMath), `REASONS` (AdjustReason), `pinVerify`/`PinLockout` (PinHash), `Clock`/`stampAbove` (Hlc, Lww), `idOf`, `DEVICE_BITS`. |
+| `js/store.js` | `Store`: check/create the copy (`WEB_FORMAT`, `MIN_BACKUP_SCHEMA`), `sync(provider)` (one round, SyncEngine's listing/cursor/gap/fullFrom rules), `applySegments` (events + cursors + derived in one transaction, events that fail or are unknown → `sync_deferred`), `retryDeferred`, `adoptBackup`; D-083: `identity`/`ensureIdentity` (the page's till number, `meta web.dev`), `putCard`, `commit(provider, build, opts)` (round → Writer → upload → read back); `SyncError` codes. |
 | `js/importer.js` | Port of `data/sync/Importer.kt` + `SaleDao.applyRemote`/`applyRemoteVoid` (rows only) collecting a `Touched` set; `Entity`, column lists, `fver` codec, version compare. |
 | `js/derived.js` | `applyDerived(db, touched)`: sale status, refunded, `StockDao.rebuild`, every count's `expected` (= `levelBefore`), `creditOnce`, `sum_day*` for the days touched (whole table past 400 days), balances. |
 | `js/reports.js` | Read side: `ReportDao`/`ReportService` queries on `sum_day*` (categories by the product's current category), stock value, slow movers, staff check (`checksOf` = `Checks.of`), sales/receipt, products/product history, movements, deliveries, shifts + `shiftReport` (`ShiftDao.totals` + `ShiftService.build`), customers + `customer` (statement with balance after), audit, `exportCsv` (the app's four CSVs). Ids out as strings. |
-| `js/segment.js` | Segment/manifest/card names and parsing, gunzip (`DecompressionStream`), SHA-256, `readSegment` (header + count checks), `CorruptFile`. |
+| `js/segment.js` | Segment/manifest/card names and parsing, gunzip (`DecompressionStream`), SHA-256, `readSegment` (header + count checks), `CorruptFile`; D-083: `gzip`, `segmentName`, `jsonText` (JsonWriter's form), `writeSegment` (SegmentCodec.write). |
 | `js/json64.js` | JSON reader keeping 64-bit integers (BigInt), null-prototype objects; `stringify` with BigInts. |
 | `js/backup.js` | `.lekasbak` reader: ZIP directory, deflate-raw, CRC-32, `applyWal` (committed frames, checksums), header bytes 18/19 → rollback journal; `BadBackup` kinds. |
-| `js/drive.js` | `DriveFolder`: Drive v3 `files.list` in `appDataFolder` (paged, `createdTime >`), `alt=media`, `about`; retries busy answers; `SIGN_IN`/`NO_ACCESS`/`OFFLINE`/`BUSY`/`DRIVE`. |
+| `js/drive.js` | `DriveFolder`: Drive v3 `files.list` in `appDataFolder` (paged, `createdTime >`), `alt=media`, `about`; retries busy answers (reads also a dropped connection); D-083: `create` (multipart with `appProperties`; a lost answer → `find` before sending again), `update` (its card), `remove`, `find`; `SIGN_IN`/`NO_ACCESS`/`OFFLINE`/`BUSY`/`DRIVE_FULL`/`DRIVE`. A base address for the local stand-in. |
 | `js/auth.js`, `js/config.js` | Google Identity Services token client (`prepare`, `signIn`, `current`, `forget`); `GOOGLE_CLIENT_ID` (web OAuth client, project `lekaspos`) and `DRIVE_SCOPE`. |
 | `js/days.js`, `js/money.js` | Ports of `core/time/Days`, `core/report/Periods` (Period, presets, comparisons, buckets, granularity, margin/change/average/value), `Rounding`, `DateText`; `MoneyFormat` (format, plain, qty), currency from settings. |
 | `js/i18n.js`, `js/app-strings.js` | The page's own words EN/MS (+ ShiftText labels) and `t(key, …args)`; the app's words (generated, do not edit). |
@@ -886,11 +893,14 @@ Static files, no build step; ES modules; served by GitHub Pages at `/LekasPOS/ma
 | `vendor/sqlite/` | SQLite 3.53.4 WebAssembly (`sqlite3.mjs`, `sqlite3.wasm`) from `@sqlite.org/sqlite-wasm` 3.53.4-build2, unchanged; README with hashes. No FTS4. |
 
 Tools and tests in `scripts/manager/`: `build-schema.mjs` (writes `js/schema.js`), `build-strings.mjs` (writes `js/app-strings.js`, list `NAMES`),
-`serve.mjs` (serves `site/` on localhost:8000), `demo-shop.mjs` (a made-up two-till shop as a `.lekasbak`; `--fixture <dir>`), `helpers.mjs`
+`serve.mjs` (serves `site/` on localhost:8000; `--fake-drive <dir>`: a stand-in for Drive's app folder at `/fake-drive`, for `?fake-drive`), `demo-shop.mjs` (a made-up two-till shop as a `.lekasbak`; `--fixture <dir>`; `--pins`: PINs 1111/2222/3333), `web-edits.mjs` (CI, D-083: a manager's day of changes with the page's code in the fixture folder → `web-edits.json`), `helpers.mjs`
 (the page's SQLite in Node, segment writer, `MemoryFolder`, `DiskFolder`, ZIP writer), `fixtures/` (a real SQLite WAL + `mkwal.py`), tests
 `core.test.mjs` (JSON, fver, days/periods/buckets/margins from the core tests, money), `sync.test.mjs` (two synthetic tills end to end, out of
 order, twice), `backup.test.mjs` (WAL, ZIP, old/damaged backups, schema up to date), `web.test.mjs` (Drive client on a fake fetch, strings
-up to date, both languages complete), `fixture.test.mjs` (CI: the app's files → same tables, reports and CSVs as both tills). Run:
+up to date, both languages complete, the page's Drive writes), `rules.test.mjs` (the ported :core rules with the app's test cases), `edit.test.mjs`
+(each save: one file, the card, the events and activity-log texts, lost answers and offline), `editing.test.mjs` (owner without PINs, PIN sign-in, waits,
+roles, idle end), `fixture.test.mjs` (CI: the app's files → same tables, reports and CSVs as both tills; then the page's changes → both tills hold
+exactly the page's data, with `ManagerEditsTest`). Run:
 `node --test scripts/manager/*.test.mjs`.
 
 ### 9.6 Resources (`RES/`)

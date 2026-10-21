@@ -1762,7 +1762,7 @@ statements; for shops with credit) and the Activity log — in English and Bahas
   sees the tills' folder. Token in memory only (about an hour; the next one from a tap). The other way in is a `.lekasbak`
   backup file (D-044), opened in the browser — no Google account at all; a backup's write-ahead log is folded in with its
   checksums (a backup taken while readers held part of the log stays complete).
-- **Read only.** The page never creates, changes or deletes a file in Drive and has no till number: a browser that wrote
+- **Read only** (until D-083). The page never creates, changes or deletes a file in Drive and has no till number: a browser that wrote
   would be a till whose storage the browser may clear at any time (a new till each time, cursors and HLC lost) — prices and
   stock stay changed on the till. Editing from the web can come later as a real till, once this one has run in shops.
 - **The same numbers as the till.** The page keeps its copy in the app's own tables (`schema.js`, generated from the schema
@@ -1806,6 +1806,55 @@ needs — the importer and the reports are SQL, reused as text); IndexedDB witho
 a year of sales is slow to sum); `drive.readonly` for a "read-only" page (a sensitive scope with Google's review; `drive.appdata`
 is the tills' own and sees only the app folder); a service worker for offline use (the data is offline already; the page itself
 is small, a stale cached page would read a newer shop wrongly).
+
+### D-083 — Changing the shop from LekasPOS Manager, as a till of its own (2026-10-21)
+The owner (2026-10-21): "how to manage on that website? like manage product, etc... please do your best". Decided: the web
+page (D-082) also **changes the shop** when it is open with Google Drive — products (the whole product form: name, price,
+sold by, unit, stock tracking, opening stock, low-stock alert, colour and picture, barcodes, pack barcodes, scale PLU, category,
+tax, cost, SKU, shown in search; delete), Change stock (count, remove, add with the till's reasons), Receive stock (supplier or
+a new one, invoice/DO, lines by quantity and cost per unit or the invoice's line amount, costs to the moving average),
+categories, suppliers and customers (with the credit limit). Sales, refunds, voids, shifts and cash, count sessions,
+promotions, settings, staff, roles and PINs stay on the tills: selling and cash need a till, and the rest is rare and moves
+money or access.
+- **A till of its own, no new kind of file.** At its first change the page takes a till number (random 22 bits that no card
+  and no file of the folder uses, kept in its copy), publishes its device card (`app: "web"`, the browser's name, no receipt
+  prefix) and writes each save as one immutable segment `seg-{store}-{dev}-{seq}` holding exactly the events a till writes for
+  the same action — payloads, field versions, stock stamps after the product's last count, the activity-log entries and their
+  English details (`site/manager/js/writer.js` ports LwwWriter, ProductDao, ProductLookDao, StockDao, PurchaseDao,
+  CategoryDao, SupplierDao, CustomerDao and the screens that call them; `rules.js` ports the :core rules — search keys, barcode
+  forms, amount parsing, costs, stock reasons, PINs, permissions, the clock — tested with the app's own test cases). The tills
+  need no change: their importer reads the page's files like any till's. A device card with an unknown app name or no prefix
+  was already fine (`checkPrefix` skips null).
+- **Sent first, then shown.** A save is made from the copy brought up to date (a round first), uploaded, and only then read
+  back through the page's importer: the copy never shows a change Google Drive did not get, and an offline save says "nothing
+  was saved". Ids and the clock are kept before the upload (never handed out twice); the next file number comes after the
+  page's highest file in the folder, and a create whose answer was lost is looked up before it is sent again — so a file that
+  arrived is read, never overwritten or sent twice under one number. No queue of saves in the browser: a browser may clear its
+  storage, losing changes the person believed saved.
+- **Other people's changes are kept.** Only the fields the form changed, and only those the row does not already hold, are
+  written (as LwwWriter); each is stamped above the version the field has (Lww.stampAbove), so a change made here after a
+  till's still wins when the computer's clock is behind. A barcode another till added meanwhile stays.
+- **Who changes it: the shop's own staff, roles and PINs.** While no active staff member has a PIN, the owner makes the
+  changes, as on a till (D-037). Otherwise a staff member signs in with their PIN — the salted PBKDF2 record the tills sync,
+  checked in the browser with the till's waits after five wrong PINs (counted in this browser, each from the fifth recorded
+  as on a till) — and their role decides: MANAGE_PRODUCTS, MANAGE_STOCK (also the opening stock of a new product), CUSTOMERS
+  and CREDIT_LIMIT for a new or changed limit. The sign-in is held in memory only, ends after 30 minutes without a change
+  (and when a till makes the person inactive), and goes into the activity log with their first change. The Google account
+  stays the real lock (whoever has it can read everything already); the PIN says who did it and what they may do.
+- **The worry in D-082** (a browser may clear its storage at any time): the page then takes a new till number at its next
+  change. Its earlier files stay in the folder and are read by everyone; ids cannot collide (another number); the clock goes on
+  from the newest event read. Each such browser leaves one card, listed on the tills' Sync screen under its name; the page's
+  Home leaves web cards out of the tills.
+- **Proven in CI.** `scripts/manager/web-edits.mjs` makes a manager's day of changes with the page's own code in the folder
+  `ManagerFixtureTest` left; `ManagerEditsTest` opens both tills from their backup files as the same tills and syncs them with
+  the app's engine — every file read, nothing set aside, no error; `fixture.test.mjs` then requires both tills to hold exactly
+  the page's data and give its reports. Locally, `node scripts/manager/serve.mjs --fake-drive <folder>` stands in for Google
+  Drive (`?fake-drive`, localhost only).
+Rejected: a manager's approval PIN on the web (no cashier waits at a computer — whoever may do it signs in instead, and the
+page offers *Sign in as someone else*); changing sales, shifts, staff or settings from the web (see above); applying a change
+before it reached Drive (the copy would show changes the tills never get); saves queued while offline (lost with the browser's
+storage); a new event kind or file format for the web (every till already reads till files; a new kind would wait in
+`sync_deferred` on tills not yet updated).
 
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,

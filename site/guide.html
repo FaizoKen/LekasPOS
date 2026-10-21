@@ -1194,8 +1194,8 @@ the files it makes.</p>
 
 <h3 id="manager">On a computer: LekasPOS Manager</h3>
 <p>See the whole shop — reports, sales and refunds, products, stock, shifts and the activity log — on a laptop or
-another phone, in a web browser: open <a href="manager/"><b>lekaspos.faizo.net/manager</b></a>. Nothing to
-install and no account with us. Two ways in:</p>
+another phone, in a web browser, and change products, stock, suppliers and customers there too: open
+<a href="manager/"><b>lekaspos.faizo.net/manager</b></a>. Nothing to install and no account with us. Two ways in:</p>
 <ul>
 <li><b>Open my shop with Google Drive</b> — sign in with the Google account your tills use for Google Drive backup
 (on the till: <b>Settings → Google Drive backup</b>). The page reads the shop's backup files from that Google Drive
@@ -1216,10 +1216,27 @@ check and the four CSV exports; <b>Sales &amp; refunds</b> opens any receipt wit
 changes, deliveries and the stock value; <b>Shift &amp; cash</b> opens each shift's report with the expected cash;
 <b>Customers</b> (for shops with customers and credit) lists who owes what, the most first, with each customer's statement; and
 the <b>Activity log</b> can be filtered by action. <b>Bahasa Melayu</b> / <b>English</b> at the top changes the language.</p>
-<div class="note"><p>The page only <b>reads</b>: prices, products and stock are still changed on the till. Anyone who can
-sign in to the shop's Google account, or has a backup file, can see everything — profit too — so keep both private. On
-a shared computer, tap <b>Forget this shop on this computer</b> at the bottom when you are done: it removes the shop
-from that browser (nothing changes in Google Drive or on the tills).</p></div>
+<p><b>Making changes</b> (with Google Drive; a backup file can only be looked at). <b>Products</b> has <b>Add product</b>
+and <b>Categories</b>; a product has <b>Edit</b> — the till's form: name, selling price, how it is sold, stock, colour and
+picture, barcodes and pack barcodes, scale PLU, category, tax, cost price, your own code, and <b>Delete</b> — and
+<b>Change stock</b> (<b>Count</b>, <b>Remove</b> or <b>Add</b>, with the reason). <b>Stock</b> has <b>Receive stock</b> (a
+delivery: the supplier or a new one, the invoice / DO no., then each product with its quantity and its cost per unit or the
+invoice's line amount; costs are averaged as on the till), <b>Change stock</b> and <b>Suppliers</b>. <b>Customers</b> has
+<b>New customer</b> and <b>Edit</b> (the credit limit only for whoever may set it). A change is saved in the shop's Google
+Drive first (<i>Saving to Google Drive…</i>), and the tills take it on their next sync: after their next sale, when the app
+is opened, or within half an hour — <b>Settings → Google Drive backup → Sync now</b> on a till takes it at once. Without
+internet nothing is saved, and the page says so.</p>
+<p><b>Who makes the change.</b> While no one in the shop has a PIN, changes are the owner's, as on the till. Once PINs are
+used, tap <b>Sign in</b> at the top, choose who you are and enter your PIN (wrong PINs make you wait, as on the till). Your
+role decides what you may change, as on the till: products and categories need <i>Edit products and categories</i>; stock,
+deliveries and suppliers <i>Receive, change and count stock</i>; customers <i>Manage customers, take repayments</i>, and a
+credit limit <i>Go over credit limits, adjust balances</i>. Every change is in the <b>Activity log</b> under your name. You
+stay signed in until you tap <b>Sign out</b>, reload the page, or make no change for 30 minutes. Sales, refunds, shifts,
+staff, promotions and settings are still done on the till.</p>
+<div class="note"><p>Anyone who can sign in to the shop's Google account, or has a backup file, can see everything — profit
+too — so keep both private; the PINs decide who may change what. On a shared computer, tap <b>Sign out</b>, then
+<b>Forget this shop on this computer</b> at the bottom when you are done: it removes the shop from that browser (changes
+already saved stay in Google Drive and on the tills).</p></div>
 <p class="top"><a href="#contents">↑ Contents</a></p>
 
 <h2 id="activity-log">14. Activity log</h2>

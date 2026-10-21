@@ -46,7 +46,7 @@ this list for **every** change (feature, fix, setting, label, permission, releas
 | adds or renames a word users see | `references/glossary.md` |
 | changes a decision or a reference rule | that reference **and** a new `docs/DECISIONS.md` entry |
 | changes what the app stores, sends or asks permission for | `site/privacy.html` + `site/privasi.html` (same date), `docs/PLAY.md` |
-| changes the schema, a sync event or its apply rule, an activity-log action, or a report/CSV | LekasPOS Manager, the web page that reads the same data (`site/manager/`, D-082; `recipes.md` §5–§9), then `node --test scripts/manager/*.test.mjs` |
+| changes the schema, a sync event or its apply rule, an activity-log action, a report/CSV, or how a product, stock change, delivery, category, supplier or customer is saved | LekasPOS Manager, the web page that reads the same data and changes products, stock, suppliers and customers as a till (`site/manager/`, D-082, D-083; `recipes.md` §5–§9), then `node --test scripts/manager/*.test.mjs` |
 | is released | the guide's "For LekasPOS x.y.z" line (both languages), `docs/PHASES.md` |
 
 Before committing anything under `site/`: `node scripts/check-site.mjs`. When reporting finished work,

@@ -48,6 +48,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **1.20.1**: the selling screen finished (D-081) — on a phone the Items tool reads **Bill** over the tiles and a scan shows the bill; an empty bill's Hold reads **Held bills (n)**; no "0 items" | **released** 2026-10-14 (v1.20.1, build 215) — the owner asked to release it; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
+| — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | built 2026-10-21; tests and a browser check pass locally; CI (`ManagerEditsTest`) after the owner's OK to push, then the owner tries it |
 
 ## Open questions for the user
 
@@ -2493,3 +2494,49 @@ The owner (2026-10-20): "make it everything fully use lekaspos.faizo.net". The o
 1. Settings → User guide: the guide opens on lekaspos.faizo.net (Malay: the panduan).
 2. Settings → About → Privacy policy: lekaspos.faizo.net/privacy.html.
 3. Settings → App updates → the website link: lekaspos.faizo.net, on Download.
+
+## LekasPOS Manager changes the shop — products, stock, suppliers, customers (D-083)
+
+The owner (2026-10-21): "how to manage on that website? like manage product, etc... please do your best". Decided: the
+web page changes the shop as a till of its own — one sync file per save, the events a till writes, the shop's PINs and
+roles. No app change, no APK: the tills read the page's files like any till's.
+
+- [x] Forms (`js/edit.js`): the product form (all of ProductEditActivity's fields: look and picture, barcodes, packs,
+      scale PLU; "Barcode already used"; Delete), Change stock (Count / Remove / Add with reasons), Receive stock (supplier
+      or a new one, invoice/DO, lines by cost per unit or the invoice's line amount), Categories, Suppliers (a Stock tab),
+      New customer / Edit (credit limit for whoever may set it); a form stays open while the page updates and asks before
+      closing with changes
+- [x] Who: owner while no one has a PIN; else **Sign in** with a PIN (the till's waits; SIGN_IN and PIN_LOCKOUT on record),
+      the role decides, *Sign in as someone else*, ends after 30 minutes without a change (`js/editing.js`)
+- [x] A save (`Store.commit`, `js/writer.js`): a round, the till's events (LwwWriter/DAO ports, stamps above field versions
+      and after counts, the till's activity-log texts), uploaded first, then read back; the page's own till number and card;
+      a lost upload answer is read, never overwritten; offline: "nothing was saved"
+- [x] Tests (`node --test scripts/manager/*.test.mjs`, 41 locally, 2 CI-only skipped): the ported :core rules with the app's
+      cases (`rules.test.mjs`), each save's file, card, events and texts, lost answers and offline (`edit.test.mjs`), PINs,
+      waits, roles and the idle end (`editing.test.mjs`), the Drive writes on a fake fetch (`web.test.mjs`)
+- [x] CI check written (not run yet): `web-edits.mjs` makes a manager's day of changes in `ManagerFixtureTest`'s folder,
+      `ManagerEditsTest` has both tills sync it with the app's engine (nothing set aside), `fixture.test.mjs` requires both
+      tills then to hold exactly the page's data and give its reports (`instrumented.sh` fails the job otherwise)
+- [x] Tried in Chrome on a made-up shop with PINs through a local stand-in for Google Drive (`serve.mjs --fake-drive`,
+      `demo-shop.mjs --pins`): sign-in (wrong PIN, a cashier refused), a new product with a colour, barcode and a pack
+      (the "already used" question), Change stock → Remove, an edit (price, a barcode removed), a delivery with a new
+      supplier (cost averaged to the sen), a category, a customer with a limit, Malay, Sign out; the folder read back by a
+      fresh reader: every file applied, nothing set aside. Fixed what it showed (a label property, `append`, hidden buttons,
+      the sticky sheet head covering questions)
+- [x] Docs: user guide EN + MS (On a computer: making changes, who makes the change), privacy policy EN + MS (21 October
+      2026), `PLAY.md`, README, `llms.txt`, `features.md` §21, `sync.md` §12a, `recipes.md` (9a, 8a, 4a), `codemap.md` §9.5a,
+      `glossary.md`, the skill, CLAUDE.md/AGENTS.md table, D-083
+- [ ] Push → CI (instrumented API 21 + 36 with `ManagerEditsTest` and the second fixture test) — waits for the owner's OK
+- [ ] The owner tries it on the live page
+
+### Checks for the owner
+1. Open https://lekaspos.faizo.net/manager/ → **Open my shop with Google Drive** (the tills' account). If the shop uses PINs,
+   **Sign in** at the top with your PIN.
+2. Products → **Add product**: name, price, a barcode, "How many do you have now?" → **Save**. On a till: Settings → Google
+   Drive backup → **Sync now**, then scan the barcode — the product and price are there, with its stock.
+3. On the page, the product → **Edit** → a new price → **Save**; Sync now on the till: the new price; the till's Activity
+   log shows the price change under your name.
+4. Stock → **Receive stock**: a supplier, two products with quantities and costs → **Save delivery**; on the till after Sync
+   now: Stock → Deliveries shows it, stock went up.
+5. Sign in as a cashier: **Add product** says the cashier may not do this.
+6. Unplug the internet and save a change: "No internet connection: nothing was saved".

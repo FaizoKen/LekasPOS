@@ -558,13 +558,14 @@ Small things a future change could fix (none loses data):
   in Reports but "Kaedah bayaran" in Settings.
 - `shift_float_hint` is unused. Part payments are lost if Android kills the process mid-payment (the bill survives).
 
-## 21. LekasPOS Manager — the shop in a web browser (`site/manager/`, D-082)
+## 21. LekasPOS Manager — the shop in a web browser (`site/manager/`, D-082, D-083)
 
-A read-only web page on the website (https://lekaspos.faizo.net/manager/), not part of the APK. No server: the
-browser reads the shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer.
+A web page on the website (https://lekaspos.faizo.net/manager/), not part of the APK. No server: the browser reads the
+shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer. With Google Drive it
+also changes products, stock, suppliers and customers as a till of its own (D-083, below).
 - **Ways in** (welcome screen): *Open my shop with Google Drive* — Google sign-in in the browser (GIS token client,
   `drive.appdata`, web OAuth client in `js/config.js`; empty = the button says it is not set up) reads the tills' sync folder
-  (`js/drive.js`: lists and downloads only); *Open a backup file* — a `.lekasbak` read in the browser (`js/backup.js`: ZIP +
+  (`js/drive.js`; it writes only the page's own files, below); *Open a backup file* — a `.lekasbak` read in the browser (`js/backup.js`: ZIP +
   CRC, WAL folded in, schema ≥ 8 else "update the app, save a new backup"). One shop at a time; another Google account or
   a store the tills moved to starts the copy again.
 - **Update**: one tap (Google's popup needs it); while the token lasts (~1 h) the page reads new files by itself every
@@ -588,4 +589,32 @@ browser reads the shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worke
   `js/app-strings.js` (generated from `values{,-ms}/`), the page's own from `js/i18n.js`.
 - Footer: the source (Google account, or "a backup file does not change"), *Open a backup file*, *Forget this shop on this
   computer* (asks once; removes the copy from the browser), guide and privacy links.
-- Not in the page: editing anything, promotions, settings, staff and roles.
+- **Changing the shop** (D-083; Google Drive only — a backup file can only be looked at): *Add product* and *Categories* on
+  Products, *Edit* and *Change stock* on a product, *Receive stock*, *Change stock* and *Suppliers* on Stock, *New customer*
+  and *Edit* on Customers. The till's forms and words: the product form of ProductEditActivity (name, selling price, sold by
+  with pcs/kg following it, unit, track stock, opening stock for whoever may change stock, low-stock alert, colour and picture
+  — a picture becomes the till's 240 px JPEG —, barcodes in their stored form, pack barcodes 2–100,000 pieces with an optional
+  price, scale PLU without leading zeros, category, tax, cost, SKU, show in search; "Barcode already used … Save anyway?"
+  for a new barcode another product has; Delete); Change stock (Count / Remove / Add with the reasons, note, "n fewer than the
+  app has"); Receive stock (supplier, or *New supplier…* saved first, invoice/DO no., note, products by search or a scanner's
+  code + Enter, quantity, cost per unit or the invoice's line amount, total; the same product again adds to its line);
+  categories (add, rename, colour, delete); suppliers (name, contact, phone, email, address, note; delete); customers (name,
+  phone, email, address, TIN, credit limit for whoever may set it, note; delete only with nothing owed). A form open while the
+  page updates stays open; closing one with changes asks *Close without saving your changes?*.
+- **Who changes it**: while no active staff member has a PIN, the owner (staff 1, every permission, as on a till); otherwise
+  *Sign in* in the header — choose who you are, enter your PIN (the tills' synced PIN record; wrong PINs: tries left, then
+  the till's waits, counted in this browser; each from the 5th recorded as `PIN_LOCKOUT`). The role decides: products and
+  categories MANAGE_PRODUCTS, stock, deliveries and suppliers MANAGE_STOCK (opening stock too), customers CUSTOMERS, a new or
+  changed credit limit CREDIT_LIMIT; without it "<name> may not do this", with *Sign in as someone else*. No approval PIN.
+  The sign-in is in memory only (gone on reload), ends after 30 minutes without a change or when the person can no longer
+  sign in (a till made them inactive); `SIGN_IN` is recorded with their first change. *Sign out* in the header.
+- **A save** (`js/editing.js` → `Store.commit` → `js/writer.js`): the copy is brought up to date, the change is made as the
+  events a till writes for it (only the fields the form changed and the row does not hold already, stamped above the field's
+  version; stock events after the product's last count; the till's activity-log entries: price, cost, sell mode, tax,
+  barcodes, packs, delete, write-offs and counts down at cost, credit limit), sent to Google Drive as one file of the page's
+  own, and only then shown here ("Saving to Google Drive…"; offline: "No internet connection: nothing was saved"). The first
+  change takes the page's till number (random, unused in the folder) and publishes its card (`app: "web"`, name "LekasPOS
+  Manager (Windows)" etc., no receipt prefix); the tills list it on their Sync screen, the page's Home does not. A browser
+  whose storage was cleared takes a new number at its next change. The tills take the changes on their next sync (after a
+  sale, when the app opens, within half an hour; *Sync now* at once) — Home says so.
+- Not in the page: sales, refunds, voids, shifts and cash, stock count sessions, promotions, settings, staff, roles and PINs.

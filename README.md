@@ -35,9 +35,10 @@ cashiers, with screenshots.
   USB drive, backup files to share or restore, and Google Drive backup — which also keeps the
   shop's tills in step and restores a lost phone in full. No Google account is required; the
   selling screen shows "Not backed up" when the data exists only on that phone.
-- **On a computer:** [LekasPOS Manager](https://lekaspos.faizo.net/manager/), a read-only web page with the
-  shop's reports, sales, products, stock, shifts and activity log — read from the shop's own Google Drive backup or a
-  backup file in the browser, with no server (D-082).
+- **On a computer:** [LekasPOS Manager](https://lekaspos.faizo.net/manager/), a web page with the shop's reports,
+  sales, products, stock, shifts and activity log — read from the shop's own Google Drive backup or a backup file in the
+  browser, with no server (D-082) — where products, stock, deliveries, suppliers and customers can be changed too, with
+  the shop's PINs, as on a till (D-083).
 - English and Bahasa Melayu (switchable in the app); Android 5.0 and newer, phones and tablets.
 
 ## Documentation map

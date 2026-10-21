@@ -1,6 +1,7 @@
 // Test helpers for the manager web page (node --test scripts/manager/): the page's own SQLite build,
 // sync files written like a till's (SegmentCodec), and a folder provider like the app's FolderProvider.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { gzipSync, deflateRawSync } from 'node:zlib';
 import { stringify } from '../../site/manager/js/json64.js';
@@ -92,6 +93,39 @@ export class MemoryFolder {
     if (!file) throw new Error(`no file ${f.name}`);
     return file.bytes;
   }
+
+  // Writes, as DriveFolder makes them (the web page's own files, D-083). [failNext]: the next create fails after
+  // storing the file (an answer lost on the way back), or before (offline) with 'before'.
+  async create(name, bytes, props = {}) {
+    const lost = this.failNext;
+    this.failNext = null;
+    if (lost === 'before') throw Object.assign(new Error('offline'), { code: 'OFFLINE' });
+    const id = `id-${name}-${this.clock}`;
+    this.files.push({ name, id, size: bytes.length, props, created: this.clock++, bytes: new Uint8Array(bytes) });
+    if (lost === 'after') throw Object.assign(new Error('answer lost'), { code: 'OFFLINE' });
+    return id;
+  }
+
+  async find(name) {
+    return this.files.filter((f) => f.name === name).map(({ bytes, ...f }) => f);
+  }
+
+  async update(id, bytes) {
+    const f = this.files.find((x) => x.id === id);
+    if (!f) throw Object.assign(new Error('not found'), { code: 'DRIVE', status: 404 });
+    f.bytes = new Uint8Array(bytes);
+    f.size = bytes.length;
+  }
+
+  async remove(id) {
+    this.files = this.files.filter((f) => f.id !== id);
+  }
+
+  /** The text of the file [name] (the newest copy). */
+  text(name) {
+    const f = this.files.filter((x) => x.name === name).pop();
+    return f ? new TextDecoder().decode(f.bytes) : null;
+  }
 }
 
 function crc32(bytes) {
@@ -119,6 +153,54 @@ export class DiskFolder {
   async get(f) {
     return this.files.find((x) => x.name === f.id).bytes;
   }
+
+  // The web page's own files (D-083), written as FolderProvider keeps them after the fixture's renaming: the file and
+  // its props in `name.props` (key=value lines). [written]: the names this folder wrote.
+  async create(name, bytes, props = {}) {
+    if (this.files.some((f) => f.name === name)) return name;
+    this.files.push({ name, bytes: new Uint8Array(bytes), props });
+    (this.written ??= new Set()).add(name);
+    if (this.dir) {
+      writeFileSync(join(this.dir, name), bytes);
+      const lines = Object.entries(props).map(([k, v]) => `${k}=${v}\n`).join('');
+      if (lines) writeFileSync(join(this.dir, `${name}.props`), lines);
+    }
+    return name;
+  }
+
+  async find(name) {
+    return (await this.list(name)).filter((f) => f.name === name);
+  }
+
+  async update(id, bytes) {
+    const f = this.files.find((x) => x.name === id);
+    if (!f) throw Object.assign(new Error('not found'), { code: 'DRIVE', status: 404 });
+    f.bytes = new Uint8Array(bytes);
+    (this.written ??= new Set()).add(id);
+    if (this.dir) writeFileSync(join(this.dir, id), bytes);
+  }
+
+  async remove(id) {
+    this.files = this.files.filter((f) => f.name !== id);
+  }
+}
+
+/** A FolderProvider folder on disk (props in `name.props`), read like Google Drive, written like it too. */
+export function readDiskFolder(dir) {
+  const files = readdirSync(dir)
+    .filter((n) => !n.endsWith('.props') && !n.endsWith('.lekasbak') && !n.endsWith('.json.expected'))
+    .map((name) => {
+      const p = join(dir, `${name}.props`);
+      const props = {};
+      if (existsSync(p)) {
+        for (const line of readFileSync(p, 'utf8').split('\n')) {
+          const at = line.indexOf('=');
+          if (at > 0) props[line.slice(0, at)] = line.slice(at + 1).trim();
+        }
+      }
+      return { name, bytes: new Uint8Array(readFileSync(join(dir, name))), props };
+    });
+  return new DiskFolder(dir, files);
 }
 
 /** A ZIP of [entries] ({name: Uint8Array}) as java.util.zip writes it (deflated). */

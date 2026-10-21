@@ -72,7 +72,7 @@ test('the web page\'s own words exist in English and Malay, with the same placeh
   for (const k of Object.keys(APP_STRINGS.en)) assert.equal(marks(APP_STRINGS.ms[k]), marks(APP_STRINGS.en[k]), `placeholders of ${k}`);
   // Every key the page asks for exists.
   const used = new Set();
-  for (const f of ['app.js', 'i18n.js']) {
+  for (const f of ['app.js', 'i18n.js', 'edit.js']) {
     const code = readFileSync(new URL(`../../site/manager/js/${f}`, import.meta.url), 'utf8');
     for (const m of code.matchAll(/\bt\('([a-z0-9_]+)'/g)) used.add(m[1]);
   }
@@ -83,4 +83,57 @@ test('the web page\'s own words exist in English and Malay, with the same placeh
   setLanguage('en');
   assert.equal(t('report_range', 'a', 'b'), 'a – b');
   assert.ok(src.length > 0);
+});
+
+test('Drive: the page writes its own files as DriveProvider.put does (D-083), and never a second copy', async () => {
+  const calls = [];
+  let lose = true;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(url);
+    calls.push({ method: init.method ?? 'GET', url: u, body: init.body });
+    if (init.method === 'POST') {
+      if (lose) { lose = false; throw new TypeError('Failed to fetch'); } // sent, but the answer was lost
+      return reply(200, { id: 'new1' });
+    }
+    if (init.method === 'PATCH') return reply(200, { id: 'card1' });
+    if (init.method === 'DELETE') return reply(404, { error: { errors: [{ reason: 'notFound' }] } });
+    return reply(200, { files: [{ id: 'there1', name: 'seg-s-9-00000001.ndjson.gz', size: '10', createdTime: '2026-10-21T01:00:00.000Z' }] });
+  };
+  const drive = new DriveFolder('tok');
+  // A create whose answer was lost: the name is looked up, and the file found is taken, not sent again.
+  assert.equal(await drive.create('seg-s-9-00000001.ndjson.gz', new Uint8Array([1, 2]), { sha256: 'ab', count: '2' }), 'there1');
+  assert.deepEqual(calls.map((c) => c.method), ['POST', 'GET']);
+  assert.equal(calls[0].url.pathname, '/upload/drive/v3/files');
+  assert.equal(calls[0].url.searchParams.get('uploadType'), 'multipart');
+  const body = await calls[0].body.text();
+  assert.match(body, /"name":"seg-s-9-00000001\.ndjson\.gz","parents":\["appDataFolder"\],"appProperties":\{"sha256":"ab","count":"2"\}/);
+  assert.equal(calls[1].url.searchParams.get('q'), "name = 'seg-s-9-00000001.ndjson.gz' and trashed = false");
+  // When nothing arrived, it is sent once more
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ method: init.method ?? 'GET', url: new URL(url) });
+    if (init.method === 'POST') {
+      if (lose) { lose = false; throw new TypeError('Failed to fetch'); }
+      return reply(200, { id: 'new2' });
+    }
+    return reply(200, { files: [] });
+  };
+  lose = true;
+  calls.length = 0;
+  assert.equal(await drive.create('seg-s-9-00000002.ndjson.gz', new Uint8Array([3])), 'new2');
+  assert.deepEqual(calls.map((c) => c.method), ['POST', 'GET', 'POST']);
+  // Its card is replaced in place; a copy already gone is fine
+  calls.length = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ method: init.method ?? 'GET', url: new URL(url) });
+    return init.method === 'DELETE' ? reply(404, { error: { errors: [{ reason: 'notFound' }] } }) : reply(200, { id: 'card1' });
+  };
+  await drive.update('card1', new Uint8Array([7]));
+  await drive.remove('gone');
+  assert.equal(calls[0].method, 'PATCH');
+  assert.equal(calls[0].url.pathname, '/upload/drive/v3/files/card1');
+  assert.equal(calls[0].url.searchParams.get('uploadType'), 'media');
+  assert.equal(calls[1].method, 'DELETE');
+  // A full Drive says so
+  globalThis.fetch = async () => reply(403, { error: { errors: [{ reason: 'storageQuotaExceeded' }] } });
+  await assert.rejects(drive.create('seg-s-9-00000003.ndjson.gz', new Uint8Array([1])), (e) => e.code === 'DRIVE_FULL');
 });

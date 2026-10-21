@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><a href="privacy.html" hreflang="en">English</a> · <strong>Bahasa Melayu</strong></p>
 <h1>Dasar privasi LekasPOS</h1>
-<p class="updated">Kemas kini terakhir: 20 Oktober 2026</p>
+<p class="updated">Kemas kini terakhir: 21 Oktober 2026</p>
 
 <p>LekasPOS ialah aplikasi jualan (POS) percuma dan sumber terbuka untuk kedai kecil
 (<a href="https://github.com/FaizoKen/LekasPOS">kod sumber</a>, GPL-3.0). Halaman ini menerangkan
@@ -84,8 +84,12 @@ privasi Google</a> terpakai.</li>
 <li><strong>Pengurus LekasPOS, halaman web (pilihan).</strong> Pada komputer anda boleh membuka kedai dalam pelayar web di
 <a href="manager/">lekaspos.faizo.net/manager</a>. Ada dua cara. Anda boleh log masuk dengan akaun Google kedai:
 halaman itu meminta Google akses kepada folder data aplikasi tersembunyi yang sama seperti kaunter (kebenaran
-<code>drive.appdata</code>) dan hanya membaca fail segerak kedai daripadanya — ia tidak mengubah atau memadam apa-apa di situ.
-Atau anda boleh membuka fail sandaran, yang dibaca dalam pelayar dan tidak dimuat naik. Kedua-duanya, data kedai bergerak
+<code>drive.appdata</code>) dan membaca fail segerak kedai daripadanya. Apabila anda mengubah produk, stok, pembekal atau
+pelanggan di situ, halaman itu menyimpan perubahan tersebut dalam folder yang sama sebagai fail baharunya sendiri, sama seperti
+kaunter, dan kaunter mengambilnya dari situ; ia tidak pernah mengubah atau memadam fail kaunter. Jika kedai menggunakan PIN,
+halaman itu menyemak PIN yang anda masukkan dalam pelayar dengan rekod PIN kedai sendiri, yang sudah disimpan oleh kaunter
+dalam folder itu, dan merekodkan perubahan anda dalam log aktiviti kedai atas nama anda, seperti kaunter; cubaan salah dikira
+dalam pelayar itu. Atau anda boleh membuka fail sandaran, yang dibaca dalam pelayar, tidak dimuat naik dan tidak diubah. Kedua-duanya, data kedai bergerak
 hanya antara Google dan pelayar anda (melalui HTTPS), dan pelayar menyimpan salinannya dalam komputer itu (dalam storan
 peribadi laman) supaya lawatan seterusnya hanya membaca yang baharu. Pembangun tidak menerima apa-apa: halaman itu tiada akaun
 dengan kami, tiada analitik dan tiada iklan; GitHub, yang menempatkan halaman itu, melihat alamat internet pelayar seperti

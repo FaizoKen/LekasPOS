@@ -12,7 +12,7 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="privasi.html" hreflang="ms">Bahasa Melayu</a></p>
 <h1>LekasPOS privacy policy</h1>
-<p class="updated">Last updated: 20 October 2026</p>
+<p class="updated">Last updated: 21 October 2026</p>
 
 <p>LekasPOS is a free, open-source point-of-sale app for small shops
 (<a href="https://github.com/FaizoKen/LekasPOS">source code</a>, GPL-3.0). This page explains
@@ -79,8 +79,12 @@ account's e-mail address on the phone to show it and to connect again. Google's
 <li><strong>LekasPOS Manager, the web page (optional).</strong> On a computer you can open the shop in a web browser at
 <a href="manager/">lekaspos.faizo.net/manager</a>. There are two ways in. You can sign in with the shop's Google
 account: the page then asks Google for the same hidden app data folder as the tills (the <code>drive.appdata</code>
-permission) and only reads the shop's sync files from it — it never changes or deletes anything there. Or you can open a
-backup file, which is read in the browser and not uploaded. Either way the shop's data travels only between Google and your
+permission) and reads the shop's sync files from it. When you change a product, stock, a supplier or a customer there, the
+page saves that change in the same folder as a new file of its own, exactly as a till does, and the tills take it from there;
+it never changes or deletes the tills' files. If the shop uses PINs, the page checks the PIN you enter in the browser against
+the shop's own PIN records, which the tills already keep in that folder, and records your changes in the shop's activity log
+under your name, as a till does; wrong tries are counted in that browser. Or you can open a backup file, which is read in the
+browser, not uploaded, and never changed. Either way the shop's data travels only between Google and your
 browser (over HTTPS), and the browser keeps a copy of it on that computer (in its private site storage) so the next visit
 reads only what is new. The developer receives nothing: the page has no account with us, no analytics and no advertising;
 GitHub, which hosts the page, sees the browser's internet address as for any website. The sign-in lasts about an hour and is

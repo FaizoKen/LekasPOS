@@ -310,17 +310,30 @@ sync screen, `forId(meta sync.provider)` for background work.
 - `DailyReportWorker`: every 3 h while online, plus once soon after a start when a day waits.
   Failures are kept as `SyncEngine.errorCode` and shown in Settings; sign-in needed waits for the owner.
 
-## 12a. A reader outside the app: LekasPOS Manager (D-082)
+## 12a. Outside the app: LekasPOS Manager (D-082, D-083)
 
-The web page `site/manager/` reads a store's folder as one more importer, never as a till: Google Drive with a web OAuth
-client of the same Cloud project and the same `drive.appdata` scope (the app folder belongs to the project), lists and
-downloads only, never writes a file, has no device number. Its round follows §6 step 3 (store = the lowest manifest, cursors per
+The web page `site/manager/` reads a store's folder as one more importer: Google Drive with a web OAuth client of the same
+Cloud project and the same `drive.appdata` scope (the app folder belongs to the project). Until its first change it lists
+and downloads only and has no device number. Its round follows §6 step 3 (store = the lowest manifest, cursors per
 till, gaps wait, a till numbered again from 1 is read again, `fullFrom` followed, checksum and header checked, whole-folder listing
 daily or on a gap, else files created after the newest seen − 15 min). It applies events with the Importer's rules
 (`site/manager/js/importer.js`) and works the derived tables out with the SQL of `DerivedRebuild`, `StockDao.rebuild`/`levelBefore`
 and `SaleDao.creditOnce` for what each batch touched (`js/derived.js`). **Any change to the file format, an event's payload or an
 apply rule changes the web page in the same change** (recipes.md §6 step 8a); `ManagerFixtureTest` + `scripts/manager/fixture.test.mjs`
 (CI) fail when the page and the tills disagree.
+
+**Its changes (D-083)** make it a till of its own, with nothing new for the tills: at the first change it takes a device
+number (random 22 bits that no card and no file of the folder uses, in its copy's `meta web.dev`) and publishes its card
+(`app: "web"`, `prefix: null`, its cursors); each save is one segment `seg-{store}-{dev}-{seq}` with the events a till
+writes for the same action (`js/writer.js`: LWW fields the form changed and the row does not hold, stamped above the
+field's version; stock events stamped after the product's last count; counts after everything known; the purchase with its
+lines and the moving-average cost; the activity-log entries). Order of a save (`Store.commit`): a round; ids and HLC kept
+in `meta`; the next segment number = after the page's highest file in the folder (a file whose upload answer was lost is
+read in that round, never overwritten); upload (Drive create looks the name up before sending again); then the page reads
+its own segment back through the importer and moves its cursor. A failed upload changes nothing in the copy. A browser
+whose storage was cleared takes a new device number at its next change (its old files stay valid). **A new LWW field or
+event the page writes changes `writer.js` too**; `ManagerEditsTest` + `scripts/manager/web-edits.mjs` + the second test
+of `fixture.test.mjs` (CI) fail when the tills do not end with the page's data.
 
 ## 12. Merge test plan (`androidTest/sync/SyncMergeTest`)
 

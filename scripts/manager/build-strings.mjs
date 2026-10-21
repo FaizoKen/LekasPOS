@@ -56,6 +56,28 @@ export const NAMES = [
   'reason_correction', 'reason_other',
   'customers_owing', 'customers_none_found', 'customer_search_hint', 'customer_limit_line', 'customer_removed_tag', 'credit_empty',
   'credit_charge', 'credit_reversal', 'credit_payment', 'credit_adjust', 'credit_balance_after',
+  // Changing the shop (D-083): the product form (strings_products.xml), Change stock, Receive stock, categories,
+  // suppliers, customers and signing in with a PIN
+  'save', 'delete', 'cancel', 'ok', 'remove', 'saved', 'not_allowed', 'products_add', 'product_new', 'product_edit', 'product_name',
+  'product_sell_mode', 'product_unit', 'product_stock_section', 'product_stock_info', 'product_opening_stock',
+  'product_opening_hint', 'look_section', 'look_help', 'look_color', 'look_preview', 'look_choose_picture',
+  'look_remove_picture', 'look_unreadable', 'color_none', 'color_red', 'color_pink', 'color_purple', 'color_indigo',
+  'color_blue', 'color_teal', 'color_green', 'color_lime', 'color_amber', 'color_orange', 'color_brown', 'color_grey',
+  'product_barcodes_info', 'product_barcode_add', 'product_pack_add', 'product_barcode_hint', 'product_pack_qty',
+  'product_pack_price', 'product_pack_row', 'product_pack_auto_price', 'product_no_barcodes', 'product_plu', 'product_more',
+  'product_tax', 'product_no_tax', 'product_sku_hint', 'product_sku_info', 'product_active', 'product_delete_confirm',
+  'product_error_name', 'product_error_price', 'product_error_qty', 'product_error_plu', 'product_error_barcode',
+  'product_error_pack_qty', 'product_duplicate_title', 'product_error_barcode_dup', 'product_saved', 'product_deleted',
+  'inv_adjust', 'inv_receive', 'inv_count_stock', 'inv_remove_stock', 'inv_add_stock', 'inv_count_help', 'inv_remove_help',
+  'inv_add_help', 'inv_app_has', 'inv_diff_less', 'inv_diff_more', 'inv_diff_same', 'inv_note_hint', 'reason_hint',
+  'inv_stock_set', 'inv_adjusted', 'inv_pick_hint', 'inv_supplier', 'inv_no_supplier', 'inv_new_supplier',
+  'inv_edit_supplier', 'inv_supplier_name', 'inv_supplier_contact', 'inv_supplier_delete_confirm', 'inv_suppliers',
+  'sync_now', 'inv_ref_hint', 'inv_purchase_lines', 'inv_unit_cost', 'inv_line_total', 'inv_add_item',
+  'inv_receive_save', 'inv_receive_empty', 'inv_receive_total', 'inv_received', 'inv_discard',
+  'categories_title', 'categories_empty', 'category_add', 'category_edit', 'category_name', 'category_delete_confirm',
+  'store_phone', 'store_email', 'store_address', 'customer_add', 'customer_edit', 'customer_name', 'customer_tin',
+  'customer_limit', 'customer_limit_hint', 'customer_limit_error', 'customer_delete_confirm', 'error_has_balance',
+  'lock_title', 'lock_who', 'pin_enter', 'pin_wrong', 'pin_wrong_wait', 'pin_wait', 'pin_not_allowed',
 ];
 
 /** The text of an Android string resource as the app shows it. */

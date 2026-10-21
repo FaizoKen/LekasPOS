@@ -1,50 +1,15 @@
 // The manager web page (D-082): shows one shop — its reports, sales, products, stock, shifts and activity
 // log — from a copy kept in this browser (worker.js), filled from the shop's Google Drive backup or a
-// backup file. Read only. Every text from the shop is set as text, never as HTML.
+// backup file. With Google Drive it also changes products, stock, suppliers and customers like a till
+// (D-083, edit.js). Every text from the shop is set as text, never as HTML.
 
 import { t, setLanguage, language } from './i18n.js';
 import * as auth from './auth.js';
 import * as D from './days.js';
 import { format, qty as qtyText, currencyOf, MYR, plain } from './money.js';
-
-// ------------------------------------------------------------------------------------------- DOM
-
-function h(tag, props, ...children) {
-  const el = document.createElement(tag);
-  if (props) {
-    for (const [k, v] of Object.entries(props)) {
-      if (v == null || v === false) continue;
-      if (k === 'class') el.className = v;
-      else if (k === 'text') el.textContent = v;
-      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-      else el.setAttribute(k, v === true ? '' : v);
-    }
-  }
-  append(el, children);
-  return el;
-}
-
-/** Replaces [el]'s content with [children] (nested lists flattened, empty values left out). */
-function put(el, ...children) {
-  el.replaceChildren();
-  return append(el, children);
-}
-
-function append(el, children) {
-  for (const c of children.flat(Infinity)) {
-    if (c == null || c === false) continue;
-    el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
-  }
-  return el;
-}
-
-const svgNs = 'http://www.w3.org/2000/svg';
-function s(tag, attrs, ...children) {
-  const el = document.createElementNS(svgNs, tag);
-  for (const [k, v] of Object.entries(attrs ?? {})) el.setAttribute(k, v);
-  for (const c of children) if (c) el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
-  return el;
-}
+import { h, put, append, s, card, row, table, td, tag, toast } from './ui.js';
+import * as E from './edit.js';
+import { Perm } from './rules.js';
 
 // ------------------------------------------------------------------------------------------- worker
 
@@ -91,6 +56,7 @@ const S = {
   error: null,
   staff: {},
   report: { preset: 'TODAY' },
+  access: null, // who changes the shop here (editing.js access())
 };
 let gen = 0; // each render: answers for an older one are dropped
 
@@ -137,20 +103,67 @@ async function boot() {
   }
   auth.prepare().catch(() => {});
   startWorker();
+  if (fakeDrive) await rpc('setDriveBase', { base: location.origin + '/fake-drive' });
+  E.initEdit({
+    rpc,
+    currency: () => S.currency,
+    access: () => S.access,
+    setAccess: (a) => { S.access = a; renderWho(); },
+    token: () => driveToken(),
+    tokenIfAny: () => (fakeDrive ? 'fake' : auth.current()),
+    device: deviceName,
+    errorText,
+    saved: (status, message) => {
+      S.status = status;
+      applyStatus();
+      render();
+      if (message) toast(message);
+    },
+  });
   try {
     S.status = await rpc('status');
+    await loadAccess();
   } catch (e) {
     S.error = e;
     S.status = { source: null };
   }
   applyStatus();
   window.addEventListener('hashchange', render);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (E.editorOpen()) E.closeEditor();
+    else closeModal();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') autoUpdate();
   });
   setInterval(autoUpdate, 5 * 60_000);
   render();
+}
+
+/** Trying the page on this computer with a stand-in for Google Drive (scripts/manager/serve.mjs --fake-drive). */
+const fakeDrive = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('fake-drive');
+
+/** A Google token for saving a change; call it straight from a tap (Google's window may have to open). */
+function driveToken() {
+  if (fakeDrive) return Promise.resolve('fake');
+  const now = auth.current();
+  return now ? Promise.resolve(now) : auth.signIn(S.status?.account);
+}
+
+/** The name of this browser as the tills list it ("LekasPOS Manager (Windows)"). */
+function deviceName() {
+  const ua = navigator.userAgent;
+  const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+  return os ? `${t('app_title')} (${os})` : t('app_title');
+}
+
+async function loadAccess() {
+  try {
+    S.access = await rpc('access');
+  } catch {
+    S.access = null;
+  }
 }
 
 function applyStatus() {
@@ -160,14 +173,14 @@ function applyStatus() {
 
 /** While a token is still good: read what is new without asking (every 5 minutes, and when the tab comes back). */
 function autoUpdate() {
-  if (S.busy || S.status?.source !== 'drive' || !auth.current()) return;
+  if (S.busy || E.editorOpen() || S.status?.source !== 'drive' || !(fakeDrive || auth.current())) return;
   if (S.status.syncedAt && Date.now() - S.status.syncedAt < 2 * 60_000) return;
   update(false, true);
 }
 
 async function update(consent = false, quiet = false) {
   if (S.busy) return;
-  let token = auth.current();
+  let token = fakeDrive ? 'fake' : auth.current();
   try {
     if (!token) token = await auth.signIn(S.status?.account, consent);
     S.busy = true;
@@ -176,6 +189,7 @@ async function update(consent = false, quiet = false) {
     renderStatusLine();
     await rpc('sync', { token });
     S.status = await rpc('status');
+    await loadAccess();
     applyStatus();
   } catch (e) {
     if (!quiet || e.code !== 'OFFLINE') S.error = e;
@@ -194,6 +208,7 @@ async function openBackup(file) {
   render();
   try {
     S.status = await rpc('openBackup', { file });
+    await loadAccess();
     applyStatus();
     location.hash = '#home';
   } catch (e) {
@@ -214,7 +229,9 @@ function pickBackup() {
 }
 
 async function forget() {
+  E.closeEditor(true);
   S.status = await rpc('forget');
+  await loadAccess();
   auth.forget();
   S.error = null;
   applyStatus();
@@ -274,10 +291,30 @@ function header() {
       h('span', { class: 'brand-text' }, h('strong', { text: name }), h('small', { text: t('app_title') }))),
     h('div', { class: 'top-actions' },
       h('span', { class: 'status', id: 'status-line' }, statusText()),
+      h('span', { id: 'who' }, whoChip()),
       st.source === 'drive'
         ? h('button', { class: 'btn primary', type: 'button', disabled: S.busy, onclick: () => update() }, S.busy ? t('updating') : t('update'))
         : h('button', { class: 'btn', type: 'button', disabled: S.busy, onclick: pickBackup }, t('open_backup')),
       langButton()));
+}
+
+/** Who changes the shop here: a PIN sign-in, or the name of whoever is signed in with a Sign out button. */
+function whoChip() {
+  const a = S.access;
+  if (!a?.canEdit || !a.loginRequired) return null;
+  if (!a.who) return h('button', { class: 'btn', type: 'button', onclick: () => E.signIn() }, t('lock_title'));
+  return h('span', { class: 'who' }, h('span', { class: 'who-name', text: a.who.name }),
+    h('button', { class: 'btn small', type: 'button', onclick: () => E.signOut() }, t('sign_out')));
+}
+
+function renderWho() {
+  const el = document.getElementById('who');
+  if (el) put(el, whoChip());
+}
+
+/** A button that changes the shop: shown only where changes can be made (Google Drive, not a backup file). */
+function editButton(label, onclick, kind = '') {
+  return E.canEdit() ? h('button', { class: `btn ${kind}`.trim(), type: 'button', onclick }, label) : null;
 }
 
 function statusText() {
@@ -374,16 +411,6 @@ function welcome() {
 
 // ------------------------------------------------------------------------------------------- shared pieces
 
-function card(title, ...children) {
-  return h('section', { class: 'card' }, title ? h('h2', { text: title }) : null, ...children);
-}
-
-/** A label / value row like the app's report rows. */
-function row(label, value, opts = {}) {
-  return h('div', { class: `row${opts.bold ? ' bold' : ''}${opts.warn ? ' warn' : ''}` },
-    h('span', { class: 'label', text: label }), h('span', { class: 'value', text: value ?? '' }));
-}
-
 function loadingEl() {
   return h('p', { class: 'muted', text: t('loading') });
 }
@@ -417,21 +444,6 @@ function bars(values) {
   const labels = h('div', { class: 'bar-labels', style: `grid-template-columns: repeat(${n}, 1fr)` },
     values.map((v, i) => h('span', { text: i % every === 0 ? v.label : '' })));
   return h('div', { class: 'chart' }, svg, labels);
-}
-
-function table(headers, rows, opts = {}) {
-  return h('div', { class: 'table-wrap' },
-    h('table', { class: opts.class ?? null },
-      h('thead', null, h('tr', null, headers.map((x) => h('th', { class: x.num ? 'num' : null, text: x.label ?? x })))),
-      h('tbody', null, rows)));
-}
-
-function td(text, opts = {}) {
-  return h('td', { class: opts.num ? 'num' : opts.class ?? null }, text);
-}
-
-function tag(text, kind) {
-  return h('span', { class: `tag ${kind ?? ''}`, text });
 }
 
 function linkRow(href, cells, extra) {
@@ -492,7 +504,7 @@ function closeModal(silent) {
   const back = modal.dataset.back;
   modal.remove();
   modal = null;
-  document.body.classList.remove('modal-open');
+  if (!document.querySelector('.modal')) document.body.classList.remove('modal-open');
   if (!silent && back && location.hash !== back) location.hash = back;
 }
 
@@ -523,7 +535,7 @@ function home(view) {
     }))));
     // The tills: their cards in Google Drive (name, last seen, app version) and, from a backup too, their sales.
     const shiftsByTill = new Map(o.openShifts.map((x) => [Number(x.device_no), x]));
-    const cards = new Map((S.status.cards ?? []).map((c) => [c.dev, c]));
+    const cards = new Map((S.status.cards ?? []).filter((c) => c.app !== 'web').map((c) => [c.dev, c]));
     const sold = new Map(o.tills.map((x) => [x.dev, x]));
     const devs = [...new Set([...cards.keys(), ...sold.keys()])].sort((a, b) => a - b);
     const tills = card(t('home_tills'), devs.length === 0 ? h('p', { class: 'muted', text: t('sync_tills_empty') }) :
@@ -537,7 +549,8 @@ function home(view) {
           parts[1] ? h('div', { class: 'small muted', text: parts[1] }) : null,
           last ? h('div', { class: 'small muted', text: t('home_last_sale', D.dateTimeText(last)) }) : null,
           sh ? h('div', { class: 'small', text: t('home_till_shift', o.staff[sh.opened_by] ?? '–', D.dateTimeText(sh.opened_at)) }) : null);
-      })));
+      })),
+      E.canEdit() ? h('p', { class: 'small muted', text: t('edits_note', t('menu_settings'), t('sync_title'), t('sync_now')) }) : null);
     const look = [];
     if (o.lowStock > 0) look.push(h('li', null, h('a', { href: '#stock/low', text: t('home_low', o.lowStock) })));
     for (const p of o.checksToday) {
@@ -750,7 +763,7 @@ function showSale(id) {
         l.discount ? h('div', { class: 'small muted', text: t('line_discount', money(l.discount)) }) : null,
         l.price_overridden ? h('div', { class: 'small muted', text: t('price_changed') }) : null]),
       td(`${qtyText(l.qty)} × ${money(l.unit_price)}`, { num: true }), td(money(l.net), { num: true })));
-    put(box, 
+    put(box,
       h('div', { class: 'tags' }, x.kind === 1 ? tag(t('sale_refund'), 'refund') : null, x.status === 1 ? tag(t('sale_voided'), 'void') : null),
       h('div', { class: 'facts' },
         row(t('time'), D.dateTimeText(x.sold_at)), row(t('till'), `${tillName(x.till)}`),
@@ -795,7 +808,8 @@ function products(view, id) {
     h('button', { class: `chip${productFilter.filter === f ? ' active' : ''}`, type: 'button', onclick: () => { productFilter.filter = f; render(); } }, t(key))));
   const list = h('div');
   view.append(h('form', { class: 'toolbar', onsubmit: (e) => { e.preventDefault(); productFilter.search = search.value; render(); } },
-    search, h('button', { class: 'btn', type: 'submit' }, t('search')), chips), list);
+    search, h('button', { class: 'btn', type: 'submit' }, t('search')), chips,
+    h('span', { class: 'toolbar-end' }, editButton(t('categories_title'), () => E.editCategories()), editButton(t('products_add'), () => E.editProduct(null), 'primary'))), list);
   productRows(list, productFilter);
   if (id) showProduct(id, '#products');
 }
@@ -816,7 +830,9 @@ function showProduct(id, back) {
       return h('tr', { class: e.status === 1 ? 'voided' : null }, td(D.dateTimeText(e.at)), td(what),
         td(q == null ? '' : `${q > 0 ? '+' : ''}${qtyText(q)}`, { num: true }));
     });
-    put(box, 
+    put(box,
+      E.canEdit() ? h('div', { class: 'sheet-actions' }, editButton(t('edit'), () => E.editProduct(x.id), 'primary'),
+        x.track_stock ? editButton(t('inv_adjust'), () => E.changeStock(x.id)) : null) : null,
       h('div', { class: 'facts' },
         row(t('product_price'), `${money(x.price)} / ${x.unit}`, { bold: true }), row(t('product_cost'), money(x.cost)),
         row(t('product_category'), x.category ?? t('product_no_category')), row(t('sold_by'), sellMode(x.sell_mode)),
@@ -852,11 +868,14 @@ function moveText(kind, reason) {
 
 // ------------------------------------------------------------------------------------------- stock
 
-const STOCK_TABS = [['low', 'inv_low_stock'], ['changes', 'inv_movements'], ['deliveries', 'inv_purchases'], ['value', 'stock_value_tab']];
+const STOCK_TABS = [['low', 'inv_low_stock'], ['changes', 'inv_movements'], ['deliveries', 'inv_purchases'], ['suppliers', 'inv_suppliers'], ['value', 'stock_value_tab']];
 
 function stock(view, id) {
   const [tab, sub] = (id ?? 'low').split('/');
   const current = STOCK_TABS.some(([k]) => k === tab) ? tab : 'low';
+  if (E.canEdit()) {
+    view.append(h('div', { class: 'toolbar' }, editButton(t('inv_receive'), () => E.receiveStock(), 'primary'), editButton(t('inv_adjust'), () => E.pickAndChangeStock())));
+  }
   view.append(h('div', { class: 'chips' }, STOCK_TABS.map(([k, key]) => h('a', { class: `chip${k === current ? ' active' : ''}`, href: `#stock/${k}` }, t(key)))));
   const box = h('div');
   view.append(box);
@@ -877,6 +896,15 @@ function stock(view, id) {
       (x) => linkRow(`#stock/deliveries/${x.id}`, [td(D.dateTimeText(x.at)), td(x.supplier ?? '–'), td(x.ref_no ?? ''), td(String(x.lines), { num: true }), td(money(x.total), { num: true })]),
       (x) => ({ at: x.at, id: x.id }), t('inv_purchases_empty'));
     if (sub) showPurchase(sub);
+  } else if (current === 'suppliers') {
+    if (E.canEdit()) box.append(h('div', { class: 'toolbar' }, editButton(t('inv_new_supplier'), () => E.editSupplier(null), 'primary')));
+    const list = h('div');
+    box.append(list);
+    fill(list, () => rpc('editLists'), (l) => (l.suppliers.length === 0 ? h('p', { class: 'muted', text: t('suppliers_none') }) :
+      table([t('inv_supplier_name'), t('inv_supplier_contact'), t('store_phone')], l.suppliers.map((x) => {
+        const cells = [td(x.name), td(x.contact ?? ''), td(x.phone ?? '')];
+        return E.canEdit() ? h('tr', { class: 'click', tabindex: 0, onclick: () => E.editSupplier(x), onkeydown: (e) => { if (e.key === 'Enter') E.editSupplier(x); } }, cells) : h('tr', null, cells);
+      }))));
   } else {
     fill(box, () => rpc('stockValue'), (v) => card(t('report_stock'),
       row(t('report_stock_value', v.products), money(v.value), { bold: true }),
@@ -891,7 +919,7 @@ function showPurchase(id) {
   rpc('purchase', { id }).then((x) => {
     if (mine !== gen || !x) return;
     modal?.querySelector('h2')?.replaceChildren(t('delivery', x.ref_no ?? ''));
-    put(box, 
+    put(box,
       h('div', { class: 'facts' }, row(t('time'), D.dateTimeText(x.at)), row(t('supplier'), x.supplier ?? '–'), x.note ? row(t('st_note'), x.note) : null),
       table([t('product'), { label: t('qty'), num: true }, { label: t('unit_cost'), num: true }, { label: t('total'), num: true }],
         x.lines.map((l) => h('tr', null, td(l.name ?? '–'), td(`${qtyText(l.qty)} ${l.unit ?? ''}`, { num: true }), td(money(l.unit_cost), { num: true }), td(money(l.total), { num: true })))),
@@ -987,7 +1015,8 @@ function customersView(view, id) {
   const search = h('input', { type: 'search', placeholder: t('customer_search_hint'), value: customerSearch, 'aria-label': t('customer_search_hint') });
   const box = h('div');
   view.append(h('form', { class: 'toolbar', onsubmit: (e) => { e.preventDefault(); customerSearch = search.value; render(); } },
-    search, h('button', { class: 'btn', type: 'submit' }, t('search'))), box);
+    search, h('button', { class: 'btn', type: 'submit' }, t('search')),
+    h('span', { class: 'toolbar-end' }, editButton(t('customer_add'), () => E.editCustomer(null), 'primary'))), box);
   fill(box, () => rpc('customers', { search: customerSearch }), (list) => {
     if (list.length === 0) return h('p', { class: 'muted', text: customerSearch ? t('customers_none_found') : t('nothing_found') });
     const owing = list.filter((c) => c.balance > 0);
@@ -1013,6 +1042,7 @@ function showCustomer(id) {
     modal?.querySelector('h2')?.replaceChildren(c.name);
     const what = (e) => t(e.kind === 2 ? 'credit_payment' : e.kind === 3 ? 'credit_adjust' : e.amount < 0 ? 'credit_reversal' : 'credit_charge');
     put(box,
+      E.canEdit() && !c.deleted ? h('div', { class: 'sheet-actions' }, editButton(t('edit'), () => E.editCustomer(c.id), 'primary')) : null,
       h('div', { class: 'facts' },
         row(t('customer_owes', money(c.balance)), '', { bold: true, warn: c.credit_limit > 0 && c.balance > c.credit_limit }),
         c.credit_limit > 0 ? row(t('customer_limit_line', money(c.credit_limit), money(Math.max(0, c.credit_limit - c.balance))), '') : null,

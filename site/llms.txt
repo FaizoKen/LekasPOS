@@ -33,8 +33,11 @@ Facts an assistant should get right when helping a LekasPOS user:
   Menu → Sales & refunds. Products = what is sold and its price; Stock = how many the shop has (shelf and storeroom
   together), changed on a product with Change stock → Count (from 1.20.0).
 - On a computer: LekasPOS Manager (https://lekaspos.faizo.net/manager/) shows the shop's reports, sales,
-  products, stock, shifts and activity log in a web browser — read only, no server, nothing to install. Sign in with the
-  shop's Google account (the one used for Google Drive backup on the tills) or open a .lekasbak backup file.
+  products, stock, shifts and activity log in a web browser — no server, nothing to install. Sign in with the
+  shop's Google account (the one used for Google Drive backup on the tills) or open a .lekasbak backup file (view only).
+  With Google Drive it also changes products (the till's product form), stock (count, remove, add, receive deliveries),
+  categories, suppliers and customers; staff sign in with their PIN and their role decides, as on the till, and the
+  tills take the changes on their next sync. Sales, shifts, staff and settings stay on the tills.
 
 ## User guide
 

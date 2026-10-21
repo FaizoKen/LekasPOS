@@ -1,6 +1,7 @@
 // A till's sync file (references/sync.md §5): `seg-{store}-{till}-{seq}.ndjson.gz`, gzip NDJSON — a
 // header line {v, store, dev, seq, count, firstHlc, lastHlc}, then one event per line
-// {"e": entity, "o": op, "r": rowId, "h": hlc, "p": payload}. Read like SegmentCodec.read.
+// {"e": entity, "o": op, "r": rowId, "h": hlc, "p": payload}. Read like SegmentCodec.read, written like
+// SegmentCodec.write (the web page's own changes, D-083).
 
 import { parse } from './json64.js';
 
@@ -46,6 +47,54 @@ export async function sha256(bytes) {
 export async function gunzip(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Response(stream).text();
+}
+
+export async function gzip(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** The name of segment [seq] of till [dev] (SyncNames.segment: the number padded to 8 digits). */
+export const segmentName = (store, dev, seq) => `seg-${store}-${dev}-${String(seq).padStart(8, '0')}.ndjson.gz`;
+
+/**
+ * JSON text as the tills' JsonWriter writes it: integers as plain digits (BigInt, or a safe Number), keys in their
+ * order, true/false as 1/0 (SQLite has no booleans: Outbox.writeRow), text escaped by JSON.stringify.
+ */
+export function jsonText(v) {
+  if (v == null) return 'null';
+  switch (typeof v) {
+    case 'bigint': return v.toString();
+    case 'number':
+      if (!Number.isSafeInteger(v)) throw new Error(`not an integer: ${v}`);
+      return String(v);
+    case 'boolean': return v ? '1' : '0';
+    case 'string': return JSON.stringify(v);
+    default:
+      if (Array.isArray(v)) return `[${v.map(jsonText).join(',')}]`;
+      return `{${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}:${jsonText(x)}`).join(',')}}`;
+  }
+}
+
+/**
+ * A segment of [events] ({entity, op, rowId, hlc, payload}) as SegmentCodec.write makes it: the gzip bytes and their
+ * SHA-256, which goes with the file (Drive appProperties `sha256` and `count`).
+ */
+export async function writeSegment({ store, dev, seq, events }) {
+  if (events.length === 0) throw new Error('an empty segment');
+  let first = events[0].hlc;
+  let last = events[0].hlc;
+  for (const e of events) {
+    if (e.hlc < first) first = e.hlc;
+    if (e.hlc > last) last = e.hlc;
+  }
+  const head = jsonText({ v: 1n, store, dev: BigInt(dev), seq: BigInt(seq), count: BigInt(events.length), firstHlc: first, lastHlc: last });
+  let text = `${head}\n`;
+  for (const e of events) {
+    text += `{"e":${e.entity},"o":${e.op},"r":${e.rowId == null ? 'null' : BigInt(e.rowId)},"h":${BigInt(e.hlc)},"p":${jsonText(e.payload)}}\n`;
+  }
+  const bytes = await gzip(new TextEncoder().encode(text));
+  return { name: segmentName(store, dev, seq), bytes, sha256: await sha256(bytes), count: events.length };
 }
 
 /**

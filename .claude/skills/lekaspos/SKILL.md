@@ -160,8 +160,9 @@ streaming I/O for files (never whole files or whole tables in memory).
 - Hybrid logical clock (HLC) timestamps make ordering robust to clock skew.
 - Periodic compacted snapshots let a new device restore quickly. Sync's Drive scope:
   `drive.appdata` only; the optional daily sales report asks for `drive.file` on its own (D-065).
-- LekasPOS Manager (`site/manager/`, D-082) reads the same folder in a browser with the Importer's rules and never writes:
-  a change to the files, an event or an apply rule changes it too (sync.md §12a).
+- LekasPOS Manager (`site/manager/`, D-082) reads the same folder in a browser with the Importer's rules, and changes
+  products, stock, suppliers and customers as a till of its own (D-083: one segment per save, the events a till writes):
+  a change to the files, an event, an apply rule or a DAO it ports (`js/writer.js`) changes it too (sync.md §12a).
   Sign-in via Google Identity Services `AuthorizationClient`.
 - WorkManager runs sync with backoff; uploads/downloads resume; status is always visible.
 - Local automatic backups and manual backup-file export/import work without Play Services.
