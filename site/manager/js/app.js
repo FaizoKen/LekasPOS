@@ -186,7 +186,9 @@ async function update(consent = false, quiet = false) {
     S.busy = true;
     S.error = null;
     S.progress = { phase: 'connect' };
-    renderStatusLine();
+    // The welcome page has no status line until it is drawn again: show the progress and hold its buttons.
+    if (S.status?.source) renderStatusLine();
+    else render();
     await rpc('sync', { token });
     S.status = await rpc('status');
     await loadAccess();
