@@ -49,7 +49,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
-| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas POS Manager (D-084) | code ready 2026-10-21, not pushed — waiting for the owner's Cloudflare and GitHub Pages switch |
+| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | code ready 2026-10-21, not pushed — waiting for the owner's Cloudflare and GitHub Pages switch |
 
 ## Open questions for the user
 
@@ -2553,7 +2553,7 @@ The owner (2026-10-21): "fully change to https://lekas.faizo.net and named as Le
 application for business management".
 
 - [x] The name people read is **Lekas POS**: launcher label, app strings (EN + MS), receipt test page, website, guide, privacy
-      policy, `llms.txt`, Play listing draft, **Lekas POS Manager** / **Pengurus Lekas POS**; identifiers kept (package, repository,
+      policy, `llms.txt`, Play listing draft, **Lekas Manager** / **Pengurus Lekas**; identifiers kept (package, repository,
       `LekasPOS.apk`, the Drive folder "LekasPOS"); the home page names Lekas
 - [x] The app's links (`guide_url`, `privacy_url`, `WEBSITE_URL`) on https://lekas.faizo.net/; `versionName` 1.20.3; the guide says
       "For Lekas POS 1.20.3"; `check-site.mjs` and the manager tests pass

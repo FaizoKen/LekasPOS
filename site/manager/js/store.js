@@ -285,7 +285,7 @@ export class Store {
   identity() {
     const dev = this.meta('web.dev');
     if (!dev) return null;
-    return { dev: Number(dev), uuid: this.meta('web.uuid'), name: this.meta('web.device_name') || 'Lekas POS Manager', cardId: this.meta('web.card_id') };
+    return { dev: Number(dev), uuid: this.meta('web.uuid'), name: this.meta('web.device_name') || 'Lekas Manager', cardId: this.meta('web.card_id') };
   }
 
   /**
@@ -305,7 +305,7 @@ export class Store {
     this.db.transaction(() => {
       this.setMeta('web.dev', dev);
       this.setMeta('web.uuid', crypto.randomUUID());
-      this.setMeta('web.device_name', name || 'Lekas POS Manager');
+      this.setMeta('web.device_name', name || 'Lekas Manager');
       this.setMeta('web.next_seq', 1);
       this.setMeta('web.seg_seq', 0);
     });

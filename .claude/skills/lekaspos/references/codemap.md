@@ -864,7 +864,7 @@ Schema snapshots: `app/src/androidTest/assets/schemas/1.sql` … `9.sql` (one pe
 `index.html` (download button → `releases/latest/download/LekasPOS.apk`, install/update steps EN + MS), `privacy.html` (EN) and `privasi.html` (MS) — must say the
 same and share "Last updated", `style.css`, `icon.svg`, `img/` (screenshots, e.g. `en-pay.png`, `customer-bill.png`, `en-manager.png`), `manager/` (the manager web page, §9.5a). Published by `pages.yml`.
 
-### 9.5a `site/manager/` — Lekas POS Manager, the shop in a web browser (D-082, D-083)
+### 9.5a `site/manager/` — Lekas Manager, the shop in a web browser (D-082, D-083)
 Static files, no build step; ES modules; served at https://lekas.faizo.net/manager/. Reads the shop; with Google Drive also
 changes products, stock, suppliers and customers as a till of its own (D-083).
 

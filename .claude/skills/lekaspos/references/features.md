@@ -562,7 +562,7 @@ Small things a future change could fix (none loses data):
   in Reports but "Kaedah bayaran" in Settings.
 - `shift_float_hint` is unused. Part payments are lost if Android kills the process mid-payment (the bill survives).
 
-## 21. Lekas POS Manager — the shop in a web browser (`site/manager/`, D-082, D-083)
+## 21. Lekas Manager — the shop in a web browser (`site/manager/`, D-082, D-083)
 
 A web page on the website (https://lekas.faizo.net/manager/), not part of the APK. No server: the browser reads the
 shop and keeps its copy (SQLite WebAssembly in OPFS, `js/worker.js`); nothing reaches the developer. With Google Drive it

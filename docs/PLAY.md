@@ -100,7 +100,7 @@ backup files are not encrypted by the app (only in transit, by HTTPS) — the pr
   files are ordinary files in the "LekasPOS" folder of the user's Drive, deleted there. Error reports:
   on request (the privacy policy's contact).
 
-The **Lekas POS Manager** web page (D-082, `site/manager/`) is not part of the app: Play's Data safety form covers the
+The **Lekas Manager** web page (D-082, `site/manager/`) is not part of the app: Play's Data safety form covers the
 APK only, and its answers above do not change. The web page reads the shop's own Drive app folder (same scope) or a
 backup file into the user's own browser, and saves the changes made there into that same folder as a till does (D-083);
 nothing reaches the developer. It is described in the privacy policy.

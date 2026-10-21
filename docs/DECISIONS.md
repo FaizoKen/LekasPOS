@@ -1862,7 +1862,11 @@ more application for business management". Supersedes D-082's choice of lekaspos
 the app's own name) — the address is now the brand's, and the app is one of its apps.
 - **The name people see is "Lekas POS"** (two words): the launcher label (`app_name`), every app string, the receipt
   test page's fallback, the website, the guide, the privacy policy, `llms.txt`, the Play listing draft, and the web page
-  **Lekas POS Manager** / **Pengurus Lekas POS** (a new browser's till name too; names already saved stay).
+  **Lekas Manager** / **Pengurus Lekas** (a new browser's till name too; names already saved stay).
+- **Lekas Manager is the web page for every Lekas app** (the owner: "on web is the main manager for every lekas app. Lekas
+  POS is lekas pos"): one page at `/manager/`, one sign-in, one web client. Today it reads Lekas POS shops; a later Lekas
+  app adds its own section there. Every Lekas app must use the Google Cloud project `lekaspos`: Drive's app folder
+  (`drive.appdata`) belongs to the project, so the page could not read the data of an app signed in through another project.
 - **Kept as they are** (identifiers, not names): the package `com.lekaspos.app`, the code's `com.lekaspos`, the
   repository `FaizoKen/LekasPOS`, the release assets `LekasPOS.apk` / `LekasPOS-<version>.apk` (the updater and the
   website's Download link find them by name, D-059), the `.lekasbak` files, the User-Agent, stable audit texts, and the

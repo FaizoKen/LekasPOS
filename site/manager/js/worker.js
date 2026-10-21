@@ -225,7 +225,7 @@ function codeOwners({ codes, except }) {
   return out;
 }
 
-const deviceName = (name) => String(name || 'Lekas POS Manager').slice(0, 60);
+const deviceName = (name) => String(name || 'Lekas Manager').slice(0, 60);
 
 /** Makes change [action] (editing.js) as the person signed in; the copy then holds it, read back from the folder. */
 function edit({ token, action, args, device }) {
