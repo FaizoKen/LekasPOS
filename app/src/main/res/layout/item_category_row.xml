@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A category in Settings → Categories (D-086): tap to rename, long-press to delete, the arrows set its place
+     among the selling screen's chips. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/category_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackground"
+        android:minHeight="56dp"
+        android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp" />
+
+    <ImageButton
+        android:id="@+id/category_up"
+        style="@style/Widget.Lekas.Button.Line"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/category_move_up"
+        android:minHeight="48dp"
+        android:scaleType="center"
+        android:src="@drawable/ic_arrow_up"
+        android:tint="@color/brand" />
+
+    <ImageButton
+        android:id="@+id/category_down"
+        style="@style/Widget.Lekas.Button.Line"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/category_move_down"
+        android:minHeight="48dp"
+        android:scaleType="center"
+        android:src="@drawable/ic_arrow_down"
+        android:tint="@color/brand" />
+</LinearLayout>

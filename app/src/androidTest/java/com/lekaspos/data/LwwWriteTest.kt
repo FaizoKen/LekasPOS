@@ -116,6 +116,30 @@ class LwwWriteTest {
         assertEquals(emptyList(), db.readBlocking { ProductDao.codeOwners(it, "12345", a.id) })
     }
 
+    /** D-086: the owner puts the categories in order; only the places that changed are written, new ones go last. */
+    @Test
+    fun categoriesInOrder() {
+        val now = System.currentTimeMillis()
+        assertEquals(0, db.readBlocking { CategoryDao.nextSort(it) }) // nothing ordered yet: by name
+        val (a, b, c) = listOf("Aiskrim", "Beras", "Coklat").map { n ->
+            db.writeBlocking { tx -> CategoryDao.insert(tx, n, 0, CategoryDao.nextSort(tx.db), now) }
+        }
+        assertEquals(listOf("Aiskrim", "Beras", "Coklat"), db.readBlocking { CategoryDao.list(it) }.map { it.name })
+        val events = { db.readBlocking { it.long("SELECT COUNT(*) FROM outbox WHERE entity = ${Entity.CATEGORY}") } }
+        val before = events()
+        assertEquals(3, db.writeBlocking { tx -> CategoryDao.reorder(tx, listOf(c, a, b), now) })
+        assertEquals(listOf("Coklat" to 1, "Aiskrim" to 2, "Beras" to 3), db.readBlocking { CategoryDao.list(it) }.map { it.name to it.sort })
+        assertEquals(before + 3, events())
+        // A swap writes the two that moved, and only their place: a rename made meanwhile on another till stays.
+        assertEquals(2, db.writeBlocking { tx -> CategoryDao.reorder(tx, listOf(c, b, a), now) })
+        assertEquals(listOf("Coklat", "Beras", "Aiskrim"), db.readBlocking { CategoryDao.list(it) }.map { it.name })
+        val fields = db.readBlocking {
+            it.queryList("SELECT payload FROM outbox WHERE entity = ${Entity.CATEGORY} ORDER BY seq DESC LIMIT 2") { r -> r.getString(0) }
+        }
+        assertTrue(fields.all { "\"sort\"" in it && "\"name\"" !in it }, fields.toString())
+        assertEquals(4, db.readBlocking { CategoryDao.nextSort(it) }) // ordered: a new one goes last
+    }
+
     @Test
     fun categoriesTaxRatesAndSettings() {
         val now = System.currentTimeMillis()

@@ -220,7 +220,7 @@ Opening, schema, migrations, seeds, SQL helpers, damage handling, derived rebuil
 | `A/data/db/Meta.kt` | `object Meta` (key constants, `get/getLong/put/increment/createIdentity/docSeqKey`) | LOCAL key/value store (`meta`). |
 | `A/data/db/Sql.kt` | top-level `args`, `queryList`, `queryOne`, `longOrNull`, `long`, `stringOrNull`, `pragma`, `SQLiteStatement.bindAll`, `Cursor.longOrNull/stringOrNull/bool` | DAO helpers; every cursor closed with `use`. `rawQuery` binds strings only on API 21. |
 | `A/data/db/DerivedRebuild.kt` | `object DerivedRebuild` (`summaries`, `refundedAmounts`, `saleStatus`, `stockLevels`, `customerBalances`, `all`, `MAINTENANCE_QUERIES`) | Set-based rebuild of every DERIVED table; must equal the incremental paths. |
-| `A/data/db/KeepDamagedDatabase.kt` | `object KeepDamagedDatabase : DatabaseErrorHandler` (`setAside`, `checkSetAside`, `problem`, `storePath`) | Never deletes a corrupt DB; moves it to `files/backups/damaged-<time>.db` (D-055). |
+| `A/data/db/KeepDamagedDatabase.kt` | `object KeepDamagedDatabase : DatabaseErrorHandler` (`setAside`, `checkSetAside`, `problem`, `storePath`, `KEPT`) | Never deletes a corrupt DB; moves it to `files/backups/damaged-<time>.db` (D-055) and renames the automatic backups before it `kept-auto-…` so they are never pruned (D-086). |
 
 ### 3.3 `com.lekaspos.data.*` — DAOs by aggregate
 Each DAO is a Kotlin `object` with constant SQL, `read` functions taking `SQLiteDatabase`, and write functions taking
@@ -234,7 +234,7 @@ hot queries expose `HOT_QUERIES: List<Pair<name, sql>>` registered in `perf/Quer
 | `A/data/backup/BackupFolder.kt` | `interface BackupFolder`, `class FileBackupFolder`, `class TreeBackupFolder` | Daily copy to an SAF tree / folder (D-048). |
 | `A/data/backup/Restore.kt` | `object Restore` (`Mode {REPLACE, NEW_DEVICE}`, `stage`, `prepare`, `arm`, `cancelStaged`, `applyIfStaged`, `afterOpen`, `renewIfAsked`, `newIdentity`, `Carry`, `Who`, `takeAudit`, `backupDir`) | Staged restore applied in `Db.open` before opening. |
 | `A/data/cart/CartDao.kt` | `CartLine`, `StoredCart`, `HeldCartRow`, `object CartDao` (`insertCart`, `putLine`, `deleteLine(s)`, `setBillDiscount`, `setCustomer`, `setPayShown`, `deleteCart`, `setStatus`, `rewriteOpen`, `parkOpen`, `loadOpen`, `load`, `held`, `heldCount`, `maxIds`) | LOCAL `cart`/`cart_line` persistence of open/held bills. |
-| `A/data/catalog/CatalogDao.kt` | `Category`, `TaxRate`, `PaymentMethod`, `PaymentMethodRow`; `object CategoryDao`, `object TaxRateDao`, `object PaymentMethodDao` | LWW categories, tax rates, payment methods. |
+| `A/data/catalog/CatalogDao.kt` | `Category`, `TaxRate`, `PaymentMethod`, `PaymentMethodRow`; `object CategoryDao` (`reorder`, `nextSort`: the categories' order, D-086), `object TaxRateDao`, `object PaymentMethodDao` | LWW categories, tax rates, payment methods. |
 | `A/data/customer/CustomerDao.kt` | `Customer`, `CustomerItem`, `CreditEntry`, `object CustomerDao` (`page`, `byPhone`, `phoneForms`, `get`, `getLive`, `balance`, `insert/update/delete`, `insertCredit`, `applyBalance`, `statement`, `BALANCES`, `REBUILD_BALANCES`, `HOT_QUERIES`) | LWW `customer`, EVENT `credit_entry` (`Entity.CREDIT`), DERIVED `customer_balance`. |
 | `A/data/print/PrintJobDao.kt` | `data class PrintJob`, `object PrintJobDao` (`enqueue`, `next`, `hasReceipt`, `expireReceipts`, `markDone/Attempt/Failed`, `cancelPending`, `purge`, `pendingCount`) | LOCAL persistent print queue (drawer pulses first). |
 | `A/data/product/ProductDao.kt` | `Product`, `Barcode`, `SellableProduct`, `ScanHit`, `ProductListItem`, `ExportRow`; `object ProductDao` (`insert` (raw, no outbox — perf/tests only), `create` (LWW), `update(tx, shown, edited, current, now)`, `delete`, barcode CRUD, `findByCode`, `sellableById`, `search`, `byCategory`, `managePage`, `sellPage`, `popularIds`, `listByIds`, `exportPage`, `owners/ownerOf/bySku/codeOwners`, `reindex`, `ftsBody`, `FTS_CANDIDATES=2000`, `HOT_QUERIES`) | LWW `product`/`product_barcode` + DERIVED `product_fts`. |
@@ -378,7 +378,7 @@ Log shipping through a dumb folder; only this package knows Google Drive.
 | `A/ui/products/PromotionActivities.kt` | `promoDeal`, `PromotionsActivity`, `PromotionEditActivity` (`buildMore`, `addMoreRow`, `readMore`: "More prices") | Promotions. |
 | `A/ui/products/LookEditor.kt` | `class LookEditor` | Tile colour + picture part of the product form. |
 | `A/ui/products/Pictures.kt` | `object Pictures` | Photo → 240 px JPEG base64. |
-| `A/ui/catalog/CategoriesActivity.kt` | `CategoriesActivity` | Categories CRUD. |
+| `A/ui/catalog/CategoriesActivity.kt` | `CategoriesActivity` | Categories CRUD and their order (↑ / ↓ per row, `item_category_row.xml`, D-086). |
 | `A/ui/catalog/TaxRatesActivity.kt` | `TaxRatesActivity` | Tax rates CRUD. |
 | `A/ui/catalog/PaymentMethodsActivity.kt` | `PaymentMethodsActivity` | Payment methods CRUD. |
 | `A/ui/inventory/InventoryActivity.kt` | `InventoryActivity` (intro card `layout/stock_intro.xml` through a `ConcatAdapter`), `ScreenActivity.adjustProduct` (Change stock) | The Stock screen ("Inventory" before 1.20.0, D-080). |
@@ -598,7 +598,7 @@ Menu = selling screen's Menu (`SellActivity.showMenu` → `ui/common/MenuSheet.k
 | `ui.products.ProductImportActivity` | B | CSV import preview/run | ProductList overflow → Import | guard MANAGE_PRODUCTS | productCsv |
 | `ui.products.PromotionsActivity` | B | Promotion list | Menu › Promotions | actions MANAGE_PRODUCTS | promotions |
 | `ui.products.PromotionEditActivity` | B | Add/edit promotion | PromotionsActivity | guard MANAGE_PRODUCTS | promotions, ProductDao (pick via ProductPick) |
-| `ui.catalog.CategoriesActivity` | B | Categories CRUD | Menu › Categories; Settings → Categories | actions `requireAccess(MANAGE_PRODUCTS)` | CategoryDao (direct `db().write`) |
+| `ui.catalog.CategoriesActivity` | B | Categories CRUD, order (↑ / ↓) | Menu › Categories; Settings → Categories | actions `requireAccess(MANAGE_PRODUCTS)` | CategoryDao (direct `db().write`) |
 | `ui.catalog.TaxRatesActivity` | B | Tax rates CRUD | Menu › Tax rates (SETTINGS); Settings → Tax rates | actions `requireAccess(SETTINGS)` | TaxRateDao, AuditDao (direct) |
 | `ui.catalog.PaymentMethodsActivity` | B | Payment methods | Settings → Payment methods | actions `requireAccess(SETTINGS)` | PaymentMethodDao, AuditDao (direct) |
 | `ui.sales.SalesActivity` | B | Sales & refunds list, receipt lookup | Menu → "Sales & refunds" (REFUND or VOID) / "Receipts" | none (row actions on detail) | SaleDao |
@@ -910,7 +910,7 @@ exactly the page's data, with `ManagerEditsTest`). Run:
 `values/` + `values-ms/`: `strings.xml` (496/495 entries), `strings_{a11y,cashier,display,fraud,hw,look,promo,reports,safety,staff,sync,update}.xml` (same files in both
 languages); `themes.xml` (styles `Theme.Lekas`, `Widget.Lekas.{Button.Primary,Button.Secondary,Button.Danger,Button.Bar(.Main) (dialog buttons, set by `Theme.Lekas.Dialog`, D-076),Key,Toggle,…}`, `Text.Lekas.{Body,Caption,Label,Section,Display,Tag,Empty}`),
 `colors.xml`, `ids.xml`; `values-land/layouts.xml` and `values-sw600dp/layouts.xml` alias `activity_sell` → `activity_sell_two_pane` (selling screen only; `status_strip`, `cart_side` with the top bar, D-076);
-`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `stock_intro.xml` (the Stock screen's first row), `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`,
+`layout/screen.xml` (ScreenActivity scaffold: `root`, `top_bar`, `back`, `title`, `actions`, `content`), `list_plain.xml`, `list_header.xml`, `stock_intro.xml` (the Stock screen's first row), `list_with_search.xml` (`list_empty` + `list_empty_action`), `customer_buttons.xml` (CustomerActivity: Take a repayment, More), `item_row.xml`, `item_category_row.xml` (a category with ↑ / ↓, D-086),
 `item_section.xml`, `item_menu_tile.xml` (MenuSheet), `top_action.xml`, selling-screen layouts; `drawable/ic_*.xml` icons (Material icons, Apache 2.0; new ones made
 with explicit path separators and no `evenOdd` fill, which API 21 lacks), `Theme.Lekas.Menu` (the Menu sheet); `xml/file_paths.xml`, `xml/locales_config.xml`, `xml/data_extraction_rules.xml`.
 

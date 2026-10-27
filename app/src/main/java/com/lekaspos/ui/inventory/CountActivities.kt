@@ -34,6 +34,7 @@ import com.lekaspos.ui.common.ScanInput
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.common.onNearEnd
 import com.lekaspos.ui.common.trackedBy
+import com.lekaspos.ui.products.ProductEditActivity
 import com.lekaspos.ui.sell.Beeper
 import com.lekaspos.ui.sell.visible
 import java.util.TimeZone
@@ -258,7 +259,15 @@ class CountActivity : ScreenActivity() {
             val p = InventoryUi.resolve(graph, code)
             if (p == null) {
                 beeper?.error()
-                toast(getString(R.string.sell_not_found_message, code))
+                // Added here and then counted, as Receive does: the toast said "Add it now … goes on this bill"
+                // with no way to add it.
+                Dialogs.confirm(
+                    this@CountActivity, getString(R.string.sell_not_found_title), getString(R.string.inv_not_found_count, code),
+                    getString(R.string.sell_add_product),
+                ) {
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(ProductEditActivity.newIntent(this@CountActivity, barcode = code), REQ_NEW)
+                }
             } else {
                 beeper?.ok()
                 countProduct(p.id)
@@ -284,6 +293,15 @@ class CountActivity : ScreenActivity() {
         }
     }
 
+    @Deprecated("Platform Activity result API (no AndroidX Activity, D-002)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_NEW || resultCode != RESULT_OK || data == null) return
+        val id = data.getLongExtra(ProductEditActivity.EXTRA_PRODUCT_ID, 0L)
+        if (id != 0L) countProduct(id) // the product just added: how many were counted
+    }
+
     /** The count was finished: says so and leaves (its report is in the list of counts). */
     private fun closed() {
         toast(R.string.inv_count_closed)
@@ -303,6 +321,7 @@ class CountActivity : ScreenActivity() {
     companion object {
         private const val EXTRA_SESSION = "session"
         private const val PAGE = 60
+        private const val REQ_NEW = 64
 
         fun intent(ctx: Context, sessionId: Long): Intent = Intent(ctx, CountActivity::class.java).putExtra(EXTRA_SESSION, sessionId)
     }

@@ -24,16 +24,22 @@ class DamagedDatabaseTest {
     private val ctx get() = TestDb.context
     private val name = "damaged-test-${UUID.randomUUID()}.db"
 
+    /** An automatic backup made before the damage, in the backups folder. */
+    private val autoBackup get() = File(Restore.backupDir(ctx), "auto-$name.lekasbak")
+
     @After
     fun tearDown() {
         KeepDamagedDatabase.clearForTests(ctx)
-        Restore.backupDir(ctx).listFiles { f -> f.name.startsWith("damaged-") }?.forEach { it.delete() }
+        Restore.backupDir(ctx).listFiles { f -> f.name.startsWith("damaged-") || f.name.startsWith(KeepDamagedDatabase.KEPT) || name in f.name }
+            ?.forEach { it.delete() }
         SQLiteDatabase.deleteDatabase(ctx.getDatabasePath(name))
     }
 
     /** Damage in a page read right after opening (meta) failed every start, and no screen could open. */
     @Test
     fun damageFoundRightAfterOpeningIsSetAsideAndAnEmptyStoreOpens() {
+        Restore.backupDir(ctx).mkdirs()
+        autoBackup.writeText("a good backup from yesterday")
         val db = Db.open(ctx, name)
         val p = TestDb.product(db, "Kopi", 250L)
         db.writeBlocking { tx -> SaleDao.commit(tx, TestDb.saleDraft(db, listOf(p to 1_000L)), TimeZone.getDefault()) }
@@ -57,6 +63,9 @@ class DamagedDatabaseTest {
             assertTrue(Restore.backupDir(ctx).listFiles().orEmpty().any { it.name.startsWith("damaged-") })
             assertFalse(fresh.readBlocking { SaleDao.any(it) }) // an empty store, ready for a restore
             assertEquals(0L, fresh.readBlocking { it.long("SELECT COUNT(*) FROM product") })
+            // The backups from before the damage are kept out of the daily rotation (1.21.1): renamed, not deleted.
+            assertFalse(autoBackup.exists())
+            assertEquals("a good backup from yesterday", File(Restore.backupDir(ctx), KeepDamagedDatabase.KEPT + autoBackup.name).readText())
         } finally {
             fresh.close()
         }

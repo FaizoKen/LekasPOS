@@ -122,6 +122,27 @@ class ReceiptLayoutTest {
         assertTrue(taxAt in 0 until totalAt)
     }
 
+    /** 1.21.1: a tax rate's "Code on receipts" was stored and never printed. */
+    @Test
+    fun taxCodesFollowTheAmountsAndExplainTheTaxLine() {
+        val items = doc().items
+        val coded = doc().copy(
+            items = listOf(items[0].copy(taxCode = "SR"), items[1].copy(taxCode = "SR"), items[2], items[3].copy(taxCode = "Z")),
+            taxes = listOf(ReceiptTax("SST", 600, 356L, code = "SR")),
+        )
+        val t = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.EN, kl).layout(coded)).map { it.text }
+        assertTrue(row("Milo Activ-Go 1kg", "18.90 SR") in t)
+        assertTrue(row("  2 x 4.20", "8.40 SR") in t)
+        assertTrue(row("  Discount", "-0.84   ") in t) // in line with its item's amount
+        assertTrue(row("  0.253 kg x 129.00/kg", "32.64   ") in t) // no code: blank, the amounts stay in one column
+        assertTrue(t.any { it.startsWith("Incl. SST 6% (SR)") && it.endsWith("3.56") })
+        assertTrue(row("Subtotal", "63.79") in t) // totals as before
+        // Without codes nothing changes.
+        val plain = texts(ReceiptLayout(32, CurrencySpec.MYR, ReceiptText.EN, kl).layout(doc())).map { it.text }
+        assertTrue(row("Milo Activ-Go 1kg", "18.90") in plain)
+        assertTrue(plain.any { it.startsWith("Incl. SST 6%") && it.endsWith("3.56") && "(" !in it })
+    }
+
     @Test
     fun percentText() {
         assertEquals("6%", ReceiptLayout.percent(600))

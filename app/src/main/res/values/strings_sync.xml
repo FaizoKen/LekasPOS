@@ -10,6 +10,7 @@
     <string name="backup_reason_manual">Made by hand</string>
     <string name="backup_reason_upgrade">Before an app upgrade</string>
     <string name="backup_reason_replaced">Before a restore</string>
+    <string name="backup_reason_kept">Before the data was damaged (kept)</string>
     <string name="backup_reason_other">Backup</string>
     <string name="backup_now">Back up now</string>
     <string name="backup_working">Making the backup…</string>
@@ -104,7 +105,7 @@
     <string name="drive_report_sub_on">On · %1$s · last upload: %2$s</string>
     <string name="drive_report_sub_sign_in">On · Google sign-in needed</string>
     <string name="drive_report_not_yet">not yet</string>
-    <string name="drive_report_help" tools:ignore="TypographyDashes">Every day, the sales of the day before are written to the folder “LekasPOS” in your Google Drive: one file a month, such as “2026-10 daily-sales.csv”, with a row for each day (sales, refunds, net sales, tax, total, discount, cost, gross profit). It opens in Google Sheets or Excel.\n\nIt goes straight to Google Drive, so it works with any Google Drive app, even an old one. It needs Google Play services and internet, and it can see only the files it makes. Use it on one till only.</string>
+    <string name="drive_report_help" tools:ignore="TypographyDashes">Every day, the sales of the day before are written to the folder “LekasPOS” in your Google Drive: one file a month, such as “2026-10 daily-sales.csv”, with a row for each day: sales, refunds, net sales, tax, total, discount, cost and gross profit, then the day\'s checks (bills cleared, items taken off bills, taken off after the total was shown, drawer opened without a sale, cash over / short). It opens in Google Sheets or Excel.\n\nIt goes straight to Google Drive, so it works with any Google Drive app, even an old one. It needs Google Play services and internet, and it can see only the files it makes. Use it on one till only.</string>
     <string name="drive_report_on">On: the report goes to the Google Drive of %1$s.</string>
     <string name="drive_report_last">Last upload: %1$s.</string>
     <string name="drive_report_never">Not uploaded yet.</string>

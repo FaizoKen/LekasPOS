@@ -2,6 +2,10 @@ package com.lekaspos.ui.catalog
 
 import android.os.Bundle
 import android.text.InputType
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,20 +16,18 @@ import com.lekaspos.data.catalog.Category
 import com.lekaspos.data.catalog.CategoryDao
 import com.lekaspos.ui.common.ColorPicker
 import com.lekaspos.ui.common.Dialogs
-import com.lekaspos.ui.common.RowAdapter
 import com.lekaspos.ui.common.ScreenActivity
 import com.lekaspos.ui.sell.visible
 import kotlinx.coroutines.CoroutineScope
 
-/** Product categories (the selling screen's catalogue tabs): add, rename, delete. */
+/**
+ * Product categories (the selling screen's catalogue tabs): add, rename, delete, and their order — the arrows move a
+ * category up or down among the selling screen's chips (D-086; they were always by name).
+ */
 class CategoriesActivity : ScreenActivity() {
 
     private lateinit var empty: TextView
-    private val adapter = RowAdapter<Category>(
-        bind = { h, c -> h.set(c.name) },
-        onClick = { edit(it) },
-        onLongClick = { delete(it) },
-    )
+    private val adapter = CategoryAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +65,11 @@ class CategoriesActivity : ScreenActivity() {
             launchUi {
                 graph.db().write(reserveIds = 4L) { tx ->
                     val now = System.currentTimeMillis()
-                    if (c == null) CategoryDao.insert(tx, name, color, 0, now) else CategoryDao.update(tx, c, c.copy(name = name, color = color), now)
+                    if (c == null) {
+                        CategoryDao.insert(tx, name, color, CategoryDao.nextSort(tx.db), now) // last once they are in order
+                    } else {
+                        CategoryDao.update(tx, c, c.copy(name = name, color = color), now)
+                    }
                 }
                 reload()
             }
@@ -79,6 +85,60 @@ class CategoriesActivity : ScreenActivity() {
                 graph.db().write(reserveIds = 0L) { tx -> CategoryDao.delete(tx, c.id, System.currentTimeMillis()) }
                 reload()
             }
+        }
+    }
+
+    /** Moves [c] one place up ([by] −1) or down (+1): shown at once, then the whole order is saved. */
+    private fun move(c: Category, by: Int) = requireAccess(Perm.MANAGE_PRODUCTS) {
+        val order = adapter.items.toMutableList()
+        val from = order.indexOfFirst { it.id == c.id }
+        val to = from + by
+        if (from < 0 || to !in order.indices) return@requireAccess
+        order.add(to, order.removeAt(from))
+        adapter.submit(order)
+        val ids = order.map { it.id }
+        launchUi {
+            graph.db().write(reserveIds = 0L) { tx -> CategoryDao.reorder(tx, ids, System.currentTimeMillis()) }
+            reload()
+        }
+    }
+
+    private class Holder(v: View) : RecyclerView.ViewHolder(v) {
+        val name: TextView = v.findViewById(R.id.category_name)
+        val up: ImageButton = v.findViewById(R.id.category_up)
+        val down: ImageButton = v.findViewById(R.id.category_down)
+    }
+
+    private inner class CategoryAdapter : RecyclerView.Adapter<Holder>() {
+        var items: List<Category> = emptyList()
+            private set
+
+        @android.annotation.SuppressLint("NotifyDataSetChanged") // a short list, read again whole
+        fun submit(list: List<Category>) {
+            items = list
+            notifyDataSetChanged()
+        }
+
+        override fun getItemCount(): Int = items.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder =
+            Holder(LayoutInflater.from(parent.context).inflate(R.layout.item_category_row, parent, false))
+
+        override fun onBindViewHolder(h: Holder, position: Int) {
+            val c = items[position]
+            h.name.text = c.name
+            h.name.setOnClickListener { edit(c) }
+            h.name.setOnLongClickListener {
+                delete(c)
+                true
+            }
+            fun arrow(b: ImageButton, enabled: Boolean, by: Int) {
+                b.isEnabled = enabled
+                b.alpha = if (enabled) 1f else 0.3f
+                b.setOnClickListener { move(c, by) }
+            }
+            arrow(h.up, position > 0, -1)
+            arrow(h.down, position < items.size - 1, +1)
         }
     }
 }

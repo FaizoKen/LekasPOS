@@ -238,7 +238,8 @@ items in a folder, and the weekly listing and a joining till's downloads grew wi
   its cursor for this till; cards are read again when older than an hour. App "web" (Lekas Manager) reads packs.
 - **Read** (`Cursors.plan`): after the cursor, the segment with the next number, or the pack holding that number when the
   segment is gone or the pack holds 20+ numbers still to read; a pack's segments up to the cursor are read past unparsed.
-  A file removed while it is read (Drive 404) ends that till's reading for the round and lists the whole folder next.
+  A file removed while it is read (Drive 404) ends that till's reading for the round and lists the whole folder next
+  (Lekas Manager, which has no next round soon, runs the round once more at once on the whole folder, D-086).
 - Every check on a till's numbers counts a pack from its first to its last (published = highest `to`; first file =
   lowest `from`; "numbered again"; `fullFrom`; gaps). A republish (D-055) counts what came before as packed.
 - `Restore.newIdentity` and `forgetPublishing` clear `sync.packed_to`, `sync.removed_to`, `sync.pack_try`.

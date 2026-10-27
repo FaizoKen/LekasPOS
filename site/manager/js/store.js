@@ -175,8 +175,26 @@ export class Store {
    * One round: reads every new file of the shop's tills from [provider] and applies it. [provider]:
    * {list(word, sinceMs?) → [{name, id, size, props, created}], get(file) → Uint8Array}. [progress]
    * gets {phase, done, total}. Returns what happened.
+   *
+   * A file that left the folder while the round read it (a till packed it, D-085) ends that till's reading;
+   * the round then runs once more on the whole folder, where its pack is (SyncEngine.import). It failed the
+   * whole round with Google Drive's "404" before.
    */
   async sync(provider, progress = () => {}, now = Date.now()) {
+    const first = await this.round(provider, progress, now, false);
+    if (!first.gone) return first.result;
+    const again = (await this.round(provider, progress, now, true)).result;
+    return {
+      ...again,
+      files: first.result.files + again.files,
+      events: first.result.events + again.events,
+      deferred: first.result.deferred + again.deferred,
+      entities: [...new Set([...first.result.entities, ...again.entities])],
+    };
+  }
+
+  /** [sync]'s round; [forceFull]: list the whole folder. Returns {result, gone}: [gone] when a listed file had left the folder. */
+  async round(provider, progress, now, forceFull) {
     progress({ phase: 'connect', done: 0, total: 0 });
     const stores = [...new Set((await provider.list('store')).map((f) => parseStoreName(f.name)).filter(Boolean))].sort();
     if (stores.length === 0) throw new SyncError('NO_STORE');
@@ -200,7 +218,7 @@ export class Store {
     let cursors = this.cursors();
     const fullAt = Number(this.meta('web.full_list_at') ?? 0);
     const since = Number(this.meta('web.list_since') ?? 0);
-    let full = !known || since === 0 || now - fullAt > FULL_LIST_MS;
+    let full = forceFull || !known || since === 0 || now - fullAt > FULL_LIST_MS;
     let listing = await this.listSegments(provider, store, full ? null : since);
     if (!full && hasGap(listing.files, cursors)) {
       full = true; // a file is missing from the short listing: list the whole folder
@@ -240,15 +258,19 @@ export class Store {
 
     // Download ahead, apply in order, a batch of files per transaction.
     let done = 0;
+    let read = 0; // files applied ([done] also counts those passed by for a till whose file was gone)
     let events = 0;
     let deferred = 0;
     const entities = new Set();
     progress({ phase: 'receive', done, total: plan.length });
     const pending = [];
+    // Tills whose next file left the folder while this round read it: the rest of their files wait for the next round.
+    const gone = new Set();
     const fetchAt = (i) => {
-      const p = this.download(provider, plan[i], store);
+      const f = plan[i];
+      const p = gone.has(f.dev) ? Promise.resolve(null) : this.download(provider, f, store);
       p.catch(() => {}); // seen when its turn comes; a failure ahead of it must not go unheard
-      return p;
+      return { f, p };
     };
     let next = 0;
     while (next < plan.length && pending.length < PARALLEL) pending.push(fetchAt(next++));
@@ -270,8 +292,19 @@ export class Store {
       if (batchEvents >= BATCH_EVENTS || batch.length >= BATCH_FILES) flush();
     };
     while (pending.length > 0) {
-      const item = await pending.shift();
+      const { f, p } = pending.shift();
+      let item;
+      try {
+        item = await p;
+      } catch (e) {
+        if (e?.status !== 404) throw e;
+        gone.add(f.dev);
+      }
       if (next < plan.length) pending.push(fetchAt(next++));
+      if (gone.has(f.dev)) {
+        done++;
+        continue; // this till's files after the one gone are read from its pack, on the whole listing
+      }
       if (item.pack) {
         // Unpacked only now, a segment at a time (a pack is up to a few thousand of them).
         const segments = await readPack(item.bytes, item, item.after);
@@ -280,6 +313,7 @@ export class Store {
         add(item);
       }
       done++;
+      read++;
     }
     flush();
 
@@ -288,10 +322,11 @@ export class Store {
       this.setMeta('web.cards', JSON.stringify(cards));
       this.setMeta('web.synced_at', now);
       if (listing.newest > 0) this.setMeta('web.list_since', Math.max(0, listing.newest - LIST_OVERLAP_MS));
-      if (full) this.setMeta('web.full_list_at', now);
+      if (gone.size > 0) this.setMeta('web.full_list_at', 0); // the next round lists the whole folder
+      else if (full) this.setMeta('web.full_list_at', now);
     });
     progress({ phase: 'done', done, total: plan.length });
-    return { store, files: done, events, deferred, entities: [...entities], tills: cards.length };
+    return { result: { store, files: read, events, deferred, entities: [...entities], tills: cards.length }, gone: gone.size > 0 };
   }
 
   // ------------------------------------------------------------------------------- changing the shop (D-083)

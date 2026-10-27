@@ -444,12 +444,13 @@ export class Writer {
     return readCategory(this.db, id);
   }
 
-  /** CategoriesActivity: a new category, or the name and colour of one. */
+  /** CategoriesActivity: a new category (after the others once they are in order, CategoryDao.nextSort), or the name and colour of one. */
   saveCategory(shown, name, color) {
     const fields = (c) => ({ name: c.name, name_key: searchKey(c.name), color: BigInt(c.color ?? 0), sort: BigInt(c.sort ?? 0) });
     if (!shown) {
       const id = this.nextId();
-      this.lwwInsert('category', Entity.CATEGORY, id, fields({ name, color, sort: 0 }));
+      const max = BigInt(this.value('SELECT COALESCE(MAX(sort), 0) FROM category WHERE deleted = 0') ?? 0);
+      this.lwwInsert('category', Entity.CATEGORY, id, fields({ name, color, sort: max <= 0n ? 0n : max + 1n }));
       return id;
     }
     const current = this.category(shown.id);
@@ -462,6 +463,17 @@ export class Writer {
     const c = this.category(id);
     if (!c || c.deleted) throw new EditError('GONE');
     this.lwwDelete('category', Entity.CATEGORY, c.id);
+  }
+
+  /** CategoryDao.reorder (D-086): the categories in the order of [ids], sort 1, 2, 3 …; only a row whose place changed is written. */
+  reorderCategories(ids) {
+    let written = 0;
+    ids.forEach((raw, i) => {
+      const c = this.category(raw);
+      if (!c || c.deleted || c.sort === i + 1) return;
+      if (this.lwwUpdate('category', Entity.CATEGORY, c.id, { sort: BigInt(i + 1) })) written++;
+    });
+    return written;
   }
 
   static supplierFields(s) {

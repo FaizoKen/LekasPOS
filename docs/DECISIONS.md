@@ -1923,6 +1923,40 @@ waiting for older tills (they would stop at the gap until updated); an archive o
 database, not a Drive limit; the perf budget is proven at 1,000,000 sale lines — about two years of 300 five-item bills a
 day — and D-045 keeps the archive open).
 
+### D-086 — Seventh bug hunt: the shop's own reports, the gaps on record, the web page and packs (1.21.1, 2026-10-27)
+The owner asked for a free-hand hunt for bugs and weak or slow features, deciding and fixing what is real. Angles no
+hunt had taken: the error reports the shops' tills sent (FaizoKen/LekasPOS-reports), the gaps `features.md` §20 had
+recorded since the user guide was written, and the newest code (Lekas Manager's edits, D-083; packs, D-085). Each finding
+was checked in the code first. Decisions that change behaviour:
+- **Lekas Manager and packs.** A file listed and then removed before the page downloaded it (a till packed it meanwhile,
+  D-085) failed the whole round with Google Drive's 404. Now, as on a till (`SyncEngine.import`), that till's reading
+  ends for the round and the round runs once more on the whole folder, where its pack is (`store.js` `sync`/`round`).
+- **Category order.** Categories always had a synced `sort` (the selling screen's chips are ordered by it, then by
+  name), but nothing set it, so the chips were always alphabetical. Settings → Categories (and Lekas Manager's
+  Categories) now have ↑ / ↓ on each category: a move saves the whole order as sort 1, 2, 3 … (`CategoryDao.reorder`;
+  only rows whose place changed get a new version, so a rename on another till stays). Until a shop moves one, every sort
+  is 0 and the chips stay by name; after that a new category (screen, CSV import, web) goes last (`CategoryDao.nextSort`).
+  No schema change, no new sync event (an LWW field every till already merges).
+- **Tax codes on receipts.** A tax rate's "Code on receipts (optional)" was stored and never printed. It now prints
+  after the amount of each item taxed at that rate ("18.90 SR"), in its own column (blank for others, so the amounts stay
+  in line) and with the rate in the tax summary ("SST 6% (SR)"); at most 4 characters.
+- **Stock screens and unknown barcodes.** Count, Receive and the product picker showed the selling screen's text
+  ("… goes on this bill"); Count's said "Add it now" as a toast with no way to add. Each now has its own text, and Count
+  offers **Add product** like Receive: the product form opens with the barcode, then its count is asked.
+- **A damaged database** (KeepDamagedDatabase): the automatic backups made before the damage are renamed `kept-…` when
+  the file is set aside, so the daily backups of the new, empty data never rotate them away (they did once the 7-day
+  pause ended); Backup & restore lists them as "Before the data was damaged (kept)", the owner deletes them there.
+- **Activity log:** a wrong-PIN entry names whose PIN was tried ("5 wrong PINs for Siti"; it showed only who was signed
+  in, usually nobody) — on the tills and in Lekas Manager. The daily-report help lists all the file's columns (the
+  checks columns of 1.12.0 were missing).
+Looked at and left: the store's tablet's last FULL perf run (1.12.1, issue #6) — one 330–400 ms stall in most scenarios
+and `low_stock_count` 3× slower than on 1.5.1, but the CPU-only PIN check was faster and data generation took twice as
+long: the tablet was busy or short of memory during that run, not a code path (nothing between 1.5.1 and 1.12.1 touched
+these queries or the perf runner's timing); a FULL run on 1.21.x on the tablet would confirm. Part payments lost when
+Android ends the app mid-payment (the bill survives; the cashier enters them again); "protected" after a backup file is
+shared or saved to the phone itself (the app cannot know where a share went); customer create/edit/delete not in the
+activity log (a new stable audit code for the tills and the web page: later, with the owner).
+
 ### D-020 — Tax model (pending user confirmation of the compliance section)
 Configurable tax rates per product, store-wide "prices include tax", per-rate-group rounding,
 MYR 5-sen cash rounding on by default. See `docs/PHASES.md` open question 1.

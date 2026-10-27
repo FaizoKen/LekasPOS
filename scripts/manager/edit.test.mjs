@@ -199,6 +199,30 @@ test('categories, suppliers and customers; a credit limit is on record', async (
   assert.deepEqual(content(other.db), content(db));
 });
 
+test('categories in order (D-086): by name until the shop orders them; a move writes only the places that changed; new ones go last', async () => {
+  const folder = shop();
+  const { db, store } = await webOf(folder);
+  const order = () => all(db, 'SELECT name, sort FROM category WHERE deleted = 0 ORDER BY sort, name_key').map((r) => r.map(String).join('|'));
+  const snek = (await store.commit(folder, (w) => w.saveCategory(null, 'Snek', 0), opts)).result;
+  const aiskrim = (await store.commit(folder, (w) => w.saveCategory(null, 'Aiskrim', 0), opts)).result;
+  assert.deepEqual(order(), ['Aiskrim|0', 'Drinks|0', 'Snek|0']); // not ordered yet: by name, as before
+  // Snek first: every place changes once
+  const r = await store.commit(folder, (w) => w.reorderCategories([snek, aiskrim, C1]), opts);
+  assert.equal(r.result, 3);
+  assert.deepEqual(order(), ['Snek|1', 'Aiskrim|2', 'Drinks|3']);
+  // Drinks and Aiskrim swap: two rows, one sort field each
+  const swap = await store.commit(folder, (w) => w.reorderCategories([snek, C1, aiskrim]), opts);
+  assert.equal(swap.events, 2);
+  const { events } = await readSegment(folder.files.find((f) => f.name.endsWith(`${String(swap.seq).padStart(8, '0')}.ndjson.gz`) && f.name.includes(`-${store.identity().dev}-`)).bytes,
+    { store: STORE, dev: store.identity().dev, seq: swap.seq });
+  assert.deepEqual(events.map((e) => Object.keys(e.payload.f)), [['sort'], ['sort']]);
+  // A new one goes after them
+  await store.commit(folder, (w) => w.saveCategory(null, 'Beras', 0), opts);
+  assert.deepEqual(order(), ['Snek|1', 'Drinks|2', 'Aiskrim|3', 'Beras|4']);
+  const other = await webOf(folder);
+  assert.deepEqual(content(other.db), content(db));
+});
+
 test('an answer lost on the way back: the file is read, never sent twice under one number; offline: nothing changes', async () => {
   const folder = shop();
   const { db, store } = await webOf(folder);

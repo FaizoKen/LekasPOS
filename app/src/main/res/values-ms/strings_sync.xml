@@ -10,6 +10,7 @@
     <string name="backup_reason_manual">Dibuat sendiri</string>
     <string name="backup_reason_upgrade">Sebelum naik taraf aplikasi</string>
     <string name="backup_reason_replaced">Sebelum pemulihan</string>
+    <string name="backup_reason_kept">Sebelum data rosak (disimpan)</string>
     <string name="backup_reason_other">Sandaran</string>
     <string name="backup_now">Buat sandaran sekarang</string>
     <string name="backup_working">Membuat sandaran…</string>
@@ -101,7 +102,7 @@
     <string name="drive_report_sub_on">Hidup · %1$s · muat naik terakhir: %2$s</string>
     <string name="drive_report_sub_sign_in">Hidup · perlu log masuk Google</string>
     <string name="drive_report_not_yet">belum</string>
-    <string name="drive_report_help" tools:ignore="TypographyDashes">Setiap hari, jualan hari sebelumnya ditulis ke folder “LekasPOS” dalam Google Drive anda: satu fail sebulan, contohnya “2026-10 daily-sales.csv”, dengan satu baris bagi setiap hari (jualan, bayaran balik, jualan bersih, cukai, jumlah, diskaun, kos, untung kasar). Ia boleh dibuka dalam Google Sheets atau Excel.\n\nIa terus ke Google Drive, jadi ia berfungsi dengan mana-mana aplikasi Google Drive, walaupun versi lama. Ia memerlukan perkhidmatan Google Play dan internet, dan hanya dapat melihat fail yang dibuatnya. Hidupkan pada satu kaunter sahaja.</string>
+    <string name="drive_report_help" tools:ignore="TypographyDashes">Setiap hari, jualan hari sebelumnya ditulis ke folder “LekasPOS” dalam Google Drive anda: satu fail sebulan, contohnya “2026-10 daily-sales.csv”, dengan satu baris bagi setiap hari: jualan, bayaran balik, jualan bersih, cukai, jumlah, diskaun, kos dan untung kasar, kemudian semakan hari itu (bil dikosongkan, barang dibuang dari bil, dibuang selepas jumlah ditunjuk, laci dibuka tanpa jualan, tunai lebih / kurang). Ia boleh dibuka dalam Google Sheets atau Excel.\n\nIa terus ke Google Drive, jadi ia berfungsi dengan mana-mana aplikasi Google Drive, walaupun versi lama. Ia memerlukan perkhidmatan Google Play dan internet, dan hanya dapat melihat fail yang dibuatnya. Hidupkan pada satu kaunter sahaja.</string>
     <string name="drive_report_on">Hidup: laporan dihantar ke Google Drive %1$s.</string>
     <string name="drive_report_last">Muat naik terakhir: %1$s.</string>
     <string name="drive_report_never">Belum dimuat naik.</string>

@@ -13,7 +13,7 @@
 <main>
 <p class="lang"><a href="guide.html" hreflang="en" lang="en">English</a> · <strong>Bahasa Melayu</strong> · <a href="index.html">Laman utama</a></p>
 <h1><img class="logo" src="icon.svg" alt="" width="48" height="48"> Panduan pengguna Lekas POS</h1>
-<p class="updated">Untuk Lekas POS 1.21.0 · Kemas kini terakhir 21 Oktober 2026</p>
+<p class="updated">Untuk Lekas POS 1.21.1 · Kemas kini terakhir 27 Oktober 2026</p>
 <p>Lekas POS ialah aplikasi jualan (POS) percuma untuk kedai runcit kecil dan pasar mini. Ia berjalan pada telefon
 atau tablet Android dan berfungsi sepenuhnya tanpa internet. Panduan ini menerangkan semua yang boleh dilakukannya,
 untuk pemilik, pengurus dan juruwang. Pengguna baharu? Baca <a href="#start">Bermula</a>; juruwang boleh mula
@@ -665,8 +665,10 @@ Petak berwarna menunjukkan teks putih.</li>
 <ul>
 <li><b>+</b> menambah kategori (nama dan warna). Ketik kategori untuk menukar nama atau warnanya.</li>
 <li><b>Tekan dan tahan</b> (tekan lama) kategori untuk memadamnya. Produknya kekal, tanpa kategori.</li>
-<li>Kategori disenaraikan mengikut abjad. Memindahkan produk ke kategori lain turut memindahkan jualan lepasnya
-dalam laporan kategori.</li>
+<li>Anak panah <b>↑</b> dan <b>↓</b> di sebelah kategori menaikkan atau menurunkannya: skrin jualan menunjukkan tab
+kategori mengikut susunan ini, jadi letakkan yang paling kerap digunakan di atas (mulai 1.21.1; sebelum itu, dan selagi
+anda belum mengalihkan satu pun, ia mengikut abjad). Kategori yang ditambah selepas itu diletakkan paling akhir.</li>
+<li>Memindahkan produk ke kategori lain turut memindahkan jualan lepasnya dalam laporan kategori.</li>
 </ul>
 
 <h3 id="tax">Kadar cukai</h3>
@@ -680,6 +682,10 @@ tekan lama untuk memadamnya (produk yang menggunakannya tidak lagi dikenakan cuk
 <li><b>Tetapan → Kedai &amp; resit → Harga termasuk cukai</b> (hidup secara lalai) menentukan sama ada harga di rak
 anda sudah termasuk cukai (cukai dikira daripada harga itu) atau cukai ditambah di atas harga di kaunter.</li>
 <li>Resit mencetak ringkasan cukai dengan nama dan amaun bagi setiap kadar.</li>
+<li><b>Kod pada resit (pilihan)</b>, contohnya <i>S</i> atau <i>SR</i>: dicetak selepas amaun setiap barang yang
+dikenakan cukai pada kadar itu, dan bersama kadar itu dalam ringkasan cukai (<i>SST 6% (S)</i>), supaya pelanggan nampak
+barang yang dikenakan cukai (mulai 1.21.1; versi lebih awal menyimpan kod itu tanpa mencetaknya). Paling banyak 4 aksara
+dicetak.</li>
 </ul>
 
 <h3 id="payment-methods">Kaedah bayaran</h3>
@@ -888,6 +894,8 @@ supaya pemilik nampak. Setiap perubahan ditunjukkan dalam <b>Perubahan stok</b> 
 <li><b>Stok → Kiraan stok → +</b>. Beri nama (tarikh hari ini sudah diisi) dan pilih <b>Semua
 produk</b> atau satu kategori. Ketik <b>Mula</b>.</li>
 <li>Imbas atau ketik produk, taip <b>jumlah</b> yang ada (di rak dan di stor sekali), dan ketik OK. OK tanpa menaip apa-apa merekodkan 0.</li>
+<li>Kod bar yang belum ada pada mana-mana produk: <b>Kod bar tidak dijumpai</b> dengan <b>Tambah produk</b> — taip nama
+dan harganya, simpan, kemudian taip berapa yang anda kira (mulai 1.21.1).</li>
 <li>Mengira produk sekali lagi <b>menggantikan</b> kiraannya — jumlahkan dahulu produk yang disimpan di dua tempat.
 Produk yang tidak anda kira kekal dengan stoknya.</li>
 <li>Setiap kiraan berkuat kuasa <b>serta-merta</b>, jadi anda boleh terus menjual semasa mengira. Beberapa orang boleh
@@ -945,7 +953,8 @@ membenarkan PIN, peranan atau akses pemilik yang terakhir dibuang.</p>
 kembali ke senarai nama.</li>
 <li>Selepas <b>5 kali PIN salah</b> bagi seseorang, kaunter membuatnya menunggu 30 saat, kemudian 1, 2, 4, 8 dan paling lama 15
 minit selepas setiap PIN salah yang berikutnya. Menukar jam telefon tidak memendekkan masa menunggu. Mulai PIN salah
-yang ke-5, setiap satu direkodkan dalam Log aktiviti (<i>Terlalu banyak PIN salah</i>).</li>
+yang ke-5, setiap satu direkodkan dalam Log aktiviti (<i>Terlalu banyak PIN salah</i>, dengan PIN siapa mulai 1.21.1:
+<i>5 wrong PINs for Siti</i>).</li>
 <li>Kunci kaunter melalui nama anda di bahagian atas → <b>Kunci / tukar pengguna</b>, atau <b>Menu → Kunci / tukar pengguna</b>. Nama
 anda di bahagian atas juga menawarkan <b>Tukar PIN saya</b>.</li>
 <li>Kaunter terkunci sendiri selepas <b>5 minit</b> tidak digunakan. Tukar tetapan ini bagi setiap kaunter di Kakitangan → <b>⋮ → Bila kaunter
@@ -1248,7 +1257,7 @@ laporan setiap syif bersama tunai dijangka; <b>Pelanggan</b> (bagi kedai yang ad
 berhutang berapa, yang terbanyak dahulu, bersama penyata setiap pelanggan; dan <b>Log aktiviti</b> boleh ditapis mengikut tindakan. <b>English</b> /
 <b>Bahasa Melayu</b> di atas menukar bahasa.</p>
 <p><b>Membuat perubahan</b> (dengan Google Drive; fail sandaran hanya boleh dilihat). <b>Produk</b> ada <b>Tambah produk</b>
-dan <b>Kategori</b>; setiap produk ada <b>Ubah</b> — borang yang sama seperti di kaunter: nama, harga jualan, cara dijual,
+dan <b>Kategori</b> (tambah, tukar nama, warna, padam, dan susunannya di skrin jualan dengan <b>↑</b> / <b>↓</b>); setiap produk ada <b>Ubah</b> — borang yang sama seperti di kaunter: nama, harga jualan, cara dijual,
 stok, warna dan gambar, kod bar dan kod bar pek, PLU penimbang, kategori, cukai, harga kos, kod sendiri, dan <b>Padam</b> —
 serta <b>Ubah stok</b> (<b>Kira</b>, <b>Keluarkan</b> atau <b>Tambah</b>, bersama sebabnya). <b>Stok</b> ada <b>Terima stok</b>
 (penghantaran: pembekal atau pembekal baharu, no. invois / DO, kemudian setiap produk dengan kuantiti dan kos seunit atau
@@ -1417,8 +1426,10 @@ memaparkan <b>Masalah data</b>, tiada sandaran baharu menggantikan sandaran yang
 <b>dapatkan bantuan sebelum memulihkan</b> (lihat <a href="#help">Mendapatkan bantuan</a>); biasanya penyelesaiannya ialah
 memulihkan sandaran <b>Automatik</b> yang terbaharu dari sebelum masalah itu berlaku.</p>
 <div class="warn"><p>Jika kaunter dibuka dalam keadaan <b>kosong</b> dengan <b>Masalah data</b>, data anda diketepikan, bukan
-dipadam — jangan mula semula dari awal. Dapatkan bantuan dan pulihkan dalam masa <b>7 hari</b>: selepas itu, sandaran
-harian yang baharu mula menggantikan sandaran yang baik.</p></div>
+dipadam — jangan mula semula dari awal. Dapatkan bantuan dan pulihkan. Mulai 1.21.1 sandaran automatik yang dibuat
+sebelum kerosakan disimpan terus: skrin Sandaran menyenaraikannya sebagai <b>Sebelum data rosak (disimpan)</b>,
+dan sandaran harian yang baharu tidak pernah menggantikannya (padamkannya di situ setelah data dipulihkan). Sebelum
+1.21.1, sandaran harian yang baharu mula menggantikan sandaran yang baik selepas <b>7 hari</b>.</p></div>
 
 <h3 id="storage">Storan telefon</h3>
 <p>Jualan tidak dapat disimpan jika storan telefon penuh. Kaunter memberi amaran awal dengan <b>Storan hampir penuh</b>. Padam foto, video

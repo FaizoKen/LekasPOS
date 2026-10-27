@@ -51,6 +51,7 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
 | — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | test build **v1.20.3** (build 228); the website on lekas.faizo.net since 2026-10-21 — the owner makes v1.20.3 the latest release |
 | — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | test build **v1.21.0** (build 232), CI green — waiting for the owner's phone check |
+| — | **1.21.1 — seventh bug hunt**: the category tabs in the order the owner sets (↑ / ↓ in Categories, also in Lekas Manager); tax codes printed on receipts; Count adds an unknown barcode; backups from before a damaged database kept for good; whose PIN in the activity log; Lekas Manager reads on when a till packs files mid-read (D-086) | built and tested locally (JVM, web, lint, release APK); not pushed yet — CI (instrumented API 21 + 36) and a test build when the owner says |
 
 ## Open questions for the user
 
@@ -2615,3 +2616,39 @@ holds at most 500,000 items in a folder).
 - A till still on 1.20.x next to a 1.21.0 till: both keep receiving each other's sales.
 - A new phone joining a shop that has packs: it receives the whole shop (Settings → Google Drive backup → Turn on sync).
 - Lekas Manager → Update on a shop with packs: the same figures as the tills.
+
+## 1.21.1 — seventh bug hunt (D-086)
+
+The owner (2026-10-27): "find bug or weak/slow feature properly as much as possible. Freely analyze, audit, and decide what
+should be fix/improve". Angles: the shops' own error reports (FaizoKen/LekasPOS-reports), the gaps `features.md` §20 had on
+record, and the newest code (Lekas Manager's edits, D-083; packs, D-085). Every finding checked in the code first.
+
+- [x] Lekas Manager: a file a till packed while the page read it (Drive 404) failed the whole round; now that till's
+      reading ends and the round runs once more on the whole folder (`store.js`; test: A packs 1..3 while segment 3 is read)
+- [x] Category order: ↑ / ↓ in Settings → Categories and in Lekas Manager's Categories; the selling screen's chips follow
+      (`CategoryDao.reorder` / `nextSort`, `reorderCategories`); by name until a shop moves one; new ones go last
+- [x] Tax rate "Code on receipts" printed after each taxed item's amount and in the tax summary (`ReceiptLayout`)
+- [x] Count / Receive / product picker: their own unknown-barcode texts (EN + MS); Count offers **Add product**
+- [x] A damaged database set aside: the automatic backups before it kept as `kept-…` ("Before the data was damaged (kept)")
+- [x] Activity log: "5 wrong PINs for Siti" (tills and Lekas Manager); the daily-report help names all its columns
+- [x] Tests: `ReceiptLayoutTest` (tax codes), `LwwWriteTest.categoriesInOrder`, `DamagedDatabaseTest` (kept backups),
+      web `sync.test.mjs` (pack mid-read), `edit.test.mjs` (category order), `editing.test.mjs` (whose PIN)
+- [x] Docs: D-086; user guide EN + MS (Categories, Tax rates, Stock count, Data problem, wrong PINs, Lekas Manager),
+      "For Lekas POS 1.21.1"; `features.md`, `codemap.md`, `glossary.md`, `sync.md`; `node scripts/check-site.mjs` OK
+- [x] Locally (2026-10-27): `:core:test :app:testDebugUnitTest` pass, instrumented sources compile, lint no errors (none in
+      the changed files), release APK **1,701,174 bytes** (1.21.0: 1,695,899); web tests 44 pass, 2 CI-only skipped;
+      `web-edits.mjs` (CI) now also reorders the categories, so `ManagerEditsTest` + `fixture.test.mjs` check the tills apply it
+- [x] `versionName` 1.21.1
+- [ ] CI on a pushed branch: instrumented API 21 + 36 (the two new instrumented tests), release smoke
+- [ ] Perf: no hot path changed (receipts gain a column; the category list reads the same query); QUICK on CI to confirm
+- [ ] Test build v1.21.1 (after the owner's say-so), then the owner's phone check
+
+### Needs real-device testing (1.21.1)
+
+1. Settings → Categories: ↓ on the first category, ↑ on the last: the selling screen's chips (after All and Popular) in
+   that order; a second till shows the same order after Sync now. Add a category: it goes last.
+2. Settings → Tax rates: give a rate a code (e.g. "S"), sell a product with that rate: the receipt shows "… 3.50 S" and
+   "SST 6% (S)"; an item without tax keeps its amount in the same column.
+3. Stock → Stock count → scan a barcode no product has: **Add product** → save → the count is asked for the new product.
+4. Five wrong PINs for one person: Activity log → *Too many wrong PINs* says "5 wrong PINs for <name>".
+5. Lekas Manager → Products → Categories: ↑ / ↓ moves a category; on a till after Sync now the chips follow.

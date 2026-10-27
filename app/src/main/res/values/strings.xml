@@ -227,6 +227,8 @@
     <string name="category_edit">Rename category</string>
     <string name="category_name">Name</string>
     <string name="category_delete_confirm">Delete category %1$s? Its products stay, without a category.</string>
+    <string name="category_move_up">Move up (earlier on the selling screen)</string>
+    <string name="category_move_down">Move down (later on the selling screen)</string>
 
     <!-- Tax rates -->
     <string name="tax_title">Tax rates</string>
@@ -484,6 +486,10 @@
     <string name="inv_stock_now">In stock: %1$s</string>
     <string name="inv_pick_title">Choose a product</string>
     <string name="inv_pick_hint">Search or scan a product</string>
+    <!-- A barcode no product has, scanned on a stock screen (the selling screen's text said "goes on this bill") -->
+    <string name="inv_not_found_receive">No product has barcode %1$s yet. Add it now (name and price): it is saved for next time and goes on this delivery.</string>
+    <string name="inv_not_found_count">No product has barcode %1$s yet. Add it now (name and price), then type how many you counted.</string>
+    <string name="inv_not_found_pick">No product has barcode %1$s yet. Add it now (name and price): it is saved for next time.</string>
     <string name="inv_adjusted">Stock of %1$s changed</string>
     <string name="inv_stock_set">%1$s: %2$s in stock now</string>
     <string name="inv_remove_stock">Remove</string>

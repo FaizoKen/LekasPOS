@@ -113,8 +113,9 @@ export class MemoryFolder {
 
   async get(f) {
     this.gets++;
+    this.beforeGet?.(f); // tests: a till changes the folder while it is read
     const file = this.files.find((x) => x.id === f.id);
-    if (!file) throw new Error(`no file ${f.name}`);
+    if (!file) throw Object.assign(new Error(`no file ${f.name}`), { status: 404 }); // as DriveFolder: removed meanwhile
     return file.bytes;
   }
 

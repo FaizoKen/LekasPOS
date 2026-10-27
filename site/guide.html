@@ -13,7 +13,7 @@
 <main>
 <p class="lang"><strong>English</strong> · <a href="panduan.html" hreflang="ms" lang="ms">Bahasa Melayu</a> · <a href="index.html">Home</a></p>
 <h1><img class="logo" src="icon.svg" alt="" width="48" height="48"> Lekas POS user guide</h1>
-<p class="updated">For Lekas POS 1.21.0 · Last updated 21 October 2026</p>
+<p class="updated">For Lekas POS 1.21.1 · Last updated 27 October 2026</p>
 <p>Lekas POS is a free point-of-sale app for small grocery shops and mini markets. It runs on an Android phone or tablet and works fully offline. This guide explains everything it does, for the owner, managers and cashiers. New here? Read <a href="#start">Getting started</a>; cashiers can start with the <a href="#cashier">Quick guide for cashiers</a>. Words in <b>bold</b> are the words you see in the app.</p>
 
 <nav class="toc" id="contents" aria-label="Contents">
@@ -645,8 +645,10 @@ colour. A coloured tile shows white text.</li>
 <ul>
 <li><b>+</b> adds one (a name and a colour). Tap a category to rename it or change its colour.</li>
 <li><b>Hold</b> (long-press) a category to delete it. Its products stay, without a category.</li>
-<li>Categories are listed in alphabetical order. Moving a product to another category also moves its past
-sales in the category report.</li>
+<li>The arrows <b>↑</b> and <b>↓</b> beside a category move it up or down: the selling screen shows the category tabs
+in this order, so put the ones you use most first (from 1.21.1; before, and until you move one, they are in
+alphabetical order). A category added after that goes last.</li>
+<li>Moving a product to another category also moves its past sales in the category report.</li>
 </ul>
 
 <h3 id="tax">Tax rates</h3>
@@ -660,6 +662,9 @@ hold it to delete it (products using it are then no longer taxed).</li>
 <li><b>Settings → Store &amp; receipt → Prices include tax</b> (on by default) says whether your shelf prices
 already contain the tax (the tax is worked out of the price) or the tax is added on top at the till.</li>
 <li>The receipt prints a tax summary with each rate's name and amount.</li>
+<li><b>Code on receipts (optional)</b>, such as <i>S</i> or <i>SR</i>: printed after the amount of every item taxed at
+that rate, and with the rate in the tax summary (<i>SST 6% (S)</i>), so the customer sees which items were taxed
+(from 1.21.1; earlier versions kept the code without printing it). Up to 4 characters are printed.</li>
 </ul>
 
 <h3 id="payment-methods">Payment methods</h3>
@@ -863,6 +868,8 @@ Every change shows in <b>Stock changes</b> and in the product's <b>Stock history
 <li><b>Stock → Stock count → +</b>. Give it a name (today's date is filled in) and choose <b>All
 products</b> or one category. Tap <b>Start</b>.</li>
 <li>Scan or tap a product, type the <b>total</b> you have (shelf and storeroom together), and tap OK. OK with nothing typed records 0.</li>
+<li>A barcode no product has yet: <b>Barcode not found</b> with <b>Add product</b> — type its name and price, save,
+then type how many you counted (from 1.21.1).</li>
 <li>Counting a product again <b>replaces</b> its count — add up a product kept in two places first. Products you do
 not count keep their stock.</li>
 <li>Each count applies <b>at once</b>, so you can keep selling while counting. Several people can count at
@@ -918,7 +925,8 @@ the last one's PIN, role or access.</p>
 to the names.</li>
 <li>After <b>5 wrong PINs</b> for one person, the till makes them wait 30 seconds, then 1, 2, 4, 8 and at most 15
 minutes after each further wrong PIN. Changing the phone's clock does not shorten the wait. From the 5th wrong
-PIN, each one is recorded in the Activity log (<i>Too many wrong PINs</i>).</li>
+PIN, each one is recorded in the Activity log (<i>Too many wrong PINs</i>, with whose PIN it was from 1.21.1:
+<i>5 wrong PINs for Siti</i>).</li>
 <li>Lock the till with your name at the top → <b>Lock / switch user</b>, or <b>Menu → Lock / switch user</b>. Your
 name at the top also offers <b>Change my PIN</b>.</li>
 <li>The till locks by itself after <b>5 minutes</b> without use. Change it per till in Staff → <b>⋮ → When the till
@@ -1217,7 +1225,7 @@ changes, deliveries and the stock value; <b>Shift &amp; cash</b> opens each shif
 <b>Customers</b> (for shops with customers and credit) lists who owes what, the most first, with each customer's statement; and
 the <b>Activity log</b> can be filtered by action. <b>Bahasa Melayu</b> / <b>English</b> at the top changes the language.</p>
 <p><b>Making changes</b> (with Google Drive; a backup file can only be looked at). <b>Products</b> has <b>Add product</b>
-and <b>Categories</b>; a product has <b>Edit</b> — the till's form: name, selling price, how it is sold, stock, colour and
+and <b>Categories</b> (add, rename, colour, delete, and their order on the selling screen with <b>↑</b> / <b>↓</b>); a product has <b>Edit</b> — the till's form: name, selling price, how it is sold, stock, colour and
 picture, barcodes and pack barcodes, scale PLU, category, tax, cost price, your own code, and <b>Delete</b> — and
 <b>Change stock</b> (<b>Count</b>, <b>Remove</b> or <b>Add</b>, with the reason). <b>Stock</b> has <b>Receive stock</b> (a
 delivery: the supplier or a new one, the invoice / DO no., then each product with its quantity and its cost per unit or the
@@ -1380,8 +1388,10 @@ shows <b>Data problem</b>, no new backup replaces the good ones, and Backup &amp
 before restoring</b> (see <a href="#help">Getting help</a>); usually the fix is to restore the newest
 <b>Automatic</b> backup from before the problem.</p>
 <div class="warn"><p>If the till opens <b>empty</b> with <b>Data problem</b>, your data was set aside, not deleted — do not
-start again from scratch. Get help and restore within <b>7 days</b>: after that, new daily backups start to replace
-the good ones.</p></div>
+start again from scratch. Get help and restore. From 1.21.1 the automatic backups made before the damage are kept for
+good: Backup &amp; restore lists them as <b>Before the data was damaged (kept)</b>, and new daily backups never replace
+them (delete them there once the data is back). Before 1.21.1, new daily backups started to replace the good ones after
+<b>7 days</b>.</p></div>
 
 <h3 id="storage">Phone storage</h3>
 <p>Sales cannot be saved on a full phone. The till warns early with <b>Storage almost full</b>. Delete photos, videos

@@ -165,6 +165,7 @@ class BackupActivity : ScreenActivity() {
         name.startsWith(BackupService.MANUAL) -> R.string.backup_reason_manual
         name.startsWith("upgrade-") -> R.string.backup_reason_upgrade
         name.startsWith(Restore.REASON_REPLACED) -> R.string.backup_reason_replaced
+        name.startsWith(com.lekaspos.data.db.KeepDamagedDatabase.KEPT) -> R.string.backup_reason_kept
         else -> R.string.backup_reason_other
     }
 

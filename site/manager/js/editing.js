@@ -21,6 +21,7 @@ const ACTIONS = {
   deleteProduct: { perm: Perm.MANAGE_PRODUCTS, run: (w, a) => w.deleteProduct(BigInt(a.id)) },
   saveCategory: { perm: Perm.MANAGE_PRODUCTS, run: (w, a) => w.saveCategory(a.shown, a.name, a.color) },
   deleteCategory: { perm: Perm.MANAGE_PRODUCTS, run: (w, a) => w.deleteCategory(BigInt(a.id)) },
+  reorderCategories: { perm: Perm.MANAGE_PRODUCTS, run: (w, a) => w.reorderCategories(a.ids.map((x) => BigInt(x))) },
   setStock: { perm: Perm.MANAGE_STOCK, run: (w, a) => w.setStock(BigInt(a.productId), BigInt(a.qty)) },
   adjustStock: {
     perm: Perm.MANAGE_STOCK,
@@ -150,7 +151,8 @@ export class Editing {
     this.store.setMeta(`web.pin.fails.${staffId}`, n);
     this.store.setMeta(`web.pin.last.${staffId}`, now);
     if (n >= PinLockout.FREE_TRIES) {
-      this.pending.push({ action: AuditAction.PIN_LOCKOUT, staffId: this.session?.id ?? null, entityId: who.id, detail: `${n} wrong PINs`, at: now });
+      // Whose PIN, by name, as on a till (StaffSession: "5 wrong PINs for Siti").
+      this.pending.push({ action: AuditAction.PIN_LOCKOUT, staffId: this.session?.id ?? null, entityId: who.id, detail: `${n} wrong PINs for ${who.name}`.slice(0, 300), at: now });
     }
     return { wrong: PinLockout.triesLeft(n), waitMs: PinLockout.waitMs(n) };
   }

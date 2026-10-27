@@ -45,7 +45,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 | Idea | English (UI) | Bahasa Melayu (UI) | Code |
 |---|---|---|---|
 | Thing the shop sells | Product | Produk | `product` |
-| Grouping and tab | Category | Kategori | `category` |
+| Grouping and tab | Category; Move up / Move down (its place on the selling screen, D-086) | Kategori; Naikkan / Turunkan | `category`, `category.sort`, `CategoryDao.reorder` |
 | How it is sold | Sold by: Piece / pack, Weight, Price entered at the till | Dijual mengikut: Unit / pek, Berat, Harga dimasukkan di kaunter | `SellMode.UNIT/WEIGHT/OPEN_PRICE` |
 | Barcode on a carton | pack barcode | kod bar pek | `product_barcode.pack_qty` |
 | Scale's item code | Scale PLU | PLU timbangan | `BarcodeKind.SCALE_PLU` |
@@ -93,6 +93,7 @@ resource before quoting it in the guide. "Code" names the class, table or consta
 |---|---|---|---|
 | Copy to Google Drive + keeping tills the same | Google Drive backup; sync | Sandaran Google Drive; segerak | `SyncEngine`, `DriveProvider` |
 | Backups on the phone, files, restore | Backup & restore; backup file; Restore | Sandaran; fail sandaran; Pulihkan | `BackupService`, `.lekasbak` |
+| Automatic backups made before the data was found damaged, never pruned (D-086) | Before the data was damaged (kept) | Sebelum data rosak (disimpan) | `KeepDamagedDatabase.KEPT`, `backup_reason_kept` |
 | Daily copy off the phone without Google | Daily copy to a folder (SD card / USB) | Salinan harian ke folder (kad SD / USB) | `BackupFolder`, `dev.backup_folder*` |
 | Data only on this phone | Not backed up | Tiada sandaran | `Protection.State.AT_RISK` |
 | Damaged database | Data problem | Masalah data | `Protection.State.DAMAGED`, `KeepDamagedDatabase` |

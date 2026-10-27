@@ -39,9 +39,12 @@ object ReceiptBuilder {
             val prev = byRate[id]
             byRate[id] = l.taxBp to ((prev?.second ?: 0L) + l.tax)
         }
+        // Each rate read once: its name for the tax lines, its "Code on receipts" for them and for the items.
+        val rates = lines.mapNotNullTo(HashSet()) { it.taxRateId }.associateWith { TaxRateDao.get(db, it) }
+        fun codeOf(rateId: Long?): String? = rateId?.let { rates[it]?.code }?.let(::oneLine)?.trim()?.take(MAX_CODE)?.takeIf { it.isNotEmpty() }
         for ((id, v) in byRate) {
-            val name = TaxRateDao.get(db, id)?.name ?: text.tax
-            taxes.add(ReceiptTax(name, v.first, v.second))
+            val name = rates[id]?.name ?: text.tax
+            taxes.add(ReceiptTax(name, v.first, v.second, codeOf(id)))
         }
 
         // Not on a voided sale: a copy of it asked the customer to request an e-invoice for a sale
@@ -67,6 +70,7 @@ object ReceiptBuilder {
                 ReceiptItem(
                     name = oneLine(it.name), qty = it.qty, unit = it.unit?.let(::oneLine), weighed = it.qty % 1000L != 0L,
                     unitPrice = it.unitPrice, gross = it.gross, discount = it.discount, promo = it.promoName?.let(::oneLine),
+                    taxCode = codeOf(it.taxRateId),
                 )
             },
             subtotal = h.subtotal,
@@ -102,6 +106,9 @@ object ReceiptBuilder {
      */
     internal fun oneLine(s: String): String =
         if (s.none { it < ' ' || it == '\u007F' }) s else s.map { if (it < ' ' || it == '\u007F') ' ' else it }.joinToString("").trim()
+
+    /** A tax code prints at most this wide after each amount ("SR", "S10"): a long one would crowd out the names. */
+    private const val MAX_CODE = 4
 
     private fun kindName(kind: Int, t: ReceiptText) = when (kind) {
         PaymentKind.CASH -> t.cash

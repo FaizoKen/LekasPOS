@@ -161,7 +161,7 @@ class ReceiveActivity : ScreenActivity() {
             if (p == null) {
                 if (fromRef) return@launchUi // the delivery order's or invoice's number, as typed in
                 beeper?.error()
-                Dialogs.confirm(this@ReceiveActivity, getString(R.string.sell_not_found_title), getString(R.string.sell_not_found_message, code), getString(R.string.sell_add_product)) {
+                Dialogs.confirm(this@ReceiveActivity, getString(R.string.sell_not_found_title), getString(R.string.inv_not_found_receive, code), getString(R.string.sell_add_product)) {
                     @Suppress("DEPRECATION")
                     startActivityForResult(ProductEditActivity.newIntent(this@ReceiveActivity, barcode = code), REQ_NEW)
                 }

@@ -797,8 +797,18 @@ export function editCategories() {
           actions(button(t('save'), save, 'primary'), button(t('cancel'), () => put(formBox))));
         name.focus();
       };
-      put(list, lists.categories.length === 0 ? h('p', { class: 'muted', text: t('categories_empty') }) : lists.categories.map((cat) => h('div', { class: 'cat-row' },
+      // Their order on the selling screen (D-086, CategoriesActivity's arrows): one place up or down, saved whole.
+      const move = (i, by) => {
+        const ids = lists.categories.map((c) => c.id);
+        ids.splice(i + by, 0, ids.splice(i, 1)[0]);
+        send(ed, ctx.token(), 'reorderCategories', { ids }, t('saved'), true).then((r) => { if (r) show(); });
+      };
+      const arrow = (sign, key, enabled, onclick) =>
+        h('button', { class: 'btn small', type: 'button', title: t(key), 'aria-label': t(key), disabled: !enabled, onclick }, sign);
+      const last = lists.categories.length - 1;
+      put(list, lists.categories.length === 0 ? h('p', { class: 'muted', text: t('categories_empty') }) : lists.categories.map((cat, i) => h('div', { class: 'cat-row' },
         h('span', { class: 'swatch', style: `background:${colorHex(cat.color) ?? 'transparent'}` }), h('span', { class: 'grow', text: cat.name }),
+        arrow('↑', 'category_move_up', i > 0, () => move(i, -1)), arrow('↓', 'category_move_down', i < last, () => move(i, 1)),
         button(t('category_edit'), () => form(cat), 'small'),
         button(t('delete'), () => ask(ed, t('category_delete_confirm', cat.name), t('delete'), () => {
           send(ed, ctx.token(), 'deleteCategory', { id: cat.id }, t('saved'), true).then((r) => { if (r) show(); });

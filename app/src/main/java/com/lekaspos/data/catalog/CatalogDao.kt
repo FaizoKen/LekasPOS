@@ -59,6 +59,29 @@ object CategoryDao {
     }
 
     fun delete(tx: Db.Tx, id: Long, now: Long): Boolean = LwwWriter.delete(tx, "category", Entity.CATEGORY, id, now)
+
+    /**
+     * The place of a new category (D-086): after the others once the shop has put them in order (a sort above 0),
+     * else 0 — the categories then stay by name, as before there was an order.
+     */
+    fun nextSort(db: SQLiteDatabase): Int {
+        val max = db.long("SELECT COALESCE(MAX(sort), 0) FROM category WHERE deleted = 0")
+        return if (max <= 0L) 0 else (max + 1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    /**
+     * Puts the categories in the order of [ids] — the selling screen's chips follow it (D-086): sort 1, 2, 3 …; only a
+     * row whose place changed gets a new version (LWW `sort`), so a rename made on another till meanwhile stays.
+     * Returns how many rows were written.
+     */
+    fun reorder(tx: Db.Tx, ids: List<Long>, now: Long): Int {
+        var written = 0
+        for ((i, id) in ids.withIndex()) {
+            val current = get(tx.db, id) ?: continue
+            if (current.sort != i + 1 && LwwWriter.update(tx, "category", Entity.CATEGORY, id, mapOf("sort" to i + 1), now)) written++
+        }
+        return written
+    }
 }
 
 /**

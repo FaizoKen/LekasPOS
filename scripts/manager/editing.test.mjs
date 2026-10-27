@@ -115,7 +115,7 @@ test('wrong PINs: tries left, then waits; each from the 5th is on record; the cl
   assert.ok(back.wait > 0 && back.wait <= 60_000, `waits at most the full wait: ${back.wait}`);
   // On record (the till's PIN_LOCKOUT), sent on their own when nothing else is changed
   await editing.flush(folder, opts);
-  assert.deepEqual(log(db), [`${AuditAction.PIN_LOCKOUT}|null|${SITI}|5 wrong PINs`, `${AuditAction.PIN_LOCKOUT}|null|${SITI}|6 wrong PINs`]);
+  assert.deepEqual(log(db), [`${AuditAction.PIN_LOCKOUT}|null|${SITI}|5 wrong PINs for Siti`, `${AuditAction.PIN_LOCKOUT}|null|${SITI}|6 wrong PINs for Siti`]);
   tick(61_000);
   assert.equal((await editing.signIn(String(SITI), '2468')).ok, true);
   assert.equal(editing.fails(String(SITI)).n, 0, 'the count starts again');

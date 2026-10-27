@@ -27,7 +27,7 @@ code, the package, the repository, the APK asset names and the daily report's Dr
   takes it and sets a new PIN (`OWNER_PIN_RESET`). Staff ⋮ → New recovery code (owners only) replaces it.
 - PINs: 4–6 digits, salted PBKDF2 (`PinHash`, D-037). Wrong PINs count **per person** (`pin.fails.<id>`):
   5 free, then 30 s doubling to 15 min (`PinLockout`), measured by wall clock and time since boot (clock changes
-  cannot skip it). Every wrong PIN from the 5th is audited (`PIN_LOCKOUT`; the target person is stored but not shown).
+  cannot skip it). Every wrong PIN from the 5th is audited (`PIN_LOCKOUT`, detail "5 wrong PINs for <name>" since 1.21.1, D-086).
 - **Roles** (`role`, LWW): seed Owner (always every permission, `Perm.effective`), Manager, Cashier, plus custom
   roles. Seed roles cannot be deleted; a role in use cannot be deleted. Role editor = `Perm.ROLE_EDITOR`
   (17 switches; `CANCEL_BILL` retired by D-063 and kept untouched).
@@ -252,7 +252,7 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
   columns (CJK = 2); labels in `core/receipt/Receipt.kt` in the **receipt language** (`receipt.lang`, defaults to the
   app language until saved). Content order: logo (per-till picture) · name · address · Tel · e-mail · Reg. No · SST No ·
   TIN · header · RECEIPT/REFUND/VOIDED/COPY · No · Date · Original (refunds) · Cashier · Customer · lines (discount or
-  promotion name) · Items · Subtotal · Item discounts · Bill discount · tax lines (exclusive) · Rounding · TOTAL ·
+  promotion name; a tax rate's code after the amount, D-086) · Items · Subtotal · Item discounts · Bill discount · tax lines (exclusive) · Rounding · TOTAL ·
   payments · Change · "Incl. tax" lines (inclusive) · note · footer or "Thank you!" · e-invoice QR (sales only, not
   voided; `{receipt}`, `{total}` = `12.35`, `{date}` = `YYYYMMDD`).
 - Receipt numbers (`data/sale/ReceiptNumbers.kt`): `{prefix}{R if refund}{seq:06}`, prefix = two letters + "-" per
@@ -306,9 +306,12 @@ RECEIPT job(s) (auto-print on; `receipt.copies` 1–3), open bill deleted. Refus
   → confirm; the barcode created last wins on scans. Audited `PRODUCT_PRICE_CHANGE` for price, sold-by, tax, cost,
   barcodes, packs (creating a product is not audited); delete → tombstone + `PRODUCT_DELETE`.
 - **Hidden** products: out of tiles, search, Popular, price-check name search, low stock; **still sell when scanned**.
-- Categories: name + colour, alphabetical (no reordering), long-press delete (products keep no category);
+- Categories: name + colour, long-press delete (products keep no category); ↑ / ↓ set their order on the selling
+  screen (D-086: `CategoryDao.reorder` writes sort 1, 2, 3 … for the rows that moved; all 0 = by name until a shop moves
+  one; a new one, also from the CSV import or the web, goes last: `nextSort`);
   recategorising moves past sales in category summaries (`Summaries.recategorize`). Not audited.
-- Tax rates (SETTINGS): name, code (shown in the list only — no code prints it), rate 0–100 % (2 decimals);
+- Tax rates (SETTINGS): name, code (printed after each taxed item's amount and with the rate in the tax summary,
+  ≤ 4 characters, D-086), rate 0–100 % (2 decimals);
   deleting untaxes products. `tax.prices_include` (default on) in Store & receipt. Per-rate-group tax: `money.md`.
 - Payment methods (SETTINGS; Settings only): seed Cash (opens drawer), Card, E-wallet / QR, Customer credit; add kinds
   E-wallet/QR (default), Card, Other; "Opens the cash drawer"; "Shown at the till" (locked on for Cash and Credit).
@@ -365,7 +368,8 @@ updated). Audited `PROMOTION_CHANGE`.
     optional. Every removal audited `STOCK_WRITE_OFF` with value at cost (D-067).
 - **Counts** (D-035): sessions (all or one category, several open, sync); each entry applies at once (OK on an empty
   pad = 0); scans outside the scope still count; report = expected vs counted, found/missing/net at count-time cost;
-  "Finish count" only closes it. Not audited.
+  "Finish count" only closes it. Not audited. An unknown barcode offers **Add product** (the product form with the
+  barcode, then its count is asked; D-086).
 - Low stock: shown, tracked, level > 0, stock ≤ level. Suppliers: name*, contact, phone, e-mail, address, note
   (long-press delete). Deliveries: read-only. Stock history per product (all kinds, level after each) and Stock
   changes (non-sale movements and session-less counts — "Counted: n" with the difference — merged by (hlc, id),
@@ -484,7 +488,8 @@ screen guards itself.
   kept only if that data never synced; otherwise (or "new till") new device number, new prefix, sync and daily
   report off.
 - Damaged DB that cannot open: files moved aside (`damaged-<time>.db`), an empty store opens, "Data problem" for 7
-  days.
+  days; the automatic backups made before it are renamed `kept-auto-…` (never pruned; "Before the data was damaged
+  (kept)", D-086).
 
 ## 16. Google Drive backup / sync (user-visible side; design in `sync.md`, D-045, D-053)
 
@@ -541,6 +546,10 @@ notifications. Google scopes: `drive.appdata` (sync), `drive.file` (daily report
 
 ## 20. Known gaps and inconsistencies (found while writing the user guide, 2026-10-08)
 
+Fixed in 1.21.1 (D-086): tax codes never printed; the daily-report help named 8 of 17 columns; Count / Receive / the
+product picker said an unknown barcode "goes on this bill" (Count could not add it); `PIN_LOCKOUT` did not say whose PIN;
+after a damaged database the good backups were rotated away once the 7-day pause ended.
+
 Fixed in 1.20.0 (D-080): the product form recorded opening stock even with Track stock off (the CSV import did not).
 
 Fixed in 1.16.0 (D-074): `error_needs_shift` pointed to "Shift & cash" (now Menu → Open shift),
@@ -551,16 +560,11 @@ Fixed in 1.13.1 (D-071): a weighed product, a pack or a weight label with no pri
 switched "Require an open shift" back on for the whole shop. The guide still warns users of 1.13.0 and older.
 
 Behaviour worth a look (decide with the owner):
-- A **damaged database** that cannot open leaves an empty till; good backups are protected only 7 days
-  (`KeepDamagedDatabase.HOLD_MS`), then daily backups of the empty data start to rotate them out.
 - Saving or sharing a backup file marks the data "protected" even when the file stays in the phone's Downloads or
   the share is cancelled (`BackupService` `BACKUP_EXPORT_OK` is set when the file is written).
 
 Small things a future change could fix (none loses data):
-- Tax rate "Code on receipts (optional)" is stored and listed but never printed.
-- The daily-report help lists 8 columns; the file has 17 (the checks columns were added in 1.12.0).
-- Receive stock / Stock count / product picker reuse the selling screen's unknown-barcode text ("goes on this bill").
-- `PIN_LOCKOUT` entries do not show whose PIN was tried; customer create/edit/delete is not audited.
+- Customer create/edit/delete is not audited.
 - Malay plural resources have only one form ("1 ditangguh" is fine, "Semua 1 baris akan dibuang" reads oddly); BM
   "Batalkan" means both void and the cleared-bill audit label ("Bil dibatalkan"); payment methods are "Cara bayaran"
   in Reports but "Kaedah bayaran" in Settings.
@@ -579,7 +583,8 @@ also changes products, stock, suppliers and customers as a till of its own (D-08
 - **Update**: one tap (Google's popup needs it); while the token lasts (~1 h) the page reads new files by itself every
   5 min and when its tab comes back. A round (`js/store.js` `Store.sync`): store = lowest `store-*.json`; the tills' cards;
   segments (or the pack holding them, D-085) after each till's cursor up to the first gap (whole-folder listing daily, on the first round and on a gap; a till
-  numbered again from 1 is read again; `fullFrom` followed); checksum checked (downloaded twice before "damaged"); events
+  numbered again from 1 is read again; `fullFrom` followed; a file gone meanwhile — packed — ends that till's reading and
+  the round runs once more on the whole folder, D-086); checksum checked (downloaded twice before "damaged"); events
   applied per batch of files with the derived tables in the same transaction; events of unknown kinds kept in
   `sync_deferred` ("n changes from a newer app version wait until this page is updated") and retried on the next round.
 - **Screens** (tabs; detail sheets by address `#sales/<id>` etc.): Home (today/yesterday/this week/this month with change,
@@ -606,7 +611,7 @@ also changes products, stock, suppliers and customers as a till of its own (D-08
   for a new barcode another product has; Delete); Change stock (Count / Remove / Add with the reasons, note, "n fewer than the
   app has"); Receive stock (supplier, or *New supplier…* saved first, invoice/DO no., note, products by search or a scanner's
   code + Enter, quantity, cost per unit or the invoice's line amount, total; the same product again adds to its line);
-  categories (add, rename, colour, delete); suppliers (name, contact, phone, email, address, note; delete); customers (name,
+  categories (add, rename, colour, delete, ↑ / ↓ order: `reorderCategories`, D-086); suppliers (name, contact, phone, email, address, note; delete); customers (name,
   phone, email, address, TIN, credit limit for whoever may set it, note; delete only with nothing owed). A form open while the
   page updates stays open; closing one with changes asks *Close without saving your changes?*.
 - **Who changes it**: while no active staff member has a PIN, the owner (staff 1, every permission, as on a till); otherwise

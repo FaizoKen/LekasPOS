@@ -451,9 +451,10 @@ class StaffSession(private val graph: AppGraph) {
             Meta.put(tx.db, KEY_FAILS + staffId, n.toString())
             Meta.put(tx.db, KEY_LAST_FAIL + staffId, now.toString())
             Meta.put(tx.db, KEY_LAST_FAIL_RT + staffId, bootStamp())
-            // Every wait is recorded (the 5th wrong PIN and each one after it), with who was signed in.
+            // Every wait is recorded (the 5th wrong PIN and each one after it), with who was signed in — and whose PIN
+            // was tried, by name: the log showed only who was signed in, often nobody (1.21.1).
             if (n >= PinLockout.FREE_TRIES) {
-                AuditDao.log(tx, AuditAction.PIN_LOCKOUT, _state.value.current?.id, now, Entity.STAFF, staffId, detail = "$n wrong PINs")
+                AuditDao.log(tx, AuditAction.PIN_LOCKOUT, _state.value.current?.id, now, Entity.STAFF, staffId, detail = "$n wrong PINs for ${staff.name}".take(300))
             }
         }
         Check.WrongPin(PinLockout.triesLeft(n), PinLockout.waitMs(n))

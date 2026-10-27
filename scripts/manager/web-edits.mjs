@@ -48,6 +48,9 @@ const shownOf = (w, id) => {
 const drinks = one("SELECT id FROM category WHERE name = 'Minuman'");
 const snacks = await commit((w) => w.saveCategory(null, 'Snek', 5));
 await commit((w) => w.saveCategory(w.category(drinks), 'Minuman Sejuk', 4));
+// Their order on the selling screen (D-086): Snek first, the others after it as they were.
+const others = db.selectArrays('SELECT id FROM category WHERE deleted = 0 AND id != ? ORDER BY sort, name_key', [snacks]).map((r) => BigInt(r[0]));
+await commit((w) => w.reorderCategories([snacks, ...others]));
 const supplier = await commit((w) => w.saveSupplier(null, { name: 'Borong Jaya Sdn Bhd', phone: '03-5511 2233' }));
 await commit((w) => w.saveSupplier({ id: supplier, name: 'Borong Jaya Sdn Bhd', phone: '03-5511 2233' },
   { name: 'Borong Jaya Sdn Bhd', contact: 'En. Rahman', phone: '03-5511 2233' }));

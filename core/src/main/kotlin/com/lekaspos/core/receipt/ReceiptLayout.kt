@@ -40,7 +40,9 @@ class ReceiptLayout(
         val out = ArrayList<PrintLine>(64)
         if (logo) out.add(PrintLine.Logo)
         header(doc, out)
-        for (item in doc.items) item(item, out)
+        // The tax codes stand in their own column after the items' amounts, so those stay in line with each other.
+        val codeWidth = doc.items.maxOfOrNull { item -> item.taxCode.nonBlank()?.let { TextWidth.of(it) } ?: 0 } ?: 0
+        for (item in doc.items) item(item, codeWidth, out)
         out.add(rule('-'))
         totals(doc, out)
         footer(doc, out)
@@ -76,8 +78,11 @@ class ReceiptLayout(
         out.add(rule('-'))
     }
 
-    private fun item(item: ReceiptItem, out: MutableList<PrintLine>) {
-        val amount = money(item.gross)
+    private fun item(item: ReceiptItem, codeWidth: Int, out: MutableList<PrintLine>) {
+        // "12.90 S": the tax rate's code on receipts (1.21.1 — it was stored and never printed); blank for an item
+        // without one, so every amount ends in the same column.
+        val code = if (codeWidth == 0) "" else " " + TextWidth.padEnd(item.taxCode.nonBlank().orEmpty(), codeWidth)
+        val amount = money(item.gross) + code
         val simple = !item.weighed && (item.qty == 1000L || item.qty == -1000L) && item.discount == 0L
         if (simple) {
             twoCol(item.name, amount, out)
@@ -97,15 +102,22 @@ class ReceiptLayout(
             }
             twoCol(detail, amount, out)
         }
-        if (item.discount != 0L) twoCol("  ${item.promo ?: t.discount}", money(Checked.neg(item.discount)), out)
+        if (item.discount != 0L) twoCol("  ${item.promo ?: t.discount}", money(Checked.neg(item.discount)) + blank(code), out)
     }
+
+    /** Spaces as wide as [s]: a discount's amount in line with its item's. */
+    private fun blank(s: String): String = if (s.isEmpty()) s else TextWidth.padEnd("", TextWidth.of(s))
+
+    /** "SST 6%", with its code when it has one: "SST 6% (S)". */
+    private fun taxLabel(tax: ReceiptTax): String =
+        "${tax.name} ${percent(tax.bp)}" + (tax.code.nonBlank()?.let { " ($it)" } ?: "")
 
     private fun totals(doc: ReceiptDoc, out: MutableList<PrintLine>) {
         twoCol("${t.items}: ${pieces(doc.items)}", "", out)
         twoCol(t.subtotal, money(doc.subtotal), out)
         if (doc.lineDiscounts != 0L) twoCol(t.itemDiscounts, money(Checked.neg(doc.lineDiscounts)), out)
         if (doc.billDiscount != 0L) twoCol(t.billDiscount, money(Checked.neg(doc.billDiscount)), out)
-        if (!doc.pricesIncludeTax) for (tax in doc.taxes) twoCol("${tax.name} ${percent(tax.bp)}", money(tax.amount), out)
+        if (!doc.pricesIncludeTax) for (tax in doc.taxes) twoCol(taxLabel(tax), money(tax.amount), out)
         if (doc.rounding != 0L) twoCol(t.rounding, money(doc.rounding), out)
 
         val total = MoneyFormat.format(doc.total, currency)
@@ -123,7 +135,7 @@ class ReceiptLayout(
         }
         if (doc.change != 0L) twoCol(t.change, money(doc.change), out, bold = true)
         if (doc.pricesIncludeTax) {
-            for (tax in doc.taxes) twoCol("${t.taxIncluded} ${tax.name} ${percent(tax.bp)}", money(tax.amount), out)
+            for (tax in doc.taxes) twoCol("${t.taxIncluded} ${taxLabel(tax)}", money(tax.amount), out)
         }
         out.add(rule('-'))
     }

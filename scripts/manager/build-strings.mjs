@@ -74,7 +74,7 @@ export const NAMES = [
   'inv_edit_supplier', 'inv_supplier_name', 'inv_supplier_contact', 'inv_supplier_delete_confirm', 'inv_suppliers',
   'sync_now', 'inv_ref_hint', 'inv_purchase_lines', 'inv_unit_cost', 'inv_line_total', 'inv_add_item',
   'inv_receive_save', 'inv_receive_empty', 'inv_receive_total', 'inv_received', 'inv_discard',
-  'categories_title', 'categories_empty', 'category_add', 'category_edit', 'category_name', 'category_delete_confirm',
+  'categories_title', 'categories_empty', 'category_add', 'category_edit', 'category_name', 'category_delete_confirm', 'category_move_up', 'category_move_down',
   'store_phone', 'store_email', 'store_address', 'customer_add', 'customer_edit', 'customer_name', 'customer_tin',
   'customer_limit', 'customer_limit_hint', 'customer_limit_error', 'customer_delete_confirm', 'error_has_balance',
   'lock_title', 'lock_who', 'pin_enter', 'pin_wrong', 'pin_wrong_wait', 'pin_wait', 'pin_not_allowed',

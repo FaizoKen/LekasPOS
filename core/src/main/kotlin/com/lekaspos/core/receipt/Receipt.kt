@@ -26,9 +26,12 @@ data class ReceiptItem(
     val discount: Long = 0L,
     /** Name of the promotion behind [discount] (printed instead of "Discount"). */
     val promo: String? = null,
+    /** The tax rate's "Code on receipts" ("S", "SR", "Z"), printed after the amount; null = none. */
+    val taxCode: String? = null,
 )
 
-data class ReceiptTax(val name: String, val bp: Int, val amount: Long)
+/** One tax rate of the sale; [code]: its "Code on receipts", printed with it so the items' codes are explained. */
+data class ReceiptTax(val name: String, val bp: Int, val amount: Long, val code: String? = null)
 
 data class ReceiptPayment(val name: String, val amount: Long, val tendered: Long = 0L, val change: Long = 0L)
 

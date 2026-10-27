@@ -128,7 +128,7 @@ class ProductPickActivity : ScreenActivity() {
                 p != null -> finishWith(p.id, p.scannedQty)
                 fromSearch && code.any { !it.isDigit() } -> reload(debounce = false) // a name: show the matches
                 else -> Dialogs.confirm(
-                    this@ProductPickActivity, getString(R.string.sell_not_found_title), getString(R.string.sell_not_found_message, code),
+                    this@ProductPickActivity, getString(R.string.sell_not_found_title), getString(R.string.inv_not_found_pick, code),
                     getString(R.string.sell_add_product),
                 ) {
                     @Suppress("DEPRECATION")

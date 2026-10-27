@@ -319,6 +319,24 @@ test('packs (D-085): a page that read part of a pack skips that part; nothing is
   assert.deepEqual(dump(db), dump(plain.db));
 });
 
+test('packs (D-085): a till packs its segments while the page reads them; the round reads the pack instead', async () => {
+  const plain = await readFolder(folderOf(false).folder);
+  const { folder, parts } = folderOf(false);
+  // Segment 3 of till A is asked for once A has packed 1..3 and removed them (Drive answers 404).
+  folder.beforeGet = (f) => {
+    if (f.name === `seg-${STORE}-${A}-00000003.ndjson.gz`) {
+      folder.beforeGet = null;
+      folder.putPack(STORE, A, parts.slice(0, 3));
+    }
+  };
+  const { db, store, result } = await readFolder(folder);
+  assert.equal(store.cursors().get(A), 4);
+  assert.equal(store.cursors().get(B), 1);
+  assert.deepEqual(dump(db), dump(plain.db)); // nothing missing, nothing twice
+  assert.equal(result.files, 5); // A 1, A 2 and B 1 in the first round; the pack (1 and 2 read past) and A 4 in the second
+  assert.equal(store.meta('web.full_list_at'), String(T0 + 2 * 86_400_000)); // the second round listed the whole folder
+});
+
 test('packs (D-085): the plan, pack names and a damaged pack', async () => {
   const seg = (n) => ({ dev: A, from: n, to: n, pack: false });
   const pk = (from, to) => ({ dev: A, from, to, pack: true });

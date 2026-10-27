@@ -647,7 +647,9 @@ class ProductCsvService(private val graph: AppGraph) {
     private fun category(tx: Db.Tx, name: String?, ctx: Context, now: Long): Long? {
         if (name.isNullOrBlank()) return null
         val key = SearchText.key(name)
-        return ctx.categories[key] ?: CategoryDao.insert(tx, name.trim(), 0, 0, now).also { ctx.categories[key] = it }
+        // After the others once the shop has put its categories in order (D-086).
+        return ctx.categories[key]
+            ?: CategoryDao.insert(tx, name.trim(), 0, CategoryDao.nextSort(tx.db), now).also { ctx.categories[key] = it }
     }
 
     private fun categoryKeys(r: SQLiteDatabase): MutableMap<String, Long> {

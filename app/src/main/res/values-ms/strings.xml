@@ -222,6 +222,8 @@
     <string name="category_edit">Tukar nama kategori</string>
     <string name="category_name">Nama</string>
     <string name="category_delete_confirm">Padam kategori %1$s? Produknya kekal, tanpa kategori.</string>
+    <string name="category_move_up">Naikkan (lebih awal di skrin jualan)</string>
+    <string name="category_move_down">Turunkan (lebih lewat di skrin jualan)</string>
 
     <!-- Kadar cukai -->
     <string name="tax_title">Kadar cukai</string>
@@ -476,6 +478,9 @@
     <string name="inv_stock_now">Stok: %1$s</string>
     <string name="inv_pick_title">Pilih produk</string>
     <string name="inv_pick_hint">Cari atau imbas produk</string>
+    <string name="inv_not_found_receive">Belum ada produk dengan kod bar %1$s. Tambahkannya sekarang (nama dan harga): ia disimpan untuk lain kali dan masuk ke penghantaran ini.</string>
+    <string name="inv_not_found_count">Belum ada produk dengan kod bar %1$s. Tambahkannya sekarang (nama dan harga), kemudian taip berapa yang anda kira.</string>
+    <string name="inv_not_found_pick">Belum ada produk dengan kod bar %1$s. Tambahkannya sekarang (nama dan harga): ia disimpan untuk lain kali.</string>
     <string name="inv_adjusted">Stok %1$s diubah</string>
     <string name="inv_stock_set">%1$s: stok kini %2$s</string>
     <string name="inv_remove_stock">Keluarkan</string>

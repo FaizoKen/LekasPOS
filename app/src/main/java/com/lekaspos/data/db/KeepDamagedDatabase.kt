@@ -3,6 +3,7 @@ package com.lekaspos.data.db
 import android.content.Context
 import android.database.DatabaseErrorHandler
 import android.database.sqlite.SQLiteDatabase
+import com.lekaspos.data.backup.BackupFiles
 import com.lekaspos.util.Log
 import java.io.File
 
@@ -70,8 +71,28 @@ object KeepDamagedDatabase : DatabaseErrorHandler {
                 f.delete()
             }
         }
+        keepBackups(dir)
         Log.e("The database could not be opened and was set aside as damaged-$stamp.db", cause)
     }
+
+    /**
+     * The automatic backups made before the damage are the shop's last good data: renamed to [KEPT] + their name, so the
+     * daily backups of the new, empty data never rotate them away (they did once the [HOLD_MS] pause ended: seven daily
+     * backups later the good ones were gone, 1.21.1). Shown in Backup & restore as made before the damage; the owner
+     * deletes them there.
+     */
+    private fun keepBackups(dir: File) {
+        val autos = dir.listFiles { f -> f.name.startsWith(AUTO) && f.name.endsWith(BackupFiles.EXT) }.orEmpty()
+        for (f in autos) {
+            if (!f.renameTo(File(dir, KEPT + f.name))) Log.w("Could not keep the backup ${f.name} from before the damage")
+        }
+    }
+
+    /** Name prefix of a backup made before the database was found damaged ([keepBackups]): never deleted by the app. */
+    const val KEPT = "kept-"
+
+    /** BackupService.AUTO (the data layer does not reach into the domain's). */
+    private const val AUTO = "auto-"
 
     /** At open: a database set aside less than [HOLD_MS] ago is reported as the problem. */
     fun checkSetAside(ctx: Context) {
