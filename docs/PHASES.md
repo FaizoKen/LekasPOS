@@ -2639,9 +2639,19 @@ record, and the newest code (Lekas Manager's edits, D-083; packs, D-085). Every 
       the changed files), release APK **1,701,174 bytes** (1.21.0: 1,695,899); web tests 44 pass, 2 CI-only skipped;
       `web-edits.mjs` (CI) now also reorders the categories, so `ManagerEditsTest` + `fixture.test.mjs` check the tills apply it
 - [x] `versionName` 1.21.1
-- [ ] CI on a pushed branch: instrumented API 21 + 36 (the two new instrumented tests), release smoke
-- [ ] Perf: no hot path changed (receipts gain a column; the category list reads the same query); QUICK on CI to confirm
-- [ ] Test build v1.21.1 (after the owner's say-so), then the owner's phone check
+- [x] Pushed to main 13539aa (the owner: "commit, push to main and deploy on production properly"); CI run 40524945802
+      (build 234) all green — build, lint, tablet, release smoke API 21 + 36 (upgrading from 1.20.2), instrumented API 21 + 36
+      (**299 tests** each, 298 before: `categoriesInOrder`); on both `web-edits.mjs` made 16 files (with the category order),
+      `ManagerEditsTest` OK and the web tests 46/46. Release APK **1,702,264 bytes**, versionCode 234, certificate
+      `0a67abec…d4b9`, SHA-256 `74e42472…d31d`
+- [x] Website deployed (Pages, same commit): the guide says "For Lekas POS 1.21.1", Lekas Manager has the category order
+- [x] Perf FULL on 13539aa (run 40525200672): **PASS** on API 21, 29 and 36 (every scenario within budget, every plan OK);
+      API 21 sale commit p95 9.2 ms (150), report_month 79 ms (1,000), report_year 104 ms (3,000), multi-word search p95
+      2.7 ms (50); cold start to a usable till on API 21 about 0.4 s (median of 10; the very first 2.9 s, the database made)
+- [ ] **v1.21.1 the latest release** (assets `LekasPOS.apk`, `LekasPOS-1.21.1.apk`, `mapping-1.21.1.txt`; notes in English
+      and Malay, also for 1.20.3 and 1.21.0): creating the release was refused to Claude by Claude Code's permission check
+      ("Create Public Surface") — the owner runs it; then `PREV_APK_URL` v1.21.1 and the PHASES lines of 1.20.3 / 1.21.0
+- [ ] The owner's phone check
 
 ### Needs real-device testing (1.21.1)
 
