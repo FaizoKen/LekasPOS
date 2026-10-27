@@ -49,9 +49,9 @@ to the user. **The next phase starts only after the user's real-device feedback.
 | — | **LekasPOS Manager** (no app change): a read-only web page, `site/manager/`, with the shop's reports, sales, products, stock, shifts and activity log — read from the shop's Google Drive backup or a backup file in the browser, no server (D-082) | built on branch `manager-web`; the owner creates the web sign-in client (README → Google Cloud setup, step 6), then tries it |
 | — | **1.20.2**: the app's links on the website's new address, https://lekaspos.faizo.net/ — User guide, privacy policy, website and download (D-082) | **released** 2026-10-20 (v1.20.2, build 223) — the owner asked for everything on lekaspos.faizo.net; offered in the app to shops on 1.6.1+; phone checks still to run |
 | — | **LekasPOS Manager changes the shop** (no app change): products (the till's product form), Change stock, Receive stock, categories, suppliers and customers on the web page, as a till of its own — one sync file per save, the shop's PINs and roles (D-083) | **live** 2026-10-21 (8febce6; CI 39553677878 green, `ManagerEditsTest` on API 21 + 36) — the owner tries it |
-| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | test build **v1.20.3** (build 228); the website on lekas.faizo.net since 2026-10-21 — the owner makes v1.20.3 the latest release |
-| — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | test build **v1.21.0** (build 232), CI green — waiting for the owner's phone check |
-| — | **1.21.1 — seventh bug hunt**: the category tabs in the order the owner sets (↑ / ↓ in Categories, also in Lekas Manager); tax codes printed on receipts; Count adds an unknown barcode; backups from before a damaged database kept for good; whose PIN in the activity log; Lekas Manager reads on when a till packs files mid-read (D-086) | built and tested locally (JVM, web, lint, release APK); not pushed yet — CI (instrumented API 21 + 36) and a test build when the owner says |
+| — | **1.20.3 — Lekas POS on lekas.faizo.net**: the app is named **Lekas POS** (Lekas: apps for small businesses), the website moves to https://lekas.faizo.net/ (lekaspos.faizo.net redirects), the web page is Lekas Manager (D-084) | **released** 2026-10-27 as part of 1.21.1 (v1.20.3, build 228, stayed a pre-release) |
+| — | **1.21.0 — years of selling in the sync folder**: each till packs its older sync files into a few large ones and removes them from Google Drive (at most 500,000 items a folder); readers and Lekas Manager read the packs; a till on an older version is waited for (D-085) | **released** 2026-10-27 as part of 1.21.1 (v1.21.0, build 232, stayed a pre-release); phone checks still to run |
+| — | **1.21.1 — seventh bug hunt**: the category tabs in the order the owner sets (↑ / ↓ in Categories, also in Lekas Manager); tax codes printed on receipts; Count adds an unknown barcode; backups from before a damaged database kept for good; whose PIN in the activity log; Lekas Manager reads on when a till packs files mid-read (D-086) | **released** 2026-10-27 (v1.21.1, build 234) — the owner asked to publish it ("deploy on production properly") and ran the release script; also carries 1.20.3 and 1.21.0; offered in the app to shops on 1.6.1+; phone checks still to run |
 
 ## Open questions for the user
 
@@ -2572,7 +2572,7 @@ application for business management".
       API 21 + 36 upgrading from 1.20.2). Release APK **1,682,955 bytes** (1.20.2: 1,682,832), label "Lekas POS"
 - [x] **Test build v1.20.3** (2026-10-21): pre-release on 0c20d77, build 228; SHA-256 `c772affb…43be`; certificate
       `0a67abec…d4b9`; `mapping-1.20.3.txt` attached
-- [ ] Made the latest release (GitHub → Releases → v1.20.3 → Edit → untick pre-release, tick latest); then `PREV_APK_URL` v1.20.3
+- [x] Released to everyone as part of 1.21.1 (2026-10-27); v1.20.3 stays a pre-release
 - [x] Perf not run again: only text changed, no code path; 1.20.1's FULL run (38581523167) stands
 - [ ] Screenshots in `site/img/` that show the old name (welcome screen, Settings → About, the manager page) refreshed
 
@@ -2606,7 +2606,7 @@ holds at most 500,000 items in a folder).
 - [x] CI on main 945c97d (run 39632572604): all jobs green; website deployed (the web page reads packs before any till makes one)
 - [x] **Test build v1.21.0** (2026-10-22): pre-release on 945c97d, build 232, 1,695,899 bytes; SHA-256 `0e0a1dc6…9ef5`;
       certificate `0a67abec…d4b9`; `mapping-1.21.0.txt` attached
-- [ ] Made the latest release after the owner's phone check (after v1.20.3); then `PREV_APK_URL` v1.21.0
+- [x] Released to everyone as part of 1.21.1 (2026-10-27); v1.21.0 stays a pre-release
 - [ ] Perf: no hot path changed (sync runs off the selling path); QUICK on CI to confirm
 
 ### Needs real-device testing (1.21.0)
@@ -2648,9 +2648,11 @@ record, and the newest code (Lekas Manager's edits, D-083; packs, D-085). Every 
 - [x] Perf FULL on 13539aa (run 40525200672): **PASS** on API 21, 29 and 36 (every scenario within budget, every plan OK);
       API 21 sale commit p95 9.2 ms (150), report_month 79 ms (1,000), report_year 104 ms (3,000), multi-word search p95
       2.7 ms (50); cold start to a usable till on API 21 about 0.4 s (median of 10; the very first 2.9 s, the database made)
-- [ ] **v1.21.1 the latest release** (assets `LekasPOS.apk`, `LekasPOS-1.21.1.apk`, `mapping-1.21.1.txt`; notes in English
-      and Malay, also for 1.20.3 and 1.21.0): creating the release was refused to Claude by Claude Code's permission check
-      ("Create Public Surface") — the owner runs it; then `PREV_APK_URL` v1.21.1 and the PHASES lines of 1.20.3 / 1.21.0
+- [x] **v1.21.1 is the latest release** (2026-10-27): on 13539aa, build 234; assets `LekasPOS.apk` and `LekasPOS-1.21.1.apk`
+      (SHA-256 `74e42472…d31d`, both checked on GitHub) and `mapping-1.21.1.txt`; notes in English and Malay, also for 1.20.3
+      and 1.21.0. Creating it was refused to Claude by Claude Code's permission check ("Create Public Surface"): the owner ran
+      the script. The website's Download serves it (SHA-256 checked); shops on 1.6.1 or later are offered it inside the app.
+      Smoke baseline (`PREV_APK_URL`) v1.21.1
 - [ ] The owner's phone check
 
 ### Needs real-device testing (1.21.1)
